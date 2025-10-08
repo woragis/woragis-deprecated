@@ -9,6 +9,7 @@ import '../config/env_config.dart';
 import '../database/database_helper.dart';
 import '../database/sync_manager.dart';
 import '../network/network_info.dart';
+import '../network/api_client.dart';
 
 // Core BLoCs
 import '../presentation/bloc/theme/theme_bloc.dart';
@@ -111,6 +112,15 @@ Future<void> init() async {
   // External
   sl.registerLazySingleton(() => Connectivity());
   sl.registerLazySingleton<http.Client>(() => http.Client());
+  
+  // API Client (centralized with auto-auth headers)
+  sl.registerLazySingleton<ApiClient>(
+    () => ApiClient(
+      httpClient: sl<http.Client>(),
+      authStore: sl<AuthStoreBloc>(),
+      baseUrl: EnvConfig.apiBaseUrl,
+    ),
+  );
   
   // SharedPreferences (for BLoCs)
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -304,6 +314,8 @@ void _initProjects() {
     updateProjectOrderUseCase: sl(),
     incrementViewCountUseCase: sl(),
     incrementLikeCountUseCase: sl(),
+    toggleProjectFeaturedUseCase: sl(),
+    toggleProjectVisibilityUseCase: sl(),
   ));
 
 }
@@ -411,7 +423,7 @@ void _initEducation() {
   
   sl.registerLazySingleton<EducationRemoteDataSource>(
     () => EducationRemoteDataSourceImpl(
-      baseUrl: EnvConfig.apiBaseUrl,
+      apiClient: sl<ApiClient>(),
     ),
   );
 
