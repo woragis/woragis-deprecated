@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../bloc/education_bloc.dart';
 import '../../domain/entities/education_entity.dart';
 
 class CreateEducationPage extends StatefulWidget {
@@ -29,6 +31,9 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
   final _pdfDocumentController = TextEditingController();
   final _verificationUrlController = TextEditingController();
   final _skillsController = TextEditingController();
+  
+  // Auto-validate after first submit attempt
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   EducationType _selectedType = EducationType.degree;
   DegreeLevel? _selectedDegreeLevel;
@@ -50,28 +55,31 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
   }
 
   void _loadEducationData() {
-    // TODO: Load actual education data from BLoC or API
-    // For now, using placeholder data
-    _titleController.text = 'Bachelor of Computer Science';
-    _institutionController.text = 'University of Technology';
-    _descriptionController.text = 'Comprehensive program covering software engineering, algorithms, data structures, and computer systems.';
-    _fieldOfStudyController.text = 'Computer Science';
-    _gradeController.text = '3.8/4.0';
-    _creditsController.text = '120';
-    _certificateIdController.text = 'CS-BS-2024-001';
-    _issuerController.text = 'University of Technology';
-    _validityPeriodController.text = 'Lifetime';
-    _pdfDocumentController.text = '/documents/degree.pdf';
-    _verificationUrlController.text = 'https://verify.university.edu/CS-BS-2024-001';
-    _skillsController.text = 'Programming, Algorithms, Data Structures, Software Engineering';
-    _selectedType = EducationType.degree;
-    _selectedDegreeLevel = DegreeLevel.bachelor;
-    _startDate = DateTime(2020, 9);
-    _endDate = DateTime(2024, 6);
-    _completionDate = DateTime(2024, 6);
-    _isVisible = true;
-    _order = 1;
-    _skills = ['Programming', 'Algorithms', 'Data Structures', 'Software Engineering'];
+    // Load education data from BLoC state if available
+    final state = context.read<EducationBloc>().state;
+    if (state is EducationDetailLoaded) {
+      final education = state.education;
+      _titleController.text = education.title;
+      _institutionController.text = education.institution;
+      _descriptionController.text = education.description ?? '';
+      _fieldOfStudyController.text = education.fieldOfStudy ?? '';
+      _gradeController.text = education.grade ?? '';
+      _creditsController.text = education.credits?.toString() ?? '';
+      _certificateIdController.text = education.certificateId ?? '';
+      _issuerController.text = education.issuer ?? '';
+      _validityPeriodController.text = education.validityPeriod ?? '';
+      _pdfDocumentController.text = education.pdfDocument ?? '';
+      _verificationUrlController.text = education.verificationUrl ?? '';
+      _skillsController.text = education.skills?.join(', ') ?? '';
+      _selectedType = education.type;
+      _selectedDegreeLevel = education.degreeLevel;
+      _startDate = education.startDate;
+      _endDate = education.endDate;
+      _completionDate = education.completionDate;
+      _isVisible = education.visible;
+      _order = education.order;
+      _skills = education.skills ?? [];
+    }
   }
 
   @override
@@ -102,16 +110,62 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
   }
 
   void _saveEducation() {
+    // Enable auto-validate after first submit attempt
+    setState(() {
+      _autovalidateMode = AutovalidateMode.onUserInteraction;
+    });
+    
     if (_formKey.currentState!.validate()) {
       _parseSkills();
-      // TODO: Implement save functionality with BLoC
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isEditing ? 'Education updated successfully!' : 'Education created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      context.pop();
+      
+      if (_isEditing) {
+        // Update existing education
+        context.read<EducationBloc>().add(UpdateEducation(
+          id: widget.educationId!,
+          title: _titleController.text,
+          institution: _institutionController.text,
+          description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          type: _selectedType.name,
+          degreeLevel: _selectedDegreeLevel?.name,
+          fieldOfStudy: _fieldOfStudyController.text.isEmpty ? null : _fieldOfStudyController.text,
+          startDate: _startDate,
+          endDate: _endDate,
+          completionDate: _completionDate,
+          grade: _gradeController.text.isEmpty ? null : _gradeController.text,
+          credits: _creditsController.text.isEmpty ? null : int.tryParse(_creditsController.text),
+          certificateId: _certificateIdController.text.isEmpty ? null : _certificateIdController.text,
+          issuer: _issuerController.text.isEmpty ? null : _issuerController.text,
+          validityPeriod: _validityPeriodController.text.isEmpty ? null : _validityPeriodController.text,
+          pdfDocument: _pdfDocumentController.text.isEmpty ? null : _pdfDocumentController.text,
+          verificationUrl: _verificationUrlController.text.isEmpty ? null : _verificationUrlController.text,
+          skills: _skills.isEmpty ? null : _skills,
+          order: _order,
+          visible: _isVisible,
+        ));
+      } else {
+        // Create new education
+        context.read<EducationBloc>().add(CreateEducation(
+          title: _titleController.text,
+          institution: _institutionController.text,
+          description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          type: _selectedType.name,
+          degreeLevel: _selectedDegreeLevel?.name,
+          fieldOfStudy: _fieldOfStudyController.text.isEmpty ? null : _fieldOfStudyController.text,
+          startDate: _startDate,
+          endDate: _endDate,
+          completionDate: _completionDate,
+          grade: _gradeController.text.isEmpty ? null : _gradeController.text,
+          credits: _creditsController.text.isEmpty ? null : int.tryParse(_creditsController.text),
+          certificateId: _certificateIdController.text.isEmpty ? null : _certificateIdController.text,
+          issuer: _issuerController.text.isEmpty ? null : _issuerController.text,
+          validityPeriod: _validityPeriodController.text.isEmpty ? null : _validityPeriodController.text,
+          pdfDocument: _pdfDocumentController.text.isEmpty ? null : _pdfDocumentController.text,
+          verificationUrl: _verificationUrlController.text.isEmpty ? null : _verificationUrlController.text,
+          skills: _skills.isEmpty ? null : _skills,
+          order: _order,
+          visible: _isVisible,
+        ));
+      }
     }
   }
 
@@ -145,14 +199,94 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Education' : 'Add Education'),
         actions: [
-          TextButton(
-            onPressed: _saveEducation,
-            child: const Text('Save'),
+          BlocBuilder<EducationBloc, EducationState>(
+            builder: (context, state) {
+              final isLoading = state is EducationLoading;
+              return TextButton(
+                onPressed: isLoading ? null : _saveEducation,
+                child: isLoading 
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+              );
+            },
           ),
         ],
       ),
-      body: Form(
+      body: BlocConsumer<EducationBloc, EducationState>(
+        listener: (context, state) {
+          if (state is EducationCreated) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Education created successfully!')),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            context.pop();
+          } else if (state is EducationUpdated) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Education updated successfully!')),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            context.pop();
+          } else if (state is EducationError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Failed to save education', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(state.message, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.white,
+                  onPressed: _saveEducation,
+                ),
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state is EducationLoading;
+          return Stack(
+            children: [
+              Form(
         key: _formKey,
+        autovalidateMode: _autovalidateMode,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -265,9 +399,15 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
                         DropdownButtonFormField<DegreeLevel?>(
                           value: _selectedDegreeLevel,
                           decoration: const InputDecoration(
-                            labelText: 'Degree Level',
+                            labelText: 'Degree Level *',
                             helperText: 'Required for degree type',
                           ),
+                          validator: (value) {
+                            if (_selectedType == EducationType.degree && value == null) {
+                              return 'Please select a degree level';
+                            }
+                            return null;
+                          },
                           items: [
                             const DropdownMenuItem(
                               value: null,
@@ -337,6 +477,15 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
                         ),
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            final credits = int.tryParse(value);
+                            if (credits == null || credits < 0) {
+                              return 'Please enter a valid number of credits';
+                            }
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
@@ -472,6 +621,15 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
                           labelText: 'Verification URL',
                           hintText: 'e.g., https://verify.university.edu/certificate',
                         ),
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            final uri = Uri.tryParse(value);
+                            if (uri == null || (!uri.hasScheme || !uri.hasAuthority)) {
+                              return 'Please enter a valid URL';
+                            }
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
@@ -555,10 +713,21 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
                       TextFormField(
                         initialValue: _order.toString(),
                         decoration: const InputDecoration(
-                          labelText: 'Order',
+                          labelText: 'Order *',
                           helperText: 'Display order (lower numbers appear first)',
                         ),
                         keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an order number';
+                          }
+                          final order = int.tryParse(value);
+                          if (order == null || order < 0) {
+                            return 'Please enter a valid order number';
+                          }
+                          return null;
+                        },
                         onChanged: (value) {
                           _order = int.tryParse(value) ?? 0;
                         },
@@ -583,22 +752,67 @@ class _CreateEducationPageState extends State<CreateEducationPage> {
               const SizedBox(height: 24),
 
               // Save Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saveEducation,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: Text(
-                    _isEditing ? 'Update Education' : 'Add Education',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
+              BlocBuilder<EducationBloc, EducationState>(
+                builder: (context, state) {
+                  final isLoading = state is EducationLoading;
+                  return SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : _saveEducation,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: isLoading
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Saving...'),
+                            ],
+                          )
+                        : Text(
+                            _isEditing ? 'Update Education' : 'Add Education',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
         ),
+              ),
+              // Loading overlay
+              if (isLoading)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  child: const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Saving education...',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

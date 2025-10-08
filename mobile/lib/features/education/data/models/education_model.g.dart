@@ -36,36 +36,46 @@ EducationModel _$EducationModelFromJson(
   skills: (json['skills'] as List<dynamic>?)?.map((e) => e as String).toList(),
   order: (json['order'] as num).toInt(),
   visible: json['visible'] as bool,
-  createdAt: DateTime.parse(json['created_at'] as String),
-  updatedAt: DateTime.parse(json['updated_at'] as String),
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
+      ? null
+      : DateTime.parse(json['updated_at'] as String),
 );
 
-Map<String, dynamic> _$EducationModelToJson(EducationModel instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'user_id': instance.userId,
-      'title': instance.title,
-      'institution': instance.institution,
-      'description': instance.description,
-      'type': _$EducationTypeEnumMap[instance.type]!,
-      'degree_level': _$DegreeLevelEnumMap[instance.degreeLevel],
-      'field_of_study': instance.fieldOfStudy,
-      'start_date': instance.startDate?.toIso8601String(),
-      'end_date': instance.endDate?.toIso8601String(),
-      'completion_date': instance.completionDate?.toIso8601String(),
-      'grade': instance.grade,
-      'credits': instance.credits,
-      'certificate_id': instance.certificateId,
-      'issuer': instance.issuer,
-      'validity_period': instance.validityPeriod,
-      'pdf_document': instance.pdfDocument,
-      'verification_url': instance.verificationUrl,
-      'skills': instance.skills,
-      'order': instance.order,
-      'visible': instance.visible,
-      'created_at': instance.createdAt.toIso8601String(),
-      'updated_at': instance.updatedAt.toIso8601String(),
-    };
+Map<String, dynamic> _$EducationModelToJson(
+  EducationModel instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'user_id': instance.userId,
+  'title': instance.title,
+  'institution': instance.institution,
+  if (instance.description case final value?) 'description': value,
+  'type': _$EducationTypeEnumMap[instance.type]!,
+  if (_$DegreeLevelEnumMap[instance.degreeLevel] case final value?)
+    'degree_level': value,
+  if (instance.fieldOfStudy case final value?) 'field_of_study': value,
+  if (instance.startDate?.toIso8601String() case final value?)
+    'start_date': value,
+  if (instance.endDate?.toIso8601String() case final value?) 'end_date': value,
+  if (instance.completionDate?.toIso8601String() case final value?)
+    'completion_date': value,
+  if (instance.grade case final value?) 'grade': value,
+  if (instance.credits case final value?) 'credits': value,
+  if (instance.certificateId case final value?) 'certificate_id': value,
+  if (instance.issuer case final value?) 'issuer': value,
+  if (instance.validityPeriod case final value?) 'validity_period': value,
+  if (instance.pdfDocument case final value?) 'pdf_document': value,
+  if (instance.verificationUrl case final value?) 'verification_url': value,
+  if (instance.skills case final value?) 'skills': value,
+  'order': instance.order,
+  'visible': instance.visible,
+  if (instance.createdAt?.toIso8601String() case final value?)
+    'created_at': value,
+  if (instance.updatedAt?.toIso8601String() case final value?)
+    'updated_at': value,
+};
 
 const _$EducationTypeEnumMap = {
   EducationType.degree: 'degree',

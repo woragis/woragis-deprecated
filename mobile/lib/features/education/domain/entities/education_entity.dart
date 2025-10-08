@@ -25,8 +25,8 @@ class EducationEntity extends Equatable {
   final List<String>? skills;
   final int order;
   final bool visible;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const EducationEntity({
     required this.id,
@@ -50,8 +50,8 @@ class EducationEntity extends Equatable {
     this.skills,
     required this.order,
     required this.visible,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
   @override

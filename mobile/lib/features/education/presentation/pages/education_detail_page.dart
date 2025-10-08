@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../bloc/education_bloc.dart';
 import '../../domain/entities/education_entity.dart';
 
-class EducationDetailPage extends StatelessWidget {
+class EducationDetailPage extends StatefulWidget {
   final String educationId;
 
   const EducationDetailPage({
@@ -11,48 +13,129 @@ class EducationDetailPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // TODO: Replace with actual education data from BLoC or API
-    // For now, using placeholder data
-    final education = EducationEntity(
-      id: educationId,
-      userId: 'user123',
-      title: 'Bachelor of Computer Science',
-      institution: 'University of Technology',
-      description: 'Comprehensive program covering software engineering, algorithms, data structures, and computer systems.',
-      type: EducationType.degree,
-      degreeLevel: DegreeLevel.bachelor,
-      fieldOfStudy: 'Computer Science',
-      startDate: DateTime(2020, 9),
-      endDate: DateTime(2024, 6),
-      completionDate: DateTime(2024, 6),
-      grade: '3.8/4.0',
-      credits: 120,
-      certificateId: 'CS-BS-2024-001',
-      issuer: 'University of Technology',
-      validityPeriod: 'Lifetime',
-      pdfDocument: '/documents/degree.pdf',
-      verificationUrl: 'https://verify.university.edu/CS-BS-2024-001',
-      skills: ['Programming', 'Algorithms', 'Data Structures', 'Software Engineering'],
-      order: 1,
-      visible: true,
-      createdAt: DateTime.now().subtract(const Duration(days: 30)),
-      updatedAt: DateTime.now(),
-    );
+  State<EducationDetailPage> createState() => _EducationDetailPageState();
+}
 
+class _EducationDetailPageState extends State<EducationDetailPage> {
+  EducationEntity? _lastLoadedEducation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load education data when the page initializes
+    context.read<EducationBloc>().add(GetEducationById(widget.educationId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(education.title),
+        title: const Text('Education Details'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              context.push('/education/${education.id}/edit');
+          BlocBuilder<EducationBloc, EducationState>(
+            builder: (context, state) {
+              if (state is EducationDetailLoaded) {
+                return IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    context.push('/education/${widget.educationId}/edit');
+                  },
+                );
+              }
+              return const SizedBox.shrink();
             },
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: BlocBuilder<EducationBloc, EducationState>(
+        builder: (context, state) {
+          if (state is EducationLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is EducationError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    state.message,
+                    style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<EducationBloc>().add(GetEducationById(widget.educationId));
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (state is EducationDetailLoaded) {
+            final education = state.education;
+            _lastLoadedEducation = education;
+            return _buildEducationDetail(education);
+          }
+
+          // Show loading overlay during delete operation
+          if (state is EducationLoading) {
+            return Stack(
+              children: [
+                _buildEducationDetail(_lastLoadedEducation ?? 
+                  EducationEntity(
+                    id: widget.educationId,
+                    userId: '',
+                    title: 'Loading...',
+                    institution: '',
+                    type: EducationType.degree,
+                    order: 0,
+                    visible: true,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  )),
+                Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  child: const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Processing...',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return const Center(child: Text('No education data available'));
+        },
+      ),
+    );
+  }
+
+  Widget _buildEducationDetail(EducationEntity education) {
+    return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,8 +271,10 @@ class EducationDetailPage extends StatelessWidget {
                     if (education.credits != null)
                       _buildDetailRow('Credits', education.credits.toString()),
                     _buildDetailRow('Order', education.order.toString()),
-                    _buildDetailRow('Created', _formatDate(education.createdAt)),
-                    _buildDetailRow('Updated', _formatDate(education.updatedAt)),
+                    if (education.createdAt != null)
+                      _buildDetailRow('Created', _formatDate(education.createdAt!)),
+                    if (education.updatedAt != null)
+                      _buildDetailRow('Updated', _formatDate(education.updatedAt!)),
                   ],
                 ),
               ),
@@ -379,18 +464,60 @@ class EducationDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // TODO: Implement delete functionality
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Delete functionality coming soon!')),
-                              );
+                          child: BlocListener<EducationBloc, EducationState>(
+                            listener: (context, state) {
+                              if (state is EducationDeleted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(Icons.check_circle, color: Colors.white),
+                                        SizedBox(width: 12),
+                                        Expanded(child: Text('Education deleted successfully')),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                                context.pop();
+                              } else if (state is EducationError) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Row(
+                                          children: [
+                                            Icon(Icons.error_outline, color: Colors.white),
+                                            SizedBox(width: 8),
+                                            Text('Failed to delete education', 
+                                                style: TextStyle(fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(state.message, style: const TextStyle(fontSize: 12)),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 5),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
                             },
-                            icon: const Icon(Icons.delete),
-                            label: const Text('Delete'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                _showDeleteConfirmation(context, education);
+                              },
+                              icon: const Icon(Icons.delete),
+                              label: const Text('Delete'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -402,7 +529,6 @@ class EducationDetailPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -453,5 +579,34 @@ class EducationDetailPage extends StatelessWidget {
       case EducationType.certificate:
         return Icons.verified;
     }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, EducationEntity education) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Education'),
+          content: Text('Are you sure you want to delete "${education.title}"? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<EducationBloc>().add(DeleteEducation(education.id));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

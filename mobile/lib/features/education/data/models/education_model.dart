@@ -23,7 +23,11 @@ enum DegreeLevelModel {
   diploma,
 }
 
-@JsonSerializable(fieldRename: FieldRename.snake)
+@JsonSerializable(
+  fieldRename: FieldRename.snake,
+  explicitToJson: true,
+  includeIfNull: false,
+)
 class EducationModel extends EducationEntity {
   const EducationModel({
     required super.id,
@@ -47,12 +51,87 @@ class EducationModel extends EducationEntity {
     super.skills,
     required super.order,
     required super.visible,
-    required super.createdAt,
-    required super.updatedAt,
+    super.createdAt,
+    super.updatedAt,
   });
 
-  factory EducationModel.fromJson(Map<String, dynamic> json) =>
-      _$EducationModelFromJson(json);
+  factory EducationModel.fromJson(Map<String, dynamic> json) {
+    // Handle potential null values with safe defaults
+    return EducationModel(
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      institution: json['institution']?.toString() ?? '',
+      description: json['description']?.toString(),
+      type: _parseEducationType(json['type']),
+      degreeLevel: _parseDegreeLevel(json['degree_level']),
+      fieldOfStudy: json['field_of_study']?.toString(),
+      startDate: json['start_date'] != null 
+          ? DateTime.tryParse(json['start_date'].toString())
+          : null,
+      endDate: json['end_date'] != null 
+          ? DateTime.tryParse(json['end_date'].toString())
+          : null,
+      completionDate: json['completion_date'] != null 
+          ? DateTime.tryParse(json['completion_date'].toString())
+          : null,
+      grade: json['grade']?.toString(),
+      credits: json['credits'] != null 
+          ? int.tryParse(json['credits'].toString())
+          : null,
+      certificateId: json['certificate_id']?.toString(),
+      issuer: json['issuer']?.toString(),
+      validityPeriod: json['validity_period']?.toString(),
+      pdfDocument: json['pdf_document']?.toString(),
+      verificationUrl: json['verification_url']?.toString(),
+      skills: json['skills'] is List 
+          ? (json['skills'] as List).map((e) => e.toString()).toList()
+          : null,
+      order: json['order'] != null 
+          ? int.tryParse(json['order'].toString()) ?? 0
+          : 0,
+      visible: json['visible'] is bool 
+          ? json['visible'] as bool
+          : true,
+      createdAt: json['created_at'] != null 
+          ? DateTime.tryParse(json['created_at'].toString())
+          : null,
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.tryParse(json['updated_at'].toString())
+          : null,
+    );
+  }
+
+  static EducationType _parseEducationType(dynamic value) {
+    if (value == null) return EducationType.degree;
+    final stringValue = value.toString().toLowerCase();
+    switch (stringValue) {
+      case 'certificate':
+        return EducationType.certificate;
+      case 'degree':
+      default:
+        return EducationType.degree;
+    }
+  }
+
+  static DegreeLevel? _parseDegreeLevel(dynamic value) {
+    if (value == null) return null;
+    final stringValue = value.toString().toLowerCase();
+    switch (stringValue) {
+      case 'associate':
+        return DegreeLevel.associate;
+      case 'bachelor':
+        return DegreeLevel.bachelor;
+      case 'master':
+        return DegreeLevel.master;
+      case 'doctorate':
+        return DegreeLevel.doctorate;
+      case 'diploma':
+        return DegreeLevel.diploma;
+      default:
+        return null;
+    }
+  }
 
   Map<String, dynamic> toJson() => _$EducationModelToJson(this);
 

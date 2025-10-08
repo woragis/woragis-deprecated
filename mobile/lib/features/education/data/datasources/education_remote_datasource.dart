@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/education_entity.dart';
 import '../models/education_model.dart';
 
@@ -65,8 +66,7 @@ abstract class EducationRemoteDataSource {
 }
 
 class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
-  final http.Client _client = http.Client();
-  final String _baseUrl;
+  final ApiClient _apiClient;
 
   // Simple in-memory cache
   static final Map<String, dynamic> _cache = {};
@@ -74,8 +74,9 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   EducationRemoteDataSourceImpl({
+    required ApiClient apiClient,
     required String baseUrl,
-  }) : _baseUrl = baseUrl;
+  }) : _apiClient = apiClient;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -132,8 +133,10 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
 
         log('🔍 Education List API Request: /admin/education');
 
-        final uri = Uri.parse('$_baseUrl/admin/education').replace(queryParameters: queryParams);
-        final response = await _client.get(uri);
+        final response = await _apiClient.get(
+          'admin/education',
+          queryParameters: queryParams,
+        );
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -167,7 +170,7 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
       try {
         log('🔍 Education by ID API Request: /admin/education/$id');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/admin/education/$id'));
+        final response = await _apiClient.get('admin/education/$id');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -215,10 +218,9 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
     required bool visible,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/education'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+      final response = await _apiClient.post(
+        'admin/education',
+        body: {
           'title': title,
           'institution': institution,
           if (description != null) 'description': description,
@@ -238,7 +240,7 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
           if (skills != null) 'skills': skills,
           'order': order,
           'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -293,10 +295,9 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
     bool? visible,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/education/$id'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+      final response = await _apiClient.put(
+        'admin/education/$id',
+        body: {
           if (title != null) 'title': title,
           if (institution != null) 'institution': institution,
           if (description != null) 'description': description,
@@ -316,7 +317,7 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
           if (skills != null) 'skills': skills,
           if (order != null) 'order': order,
           if (visible != null) 'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -353,7 +354,7 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
   @override
   Future<void> deleteEducation(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/admin/education/$id'));
+      final response = await _apiClient.delete('admin/education/$id');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         // Invalidate education cache
@@ -379,10 +380,9 @@ class EducationRemoteDataSourceImpl implements EducationRemoteDataSource {
   @override
   Future<void> updateEducationOrder(List<Map<String, dynamic>> educationOrders) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/education/order'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'educationOrders': educationOrders}),
+      final response = await _apiClient.put(
+        'admin/education/order',
+        body: {'educationOrders': educationOrders},
       );
 
       if (response.statusCode != 200) {
