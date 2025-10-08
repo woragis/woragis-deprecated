@@ -199,6 +199,56 @@ class ApiClient {
     }
   }
 
+  // Unauthenticated requests (for login/register)
+  /// Build headers without auth token (only API key)
+  Map<String, String> _buildUnauthenticatedHeaders({Map<String, String>? additionalHeaders}) {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      EnvConfig.apiKeyHeader: EnvConfig.apiKey,
+    };
+
+    // Add any additional headers
+    if (additionalHeaders != null) {
+      headers.addAll(additionalHeaders);
+    }
+
+    if (EnvConfig.networkLogging) {
+      log('📤 Unauthenticated Request Headers: ${headers.keys.join(", ")}');
+    }
+
+    return headers;
+  }
+
+  /// POST request without authentication (for login/register)
+  Future<http.Response> postUnauthenticated(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+  }) async {
+    final uri = Uri.parse(_buildUrl(path));
+
+    if (EnvConfig.networkLogging) {
+      log('📡 POST (Unauth) ${uri.toString()}');
+      if (body != null) {
+        log('📦 Request Body: ${json.encode(body)}');
+      }
+    }
+
+    try {
+      final response = await _httpClient.post(
+        uri,
+        headers: _buildUnauthenticatedHeaders(additionalHeaders: headers),
+        body: body != null ? json.encode(body) : null,
+      );
+
+      _logResponse(response, 'POST (Unauth)', uri.toString());
+      return response;
+    } catch (e) {
+      log('❌ POST (Unauth) request failed: $e');
+      rethrow;
+    }
+  }
+
   /// Log response details
   void _logResponse(http.Response response, String method, String url) {
     if (!EnvConfig.networkLogging) return;

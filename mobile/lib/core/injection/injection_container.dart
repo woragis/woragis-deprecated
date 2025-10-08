@@ -192,7 +192,7 @@ void _initAuth() {
   
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(
-      baseUrl: EnvConfig.apiBaseUrl,
+      apiClient: sl<ApiClient>(),
     ),
   );
 
@@ -233,12 +233,12 @@ void _initAuth() {
 void _initBlog() {
   // Data sources
   sl.registerLazySingleton<BlogLocalDataSource>(
-    () => BlogLocalDataSourceImpl(),
+    () => BlogLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<BlogRemoteDataSource>(
     () => BlogRemoteDataSourceImpl(
-      baseUrl: EnvConfig.apiBaseUrl,
+      apiClient: sl<ApiClient>(),
     ),
   );
 
@@ -274,12 +274,12 @@ void _initBlog() {
 void _initProjects() {
   // Data sources
   sl.registerLazySingleton<ProjectsLocalDataSource>(
-    () => ProjectsLocalDataSourceImpl(),
+    () => ProjectsLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<ProjectsRemoteDataSource>(
     () => ProjectsRemoteDataSourceImpl(
-      baseUrl: EnvConfig.apiBaseUrl,
+      apiClient: sl<ApiClient>(),
     ),
   );
 
@@ -302,6 +302,8 @@ void _initProjects() {
   sl.registerLazySingleton(() => UpdateProjectOrderUseCase(sl()));
   sl.registerLazySingleton(() => IncrementProjectViewCountUseCase(sl()));
   sl.registerLazySingleton(() => IncrementProjectLikeCountUseCase(sl()));
+  sl.registerLazySingleton(() => ToggleProjectFeaturedUseCase(sl()));
+  sl.registerLazySingleton(() => ToggleProjectVisibilityUseCase(sl()));
 
   // BLoCs (local UI state only)
   sl.registerFactory(() => ProjectsBloc(
@@ -329,6 +331,7 @@ void _initFrameworks() {
   
   sl.registerLazySingleton<FrameworksRemoteDataSource>(
     () => FrameworksRemoteDataSourceImpl(
+      apiClient: sl<ApiClient>(),
       baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
@@ -361,12 +364,12 @@ void _initFrameworks() {
 void _initAbout() {
   // Data sources
   sl.registerLazySingleton<AboutLocalDataSource>(
-    () => AboutLocalDataSourceImpl(),
+    () => AboutLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<AboutRemoteDataSource>(
     () => AboutRemoteDataSourceImpl(
-      baseUrl: EnvConfig.apiBaseUrl,
+      apiClient: sl<ApiClient>(),
     ),
   );
 
@@ -418,7 +421,7 @@ void _initAbout() {
 void _initEducation() {
   // Data sources
   sl.registerLazySingleton<EducationLocalDataSource>(
-    () => EducationLocalDataSourceImpl(),
+    () => EducationLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<EducationRemoteDataSource>(
@@ -459,12 +462,12 @@ void _initEducation() {
 void _initExperience() {
   // Data sources
   sl.registerLazySingleton<ExperienceLocalDataSource>(
-    () => ExperienceLocalDataSourceImpl(),
+    () => ExperienceLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<ExperienceRemoteDataSource>(
     () => ExperienceRemoteDataSourceImpl(
-      baseUrl: EnvConfig.apiBaseUrl,
+      apiClient: sl<ApiClient>(),
     ),
   );
 
@@ -504,6 +507,7 @@ void _initMoney() {
   
   sl.registerLazySingleton<MoneyRemoteDataSource>(
     () => MoneyRemoteDataSourceImpl(
+      apiClient: sl<ApiClient>(),
       baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
@@ -559,6 +563,7 @@ void _initTestimonials() {
   
   sl.registerLazySingleton<TestimonialsRemoteDataSource>(
     () => TestimonialsRemoteDataSourceImpl(
+      apiClient: sl<ApiClient>(),
       baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
@@ -603,7 +608,7 @@ void _initSettings() {
   
   sl.registerLazySingleton<SettingsRemoteDataSource>(
     () => SettingsRemoteDataSourceImpl(
-      client: sl(),
+      apiClient: sl<ApiClient>(),
       baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
