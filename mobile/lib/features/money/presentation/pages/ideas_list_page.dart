@@ -20,13 +20,22 @@ class _IdeasListPageState extends State<IdeasListPage> {
   void initState() {
     super.initState();
     // Load ideas when page initializes
-    context.read<MoneyBloc>().add(GetIdeasRequested());
+    _loadIdeas();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadIdeas() {
+    final searchQuery = _searchController.text.trim();
+    context.read<MoneyBloc>().add(GetIdeasRequested(
+      search: searchQuery.isEmpty ? null : searchQuery,
+      featured: _showFeaturedOnly,
+      public: _showPublicOnly,
+    ));
   }
 
   @override
@@ -315,7 +324,11 @@ class _IdeasListPageState extends State<IdeasListPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/money/ideas/${idea.id}'),
+        onTap: () async {
+          await context.push('/money/ideas/${idea.id}');
+          // Reload list when returning from detail page
+          _loadIdeas();
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

@@ -387,4 +387,32 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       return Left(CacheFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> toggleProjectFeatured(String id) async {
+    try {
+      await remoteDataSource.toggleProjectFeatured(id);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
+    } catch (e) {
+      return Left(UnexpectedFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> toggleProjectVisibility(String id) async {
+    try {
+      await remoteDataSource.toggleProjectVisibility(id);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
+    } catch (e) {
+      return Left(UnexpectedFailure(e.toString()));
+    }
+  }
 }

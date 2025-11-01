@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/sync_manager.dart';
+import '../../../../core/stores/auth_store.dart';
 import '../../domain/entities/about_core_entity.dart';
 import '../../domain/entities/biography_entity.dart';
 import '../../domain/entities/anime_entity.dart';
@@ -41,6 +42,28 @@ abstract class AboutLocalDataSource {
 class AboutLocalDataSourceImpl implements AboutLocalDataSource {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final SyncManager _syncManager = SyncManager();
+  final AuthStoreBloc? _authStore;
+  
+  AboutLocalDataSourceImpl({AuthStoreBloc? authStore}) : _authStore = authStore;
+
+  /// Ensure required NOT NULL fields are always present
+  Map<String, dynamic> _ensureRequiredFields(Map<String, dynamic> data) {
+    final safeData = Map<String, dynamic>.from(data);
+    
+    // ✅ ENSURE user_id is always present (NOT NULL constraint)
+    if (!safeData.containsKey('user_id') || safeData['user_id'] == null || safeData['user_id'] == '') {
+      // Try to get user ID from auth store
+      final currentUserId = _authStore?.state.user?.id;
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        safeData['user_id'] = currentUserId;
+      } else {
+        // Fallback to a default user ID if not authenticated
+        safeData['user_id'] = 'system';
+      }
+    }
+    
+    return safeData;
+  }
 
   // About Core Implementation
   @override
@@ -57,9 +80,11 @@ class AboutLocalDataSourceImpl implements AboutLocalDataSource {
     aboutCoreMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
     aboutCoreMap['is_dirty'] = 0;
 
+    final safeAboutCoreMap = _ensureRequiredFields(aboutCoreMap);
+
     await db.insert(
       'about_core',
-      aboutCoreMap,
+      safeAboutCoreMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -71,9 +96,11 @@ class AboutLocalDataSourceImpl implements AboutLocalDataSource {
     aboutCoreMap['updated_at'] = DateTime.now().millisecondsSinceEpoch;
     aboutCoreMap['is_dirty'] = 1;
 
+    final safeAboutCoreMap = _ensureRequiredFields(aboutCoreMap);
+
     await db.update(
       'about_core',
-      aboutCoreMap,
+      safeAboutCoreMap,
       where: 'id = ?',
       whereArgs: [aboutCore.id],
     );

@@ -229,7 +229,7 @@ class _MusicGenresPageState extends State<MusicGenresPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: _getGenreColor(genre.name).withOpacity(0.1),
+                      color: _getGenreColor(genre.name).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -298,7 +298,7 @@ class _MusicGenresPageState extends State<MusicGenresPage> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: _getGenreColor(genre.name).withOpacity(0.1),
+            color: _getGenreColor(genre.name).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(

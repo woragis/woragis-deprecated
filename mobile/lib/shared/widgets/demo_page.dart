@@ -107,7 +107,7 @@ class _WoragisDemoPageState extends State<WoragisDemoPage>
                     IconButton(
                       icon: Icon(
                         isDark ? Icons.light_mode : Icons.dark_mode,
-                        color: colorScheme.onBackground,
+                        color: colorScheme.onSurface,
                       ),
                       onPressed: () {
                         HapticFeedback.lightImpact();
@@ -245,7 +245,7 @@ class _WoragisDemoPageState extends State<WoragisDemoPage>
       children: [
         Text(
           title,
-          style: WoragisTextStyles.headlineMedium(colorScheme.onBackground),
+          style: WoragisTextStyles.headlineMedium(colorScheme.onSurface),
         ),
         const SizedBox(height: WoragisStyles.spacingXs),
         Text(

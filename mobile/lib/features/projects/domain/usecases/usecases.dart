@@ -8,3 +8,5 @@ export 'delete_project_usecase.dart';
 export 'update_project_order_usecase.dart';
 export 'increment_project_view_count_usecase.dart';
 export 'increment_project_like_count_usecase.dart';
+export 'toggle_project_featured_usecase.dart';
+export 'toggle_project_visibility_usecase.dart';

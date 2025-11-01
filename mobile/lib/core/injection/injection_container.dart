@@ -239,6 +239,7 @@ void _initBlog() {
   sl.registerLazySingleton<BlogRemoteDataSource>(
     () => BlogRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
+      baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
 
@@ -326,7 +327,9 @@ void _initProjects() {
 void _initFrameworks() {
   // Data sources
   sl.registerLazySingleton<FrameworksLocalDataSource>(
-    () => FrameworksLocalDataSourceImpl(),
+    () => FrameworksLocalDataSourceImpl(
+      authStoreBloc: sl<AuthStoreBloc>(),
+    ),
   );
   
   sl.registerLazySingleton<FrameworksRemoteDataSource>(
@@ -370,6 +373,7 @@ void _initAbout() {
   sl.registerLazySingleton<AboutRemoteDataSource>(
     () => AboutRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
+      baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
 
@@ -427,6 +431,7 @@ void _initEducation() {
   sl.registerLazySingleton<EducationRemoteDataSource>(
     () => EducationRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
+      baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
 
@@ -468,6 +473,7 @@ void _initExperience() {
   sl.registerLazySingleton<ExperienceRemoteDataSource>(
     () => ExperienceRemoteDataSourceImpl(
       apiClient: sl<ApiClient>(),
+      baseUrl: EnvConfig.apiBaseUrl,
     ),
   );
 
@@ -502,7 +508,7 @@ void _initExperience() {
 void _initMoney() {
   // Data sources
   sl.registerLazySingleton<MoneyLocalDataSource>(
-    () => MoneyLocalDataSourceImpl(),
+    () => MoneyLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<MoneyRemoteDataSource>(
@@ -558,7 +564,7 @@ void _initMoney() {
 void _initTestimonials() {
   // Data sources
   sl.registerLazySingleton<TestimonialsLocalDataSource>(
-    () => TestimonialsLocalDataSourceImpl(),
+    () => TestimonialsLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<TestimonialsRemoteDataSource>(
@@ -603,7 +609,7 @@ void _initTestimonials() {
 void _initSettings() {
   // Data sources
   sl.registerLazySingleton<SettingsLocalDataSource>(
-    () => SettingsLocalDataSourceImpl(),
+    () => SettingsLocalDataSourceImpl(authStore: sl<AuthStoreBloc>()),
   );
   
   sl.registerLazySingleton<SettingsRemoteDataSource>(

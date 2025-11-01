@@ -93,6 +93,7 @@ class CreateFramework extends FrameworksEvent {
   final String? description;
   final String? icon;
   final String? color;
+  final String? website;
   final String type;
   final String? proficiencyLevel;
   final int order;
@@ -105,6 +106,7 @@ class CreateFramework extends FrameworksEvent {
     this.description,
     this.icon,
     this.color,
+    this.website,
     required this.type,
     this.proficiencyLevel,
     required this.order,
@@ -113,7 +115,7 @@ class CreateFramework extends FrameworksEvent {
   });
 
   @override
-  List<Object?> get props => [name, slug, description, icon, color, type, proficiencyLevel, order, visible, public];
+  List<Object?> get props => [name, slug, description, icon, color, website, type, proficiencyLevel, order, visible, public];
 }
 
 class UpdateFramework extends FrameworksEvent {
@@ -123,6 +125,7 @@ class UpdateFramework extends FrameworksEvent {
   final String? description;
   final String? icon;
   final String? color;
+  final String? website;
   final String? type;
   final String? proficiencyLevel;
   final int? order;
@@ -136,6 +139,7 @@ class UpdateFramework extends FrameworksEvent {
     this.description,
     this.icon,
     this.color,
+    this.website,
     this.type,
     this.proficiencyLevel,
     this.order,
@@ -144,7 +148,7 @@ class UpdateFramework extends FrameworksEvent {
   });
 
   @override
-  List<Object?> get props => [id, name, slug, description, icon, color, type, proficiencyLevel, order, visible, public];
+  List<Object?> get props => [id, name, slug, description, icon, color, website, type, proficiencyLevel, order, visible, public];
 }
 
 class DeleteFramework extends FrameworksEvent {
@@ -418,6 +422,7 @@ class FrameworksBloc extends Bloc<FrameworksEvent, FrameworksState> {
       description: event.description,
       icon: event.icon,
       color: event.color,
+      website: event.website,
       type: event.type,
       proficiencyLevel: event.proficiencyLevel,
       order: event.order,
@@ -444,6 +449,7 @@ class FrameworksBloc extends Bloc<FrameworksEvent, FrameworksState> {
       description: event.description,
       icon: event.icon,
       color: event.color,
+      website: event.website,
       type: event.type,
       proficiencyLevel: event.proficiencyLevel,
       order: event.order,

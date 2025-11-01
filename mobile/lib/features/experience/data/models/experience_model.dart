@@ -4,6 +4,25 @@ import '../../domain/entities/experience_entity.dart';
 
 part 'experience_model.g.dart';
 
+// Helper methods for safe type conversion
+extension ExperienceModelHelpers on ExperienceModel {
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is num) return value.toInt();
+    return 0;
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+}
+
 @JsonSerializable()
 class ExperienceModel extends ExperienceEntity {
   const ExperienceModel({
@@ -23,8 +42,29 @@ class ExperienceModel extends ExperienceEntity {
     required super.updatedAt,
   });
 
-  factory ExperienceModel.fromJson(Map<String, dynamic> json) =>
-      _$ExperienceModelFromJson(json);
+  factory ExperienceModel.fromJson(Map<String, dynamic> json) {
+    try {
+      return _$ExperienceModelFromJson(json);
+    } catch (e) {
+      // Fallback: manually parse with safe type conversion
+      return ExperienceModel(
+        id: json['id'] as String,
+        userId: json['userId'] as String,
+        title: json['title'] as String,
+        company: json['company'] as String,
+        period: json['period'] as String,
+        location: json['location'] as String,
+        description: json['description'] as String,
+        achievements: List<String>.from(json['achievements'] as List),
+        technologies: List<String>.from(json['technologies'] as List),
+        icon: json['icon'] as String,
+        order: ExperienceModelHelpers._parseInt(json['order']),
+        visible: ExperienceModelHelpers._parseBool(json['visible']),
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: DateTime.parse(json['updatedAt'] as String),
+      );
+    }
+  }
 
   Map<String, dynamic> toJson() => _$ExperienceModelToJson(this);
 

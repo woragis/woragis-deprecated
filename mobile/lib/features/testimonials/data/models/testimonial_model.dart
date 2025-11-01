@@ -3,6 +3,25 @@ import '../../domain/entities/testimonial_entity.dart';
 
 part 'testimonial_model.g.dart';
 
+// Helper methods for safe type conversion
+extension TestimonialModelHelpers on TestimonialModel {
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is num) return value.toInt();
+    return 0;
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+}
+
 @JsonSerializable()
 class TestimonialModel extends TestimonialEntity {
   const TestimonialModel({
@@ -22,8 +41,29 @@ class TestimonialModel extends TestimonialEntity {
     required super.updatedAt,
   });
 
-  factory TestimonialModel.fromJson(Map<String, dynamic> json) =>
-      _$TestimonialModelFromJson(json);
+  factory TestimonialModel.fromJson(Map<String, dynamic> json) {
+    try {
+      return _$TestimonialModelFromJson(json);
+    } catch (e) {
+      // Fallback: manually parse with safe type conversion
+      return TestimonialModel(
+        id: json['id'] as String,
+        userId: json['userId'] as String,
+        name: json['name'] as String,
+        position: json['position'] as String,
+        company: json['company'] as String,
+        content: json['content'] as String,
+        avatar: json['avatar'] as String?,
+        rating: TestimonialModelHelpers._parseInt(json['rating']),
+        featured: TestimonialModelHelpers._parseBool(json['featured']),
+        order: TestimonialModelHelpers._parseInt(json['order']),
+        visible: TestimonialModelHelpers._parseBool(json['visible']),
+        public: TestimonialModelHelpers._parseBool(json['public']),
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: DateTime.parse(json['updatedAt'] as String),
+      );
+    }
+  }
 
   // Custom methods for API (camelCase) and Local Storage (snake_case) conversion
   factory TestimonialModel.fromApiJson(Map<String, dynamic> json) {

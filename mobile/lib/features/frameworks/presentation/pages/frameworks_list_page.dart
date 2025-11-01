@@ -23,13 +23,26 @@ class _FrameworksListPageState extends State<FrameworksListPage> {
   @override
   void initState() {
     super.initState();
-    context.read<FrameworksBloc>().add(const LoadFrameworks());
+    _loadFrameworks();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadFrameworks() {
+    context.read<FrameworksBloc>().add(LoadFrameworks(
+      page: 1,
+      limit: 20,
+      search: _searchController.text.isEmpty ? null : _searchController.text,
+      type: _selectedType,
+      visible: _selectedVisible,
+      public: _selectedPublic,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
+    ));
   }
 
   void _applyFilters() {
@@ -327,8 +340,10 @@ class _FrameworksListPageState extends State<FrameworksListPage> {
   Widget _buildFrameworkCard(FrameworkEntity framework) {
     return Card(
       child: InkWell(
-        onTap: () {
-          context.push('/frameworks/${framework.id}');
+        onTap: () async {
+          await context.push('/frameworks/${framework.id}');
+          // Reload list when returning from detail page
+          _loadFrameworks();
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -543,8 +558,10 @@ class _FrameworksListPageState extends State<FrameworksListPage> {
             const Icon(Icons.arrow_forward_ios, size: 16),
           ],
         ),
-        onTap: () {
-          context.push('/frameworks/${framework.id}');
+        onTap: () async {
+          await context.push('/frameworks/${framework.id}');
+          // Reload list when returning from detail page
+          _loadFrameworks();
         },
       ),
     );

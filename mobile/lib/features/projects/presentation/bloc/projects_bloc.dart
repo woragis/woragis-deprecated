@@ -201,6 +201,24 @@ class IncrementLikeCountRequested extends ProjectsEvent {
   List<Object> get props => [projectId];
 }
 
+class ToggleProjectFeaturedRequested extends ProjectsEvent {
+  final String projectId;
+
+  const ToggleProjectFeaturedRequested(this.projectId);
+
+  @override
+  List<Object> get props => [projectId];
+}
+
+class ToggleProjectVisibilityRequested extends ProjectsEvent {
+  final String projectId;
+
+  const ToggleProjectVisibilityRequested(this.projectId);
+
+  @override
+  List<Object> get props => [projectId];
+}
+
 // States
 abstract class ProjectsState extends Equatable {
   const ProjectsState();
@@ -294,6 +312,24 @@ class LikeCountIncremented extends ProjectsState {
   List<Object> get props => [projectId];
 }
 
+class ProjectFeaturedToggled extends ProjectsState {
+  final String projectId;
+
+  const ProjectFeaturedToggled(this.projectId);
+
+  @override
+  List<Object> get props => [projectId];
+}
+
+class ProjectVisibilityToggled extends ProjectsState {
+  final String projectId;
+
+  const ProjectVisibilityToggled(this.projectId);
+
+  @override
+  List<Object> get props => [projectId];
+}
+
 // BLoC
 class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   final GetProjectsUseCase getProjectsUseCase;
@@ -305,6 +341,8 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   final UpdateProjectOrderUseCase updateProjectOrderUseCase;
   final IncrementProjectViewCountUseCase incrementViewCountUseCase;
   final IncrementProjectLikeCountUseCase incrementLikeCountUseCase;
+  final ToggleProjectFeaturedUseCase toggleProjectFeaturedUseCase;
+  final ToggleProjectVisibilityUseCase toggleProjectVisibilityUseCase;
 
   ProjectsBloc({
     required this.getProjectsUseCase,
@@ -316,6 +354,8 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
     required this.updateProjectOrderUseCase,
     required this.incrementViewCountUseCase,
     required this.incrementLikeCountUseCase,
+    required this.toggleProjectFeaturedUseCase,
+    required this.toggleProjectVisibilityUseCase,
   }) : super(ProjectsInitial()) {
     on<GetProjectsRequested>(_onGetProjectsRequested);
     on<GetProjectByIdRequested>(_onGetProjectByIdRequested);
@@ -325,6 +365,8 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
     on<UpdateProjectOrderRequested>(_onUpdateProjectOrderRequested);
     on<IncrementViewCountRequested>(_onIncrementViewCountRequested);
     on<IncrementLikeCountRequested>(_onIncrementLikeCountRequested);
+    on<ToggleProjectFeaturedRequested>(_onToggleProjectFeaturedRequested);
+    on<ToggleProjectVisibilityRequested>(_onToggleProjectVisibilityRequested);
   }
 
   Future<void> _onGetProjectsRequested(
@@ -475,6 +517,30 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
       (_) => emit(LikeCountIncremented(event.projectId)),
     );
   }
+
+  Future<void> _onToggleProjectFeaturedRequested(
+    ToggleProjectFeaturedRequested event,
+    Emitter<ProjectsState> emit,
+  ) async {
+    final result = await toggleProjectFeaturedUseCase(event.projectId);
+
+    result.fold(
+      (failure) => emit(ProjectsError(failure.message)),
+      (_) => emit(ProjectFeaturedToggled(event.projectId)),
+    );
+  }
+
+  Future<void> _onToggleProjectVisibilityRequested(
+    ToggleProjectVisibilityRequested event,
+    Emitter<ProjectsState> emit,
+  ) async {
+    final result = await toggleProjectVisibilityUseCase(event.projectId);
+
+    result.fold(
+      (failure) => emit(ProjectsError(failure.message)),
+      (_) => emit(ProjectVisibilityToggled(event.projectId)),
+    );
+  }
 }
 
 // Factory function for creating ProjectsBloc with dependency injection
@@ -489,5 +555,7 @@ ProjectsBloc createProjectsBloc() {
     updateProjectOrderUseCase: sl<UpdateProjectOrderUseCase>(),
     incrementViewCountUseCase: sl<IncrementProjectViewCountUseCase>(),
     incrementLikeCountUseCase: sl<IncrementProjectLikeCountUseCase>(),
+    toggleProjectFeaturedUseCase: sl<ToggleProjectFeaturedUseCase>(),
+    toggleProjectVisibilityUseCase: sl<ToggleProjectVisibilityUseCase>(),
   );
 }

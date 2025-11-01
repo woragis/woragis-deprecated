@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/idea_entity.dart';
 import '../../domain/entities/ai_chat_entity.dart';
 import '../../domain/entities/idea_node_entity.dart';
@@ -141,7 +142,7 @@ abstract class MoneyRemoteDataSource {
 }
 
 class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
-  final http.Client _client = http.Client();
+  final ApiClient _apiClient;
   final String _baseUrl;
 
   // Simple in-memory cache
@@ -150,8 +151,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   MoneyRemoteDataSourceImpl({
+    required ApiClient apiClient,
     required String baseUrl,
-  }) : _baseUrl = baseUrl;
+  })  : _apiClient = apiClient,
+        _baseUrl = baseUrl;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -211,8 +214,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
 
         log('🔍 Ideas List API Request: /api/money/ideas');
 
-        final uri = Uri.parse('$_baseUrl/api/money/ideas').replace(queryParameters: queryParams);
-        final response = await _client.get(uri);
+        final response = await _apiClient.get('/api/money/ideas', queryParameters: queryParams);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -246,7 +248,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
       try {
         log('🔍 Idea by ID API Request: /api/money/ideas/$id');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/api/money/ideas/$id'));
+        final response = await _apiClient.get('/api/money/ideas/$id');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -274,7 +276,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<IdeaEntity> getIdeaBySlug(String slug) async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/api/money/ideas/slug/$slug'));
+      final response = await _apiClient.get('/api/money/ideas/slug/$slug');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -310,10 +312,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     required int order,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/api/money/ideas'),
+      final response = await _apiClient.post(
+        '/api/money/ideas',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'title': title,
           'slug': slug,
           'document': document,
@@ -322,7 +324,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
           'visible': visible,
           'public': public,
           'order': order,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -366,10 +368,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     int? order,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/api/money/ideas/$id'),
+      final response = await _apiClient.put(
+        '/api/money/ideas/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (title != null) 'title': title,
           if (slug != null) 'slug': slug,
           if (document != null) 'document': document,
@@ -378,7 +380,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
           if (visible != null) 'visible': visible,
           if (public != null) 'public': public,
           if (order != null) 'order': order,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -415,7 +417,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<void> deleteIdea(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/api/money/ideas/$id'));
+      final response = await _apiClient.delete('/api/money/ideas/$id');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         // Invalidate ideas cache
@@ -463,8 +465,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
       if (sortBy != null) queryParams['sortBy'] = sortBy;
       if (sortOrder != null) queryParams['sortOrder'] = sortOrder;
 
-      final uri = Uri.parse('$_baseUrl/api/money/ai-chats').replace(queryParameters: queryParams);
-      final response = await _client.get(uri);
+      final response = await _apiClient.get('/api/money/ai-chats', queryParameters: queryParams);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -497,7 +498,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
       try {
         log('🔍 AI Chat by ID API Request: /api/money/ai-chats/$id');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/api/money/ai-chats/$id'));
+        final response = await _apiClient.get('/api/money/ai-chats/$id');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -535,10 +536,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     required bool archived,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/api/money/ai-chats'),
+      final response = await _apiClient.post(
+        '/api/money/ai-chats',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'title': title,
           if (ideaNodeId != null) 'ideaNodeId': ideaNodeId,
           'agent': agent,
@@ -548,7 +549,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
           if (maxTokens != null) 'maxTokens': maxTokens,
           'visible': visible,
           'archived': archived,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -593,10 +594,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     bool? archived,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/api/money/ai-chats/$id'),
+      final response = await _apiClient.put(
+        '/api/money/ai-chats/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (title != null) 'title': title,
           if (ideaNodeId != null) 'ideaNodeId': ideaNodeId,
           if (agent != null) 'agent': agent,
@@ -606,7 +607,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
           if (maxTokens != null) 'maxTokens': maxTokens,
           if (visible != null) 'visible': visible,
           if (archived != null) 'archived': archived,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -643,7 +644,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<void> deleteAiChat(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/api/money/ai-chats/$id'));
+      final response = await _apiClient.delete('/api/money/ai-chats/$id');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         // Invalidate AI chats cache
@@ -672,12 +673,12 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     required String message,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/api/money/ai-chats/$chatId/messages'),
+      final response = await _apiClient.post(
+        '/api/money/ai-chats/$chatId/messages',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'message': message,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -708,7 +709,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<List<ChatMessageEntity>> getChatMessages(String chatId) async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/api/money/ai-chats/$chatId/messages'));
+      final response = await _apiClient.get('/api/money/ai-chats/$chatId/messages');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -752,8 +753,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
       if (limit != null) queryParams['limit'] = limit.toString();
       if (offset != null) queryParams['offset'] = offset.toString();
 
-      final uri = Uri.parse('$_baseUrl/api/money/idea-nodes').replace(queryParameters: queryParams);
-      final response = await _client.get(uri);
+      final response = await _apiClient.get('/api/money/idea-nodes', queryParameters: queryParams);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -781,7 +781,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<IdeaNodeEntity> getIdeaNodeById(String id) async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/api/money/idea-nodes/$id'));
+      final response = await _apiClient.get('/api/money/idea-nodes/$id');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -820,10 +820,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     required bool visible,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/api/money/idea-nodes'),
+      final response = await _apiClient.post(
+        '/api/money/idea-nodes',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'ideaId': ideaId,
           'title': title,
           if (content != null) 'content': content,
@@ -835,7 +835,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
           if (color != null) 'color': color,
           'connections': connections,
           'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -876,10 +876,10 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     bool? visible,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/api/money/idea-nodes/$id'),
+      final response = await _apiClient.put(
+        '/api/money/idea-nodes/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (title != null) 'title': title,
           if (content != null) 'content': content,
           if (type != null) 'type': type,
@@ -890,7 +890,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
           if (color != null) 'color': color,
           if (connections != null) 'connections': connections,
           if (visible != null) 'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -921,7 +921,7 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<void> deleteIdeaNode(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/api/money/idea-nodes/$id'));
+      final response = await _apiClient.delete('/api/money/idea-nodes/$id');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return;
@@ -949,13 +949,13 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     required double positionY,
   }) async {
     try {
-      final response = await _client.patch(
-        Uri.parse('$_baseUrl/api/money/idea-nodes/$id/position'),
+      final response = await _apiClient.patch(
+        '/api/money/idea-nodes/$id/position',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'positionX': positionX,
           'positionY': positionY,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -983,12 +983,12 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
   @override
   Future<void> updateNodePositions(List<Map<String, dynamic>> positions) async {
     try {
-      final response = await _client.patch(
-        Uri.parse('$_baseUrl/api/money/idea-nodes/positions'),
+      final response = await _apiClient.patch(
+        '/api/money/idea-nodes/positions',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'positions': positions,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -1012,12 +1012,12 @@ class MoneyRemoteDataSourceImpl implements MoneyRemoteDataSource {
     required List<String> connections,
   }) async {
     try {
-      final response = await _client.patch(
-        Uri.parse('$_baseUrl/api/money/idea-nodes/$id/connections'),
+      final response = await _apiClient.patch(
+        '/api/money/idea-nodes/$id/connections',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'connections': connections,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {

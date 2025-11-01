@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/experience_entity.dart';
 import '../models/experience_model.dart';
 
@@ -46,7 +47,7 @@ abstract class ExperienceRemoteDataSource {
 }
 
 class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
-  final http.Client _client = http.Client();
+  final ApiClient _apiClient;
   final String _baseUrl;
 
   // Simple in-memory cache
@@ -55,8 +56,10 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   ExperienceRemoteDataSourceImpl({
+    required ApiClient apiClient,
     required String baseUrl,
-  }) : _baseUrl = baseUrl;
+  })  : _apiClient = apiClient,
+        _baseUrl = baseUrl;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -109,16 +112,9 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
 
         log('🔍 Experience List API Request: /admin/experience');
 
-        final uri = Uri.parse('$_baseUrl/admin/experience').replace(
+        final response = await _apiClient.get(
+          '/admin/experience',
           queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString())),
-        );
-
-        final response = await _client.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
         );
 
         if (response.statusCode == 200) {
@@ -151,8 +147,8 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
       try {
         log('🔍 Experience by ID API Request: /admin/experience/$id');
 
-        final uri = Uri.parse('$_baseUrl/admin/experience/$id');
-        final response = await _client.get(
+        final uri = '/admin/experience/$id';
+        final response = await _apiClient.get(
           uri,
           headers: {
             'Content-Type': 'application/json',
@@ -193,14 +189,14 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
     try {
       log('🔍 Create Experience API Request: /admin/experience');
 
-      final uri = Uri.parse('$_baseUrl/admin/experience');
-      final response = await _client.post(
+      final uri = '/admin/experience';
+      final response = await _apiClient.post(
         uri,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: json.encode({
+        body: {
           'title': title,
           'company': company,
           'description': description,
@@ -208,7 +204,7 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
           'endDate': endDate,
           'visible': visible,
           'order': order,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -248,14 +244,14 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
     try {
       log('🔍 Update Experience API Request: /admin/experience/$id');
 
-      final uri = Uri.parse('$_baseUrl/admin/experience/$id');
-      final response = await _client.put(
+      final uri = '/admin/experience/$id';
+      final response = await _apiClient.put(
         uri,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: json.encode({
+        body: {
           if (title != null) 'title': title,
           if (company != null) 'company': company,
           if (description != null) 'description': description,
@@ -263,7 +259,7 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
           if (endDate != null) 'endDate': endDate,
           if (visible != null) 'visible': visible,
           if (order != null) 'order': order,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -295,8 +291,8 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
     try {
       log('🔍 Delete Experience API Request: /admin/experience/$id');
 
-      final uri = Uri.parse('$_baseUrl/admin/experience/$id');
-      final response = await _client.delete(
+      final uri = '/admin/experience/$id';
+      final response = await _apiClient.delete(
         uri,
         headers: {
           'Content-Type': 'application/json',
@@ -329,16 +325,11 @@ class ExperienceRemoteDataSourceImpl implements ExperienceRemoteDataSource {
     try {
       log('🔍 Update Experience Order API Request: /admin/experience/$id/order');
 
-      final uri = Uri.parse('$_baseUrl/admin/experience/$id/order');
-      final response = await _client.put(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
+      final response = await _apiClient.put(
+        '/admin/experience/$id/order',
+        body: {
           'order': order,
-        }),
+        },
       );
 
       log('📡 Update Experience Order Response: ${response.statusCode}');

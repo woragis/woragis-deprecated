@@ -22,13 +22,23 @@ class _TestimonialsListPageState extends State<TestimonialsListPage> {
   void initState() {
     super.initState();
     // Load testimonials when page initializes
-    context.read<TestimonialsBloc>().add(GetTestimonialsRequested());
+    _loadTestimonials();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadTestimonials() {
+    final searchQuery = _searchController.text.trim();
+    context.read<TestimonialsBloc>().add(GetTestimonialsRequested(
+      search: searchQuery.isEmpty ? null : searchQuery,
+      featured: _showFeaturedOnly,
+      public: _showPublicOnly,
+      rating: _selectedRating,
+    ));
   }
 
   @override
@@ -239,7 +249,11 @@ class _TestimonialsListPageState extends State<TestimonialsListPage> {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push('/testimonials/${testimonial.id}'),
+        onTap: () async {
+          await context.push('/testimonials/${testimonial.id}');
+          // Reload list when returning from detail page
+          _loadTestimonials();
+        },
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -353,7 +367,11 @@ class _TestimonialsListPageState extends State<TestimonialsListPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/testimonials/${testimonial.id}'),
+        onTap: () async {
+          await context.push('/testimonials/${testimonial.id}');
+          // Reload list when returning from detail page
+          _loadTestimonials();
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

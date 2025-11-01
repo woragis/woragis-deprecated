@@ -116,6 +116,7 @@ class ProjectModel extends ProjectEntity {
       'id': id,
       'user_id': userId,
       'title': title,
+      'slug': slug, // ✅ ADDED MISSING SLUG FIELD
       'description': description,
       'long_description': longDescription,
       'content': content,

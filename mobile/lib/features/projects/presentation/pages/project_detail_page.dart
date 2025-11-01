@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../bloc/projects_bloc.dart';
 
 class ProjectDetailPage extends StatefulWidget {
@@ -17,6 +20,7 @@ class ProjectDetailPage extends StatefulWidget {
 
 class _ProjectDetailPageState extends State<ProjectDetailPage> {
   bool _isEditing = false;
+  bool _isSaving = false;
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _longDescriptionController;
@@ -24,6 +28,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   late TextEditingController _githubUrlController;
   late TextEditingController _liveUrlController;
   late TextEditingController _videoUrlController;
+  final ImagePicker _imagePicker = ImagePicker();
+  String? _selectedImagePath;
+  
+  // Form validation errors
+  String? _titleError;
+  String? _descriptionError;
+  String? _githubUrlError;
+  String? _liveUrlError;
+  String? _videoUrlError;
 
   @override
   void initState() {
@@ -82,21 +95,96 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       body: BlocConsumer<ProjectsBloc, ProjectsState>(
         listener: (context, state) {
           if (state is ProjectsError) {
+            setState(() {
+              _isSaving = false;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Error',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(state.message),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
               ),
             );
           } else if (state is ProjectUpdated) {
+            setState(() {
+              _isSaving = false;
+              _isEditing = false;
+              _selectedImagePath = null; // Reset selected image after save
+            });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Project updated successfully'),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Success',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text('Project updated successfully'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
               ),
             );
+            // Reload the project to show updated data
+            context.read<ProjectsBloc>().add(GetProjectByIdRequested(widget.projectId));
+          } else if (state is ProjectDeleted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Success',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text('Project deleted successfully'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else if (state is ProjectsLoading) {
             setState(() {
-              _isEditing = false;
+              _isSaving = true;
             });
           }
         },
@@ -151,17 +239,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               _videoUrlController.text = project.videoUrl ?? '';
             }
 
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   // Project image
                   Container(
                     height: 250,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       image: DecorationImage(
-                        image: NetworkImage(project.image),
+                        image: _selectedImagePath != null
+                            ? FileImage(File(_selectedImagePath!))
+                            : NetworkImage(project.image) as ImageProvider,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -195,14 +287,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                             bottom: 16,
                             right: 16,
                             child: FloatingActionButton.small(
-                              onPressed: () {
-                                // TODO: Implement image picker
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Image picker not implemented yet'),
-                                  ),
-                                );
-                              },
+                              onPressed: _pickImage,
                               backgroundColor: Colors.blue.shade600,
                               child: const Icon(Icons.camera_alt, color: Colors.white),
                             ),
@@ -223,10 +308,27 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                               child: _isEditing
                                   ? TextField(
                                       controller: _titleController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Title',
-                                        border: OutlineInputBorder(),
+                                      decoration: InputDecoration(
+                                        labelText: 'Title *',
+                                        hintText: 'Enter project title',
+                                        border: const OutlineInputBorder(),
+                                        errorText: _titleError,
+                                        errorMaxLines: 2,
+                                        helperText: 'Required (3-200 characters)',
+                                        helperStyle: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
                                       ),
+                                      maxLength: 200,
+                                      onChanged: (_) {
+                                        // Clear error on change
+                                        if (_titleError != null) {
+                                          setState(() {
+                                            _titleError = null;
+                                          });
+                                        }
+                                      },
                                     )
                                   : Text(
                                       project.title,
@@ -300,11 +402,28 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                 _isEditing
                                     ? TextField(
                                         controller: _descriptionController,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Description',
-                                          border: OutlineInputBorder(),
+                                        decoration: InputDecoration(
+                                          labelText: 'Description *',
+                                          hintText: 'Enter project description',
+                                          border: const OutlineInputBorder(),
+                                          errorText: _descriptionError,
+                                          errorMaxLines: 2,
+                                          helperText: 'Required (10-500 characters)',
+                                          helperStyle: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
                                         ),
                                         maxLines: 3,
+                                        maxLength: 500,
+                                        onChanged: (_) {
+                                          // Clear error on change
+                                          if (_descriptionError != null) {
+                                            setState(() {
+                                              _descriptionError = null;
+                                            });
+                                          }
+                                        },
                                       )
                                     : Text(
                                         project.description,
@@ -464,6 +583,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                     _githubUrlController,
                                     Icons.code,
                                     project.githubUrl,
+                                    _githubUrlError,
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -473,6 +593,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                     _liveUrlController,
                                     Icons.launch,
                                     project.liveUrl,
+                                    _liveUrlError,
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -482,6 +603,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                                     _videoUrlController,
                                     Icons.play_circle,
                                     project.videoUrl,
+                                    _videoUrlError,
                                   ),
                                 ],
                               ],
@@ -521,9 +643,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _saveProject(),
-                                  icon: const Icon(Icons.save),
-                                  label: const Text('Save Changes'),
+                                  onPressed: _isSaving ? null : () => _saveProject(),
+                                  icon: _isSaving
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          ),
+                                        )
+                                      : const Icon(Icons.save),
+                                  label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue.shade600,
                                     foregroundColor: Colors.white,
@@ -536,8 +667,36 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                       ],
                     ),
                   ),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+                // Loading Overlay
+                if (_isSaving)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    child: const Center(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text(
+                                'Saving changes...',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             );
           }
 
@@ -560,6 +719,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     TextEditingController controller,
     IconData icon,
     String? url,
+    String? errorText,
   ) {
     return Row(
       children: [
@@ -573,7 +733,24 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                     labelText: label,
                     border: const OutlineInputBorder(),
                     hintText: 'https://...',
+                    errorText: errorText,
+                    errorMaxLines: 2,
+                    helperText: 'Optional: Must be a valid URL',
+                    helperStyle: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
+                  onChanged: (_) {
+                    // Clear error on change
+                    if (errorText != null) {
+                      setState(() {
+                        if (label == 'GitHub') _githubUrlError = null;
+                        if (label == 'Live Demo') _liveUrlError = null;
+                        if (label == 'Video') _videoUrlError = null;
+                      });
+                    }
+                  },
                 )
               : url != null
                   ? InkWell(
@@ -624,7 +801,102 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     );
   }
 
+  bool _validateForm() {
+    bool isValid = true;
+    setState(() {
+      // Validate title
+      if (_titleController.text.trim().isEmpty) {
+        _titleError = 'Title is required';
+        isValid = false;
+      } else if (_titleController.text.trim().length < 3) {
+        _titleError = 'Title must be at least 3 characters';
+        isValid = false;
+      } else if (_titleController.text.trim().length > 200) {
+        _titleError = 'Title must be less than 200 characters';
+        isValid = false;
+      } else {
+        _titleError = null;
+      }
+
+      // Validate description
+      if (_descriptionController.text.trim().isEmpty) {
+        _descriptionError = 'Description is required';
+        isValid = false;
+      } else if (_descriptionController.text.trim().length < 10) {
+        _descriptionError = 'Description must be at least 10 characters';
+        isValid = false;
+      } else if (_descriptionController.text.trim().length > 500) {
+        _descriptionError = 'Description must be less than 500 characters';
+        isValid = false;
+      } else {
+        _descriptionError = null;
+      }
+
+      // Validate URLs if provided
+      if (_githubUrlController.text.trim().isNotEmpty &&
+          !_isValidUrl(_githubUrlController.text.trim())) {
+        _githubUrlError = 'Invalid GitHub URL format';
+        isValid = false;
+      } else {
+        _githubUrlError = null;
+      }
+
+      if (_liveUrlController.text.trim().isNotEmpty &&
+          !_isValidUrl(_liveUrlController.text.trim())) {
+        _liveUrlError = 'Invalid live URL format';
+        isValid = false;
+      } else {
+        _liveUrlError = null;
+      }
+
+      if (_videoUrlController.text.trim().isNotEmpty &&
+          !_isValidUrl(_videoUrlController.text.trim())) {
+        _videoUrlError = 'Invalid video URL format';
+        isValid = false;
+      } else {
+        _videoUrlError = null;
+      }
+    });
+
+    if (!isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_outlined, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text('Please fix the validation errors before saving'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+
+    return isValid;
+  }
+
+  bool _isValidUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https');
+    } catch (e) {
+      return false;
+    }
+  }
+
   void _saveProject() {
+    if (!_validateForm()) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
     context.read<ProjectsBloc>().add(UpdateProjectRequested(
       id: widget.projectId,
       title: _titleController.text.trim(),
@@ -650,27 +922,103 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   void _showDeleteDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Project'),
-        content: const Text(
-          'Are you sure you want to delete this project? This action cannot be undone.',
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (dialogContext) => AlertDialog(
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.red.shade600,
+          size: 48,
+        ),
+        title: const Text(
+          'Delete Project',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to delete this project?',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.red.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'This action cannot be undone. All project data will be permanently deleted.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontSize: 16),
+            ),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              // Show a brief confirmation message
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text('Deleting project...'),
+                    ],
+                  ),
+                  duration: Duration(seconds: 2),
+                ),
+              );
               context.read<ProjectsBloc>().add(DeleteProjectRequested(widget.projectId));
               context.pop(); // Go back to projects list
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: const Text('Delete'),
+            icon: const Icon(Icons.delete_forever),
+            label: const Text(
+              'Delete Permanently',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -678,13 +1026,65 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   }
 
   Future<void> _launchUrl(String url) async {
-    // TODO: Implement URL launcher when url_launcher package is added
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('URL launcher not implemented yet: $url'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not launch URL: $url'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error launching URL: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image selected. Remember to save your changes.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime date) {

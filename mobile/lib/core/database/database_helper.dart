@@ -20,7 +20,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'woragis.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Increment version for schema migration
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -50,9 +50,70 @@ class DatabaseHelper {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Handle database migrations here
-    // For now, we'll just recreate tables (in production, you'd want proper migrations)
-    if (oldVersion < newVersion) {
-      await _onCreate(db, newVersion);
+    if (oldVersion < 2) {
+      // Migration for frameworks table schema update
+      await _migrateFrameworksTable(db);
+    }
+  }
+
+  Future<void> _migrateFrameworksTable(Database db) async {
+    try {
+      // Check if we need to migrate the frameworks table
+      final tableInfo = await db.rawQuery('PRAGMA table_info(frameworks)');
+      final columnNames = tableInfo.map((column) => column['name'] as String).toList();
+      
+      // Add missing columns if they don't exist
+      if (!columnNames.contains('proficiencyLevel')) {
+        await db.execute('ALTER TABLE frameworks ADD COLUMN proficiencyLevel TEXT');
+      }
+      if (!columnNames.contains('public')) {
+        await db.execute('ALTER TABLE frameworks ADD COLUMN public INTEGER NOT NULL DEFAULT 1');
+      }
+      
+      // Rename columns if they exist with old names
+      if (columnNames.contains('user_id') && !columnNames.contains('userId')) {
+        // SQLite doesn't support RENAME COLUMN in older versions, so we'll recreate
+        await db.execute('''
+          CREATE TABLE frameworks_new (
+            id TEXT PRIMARY KEY,
+            userId TEXT NOT NULL,
+            name TEXT NOT NULL UNIQUE,
+            slug TEXT NOT NULL UNIQUE,
+            description TEXT,
+            icon TEXT,
+            color TEXT,
+            website TEXT,
+            type TEXT NOT NULL DEFAULT 'framework',
+            proficiencyLevel TEXT,
+            version TEXT,
+            `order` INTEGER DEFAULT 0,
+            visible INTEGER NOT NULL DEFAULT 1,
+            public INTEGER NOT NULL DEFAULT 1,
+            createdAt INTEGER NOT NULL,
+            updatedAt INTEGER NOT NULL,
+            synced_at INTEGER,
+            is_dirty INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+        
+        await db.execute('''
+          INSERT INTO frameworks_new (
+            id, userId, name, slug, description, icon, color, website, type, 
+            proficiencyLevel, version, `order`, visible, public, createdAt, updatedAt, synced_at, is_dirty
+          )
+          SELECT 
+            id, user_id, name, slug, description, icon, color, website, type,
+            proficiencyLevel, version, `order`, visible, 1, created_at, updated_at, synced_at, is_dirty
+          FROM frameworks
+        ''');
+        
+        await db.execute('DROP TABLE frameworks');
+        await db.execute('ALTER TABLE frameworks_new RENAME TO frameworks');
+      }
+    } catch (e) {
+      // If migration fails, recreate the table
+      await db.execute('DROP TABLE IF EXISTS frameworks');
+      await _createFrameworksTables(db);
     }
   }
 
@@ -197,7 +258,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS frameworks (
         id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
+        userId TEXT NOT NULL,
         name TEXT NOT NULL UNIQUE,
         slug TEXT NOT NULL UNIQUE,
         description TEXT,
@@ -205,11 +266,13 @@ class DatabaseHelper {
         color TEXT,
         website TEXT,
         type TEXT NOT NULL DEFAULT 'framework',
+        proficiencyLevel TEXT,
         version TEXT,
         `order` INTEGER DEFAULT 0,
         visible INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
+        public INTEGER NOT NULL DEFAULT 1,
+        createdAt INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL,
         synced_at INTEGER,
         is_dirty INTEGER NOT NULL DEFAULT 0
       )

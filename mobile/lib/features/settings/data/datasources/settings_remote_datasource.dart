@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/setting_entity.dart';
 import '../models/setting_model.dart';
 
@@ -56,13 +57,13 @@ abstract class SettingsRemoteDataSource {
 }
 
 class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
-  final http.Client client;
+  final ApiClient _apiClient;
   final String baseUrl;
 
   SettingsRemoteDataSourceImpl({
-    required this.client,
+    required ApiClient apiClient,
     required this.baseUrl,
-  });
+  }) : _apiClient = apiClient;
 
   @override
   Future<List<SettingEntity>> getSettings({
@@ -74,8 +75,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
       if (category != null) queryParams['category'] = category;
       if (isPublic != null) queryParams['isPublic'] = isPublic.toString();
 
-      final uri = Uri.parse('$baseUrl/admin/settings').replace(queryParameters: queryParams);
-      final response = await client.get(uri);
+      final response = await _apiClient.get('/admin/settings', queryParameters: queryParams);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -103,7 +103,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
   @override
   Future<SettingEntity> getSettingById(String id) async {
     try {
-      final response = await client.get(Uri.parse('$baseUrl/admin/settings/$id'));
+      final response = await _apiClient.get('/admin/settings/$id');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -130,7 +130,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
   @override
   Future<SettingEntity> getSettingByKey(String key) async {
     try {
-      final response = await client.get(Uri.parse('$baseUrl/admin/settings/key/$key'));
+      final response = await _apiClient.get('/admin/settings/key/$key');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -165,10 +165,10 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
     bool? isEditable,
   }) async {
     try {
-      final response = await client.post(
-        Uri.parse('$baseUrl/admin/settings'),
+      final response = await _apiClient.post(
+        '/admin/settings',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'key': key,
           'value': value,
           if (category != null) 'category': category,
@@ -176,10 +176,10 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
           if (type != null) 'type': type,
           if (isPublic != null) 'isPublic': isPublic,
           if (isEditable != null) 'isEditable': isEditable,
-        }),
+        },
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
           return SettingModel.fromJson(data['data']).toEntity();
@@ -214,10 +214,10 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
     bool? isEditable,
   }) async {
     try {
-      final response = await client.put(
-        Uri.parse('$baseUrl/admin/settings/$id'),
+      final response = await _apiClient.put(
+        '/admin/settings/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (key != null) 'key': key,
           if (value != null) 'value': value,
           if (category != null) 'category': category,
@@ -225,7 +225,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
           if (type != null) 'type': type,
           if (isPublic != null) 'isPublic': isPublic,
           if (isEditable != null) 'isEditable': isEditable,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -259,12 +259,12 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
     required String value,
   }) async {
     try {
-      final response = await client.put(
-        Uri.parse('$baseUrl/admin/settings/key/$key'),
+      final response = await _apiClient.put(
+        '/admin/settings/key/$key',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'value': value,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -295,7 +295,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
   @override
   Future<void> deleteSetting(String id) async {
     try {
-      final response = await client.delete(Uri.parse('$baseUrl/admin/settings/$id'));
+      final response = await _apiClient.delete('/admin/settings/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 404) {
@@ -316,7 +316,7 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
 
   Future<void> deleteSettingByKey(String key) async {
     try {
-      final response = await client.delete(Uri.parse('$baseUrl/admin/settings/key/$key'));
+      final response = await _apiClient.delete('/admin/settings/key/$key');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 404) {
@@ -357,10 +357,9 @@ class SettingsRemoteDataSourceImpl implements SettingsRemoteDataSource {
   @override
   Future<void> updateSettingsBulk(Map<String, String> settings) async {
     try {
-      final response = await client.put(
-        Uri.parse('$baseUrl/admin/settings/bulk'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'settings': settings}),
+      final response = await _apiClient.put(
+        '/admin/settings/bulk',
+        body: {'settings': settings},
       );
 
       if (response.statusCode != 200) {

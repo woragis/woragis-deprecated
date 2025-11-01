@@ -23,13 +23,26 @@ class _EducationListPageState extends State<EducationListPage> {
   @override
   void initState() {
     super.initState();
-    context.read<EducationBloc>().add(const LoadEducationList());
+    _loadEducationList();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadEducationList() {
+    context.read<EducationBloc>().add(LoadEducationList(
+      page: 1,
+      limit: 20,
+      search: _searchController.text.isEmpty ? null : _searchController.text,
+      type: _selectedType,
+      institution: _selectedInstitution,
+      visible: _selectedVisible,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
+    ));
   }
 
   void _applyFilters() {
@@ -341,8 +354,10 @@ class _EducationListPageState extends State<EducationListPage> {
   Widget _buildEducationCard(EducationEntity education) {
     return Card(
       child: InkWell(
-        onTap: () {
-          context.push('/education/${education.id}');
+        onTap: () async {
+          await context.push('/education/${education.id}');
+          // Reload list when returning from detail page
+          _loadEducationList();
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -527,8 +542,10 @@ class _EducationListPageState extends State<EducationListPage> {
             const Icon(Icons.arrow_forward_ios, size: 16),
           ],
         ),
-        onTap: () {
-          context.push('/education/${education.id}');
+        onTap: () async {
+          await context.push('/education/${education.id}');
+          // Reload list when returning from detail page
+          _loadEducationList();
         },
       ),
     );

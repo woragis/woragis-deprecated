@@ -28,6 +28,7 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
   bool _isVisible = true;
   bool _isLoading = false;
   bool _isEditMode = false;
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -63,15 +64,29 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
         elevation: 0,
         automaticallyImplyLeading: true,
         actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveExperience,
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          BlocBuilder<ExperienceBloc, ExperienceState>(
+            builder: (context, state) {
+              final isLoading = state is ExperienceLoading || _isLoading;
+              return TextButton(
+                onPressed: isLoading ? null : _saveExperience,
+                child: isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              );
+            },
           ),
         ],
       ),
@@ -80,8 +95,30 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
           if (state is ExperienceError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Failed to save experience', 
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(state.message, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.white,
+                  onPressed: _saveExperience,
+                ),
               ),
             );
             setState(() {
@@ -92,31 +129,52 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
           } else if (state is ExperienceCreated) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Experience created successfully'),
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Experience created successfully!')),
+                  ],
+                ),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
               ),
             );
             context.push('/experience');
           } else if (state is ExperienceUpdated) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Experience updated successfully'),
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Experience updated successfully!')),
+                  ],
+                ),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
               ),
             );
             context.push('/experience');
           }
         },
         builder: (context, state) {
-          if (state is ExperienceLoading && !_isLoading) {
+          final isLoading = state is ExperienceLoading || _isLoading;
+          
+          if (state is ExperienceLoading && !_isLoading && _isEditMode) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: _autovalidateMode,
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Basic Information
@@ -217,11 +275,15 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
                             ),
                             validator: (value) {
                               if (value != null && value.isNotEmpty) {
-                                if (Uri.tryParse(value)?.hasAbsolutePath != true) {
+                                final uri = Uri.tryParse(value);
+                                if (uri == null || (!uri.hasScheme || !uri.hasAuthority)) {
                                   return 'Please enter a valid URL';
                                 }
                               }
                               return null;
+                            },
+                            onChanged: (value) {
+                              setState(() {}); // Rebuild to show preview
                             },
                           ),
                           if (_iconUrlController.text.isNotEmpty) ...[
@@ -479,8 +541,33 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
                     ),
                   ),
                 ],
+                  ),
+                ),
               ),
-            ),
+              // Loading overlay
+              if (isLoading)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  child: const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Saving experience...',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
@@ -526,6 +613,11 @@ class _CreateExperiencePageState extends State<CreateExperiencePage> {
   }
 
   void _saveExperience() {
+    // Enable auto-validate after first submit attempt
+    setState(() {
+      _autovalidateMode = AutovalidateMode.onUserInteraction;
+    });
+    
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;

@@ -12,8 +12,10 @@ class FrameworkEntity extends Equatable {
   final String? description;
   final String? icon;
   final String? color;
+  final String? website;
   final FrameworkType type;
   final ProficiencyLevel? proficiencyLevel;
+  final String? version;
   final bool visible;
   final bool public;
   final int order;
@@ -28,8 +30,10 @@ class FrameworkEntity extends Equatable {
     this.description,
     this.icon,
     this.color,
+    this.website,
     required this.type,
     this.proficiencyLevel,
+    this.version,
     required this.visible,
     required this.public,
     required this.order,
@@ -46,8 +50,10 @@ class FrameworkEntity extends Equatable {
         description,
         icon,
         color,
+        website,
         type,
         proficiencyLevel,
+        version,
         visible,
         public,
         order,
@@ -63,8 +69,10 @@ class FrameworkEntity extends Equatable {
     String? description,
     String? icon,
     String? color,
+    String? website,
     FrameworkType? type,
     ProficiencyLevel? proficiencyLevel,
+    String? version,
     bool? visible,
     bool? public,
     int? order,
@@ -79,8 +87,10 @@ class FrameworkEntity extends Equatable {
       description: description ?? this.description,
       icon: icon ?? this.icon,
       color: color ?? this.color,
+      website: website ?? this.website,
       type: type ?? this.type,
       proficiencyLevel: proficiencyLevel ?? this.proficiencyLevel,
+      version: version ?? this.version,
       visible: visible ?? this.visible,
       public: public ?? this.public,
       order: order ?? this.order,

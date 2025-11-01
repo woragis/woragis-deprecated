@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/about_core_entity.dart';
 import '../../domain/entities/biography_entity.dart';
 import '../../domain/entities/anime_entity.dart';
@@ -105,7 +106,7 @@ abstract class AboutRemoteDataSource {
 }
 
 class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
-  final http.Client _client = http.Client();
+  final ApiClient _apiClient;
   final String _baseUrl;
 
   // Simple in-memory cache
@@ -114,8 +115,10 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   AboutRemoteDataSourceImpl({
+    required ApiClient apiClient,
     required String baseUrl,
-  }) : _baseUrl = baseUrl;
+  })  : _apiClient = apiClient,
+        _baseUrl = baseUrl;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -156,7 +159,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
       try {
         log('🔍 About Core API Request: /admin/about/core');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/admin/about/core'));
+        final response = await _apiClient.get('/admin/about/core');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -188,16 +191,16 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
     bool? visible,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/about/core'),
+      final response = await _apiClient.put(
+        '/admin/about/core',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (name != null) 'name': name,
           if (currentProfessionId != null) 'currentProfessionId': currentProfessionId,
           if (biography != null) 'biography': biography,
           if (featuredBiography != null) 'featuredBiography': featuredBiography,
           if (visible != null) 'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -237,7 +240,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
       try {
         log('🔍 Biography API Request: /admin/about/biography');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/admin/about/biography'));
+        final response = await _apiClient.get('/admin/about/biography');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -267,14 +270,14 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
     bool? visible,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/about/biography'),
+      final response = await _apiClient.put(
+        '/admin/about/biography',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (featuredBiography != null) 'featuredBiography': featuredBiography,
           if (fullBiography != null) 'fullBiography': fullBiography,
           if (visible != null) 'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -322,8 +325,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
 
         log('🔍 Anime List API Request: /admin/about/anime');
 
-        final uri = Uri.parse('$_baseUrl/admin/about/anime').replace(queryParameters: queryParams);
-        final response = await _client.get(uri);
+        final response = await _apiClient.get('/admin/about/anime', queryParameters: queryParams);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -352,7 +354,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
   @override
   Future<AnimeEntity> getAnimeById(String id) async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/admin/about/anime/$id'));
+      final response = await _apiClient.get('/admin/about/anime/$id');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -394,10 +396,10 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
     required bool visible,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/about/anime'),
+      final response = await _apiClient.post(
+        '/admin/about/anime',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'title': title,
           if (description != null) 'description': description,
           'status': status,
@@ -412,7 +414,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
           if (completedAt != null) 'completedAt': completedAt.toIso8601String(),
           'order': order,
           'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -457,10 +459,10 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
     bool? visible,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/about/anime/$id'),
+      final response = await _apiClient.put(
+        '/admin/about/anime/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (title != null) 'title': title,
           if (description != null) 'description': description,
           if (status != null) 'status': status,
@@ -475,7 +477,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
           if (completedAt != null) 'completedAt': completedAt.toIso8601String(),
           if (order != null) 'order': order,
           if (visible != null) 'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -506,7 +508,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
   @override
   Future<void> deleteAnime(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/admin/about/anime/$id'));
+      final response = await _apiClient.delete('/admin/about/anime/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 404) {
@@ -545,8 +547,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
 
         log('🔍 Music Genres API Request: /admin/about/music/genres');
 
-        final uri = Uri.parse('$_baseUrl/admin/about/music/genres').replace(queryParameters: queryParams);
-        final response = await _client.get(uri);
+        final response = await _apiClient.get('/admin/about/music/genres', queryParameters: queryParams);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -575,7 +576,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
   @override
   Future<MusicGenreEntity> getMusicGenreById(String id) async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/admin/about/music/genres/$id'));
+      final response = await _apiClient.get('/admin/about/music/genres/$id');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -607,15 +608,15 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
     required bool visible,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/about/music/genres'),
+      final response = await _apiClient.post(
+        '/admin/about/music/genres',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'name': name,
           if (description != null) 'description': description,
           'order': order,
           'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -650,15 +651,15 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
     bool? visible,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/about/music/genres/$id'),
+      final response = await _apiClient.put(
+        '/admin/about/music/genres/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (name != null) 'name': name,
           if (description != null) 'description': description,
           if (order != null) 'order': order,
           if (visible != null) 'visible': visible,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -689,7 +690,7 @@ class AboutRemoteDataSourceImpl implements AboutRemoteDataSource {
   @override
   Future<void> deleteMusicGenre(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/admin/about/music/genres/$id'));
+      final response = await _apiClient.delete('/admin/about/music/genres/$id');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (response.statusCode == 404) {

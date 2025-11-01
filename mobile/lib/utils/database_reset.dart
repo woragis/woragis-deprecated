@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import '../core/database/database_helper.dart';
 
@@ -8,16 +9,16 @@ class DatabaseReset {
   /// Completely resets the database by deleting the file and recreating it
   static Future<void> resetDatabase() async {
     try {
-      print('🔄 Starting database reset...');
+      log('🔄 Starting database reset...');
       
       // Reset the database
       await _dbHelper.resetDatabase();
       
-      print('✅ Database reset completed successfully!');
-      print('📊 Database has been recreated with fresh schema');
+      log('✅ Database reset completed successfully!');
+      log('📊 Database has been recreated with fresh schema');
       
     } catch (e) {
-      print('❌ Error resetting database: $e');
+      log('❌ Error resetting database: $e');
       rethrow;
     }
   }
@@ -25,16 +26,16 @@ class DatabaseReset {
   /// Clears all data from the database but keeps the schema
   static Future<void> clearAllData() async {
     try {
-      print('🔄 Clearing all data from database...');
+      log('🔄 Clearing all data from database...');
       
       // Clear all data
       await _dbHelper.clearAllData();
       
-      print('✅ All data cleared successfully!');
-      print('📊 Database schema preserved');
+      log('✅ All data cleared successfully!');
+      log('📊 Database schema preserved');
       
     } catch (e) {
-      print('❌ Error clearing data: $e');
+      log('❌ Error clearing data: $e');
       rethrow;
     }
   }

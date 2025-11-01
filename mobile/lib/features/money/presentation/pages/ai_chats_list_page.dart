@@ -20,13 +20,22 @@ class _AiChatsListPageState extends State<AiChatsListPage> {
   void initState() {
     super.initState();
     // Load AI chats when page initializes
-    context.read<MoneyBloc>().add(GetAiChatsRequested());
+    _loadAiChats();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadAiChats() {
+    final searchQuery = _searchController.text.trim();
+    context.read<MoneyBloc>().add(GetAiChatsRequested(
+      search: searchQuery.isEmpty ? null : searchQuery,
+      archived: _showArchivedOnly,
+      agent: _selectedAgent,
+    ));
   }
 
   @override
@@ -200,7 +209,11 @@ class _AiChatsListPageState extends State<AiChatsListPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/money/ai-chats/${chat.id}'),
+        onTap: () async {
+          await context.push('/money/ai-chats/${chat.id}');
+          // Reload list when returning from detail page
+          _loadAiChats();
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

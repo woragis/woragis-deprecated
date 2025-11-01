@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/testimonial_entity.dart';
 import '../models/testimonial_model.dart';
 
@@ -51,7 +52,7 @@ abstract class TestimonialsRemoteDataSource {
 }
 
 class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
-  final http.Client _client = http.Client();
+  final ApiClient _apiClient;
   final String _baseUrl;
 
   // Simple in-memory cache
@@ -60,8 +61,10 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   TestimonialsRemoteDataSourceImpl({
+    required ApiClient apiClient,
     required String baseUrl,
-  }) : _baseUrl = baseUrl;
+  })  : _apiClient = apiClient,
+        _baseUrl = baseUrl;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -122,8 +125,7 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
 
         log('🔍 Testimonials API Request: /admin/testimonials');
 
-        final uri = Uri.parse('$_baseUrl/admin/testimonials').replace(queryParameters: queryParams);
-        final response = await _client.get(uri);
+        final response = await _apiClient.get('/admin/testimonials', queryParameters: queryParams);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -157,7 +159,7 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
       try {
         log('🔍 Testimonial by ID API Request: /admin/testimonials/$id');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/admin/testimonials/$id'));
+        final response = await _apiClient.get('/admin/testimonials/$id');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -196,10 +198,10 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
     required bool public,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/testimonials'),
+      final response = await _apiClient.post(
+        '/admin/testimonials',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'name': name,
           'position': position,
           'company': company,
@@ -210,7 +212,7 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
           'order': order,
           'visible': visible,
           'public': public,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -256,10 +258,10 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
     bool? public,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/testimonials/$id'),
+      final response = await _apiClient.put(
+        '/admin/testimonials/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (name != null) 'name': name,
           if (position != null) 'position': position,
           if (company != null) 'company': company,
@@ -270,7 +272,7 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
           if (order != null) 'order': order,
           if (visible != null) 'visible': visible,
           if (public != null) 'public': public,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -307,7 +309,7 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
   @override
   Future<void> deleteTestimonial(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/admin/testimonials/$id'));
+      final response = await _apiClient.delete('/admin/testimonials/$id');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         // Invalidate testimonials cache
@@ -333,10 +335,9 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
   @override
   Future<void> updateTestimonialOrder(List<Map<String, dynamic>> testimonialOrders) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/testimonials/order'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'testimonialOrders': testimonialOrders}),
+      final response = await _apiClient.put(
+        '/admin/testimonials/order',
+        body: {'testimonialOrders': testimonialOrders},
       );
 
       if (response.statusCode != 200) {
@@ -355,8 +356,8 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
   @override
   Future<void> incrementViewCount(String testimonialId) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/testimonials/$testimonialId/view'),
+      final response = await _apiClient.post(
+        '/admin/testimonials/$testimonialId/view',
       );
 
       if (response.statusCode != 200) {
@@ -375,8 +376,8 @@ class TestimonialsRemoteDataSourceImpl implements TestimonialsRemoteDataSource {
   @override
   Future<void> incrementLikeCount(String testimonialId) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/testimonials/$testimonialId/like'),
+      final response = await _apiClient.post(
+        '/admin/testimonials/$testimonialId/like',
       );
 
       if (response.statusCode != 200) {

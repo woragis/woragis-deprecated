@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/project_entity.dart';
 import '../models/project_model.dart';
 
@@ -77,11 +78,14 @@ abstract class ProjectsRemoteDataSource {
   });
 
   Future<List<String>> getProjectFrameworkIds(String projectId);
+
+  // Toggle methods
+  Future<void> toggleProjectFeatured(String id);
+  Future<void> toggleProjectVisibility(String id);
 }
 
 class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
-  final http.Client _client = http.Client();
-  final String _baseUrl;
+  final ApiClient _apiClient;
 
   // Simple in-memory cache
   static final Map<String, dynamic> _cache = {};
@@ -89,8 +93,8 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   ProjectsRemoteDataSourceImpl({
-    required String baseUrl,
-  }) : _baseUrl = baseUrl;
+    required ApiClient apiClient,
+  }) : _apiClient = apiClient;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -145,16 +149,9 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
 
         log('🔍 Projects List API Request: /admin/projects');
 
-        final uri = Uri.parse('$_baseUrl/admin/projects').replace(
+        final response = await _apiClient.get(
+          'admin/projects',
           queryParameters: queryParams.map((key, value) => MapEntry(key, value.toString())),
-        );
-
-        final response = await _client.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
         );
 
         if (response.statusCode == 200) {
@@ -187,14 +184,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
       try {
         log('🔍 Project by ID API Request: /admin/projects/$id');
 
-        final uri = Uri.parse('$_baseUrl/admin/projects/$id');
-        final response = await _client.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        );
+        final response = await _apiClient.get('/admin/projects/$id');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -237,14 +227,9 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Create Project API Request: /admin/projects');
 
-      final uri = Uri.parse('$_baseUrl/admin/projects');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.post(
+        '/admin/projects',
+        body: {
           'title': title,
           'slug': slug,
           'description': description,
@@ -259,7 +244,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
           'visible': visible,
           'public': public,
           if (frameworkIds != null) 'frameworkIds': frameworkIds,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -306,14 +291,9 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Update Project API Request: /admin/projects/$id');
 
-      final uri = Uri.parse('$_baseUrl/admin/projects/$id');
-      final response = await _client.put(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.put(
+        '/admin/projects/$id',
+        body: {
           if (title != null) 'title': title,
           if (slug != null) 'slug': slug,
           if (description != null) 'description': description,
@@ -328,7 +308,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
           if (visible != null) 'visible': visible,
           if (public != null) 'public': public,
           if (frameworkIds != null) 'frameworkIds': frameworkIds,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -360,14 +340,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Delete Project API Request: /admin/projects/$id');
 
-      final uri = Uri.parse('$_baseUrl/admin/projects/$id');
-      final response = await _client.delete(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await _apiClient.delete('/admin/projects/$id');
 
       if (response.statusCode == 200) {
         // Invalidate projects cache
@@ -395,16 +368,11 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Update Project Order API Request: /admin/projects/$id/order');
 
-      final uri = Uri.parse('$_baseUrl/admin/projects/$id/order');
-      final response = await _client.put(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.put(
+        '/admin/projects/$id/order',
+        body: {
           'order': order,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -433,16 +401,11 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Assign Framework to Project API Request: /api/admin/projects/$projectId/frameworks');
 
-      final uri = Uri.parse('$_baseUrl/api/admin/projects/$projectId/frameworks');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.post(
+        '/api/admin/projects/$projectId/frameworks',
+        body: {
           'frameworkId': frameworkId,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -468,14 +431,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Remove Framework from Project API Request: /api/admin/projects/$projectId/frameworks/$frameworkId');
 
-      final uri = Uri.parse('$_baseUrl/api/admin/projects/$projectId/frameworks/$frameworkId');
-      final response = await _client.delete(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await _apiClient.delete('/api/admin/projects/$projectId/frameworks/$frameworkId');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         log('✅ Framework removed from project successfully');
@@ -497,14 +453,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Get Project Framework IDs API Request: /api/admin/projects/$projectId/frameworks');
 
-      final uri = Uri.parse('$_baseUrl/api/admin/projects/$projectId/frameworks');
-      final response = await _client.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await _apiClient.get('/api/admin/projects/$projectId/frameworks');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -535,14 +484,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
       try {
         log('🔍 Project by Slug API Request: /admin/projects/slug/$slug');
 
-        final uri = Uri.parse('$_baseUrl/admin/projects/slug/$slug');
-        final response = await _client.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        );
+        final response = await _apiClient.get('/admin/projects/slug/$slug');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -569,14 +511,7 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Increment View Count API Request: /admin/projects/$id/view');
 
-      final uri = Uri.parse('$_baseUrl/admin/projects/$id/view');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await _apiClient.post('/admin/projects/$id/view');
 
       if (response.statusCode == 200) {
         log('✅ Project view count incremented successfully');
@@ -596,19 +531,58 @@ class ProjectsRemoteDataSourceImpl implements ProjectsRemoteDataSource {
     try {
       log('🔍 Increment Like Count API Request: /admin/projects/$id/like');
 
-      final uri = Uri.parse('$_baseUrl/admin/projects/$id/like');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await _apiClient.post('/admin/projects/$id/like');
 
       if (response.statusCode == 200) {
         log('✅ Project like count incremented successfully');
       } else {
         throw ServerException('Failed to increment like count with status ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
+      throw ServerException('Unexpected error: $e');
+    }
+  }
+
+  @override
+  Future<void> toggleProjectFeatured(String id) async {
+    try {
+      log('🔍 Toggle Project Featured API Request: /admin/projects/$id/toggle-featured');
+
+      final response = await _apiClient.post('/admin/projects/$id/toggle-featured');
+
+      if (response.statusCode == 200) {
+        log('✅ Project featured status toggled successfully');
+        // Invalidate cache for this project
+        _invalidateCache('project_$id');
+        _invalidateCache('projects_');
+      } else {
+        throw ServerException('Failed to toggle project featured status with status ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
+      throw ServerException('Unexpected error: $e');
+    }
+  }
+
+  @override
+  Future<void> toggleProjectVisibility(String id) async {
+    try {
+      log('🔍 Toggle Project Visibility API Request: /admin/projects/$id/toggle-visibility');
+
+      final response = await _apiClient.post('/admin/projects/$id/toggle-visibility');
+
+      if (response.statusCode == 200) {
+        log('✅ Project visibility toggled successfully');
+        // Invalidate cache for this project
+        _invalidateCache('project_$id');
+        _invalidateCache('projects_');
+      } else {
+        throw ServerException('Failed to toggle project visibility with status ${response.statusCode}');
       }
     } catch (e) {
       if (e is ServerException || e is NetworkException) {

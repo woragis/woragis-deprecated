@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/auth_response_entity.dart';
 import '../../domain/entities/user_entity.dart';
 import '../models/auth_response_model.dart';
@@ -43,8 +44,7 @@ abstract class AuthRemoteDataSource {
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final http.Client _client = http.Client();
-  final String _baseUrl;
+  final ApiClient _apiClient;
 
   // Simple in-memory cache
   static final Map<String, dynamic> _cache = {};
@@ -52,8 +52,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   AuthRemoteDataSourceImpl({
-    required String baseUrl,
-  }) : _baseUrl = baseUrl;
+    required ApiClient apiClient,
+  })  : _apiClient = apiClient;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -93,17 +93,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       log('🔍 Auth Login API Request: /api/auth/login');
 
-      final uri = Uri.parse('$_baseUrl/api/auth/login');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.postUnauthenticated(
+        '/api/auth/login',
+        body: {
           'email': email,
           'password': password,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -140,20 +135,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       log('🔍 Auth Register API Request: /api/auth/register');
 
-      final uri = Uri.parse('$_baseUrl/api/auth/register');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.postUnauthenticated(
+        '/api/auth/register',
+        body: {
           'email': email,
           'username': username,
           'password': password,
           if (firstName != null) 'firstName': firstName,
           if (lastName != null) 'lastName': lastName,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -187,14 +177,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       try {
         log('🔍 Auth Get Current User API Request: /api/auth/me');
 
-        final uri = Uri.parse('$_baseUrl/api/auth/me');
-        final response = await _client.get(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        );
+        final response = await _apiClient.get('/api/auth/me');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -221,14 +204,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       log('🔍 Auth Logout API Request: /api/auth/logout');
 
-      final uri = Uri.parse('$_baseUrl/api/auth/logout');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await _apiClient.post('/api/auth/logout');
 
       if (response.statusCode == 200) {
         // Invalidate all auth-related cache on logout
@@ -250,16 +226,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       log('🔍 Auth Refresh Token API Request: /api/auth/refresh');
 
-      final uri = Uri.parse('$_baseUrl/api/auth/refresh');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
+      final response = await _apiClient.post(
+        '/api/auth/refresh',
+        body: {
           'refreshToken': refreshToken,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -293,17 +264,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       log('🔍 Change Password API Request: /api/auth/change-password');
 
-      final uri = Uri.parse('$_baseUrl/api/auth/change-password');
-      final response = await _client.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
+      final response = await _apiClient.post(
+        '/api/auth/change-password',
+        body: {
           'current_password': currentPassword,
           'new_password': newPassword,
-        }),
+        },
       );
 
       log('📡 Change Password Response: ${response.statusCode}');
@@ -333,19 +299,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       log('🔍 Update Profile API Request: /api/auth/profile');
 
-      final uri = Uri.parse('$_baseUrl/api/auth/profile');
-      final response = await _client.put(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
+      final response = await _apiClient.put(
+        '/api/auth/profile',
+        body: {
           if (firstName != null) 'first_name': firstName,
           if (lastName != null) 'last_name': lastName,
           if (email != null) 'email': email,
           if (username != null) 'username': username,
-        }),
+        },
       );
 
       log('📡 Update Profile Response: ${response.statusCode}');

@@ -23,7 +23,7 @@ class _ExperienceListPageState extends State<ExperienceListPage> {
   void initState() {
     super.initState();
     // Load experience list
-    context.read<ExperienceBloc>().add(GetExperienceListRequested());
+    _loadExperiences();
   }
 
   @override
@@ -31,6 +31,14 @@ class _ExperienceListPageState extends State<ExperienceListPage> {
     _searchController.dispose();
     _companyFilterController.dispose();
     super.dispose();
+  }
+
+  void _loadExperiences() {
+    context.read<ExperienceBloc>().add(GetExperienceListRequested(
+      search: _searchController.text.isEmpty ? null : _searchController.text,
+      visible: _showOnlyVisible ? true : null,
+      company: _selectedCompany == 'All Companies' ? null : _selectedCompany,
+    ));
   }
 
   @override
@@ -367,7 +375,11 @@ class _ExperienceListPageState extends State<ExperienceListPage> {
                 const Icon(Icons.arrow_forward_ios, size: 16),
               ],
             ),
-            onTap: () => context.push('/experience/${experience.id}'),
+            onTap: () async {
+              await context.push('/experience/${experience.id}');
+              // Reload list when returning from detail page
+              _loadExperiences();
+            },
           ),
         );
       },
@@ -388,7 +400,11 @@ class _ExperienceListPageState extends State<ExperienceListPage> {
         final experience = experiences[index];
         return Card(
           child: InkWell(
-            onTap: () => context.push('/experience/${experience.id}'),
+            onTap: () async {
+              await context.push('/experience/${experience.id}');
+              // Reload list when returning from detail page
+              _loadExperiences();
+            },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(12),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/framework_entity.dart';
 import '../models/framework_model.dart';
 
@@ -26,7 +27,7 @@ abstract class FrameworksRemoteDataSource {
     String? description,
     String? icon,
     String? color,
-    String? url,
+    String? website,
     String? type,
     String? proficiencyLevel,
     required int order,
@@ -41,7 +42,7 @@ abstract class FrameworksRemoteDataSource {
     String? description,
     String? icon,
     String? color,
-    String? url,
+    String? website,
     String? type,
     String? proficiencyLevel,
     int? order,
@@ -56,7 +57,7 @@ abstract class FrameworksRemoteDataSource {
 }
 
 class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
-  final http.Client _client = http.Client();
+  final ApiClient _apiClient;
   final String _baseUrl;
 
   // Simple in-memory cache
@@ -65,8 +66,10 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   FrameworksRemoteDataSourceImpl({
+    required ApiClient apiClient,
     required String baseUrl,
-  }) : _baseUrl = baseUrl;
+  })  : _apiClient = apiClient,
+        _baseUrl = baseUrl;
 
   // Helper method to get cached data or fetch fresh
   Future<T> _getCachedOrFetch<T>(
@@ -125,13 +128,12 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
 
         log('🔍 Frameworks API Request: /admin/frameworks');
 
-        final uri = Uri.parse('$_baseUrl/admin/frameworks').replace(queryParameters: queryParams);
-        final response = await _client.get(uri);
+        final response = await _apiClient.get('/admin/frameworks', queryParameters: queryParams);
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           if (data['success'] == true) {
-            final frameworks = (data['data']['frameworks'] as List)
+            final frameworks = (data['data'] as List)
                 .map((frameworkJson) => FrameworkModel.fromJson(frameworkJson).toEntity())
                 .toList();
             return frameworks;
@@ -160,7 +162,7 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
       try {
         log('🔍 Framework by ID API Request: /admin/frameworks/$id');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/admin/frameworks/$id'));
+        final response = await _apiClient.get('/admin/frameworks/$id');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -193,7 +195,7 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
       try {
         log('🔍 Framework by Slug API Request: /admin/frameworks/slug/$slug');
 
-        final response = await _client.get(Uri.parse('$_baseUrl/admin/frameworks/slug/$slug'));
+        final response = await _apiClient.get('/admin/frameworks/slug/$slug');
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -225,7 +227,7 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
     String? description,
     String? icon,
     String? color,
-    String? url,
+    String? website,
     String? type,
     String? proficiencyLevel,
     required int order,
@@ -233,22 +235,22 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
     required bool public,
   }) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/admin/frameworks'),
+      final response = await _apiClient.post(
+        '/admin/frameworks',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           'name': name,
           'slug': slug,
           if (description != null) 'description': description,
           if (icon != null) 'icon': icon,
           if (color != null) 'color': color,
-          if (url != null) 'url': url,
+          if (website != null) 'website': website,
           if (type != null) 'type': type,
           if (proficiencyLevel != null) 'proficiencyLevel': proficiencyLevel,
           'order': order,
           'visible': visible,
           'public': public,
-        }),
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -287,7 +289,7 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
     String? description,
     String? icon,
     String? color,
-    String? url,
+    String? website,
     String? type,
     String? proficiencyLevel,
     int? order,
@@ -295,22 +297,22 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
     bool? public,
   }) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/frameworks/$id'),
+      final response = await _apiClient.put(
+        '/admin/frameworks/$id',
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
+        body: {
           if (name != null) 'name': name,
           if (slug != null) 'slug': slug,
           if (description != null) 'description': description,
           if (icon != null) 'icon': icon,
           if (color != null) 'color': color,
-          if (url != null) 'url': url,
+          if (website != null) 'website': website,
           if (type != null) 'type': type,
           if (proficiencyLevel != null) 'proficiencyLevel': proficiencyLevel,
           if (order != null) 'order': order,
           if (visible != null) 'visible': visible,
           if (public != null) 'public': public,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -347,7 +349,7 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
   @override
   Future<void> deleteFramework(String id) async {
     try {
-      final response = await _client.delete(Uri.parse('$_baseUrl/admin/frameworks/$id'));
+      final response = await _apiClient.delete('/admin/frameworks/$id');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         // Invalidate frameworks cache
@@ -373,10 +375,9 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
   @override
   Future<void> updateFrameworkOrder(List<Map<String, dynamic>> frameworkOrders) async {
     try {
-      final response = await _client.put(
-        Uri.parse('$_baseUrl/admin/frameworks/order'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'frameworkOrders': frameworkOrders}),
+      final response = await _apiClient.put(
+        '/admin/frameworks/order',
+        body: {'frameworkOrders': frameworkOrders},
       );
 
       if (response.statusCode != 200) {
@@ -395,7 +396,7 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
   @override
   Future<int> getFrameworkProjectCount(String frameworkId) async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/admin/frameworks/$frameworkId/project-count'));
+      final response = await _apiClient.get('/admin/frameworks/$frameworkId/project-count');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -420,12 +421,12 @@ class FrameworksRemoteDataSourceImpl implements FrameworksRemoteDataSource {
   @override
   Future<List<FrameworkEntity>> getFrameworksWithProjectCount() async {
     try {
-      final response = await _client.get(Uri.parse('$_baseUrl/admin/frameworks/with-count'));
+      final response = await _apiClient.get('/admin/frameworks/with-count');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true) {
-          final frameworks = (data['data']['frameworks'] as List)
+          final frameworks = (data['data'] as List)
               .map((frameworkJson) => FrameworkModel.fromJson(frameworkJson).toEntity())
               .toList();
           return frameworks;

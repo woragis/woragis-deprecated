@@ -4,6 +4,39 @@ import 'blog_tag_model.dart';
 
 part 'blog_post_model.g.dart';
 
+// Custom JSON converters for safe type conversion
+class SafeIntConverter implements JsonConverter<int, dynamic> {
+  const SafeIntConverter();
+
+  @override
+  int fromJson(dynamic json) {
+    if (json == null) return 0;
+    if (json is int) return json;
+    if (json is String) return int.tryParse(json) ?? 0;
+    if (json is num) return json.toInt();
+    return 0;
+  }
+
+  @override
+  dynamic toJson(int object) => object;
+}
+
+class SafeBoolConverter implements JsonConverter<bool, dynamic> {
+  const SafeBoolConverter();
+
+  @override
+  bool fromJson(dynamic json) {
+    if (json == null) return false;
+    if (json is bool) return json;
+    if (json is int) return json == 1;
+    if (json is String) return json.toLowerCase() == 'true' || json == '1';
+    return false;
+  }
+
+  @override
+  dynamic toJson(bool object) => object;
+}
+
 @JsonSerializable(explicitToJson: true)
 class BlogPostModel extends BlogPostEntity {
   @override
@@ -18,21 +51,69 @@ class BlogPostModel extends BlogPostEntity {
     required super.content,
     super.featuredImage,
     super.readingTime,
-    required super.featured,
-    required super.published,
+    @SafeBoolConverter() required super.featured,
+    @SafeBoolConverter() required super.published,
     super.publishedAt,
-    required super.order,
-    required super.visible,
-    required super.public,
-    super.viewCount,
-    super.likeCount,
+    @SafeIntConverter() required super.order,
+    @SafeBoolConverter() required super.visible,
+    @SafeBoolConverter() required super.public,
+    @SafeIntConverter() super.viewCount,
+    @SafeIntConverter() super.likeCount,
     this.tags,
     required super.createdAt,
     required super.updatedAt,
   }) : super(tags: tags);
 
-  factory BlogPostModel.fromJson(Map<String, dynamic> json) =>
-      _$BlogPostModelFromJson(json);
+  factory BlogPostModel.fromJson(Map<String, dynamic> json) {
+    try {
+      return _$BlogPostModelFromJson(json);
+    } catch (e) {
+      // Fallback: manually parse with safe type conversion
+      return BlogPostModel(
+        id: json['id'] as String,
+        userId: json['userId'] as String,
+        title: json['title'] as String,
+        slug: json['slug'] as String,
+        excerpt: json['excerpt'] as String,
+        content: json['content'] as String,
+        featuredImage: json['featuredImage'] as String?,
+        readingTime: _parseInt(json['readingTime']),
+        featured: _parseBool(json['featured']),
+        published: _parseBool(json['published']),
+        publishedAt: json['publishedAt'] != null 
+            ? DateTime.parse(json['publishedAt'] as String)
+            : null,
+        order: _parseInt(json['order']),
+        visible: _parseBool(json['visible']),
+        public: _parseBool(json['public']),
+        viewCount: _parseInt(json['viewCount']),
+        likeCount: _parseInt(json['likeCount']),
+        tags: (json['tags'] as List<dynamic>?)
+            ?.map((e) => BlogTagModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: DateTime.parse(json['updatedAt'] as String),
+      );
+    }
+  }
+
+  // Helper method to safely parse integers from JSON
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is num) return value.toInt();
+    return 0;
+  }
+
+  // Helper method to safely parse booleans from JSON
+  static bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
 
   /// Creates a BlogPostModel from database JSON with snake_case field names
   factory BlogPostModel.fromDatabaseJson(Map<String, dynamic> json) {

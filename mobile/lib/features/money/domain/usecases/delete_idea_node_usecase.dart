@@ -11,3 +11,4 @@ class DeleteIdeaNodeUseCase {
     return await repository.deleteIdeaNode(id);
   }
 }
+

@@ -142,7 +142,7 @@ class _AboutOverviewPageState extends State<AboutOverviewPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -294,7 +294,7 @@ class _AboutOverviewPageState extends State<AboutOverviewPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _getAnimeStatusColor(anime.status).withOpacity(0.1),
+                            color: _getAnimeStatusColor(anime.status).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -351,7 +351,7 @@ class _AboutOverviewPageState extends State<AboutOverviewPage> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.1),
+                    color: Colors.purple.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(

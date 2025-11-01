@@ -78,6 +78,9 @@ abstract class ProjectsRepository {
 
   Future<Either<Failure, List<String>>> getProjectFrameworkIds(String projectId);
 
+  // Toggle methods
+  Future<Either<Failure, void>> toggleProjectFeatured(String id);
+  Future<Either<Failure, void>> toggleProjectVisibility(String id);
 
   // Offline/Cache methods
   Future<Either<Failure, List<ProjectEntity>>> getCachedProjects();

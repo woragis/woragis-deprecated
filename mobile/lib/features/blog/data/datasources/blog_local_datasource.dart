@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/sync_manager.dart';
+import '../../../../core/stores/auth_store.dart';
 import '../../domain/entities/blog_post_entity.dart';
 import '../../domain/entities/blog_tag_entity.dart';
 import '../../domain/entities/blog_stats_entity.dart';
@@ -74,6 +75,28 @@ abstract class BlogLocalDataSource {
 class BlogLocalDataSourceImpl implements BlogLocalDataSource {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final SyncManager _syncManager = SyncManager();
+  final AuthStoreBloc? _authStore;
+  
+  BlogLocalDataSourceImpl({AuthStoreBloc? authStore}) : _authStore = authStore;
+
+  /// Ensure required NOT NULL fields are always present
+  Map<String, dynamic> _ensureRequiredFields(Map<String, dynamic> data) {
+    final safeData = Map<String, dynamic>.from(data);
+    
+    // ✅ ENSURE user_id is always present (NOT NULL constraint)
+    if (!safeData.containsKey('user_id') || safeData['user_id'] == null || safeData['user_id'] == '') {
+      // Try to get user ID from auth store
+      final currentUserId = _authStore?.state.user?.id;
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        safeData['user_id'] = currentUserId;
+      } else {
+        // Fallback to a default user ID if not authenticated
+        safeData['user_id'] = 'system';
+      }
+    }
+    
+    return safeData;
+  }
 
   // Blog Posts Methods
   @override
@@ -165,9 +188,11 @@ class BlogLocalDataSourceImpl implements BlogLocalDataSource {
     postMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
     postMap['is_dirty'] = 0;
 
+    final safePostMap = _ensureRequiredFields(postMap);
+
     await db.insert(
       'blog_posts',
-      postMap,
+      safePostMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -184,9 +209,11 @@ class BlogLocalDataSourceImpl implements BlogLocalDataSource {
       postMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
       postMap['is_dirty'] = 0;
 
+      final safePostMap = _ensureRequiredFields(postMap);
+
       batch.insert(
         'blog_posts',
-        postMap,
+        safePostMap,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
@@ -203,9 +230,11 @@ class BlogLocalDataSourceImpl implements BlogLocalDataSource {
     postMap['updated_at'] = DateTime.now().millisecondsSinceEpoch;
     postMap['is_dirty'] = 1;
 
+    final safePostMap = _ensureRequiredFields(postMap);
+
     await db.update(
       'blog_posts',
-      postMap,
+      safePostMap,
       where: 'id = ?',
       whereArgs: [post.id],
     );

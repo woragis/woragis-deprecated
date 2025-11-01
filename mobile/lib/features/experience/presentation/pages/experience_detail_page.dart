@@ -13,6 +13,8 @@ class ExperienceDetailPage extends StatefulWidget {
 }
 
 class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
+  dynamic _lastLoadedExperience;
+
   @override
   void initState() {
     super.initState();
@@ -90,33 +92,101 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
           if (state is ExperienceError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.message),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Failed to process request', 
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(state.message, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+                behavior: SnackBarBehavior.floating,
               ),
             );
           } else if (state is ExperienceDeleted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Experience deleted successfully'),
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Experience deleted successfully')),
+                  ],
+                ),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
               ),
             );
             context.push('/experience');
           } else if (state is ExperienceUpdated) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Experience updated successfully'),
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Experience updated successfully')),
+                  ],
+                ),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
               ),
             );
           }
         },
         builder: (context, state) {
+          if (state is ExperienceLoaded) {
+            _lastLoadedExperience = state.experience;
+            return _buildExperienceDetails(state.experience);
+          }
+
+          // Show loading overlay during operations
+          if (state is ExperienceLoading && _lastLoadedExperience != null) {
+            return Stack(
+              children: [
+                _buildExperienceDetails(_lastLoadedExperience),
+                Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  child: const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Processing...',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
           if (state is ExperienceLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state is ExperienceLoaded) {
-            return _buildExperienceDetails(state.experience);
-          } else if (state is ExperienceError) {
+          }
+
+          if (state is ExperienceError) {
             return _buildErrorState(state.message);
           }
           

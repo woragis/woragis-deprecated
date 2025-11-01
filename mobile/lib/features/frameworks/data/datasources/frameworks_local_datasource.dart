@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/sync_manager.dart';
+import '../../../../core/stores/auth_store.dart';
 import '../../domain/entities/framework_entity.dart';
 import '../models/framework_model.dart';
 
@@ -30,6 +31,12 @@ abstract class FrameworksLocalDataSource {
 class FrameworksLocalDataSourceImpl implements FrameworksLocalDataSource {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final SyncManager _syncManager = SyncManager();
+  final AuthStoreBloc _authStoreBloc;
+  
+  FrameworksLocalDataSourceImpl({required AuthStoreBloc authStoreBloc}) 
+      : _authStoreBloc = authStoreBloc;
+
+  String? get _currentUserId => _authStoreBloc.state.user?.id;
 
   @override
   Future<List<FrameworkEntity>> getCachedFrameworks({
@@ -75,7 +82,7 @@ class FrameworksLocalDataSourceImpl implements FrameworksLocalDataSource {
       offset: offset,
     );
 
-    return result.map((frameworkMap) => FrameworkModel.fromJson(frameworkMap).toEntity()).toList();
+    return result.map((frameworkMap) => FrameworkModel.fromJson(frameworkMap, userId: _currentUserId).toEntity()).toList();
   }
 
   @override
@@ -110,6 +117,11 @@ class FrameworksLocalDataSourceImpl implements FrameworksLocalDataSource {
     final frameworkModel = FrameworkModel.fromEntity(framework);
     final frameworkMap = frameworkModel.toJson();
     
+    // Ensure userId is set from auth store
+    if (_currentUserId != null) {
+      frameworkMap['userId'] = _currentUserId;
+    }
+    
     frameworkMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
     frameworkMap['is_dirty'] = 0;
 
@@ -129,6 +141,11 @@ class FrameworksLocalDataSourceImpl implements FrameworksLocalDataSource {
       final frameworkModel = FrameworkModel.fromEntity(framework);
       final frameworkMap = frameworkModel.toJson();
       
+      // Ensure userId is set from auth store
+      if (_currentUserId != null) {
+        frameworkMap['userId'] = _currentUserId;
+      }
+      
       frameworkMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
       frameworkMap['is_dirty'] = 0;
 
@@ -147,6 +164,11 @@ class FrameworksLocalDataSourceImpl implements FrameworksLocalDataSource {
     final db = await _dbHelper.database;
     final frameworkModel = FrameworkModel.fromEntity(framework);
     final frameworkMap = frameworkModel.toJson();
+    
+    // Ensure userId is set from auth store
+    if (_currentUserId != null) {
+      frameworkMap['userId'] = _currentUserId;
+    }
     
     frameworkMap['updated_at'] = DateTime.now().millisecondsSinceEpoch;
     frameworkMap['is_dirty'] = 1;
@@ -192,7 +214,7 @@ class FrameworksLocalDataSourceImpl implements FrameworksLocalDataSource {
       whereArgs: [1],
     );
 
-    return result.map((frameworkMap) => FrameworkModel.fromJson(frameworkMap).toEntity()).toList();
+    return result.map((frameworkMap) => FrameworkModel.fromJson(frameworkMap, userId: _currentUserId).toEntity()).toList();
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/project_entity.dart';
+import '../../../frameworks/domain/entities/framework_entity.dart';
 import '../bloc/projects_bloc.dart';
 
 class ProjectsListPage extends StatefulWidget {
@@ -17,18 +18,31 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
   bool _showPublicOnly = false;
   bool _isGridView = true;
   final List<String> _selectedTechnologies = [];
+  List<FrameworkEntity> _availableFrameworks = [];
+  bool _isLoadingFrameworks = false;
 
   @override
   void initState() {
     super.initState();
     // Load projects when page initializes
-    context.read<ProjectsBloc>().add(GetProjectsRequested());
+    _loadProjects();
+    // Load available frameworks for filtering
+    _loadFrameworks();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadProjects() {
+    context.read<ProjectsBloc>().add(GetProjectsRequested(
+      search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+      featured: _showFeaturedOnly,
+      public: _showPublicOnly,
+      technologies: _selectedTechnologies.isEmpty ? null : _selectedTechnologies,
+    ));
   }
 
   @override
@@ -238,7 +252,11 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push('/projects/${project.id}'),
+        onTap: () async {
+          await context.push('/projects/${project.id}');
+          // Reload list when returning from detail page
+          _loadProjects();
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -348,7 +366,11 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/projects/${project.id}'),
+        onTap: () async {
+          await context.push('/projects/${project.id}');
+          // Reload list when returning from detail page
+          _loadProjects();
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -501,6 +523,90 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
     _performSearch();
   }
 
+  Future<void> _loadFrameworks() async {
+    setState(() {
+      _isLoadingFrameworks = true;
+    });
+
+    try {
+      // For now, we'll use a simple list of common technologies
+      // In a real implementation, this would come from the frameworks repository
+      _availableFrameworks = [
+        FrameworkEntity(
+          id: '1',
+          userId: 'user',
+          name: 'Flutter',
+          slug: 'flutter',
+          description: 'Flutter framework',
+          type: FrameworkType.framework,
+          visible: true,
+          public: true,
+          order: 1,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        FrameworkEntity(
+          id: '2',
+          userId: 'user',
+          name: 'React',
+          slug: 'react',
+          description: 'React framework',
+          type: FrameworkType.framework,
+          visible: true,
+          public: true,
+          order: 2,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        FrameworkEntity(
+          id: '3',
+          userId: 'user',
+          name: 'Vue.js',
+          slug: 'vuejs',
+          description: 'Vue.js framework',
+          type: FrameworkType.framework,
+          visible: true,
+          public: true,
+          order: 3,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        FrameworkEntity(
+          id: '4',
+          userId: 'user',
+          name: 'Node.js',
+          slug: 'nodejs',
+          description: 'Node.js runtime',
+          type: FrameworkType.framework,
+          visible: true,
+          public: true,
+          order: 4,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        FrameworkEntity(
+          id: '5',
+          userId: 'user',
+          name: 'Python',
+          slug: 'python',
+          description: 'Python programming language',
+          type: FrameworkType.language,
+          visible: true,
+          public: true,
+          order: 5,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      ];
+    } catch (e) {
+      // Handle error silently for now
+    } finally {
+      setState(() {
+        _isLoadingFrameworks = false;
+      });
+    }
+  }
+
   void _showFilterDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -508,32 +614,56 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
         title: const Text('Filter Projects'),
         content: StatefulBuilder(
           builder: (context, setDialogState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CheckboxListTile(
-                  title: const Text('Featured only'),
-                  value: _showFeaturedOnly,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      _showFeaturedOnly = value ?? false;
-                    });
-                  },
-                ),
-                CheckboxListTile(
-                  title: const Text('Public only'),
-                  value: _showPublicOnly,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      _showPublicOnly = value ?? false;
-                    });
-                  },
-                ),
-                const Divider(),
-                const Text('Technologies:', style: TextStyle(fontWeight: FontWeight.bold)),
-                // TODO: Add technology selection chips
-                const Text('Technology filtering will be implemented soon'),
-              ],
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CheckboxListTile(
+                    title: const Text('Featured only'),
+                    value: _showFeaturedOnly,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _showFeaturedOnly = value ?? false;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Public only'),
+                    value: _showPublicOnly,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _showPublicOnly = value ?? false;
+                      });
+                    },
+                  ),
+                  const Divider(),
+                  const Text('Technologies:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  if (_isLoadingFrameworks)
+                    const CircularProgressIndicator()
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _availableFrameworks.map((framework) {
+                        final isSelected = _selectedTechnologies.contains(framework.name);
+                        return FilterChip(
+                          label: Text(framework.name),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              if (selected) {
+                                _selectedTechnologies.add(framework.name);
+                              } else {
+                                _selectedTechnologies.remove(framework.name);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                ],
+              ),
             );
           },
         ),

@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/database/sync_manager.dart';
+import '../../../../core/stores/auth_store.dart';
 import '../../domain/entities/idea_entity.dart';
 import '../../domain/entities/ai_chat_entity.dart';
 import '../../domain/entities/idea_node_entity.dart';
@@ -37,6 +38,28 @@ abstract class MoneyLocalDataSource {
 class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final SyncManager _syncManager = SyncManager();
+  final AuthStoreBloc? _authStore;
+  
+  MoneyLocalDataSourceImpl({AuthStoreBloc? authStore}) : _authStore = authStore;
+
+  /// Ensure required NOT NULL fields are always present
+  Map<String, dynamic> _ensureRequiredFields(Map<String, dynamic> data) {
+    final safeData = Map<String, dynamic>.from(data);
+    
+    // ✅ ENSURE user_id is always present (NOT NULL constraint)
+    if (!safeData.containsKey('user_id') || safeData['user_id'] == null || safeData['user_id'] == '') {
+      // Try to get user ID from auth store
+      final currentUserId = _authStore?.state.user?.id;
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        safeData['user_id'] = currentUserId;
+      } else {
+        // Fallback to a default user ID if not authenticated
+        safeData['user_id'] = 'system';
+      }
+    }
+    
+    return safeData;
+  }
 
   // Ideas Implementation
   @override
@@ -67,9 +90,11 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
     ideaMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
     ideaMap['is_dirty'] = 0;
 
+    final safeIdeaMap = _ensureRequiredFields(ideaMap);
+
     await db.insert(
       'ideas',
-      ideaMap,
+      safeIdeaMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -84,9 +109,11 @@ class MoneyLocalDataSourceImpl implements MoneyLocalDataSource {
       ideaMap['synced_at'] = DateTime.now().millisecondsSinceEpoch;
       ideaMap['is_dirty'] = 0;
 
+      final safeIdeaMap = _ensureRequiredFields(ideaMap);
+
       batch.insert(
         'ideas',
-        ideaMap,
+        safeIdeaMap,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }

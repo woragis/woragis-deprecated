@@ -17,19 +17,29 @@ class _BlogPostsListPageState extends State<BlogPostsListPage> {
   bool _showFeaturedOnly = false;
   bool _showPublicOnly = false;
   bool _isGridView = false;
-  List<String> _selectedTags = [];
+  final List<String> _selectedTags = [];
 
   @override
   void initState() {
     super.initState();
     // Load blog posts when page initializes
-    context.read<BlogBloc>().add(GetBlogPostsRequested());
+    _loadBlogPosts();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _loadBlogPosts() {
+    final searchQuery = _searchController.text.trim();
+    context.read<BlogBloc>().add(GetBlogPostsRequested(
+      search: searchQuery.isEmpty ? null : searchQuery,
+      published: _showPublishedOnly,
+      featured: _showFeaturedOnly,
+      public: _showPublicOnly,
+    ));
   }
 
   @override
@@ -245,7 +255,11 @@ class _BlogPostsListPageState extends State<BlogPostsListPage> {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push('/blog/${post.id}'),
+        onTap: () async {
+          await context.push('/blog/${post.id}');
+          // Reload list when returning from detail page
+          _loadBlogPosts();
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -399,7 +413,11 @@ class _BlogPostsListPageState extends State<BlogPostsListPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/blog/${post.id}'),
+        onTap: () async {
+          await context.push('/blog/${post.id}');
+          // Reload list when returning from detail page
+          _loadBlogPosts();
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

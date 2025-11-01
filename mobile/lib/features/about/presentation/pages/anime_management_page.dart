@@ -305,7 +305,7 @@ class _AnimeManagementPageState extends State<AnimeManagementPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _getAnimeStatusColor(anime.status).withOpacity(0.1),
+                        color: _getAnimeStatusColor(anime.status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -381,7 +381,7 @@ class _AnimeManagementPageState extends State<AnimeManagementPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _getAnimeStatusColor(anime.status).withOpacity(0.1),
+                    color: _getAnimeStatusColor(anime.status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
