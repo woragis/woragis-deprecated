@@ -10,18 +10,42 @@ import { validateConnectionsOnStartup } from "./env";
 /**
  * Comprehensive startup validation
  * This function should be called at the very beginning of your application
+ * Note: This function will exit the process if validation fails (server-side only)
  */
 export async function validateApplicationStartup(): Promise<void> {
   console.log("🚀 Starting application validation...");
   
   try {
     // Test all critical connections
-    await validateConnectionsOnStartup();
+    const result = await validateConnectionsOnStartup();
+    
+    if (!result.success) {
+      console.error("❌ Application startup validation failed:");
+      result.errors.forEach(error => console.error(`  - ${error}`));
+      
+      console.error("\n💡 Make sure your services are running:");
+      console.error("  - Database: docker-compose up db");
+      console.error("  - Redis: docker-compose up redis");
+      console.error("  - Or start all: docker-compose up");
+      
+      // Only exit in server environment, not in Edge Runtime
+      if (typeof process !== 'undefined' && process.exit) {
+        process.exit(1);
+      } else {
+        throw new Error(`Application startup validation failed: ${result.errors.join(', ')}`);
+      }
+    }
     
     console.log("✅ Application startup validation completed successfully");
   } catch (error) {
     console.error("❌ Application startup validation failed:", error);
-    process.exit(1);
+    
+    // Only exit in server environment, not in Edge Runtime
+    if (typeof process !== 'undefined' && process.exit) {
+      process.exit(1);
+    } else {
+      throw error;
+    }
   }
 }
 

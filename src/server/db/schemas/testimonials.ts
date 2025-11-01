@@ -20,12 +20,12 @@ export const testimonials = pgTable("testimonials", {
   content: text("content").notNull(),
   avatar: text("avatar"), // URL to avatar image
   rating: integer("rating").notNull().default(5), // 1-5 star rating
-  featured: boolean("featured").default(true),
+  featured: boolean("featured").notNull().default(true),
   order: integer("order").notNull().default(0),
-  visible: boolean("visible").default(true),
-  public: boolean("public").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  visible: boolean("visible").notNull().default(true),
+  public: boolean("public").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Relations

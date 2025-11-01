@@ -51,7 +51,14 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   }
 
   const body = await request.json();
-  const educationData: NewEducation = body;
+  
+  // Convert date strings to Date objects for Drizzle
+  const educationData: NewEducation = {
+    ...body,
+    startDate: body.startDate ? new Date(body.startDate) : undefined,
+    endDate: body.endDate ? new Date(body.endDate) : undefined,
+    completionDate: body.completionDate ? new Date(body.completionDate) : undefined,
+  };
 
   const result = await educationService.createEducation(
     educationData,

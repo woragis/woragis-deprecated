@@ -79,6 +79,25 @@ export class ProjectService extends BaseService {
     }
   }
 
+  async getProjectBySlug(
+    slug: string,
+    userId?: string
+  ): Promise<ApiResponse<Project | null>> {
+    try {
+      if (!slug || slug.trim().length === 0) {
+        return {
+          success: false,
+          error: "Invalid project slug",
+        };
+      }
+
+      const project = await projectRepository.findBySlug(slug, userId);
+      return this.success(project);
+    } catch (error) {
+      return this.handleError(error, "getProjectBySlug");
+    }
+  }
+
   async getProjectWithRelations(
     id: string,
     userId?: string

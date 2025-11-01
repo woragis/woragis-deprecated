@@ -1,7 +1,15 @@
-import { config } from "dotenv";
-
-// Load environment variables from .env file
-config();
+// Load environment variables from .env file (server-side only)
+// This is safe to import in Edge Runtime as it only reads process.env
+try {
+  // Only load dotenv if we're in a Node.js environment (not Edge Runtime)
+  if (typeof process !== 'undefined' && !process.env.NEXT_RUNTIME) {
+    const { config } = require("dotenv");
+    config();
+  }
+} catch (error) {
+  // Silently fail in Edge Runtime - environment variables should be set externally
+  console.warn("Could not load .env file (this is expected in Edge Runtime)");
+}
 
 export const env = {
   // Database
@@ -40,6 +48,15 @@ export const env = {
 
   // AI Configuration
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+
+  // CORS Configuration
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:3001",
+  // Note: Native mobile apps don't need CORS origins - only web views and PWAs do
+  MOBILE_APP_ORIGINS: process.env.MOBILE_APP_ORIGINS || "capacitor://localhost,ionic://localhost",
+
+  // API Key Configuration
+  API_KEY_SECRET: process.env.API_KEY_SECRET || "your-api-key-secret",
+  MOBILE_API_KEYS: process.env.MOBILE_API_KEYS || "mobile-key-1,mobile-key-2",
 } as const;
 
 // Validate required environment variables
@@ -138,28 +155,35 @@ async function testRedisConnection(): Promise<boolean> {
 }
 
 /**
- * Test all connections and exit if any fail
- * This should be called on app startup
+ * Test all connections and return results
+ * This should be called on app startup (server-side only)
+ * Note: This function should NOT be called in Edge Runtime (middleware)
  */
-export async function validateConnectionsOnStartup(): Promise<void> {
+export async function validateConnectionsOnStartup(): Promise<{ success: boolean; errors: string[] }> {
   console.log("🔍 Testing connections on startup...");
   
-  const { testAllConnections } = await import("./connection-tests");
-  const results = await testAllConnections();
-  
-  if (!results.overall.success) {
-    console.error("❌ Connection validation failed:");
-    results.overall.errors.forEach(error => console.error(`  - ${error}`));
+  try {
+    const { testAllConnections } = await import("./connection-tests");
+    const results = await testAllConnections();
     
-    console.error("\n💡 Make sure your services are running:");
-    console.error("  - Database: docker-compose up db");
-    console.error("  - Redis: docker-compose up redis");
-    console.error("  - Or start all: docker-compose up");
+    if (!results.overall.success) {
+      console.error("❌ Connection validation failed:");
+      results.overall.errors.forEach(error => console.error(`  - ${error}`));
+      
+      console.error("\n💡 Make sure your services are running:");
+      console.error("  - Database: docker-compose up db");
+      console.error("  - Redis: docker-compose up redis");
+      console.error("  - Or start all: docker-compose up");
+      
+      return { success: false, errors: results.overall.errors };
+    }
     
-    process.exit(1);
+    console.log("✅ All connections validated successfully");
+    return { success: true, errors: [] };
+  } catch (error) {
+    console.error("❌ Connection validation error:", error);
+    return { success: false, errors: [error instanceof Error ? error.message : 'Unknown error'] };
   }
-  
-  console.log("✅ All connections validated successfully");
 }
 
 export default env;

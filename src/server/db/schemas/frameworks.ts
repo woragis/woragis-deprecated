@@ -15,7 +15,18 @@ import { users } from "./auth";
 export const frameworkTypeEnum = pgEnum("framework_type", [
   "framework",
   "language",
+  "library",
   "tool",
+  "database",
+  "other",
+]);
+
+// Enum for proficiency level
+export const proficiencyLevelEnum = pgEnum("proficiency_level", [
+  "beginner",
+  "intermediate",
+  "advanced",
+  "expert",
 ]);
 
 export const frameworks = pgTable("frameworks", {
@@ -30,11 +41,13 @@ export const frameworks = pgTable("frameworks", {
   color: text("color"), // Hex color code for UI
   website: text("website"), // Official website URL
   type: frameworkTypeEnum("type").notNull().default("framework"), // framework or language
+  proficiencyLevel: proficiencyLevelEnum("proficiency_level"), // User's proficiency level
   version: text("version"), // Current version (mainly for frameworks)
-  order: integer("order").default(0),
-  visible: boolean("visible").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  order: integer("order").default(0).notNull(),
+  visible: boolean("visible").default(true).notNull(),
+  public: boolean("public").default(true).notNull(), // Whether to show publicly
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Junction table for many-to-many relationship between projects and frameworks/languages

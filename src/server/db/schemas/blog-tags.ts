@@ -18,10 +18,10 @@ export const blogTags = pgTable("blog_tags", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   color: text("color"), // Hex color code for UI display
-  visible: boolean("visible").default(true),
+  visible: boolean("visible").notNull().default(true),
   order: integer("order").notNull().default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Relations

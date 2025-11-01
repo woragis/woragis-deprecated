@@ -30,18 +30,27 @@ export const errorHandler = (err: any, req: any, res: any, next: any) => {
   });
 };
 
-// CORS middleware
+// Enhanced CORS middleware for web and mobile apps
 export const corsHandler = (req: any, res: any, next: any) => {
   const origin = req.headers.origin;
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+  const mobileOrigins = process.env.MOBILE_APP_ORIGINS?.split(',') || ['capacitor://localhost', 'ionic://localhost'];
   
-  if (allowedOrigins.includes(origin)) {
+  // Combine all allowed origins
+  const allAllowedOrigins = [...allowedOrigins, ...mobileOrigins];
+  
+  // Check if origin is allowed
+  if (origin && allAllowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (origin && (origin.startsWith('capacitor://') || origin.startsWith('ionic://'))) {
+    // Allow all Capacitor/Ionic origins for mobile apps
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-Requested-With');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   
   if (req.method === 'OPTIONS') {
     res.status(200).end();

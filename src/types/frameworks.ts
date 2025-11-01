@@ -2,11 +2,12 @@ import type {
   frameworks,
   projectFrameworks,
   frameworkTypeEnum,
+  proficiencyLevelEnum,
 } from "@/server/db/schemas/frameworks";
-import type { ProficiencyLevel } from "./index";
 
 // Framework/Language type enum
 export type FrameworkType = (typeof frameworkTypeEnum.enumValues)[number];
+export type ProficiencyLevel = (typeof proficiencyLevelEnum.enumValues)[number];
 
 // Base types from schema
 export type Framework = typeof frameworks.$inferSelect;
@@ -26,10 +27,15 @@ export interface FrameworkWithProficiency extends Omit<Framework, "version"> {
 
 export interface FrameworkFilters {
   visible?: boolean;
+  public?: boolean;
   search?: string;
   type?: FrameworkType;
+  proficiencyLevel?: ProficiencyLevel;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
   limit?: number;
   offset?: number;
+  page?: number;
 }
 
 // Form types for admin
@@ -41,9 +47,11 @@ export interface FrameworkFormData {
   color?: string;
   website?: string;
   type: FrameworkType;
+  proficiencyLevel?: ProficiencyLevel;
   version?: string;
   order: number;
   visible: boolean;
+  public: boolean;
 }
 
 // API response types

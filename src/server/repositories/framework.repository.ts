@@ -100,6 +100,10 @@ export class FrameworkRepository {
       conditions.push(eq(frameworks.visible, filters.visible));
     }
 
+    if (filters.public !== undefined) {
+      conditions.push(eq(frameworks.public, filters.public));
+    }
+
     if (filters.type) {
       conditions.push(eq(frameworks.type, filters.type));
     }
@@ -122,7 +126,29 @@ export class FrameworkRepository {
       query = query.offset(filters.offset) as any;
     }
 
-    return await query.orderBy(asc(frameworks.order), asc(frameworks.name));
+    // Dynamic sorting
+    const sortField = filters.sortBy || "order";
+    const sortDirection = filters.sortOrder || "asc";
+    
+    // Map sort field to column
+    const sortColumn = sortField === "name" ? frameworks.name :
+                       sortField === "type" ? frameworks.type :
+                       sortField === "createdAt" ? frameworks.createdAt :
+                       sortField === "updatedAt" ? frameworks.updatedAt :
+                       frameworks.order;
+    
+    if (sortDirection === "desc") {
+      query = query.orderBy(desc(sortColumn)) as any;
+    } else {
+      query = query.orderBy(asc(sortColumn)) as any;
+    }
+    
+    // Add secondary sort by name for consistency
+    if (sortField !== "name") {
+      query = query.orderBy(asc(frameworks.name)) as any;
+    }
+
+    return await query;
   }
 
   // Type-specific methods

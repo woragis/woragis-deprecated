@@ -24,9 +24,9 @@ export const experiences = pgTable("experiences", {
   technologies: jsonb("technologies").$type<string[]>().notNull().default([]),
   icon: text("icon").notNull().default("💼"),
   order: integer("order").notNull().default(0),
-  visible: boolean("visible").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  visible: boolean("visible").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Relations

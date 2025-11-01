@@ -98,6 +98,18 @@ export class ProjectRepository {
     return result[0] || null;
   }
 
+  async findBySlug(slug: string, userId?: string): Promise<Project | null> {
+    const conditions = [eq(projects.slug, slug)];
+    if (userId) {
+      conditions.push(eq(projects.userId, userId));
+    }
+    const result = await db
+      .select()
+      .from(projects)
+      .where(and(...conditions));
+    return result[0] || null;
+  }
+
   async create(project: NewProject): Promise<Project> {
     const result = await db.insert(projects).values(project).returning();
     return result[0];

@@ -35,7 +35,14 @@ export const PUT = withErrorHandling(async (
 
   const { id } = await params;
   const body = await request.json();
-  const educationData: Partial<NewEducation> = body;
+  
+  // Convert date strings to Date objects for Drizzle
+  const educationData: Partial<NewEducation> = {
+    ...body,
+    startDate: body.startDate ? new Date(body.startDate) : undefined,
+    endDate: body.endDate ? new Date(body.endDate) : undefined,
+    completionDate: body.completionDate ? new Date(body.completionDate) : undefined,
+  };
 
   const result = await educationService.updateEducation(id, educationData);
   return handleServiceResult(result, "Education record updated successfully");

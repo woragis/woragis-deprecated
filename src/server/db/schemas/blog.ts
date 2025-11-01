@@ -24,12 +24,12 @@ export const blogPosts = pgTable("blog_posts", {
   published: boolean("published").default(false),
   publishedAt: timestamp("published_at"),
   order: integer("order").notNull().default(0),
-  visible: boolean("visible").default(true),
-  public: boolean("public").default(true),
-  viewCount: integer("view_count").default(0),
-  likeCount: integer("like_count").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  visible: boolean("visible").notNull().default(true),
+  public: boolean("public").notNull().default(true),
+  viewCount: integer("view_count").notNull().default(0),
+  likeCount: integer("like_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Relations

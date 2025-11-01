@@ -16,6 +16,16 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   }
 
   const { searchParams } = new URL(request.url);
+  
+  // Handle both page-based and offset-based pagination
+  const page = searchParams.get("page");
+  const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 20;
+  const offset = page 
+    ? (parseInt(page) - 1) * limit 
+    : searchParams.get("offset")
+    ? parseInt(searchParams.get("offset")!)
+    : undefined;
+
   const filters: FrameworkFilters = {
     visible:
       searchParams.get("visible") === "true"
@@ -23,14 +33,18 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
         : searchParams.get("visible") === "false"
         ? false
         : undefined,
+    public:
+      searchParams.get("public") === "true"
+        ? true
+        : searchParams.get("public") === "false"
+        ? false
+        : undefined,
     search: searchParams.get("search") || undefined,
     type: (searchParams.get("type") as FrameworkType) || undefined,
-    limit: searchParams.get("limit")
-      ? parseInt(searchParams.get("limit")!)
-      : undefined,
-    offset: searchParams.get("offset")
-      ? parseInt(searchParams.get("offset")!)
-      : undefined,
+    sortBy: searchParams.get("sortBy") || undefined,
+    sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || undefined,
+    limit,
+    offset,
   };
 
   const result = await frameworkService.searchFrameworks(filters);
