@@ -34,7 +34,7 @@ migrate_working_dir/
 /build/
 
 # Environment variables
-.env
+# .env
 
 # Symbolication related
 app.*.symbols
