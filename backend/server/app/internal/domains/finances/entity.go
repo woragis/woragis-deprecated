@@ -25,6 +25,9 @@ type Transaction struct {
 	Amount      float64         `gorm:"not null"`
 	Currency    string          `gorm:"size:8;not null"`
 	OccurredAt  time.Time       `gorm:"not null"`
+	IsRecurring bool            `gorm:"not null;default:false"`
+	IsEssential bool            `gorm:"not null;default:false"`
+	IsArchived  bool            `gorm:"not null;default:false;index"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -40,6 +43,9 @@ func NewTransaction(userID uuid.UUID, txType TransactionType, category, descript
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(currency)),
 		OccurredAt:  occurredAt.UTC(),
+		IsRecurring: false,
+		IsEssential: false,
+		IsArchived:  false,
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
@@ -82,4 +88,43 @@ func (t *Transaction) Validate() error {
 	}
 
 	return nil
+}
+
+// UpdateMutableFields updates mutable attributes and preserves invariants.
+func (t *Transaction) UpdateMutableFields(category, description string, amount *float64, currency string, occurredAt *time.Time) error {
+	if category != "" {
+		t.Category = strings.TrimSpace(category)
+	}
+	if description != "" {
+		t.Description = strings.TrimSpace(description)
+	}
+	if amount != nil {
+		t.Amount = *amount
+	}
+	if currency != "" {
+		t.Currency = strings.ToUpper(strings.TrimSpace(currency))
+	}
+	if occurredAt != nil && !occurredAt.IsZero() {
+		t.OccurredAt = occurredAt.UTC()
+	}
+	t.UpdatedAt = time.Now().UTC()
+	return t.Validate()
+}
+
+// ToggleArchived sets archived flag.
+func (t *Transaction) ToggleArchived(archived bool) {
+	t.IsArchived = archived
+	t.UpdatedAt = time.Now().UTC()
+}
+
+// ToggleRecurring sets recurring flag.
+func (t *Transaction) ToggleRecurring(recurring bool) {
+	t.IsRecurring = recurring
+	t.UpdatedAt = time.Now().UTC()
+}
+
+// ToggleEssential sets essential flag.
+func (t *Transaction) ToggleEssential(essential bool) {
+	t.IsEssential = essential
+	t.UpdatedAt = time.Now().UTC()
 }

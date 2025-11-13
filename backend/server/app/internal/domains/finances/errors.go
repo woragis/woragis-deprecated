@@ -10,6 +10,8 @@ const (
 	ErrCodeInvalidCurrency   = 2004
 	ErrCodeRepositoryFailure = 2005
 	ErrCodeSummaryFailure    = 2006
+	ErrCodeInvalidQuery      = 2007
+	ErrCodeNotFound          = 2008
 )
 
 const (
@@ -24,6 +26,11 @@ const (
 	ErrUnableToPersist            = "finances: unable to persist transaction"
 	ErrUnableToFetch              = "finances: unable to fetch transactions"
 	ErrUnableToSummarize          = "finances: unable to build summary"
+	ErrUnableToUpdate             = "finances: unable to update transaction"
+	ErrUnableToDelete             = "finances: unable to delete transaction"
+	ErrUnableToBulkPersist        = "finances: unable to persist bulk transactions"
+	ErrInvalidFilter              = "finances: invalid query filters"
+	ErrTransactionNotFound        = "finances: transaction not found"
 )
 
 type DomainError struct {
