@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-	import { monitoringStore, type MetricSample } from '$lib';
+	import { monitoringStore, type MetricSeries } from '$lib';
+	import { PUBLIC_GRAFANA_PANELS } from '$env/static/public';
 
 	let status = 'disconnected';
 	let error: string | null = null;
 	let lastUpdated: number | null = null;
-	let samples: MetricSample[] = [];
+	let series: MetricSeries[] = [];
 
 	const unsubscribe = monitoringStore.subscribe((state) => {
 		status = state.status;
 		error = state.error;
 		lastUpdated = state.lastUpdated;
-		samples = state.samples;
+		series = state.series;
 	});
 
 	onMount(() => {
@@ -34,7 +35,57 @@
 		'woragis_user_registrations_total'
 	]);
 
-	$: sortedSamples = [...samples].sort((a, b) => a.name.localeCompare(b.name));
+	const formatLabels = (labels: Record<string, string>) => {
+		const entries = Object.entries(labels);
+		if (entries.length === 0) return '—';
+		return entries.map(([key, value]) => `${key}=${value}`).join(', ');
+	};
+
+	const toPath = (points: MetricSeries['points']) => {
+		if (points.length === 0) return '';
+		const values = points.map((point) => point.value);
+		const min = Math.min(...values);
+		const max = Math.max(...values);
+		const range = max - min || 1;
+		const lastIndex = Math.max(points.length - 1, 1);
+
+		return points
+			.map((point, index) => {
+				const x = (index / lastIndex) * 100;
+				const y = 40 - ((point.value - min) / range) * 40;
+				return `${index === 0 ? 'M' : 'L'}${x},${y}`;
+			})
+			.join(' ');
+	};
+
+	const latestValue = (metric: MetricSeries) =>
+		metric.points.length ? metric.points[metric.points.length - 1].value : 0;
+
+	const sortedSeries = () => [...series].sort((a, b) => a.name.localeCompare(b.name));
+
+	type GrafanaPanel = {
+		key: string;
+		title: string;
+		url: string;
+	};
+
+	const grafanaPanels: GrafanaPanel[] = (() => {
+		const raw = (PUBLIC_GRAFANA_PANELS ?? '').split(',').map((value) => value.trim());
+		return raw
+			.filter((value) => value.length > 0)
+			.map((entry, index) => {
+				const [title, url] = entry.split('|');
+				const resolvedUrl = (url ?? title ?? '').trim();
+				return {
+					key: `${index}-${resolvedUrl}`,
+					title: title?.trim() || `Grafana panel #${index + 1}`,
+					url: resolvedUrl
+				};
+			})
+			.filter((panel) => panel.url.length > 0);
+	})();
+
+	$: console.log('Monitoring metrics series', series);
 </script>
 
 <section class="space-y-6">
@@ -78,50 +129,100 @@
 		</p>
 	</header>
 
+	{#if grafanaPanels.length > 0}
+		<section class="space-y-3 rounded border border-slate-800 bg-slate-900/60 p-4">
+			<header class="flex items-center justify-between">
+				<h3 class="text-sm font-semibold text-slate-100">Grafana Dashboards</h3>
+				<span class="text-xs text-slate-400">
+					{grafanaPanels.length} panel{grafanaPanels.length === 1 ? '' : 's'}
+				</span>
+			</header>
+			<div class="grid gap-4 lg:grid-cols-2">
+				{#each grafanaPanels as panel (panel.key)}
+					<div class="space-y-2">
+						<h4 class="text-xs font-semibold tracking-wide text-slate-400 uppercase">
+							{panel.title}
+						</h4>
+						<iframe
+							src={panel.url}
+							class="h-[320px] w-full overflow-hidden rounded border border-slate-800 bg-slate-950"
+							frameborder="0"
+							loading="lazy"
+							allow="fullscreen"
+						/>
+					</div>
+				{/each}
+			</div>
+		</section>
+	{:else}
+		<section
+			class="rounded border border-dashed border-slate-700 bg-slate-900/40 p-4 text-xs text-slate-300"
+		>
+			<p class="font-semibold text-slate-100">Grafana panels</p>
+			<p class="mt-2">
+				Set <code>PUBLIC_GRAFANA_PANELS</code> in <code>frontend/.env</code> with one or more
+				Grafana embed URLs in the form
+				<code>Title|http://localhost:3000/d-solo/uid/dashboard?orgId=1&panelId=2&refresh=5s</code>.
+				Panels will appear here automatically.
+			</p>
+		</section>
+	{/if}
+
 	<section class="space-y-4">
-		<h3 class="text-sm font-semibold text-slate-100">Live Samples ({sortedSamples.length})</h3>
-		{#if sortedSamples.length === 0}
+		<h3 class="text-sm font-semibold text-slate-100">
+			Live Series ({sortedSeries().length})
+		</h3>
+		{#if sortedSeries().length === 0}
 			<p class="rounded border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
 				Waiting for metric samples. Exercise the API or use the refresh button to load a snapshot.
 			</p>
 		{:else}
-			<div class="rounded border border-slate-800 bg-slate-900/60 p-4">
-				<table class="min-w-full border-separate border-spacing-y-2 text-xs text-slate-200">
-					<thead class="text-[11px] tracking-wide text-slate-500 uppercase">
-						<tr>
-							<th class="text-left">Metric</th>
-							<th class="text-left">Value</th>
-							<th class="text-left">Labels</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each sortedSamples as sample (sample.name + JSON.stringify(sample.labels))}
-							<tr
-								class={`rounded border ${
-									highlightMetrics.has(sample.name)
-										? 'border-emerald-500/40 bg-emerald-500/10'
-										: 'border-slate-800 bg-slate-950/60'
-								}`}
-							>
-								<td class="px-3 py-2 font-semibold">{sample.name}</td>
-								<td class="px-3 py-2 text-slate-100">{sample.value}</td>
-								<td class="px-3 py-2 text-[11px] text-slate-400">
-									{#if Object.keys(sample.labels).length === 0}
-										<span>—</span>
-									{:else}
-										<ul class="flex flex-wrap gap-2">
-											{#each Object.entries(sample.labels) as [labelKey, labelValue] (`${sample.name}-${labelKey}-${labelValue}`)}
-												<li class="rounded bg-slate-800/60 px-2 py-1">
-													<strong>{labelKey}</strong>=<span>{labelValue}</span>
-												</li>
-											{/each}
-										</ul>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+			<div class="grid gap-4 lg:grid-cols-2">
+				{#each sortedSeries() as metric (metric.key)}
+					<div
+						class={`space-y-3 rounded border p-4 ${
+							highlightMetrics.has(metric.name)
+								? 'border-emerald-500/40 bg-emerald-500/10'
+								: 'border-slate-800 bg-slate-900/60'
+						}`}
+					>
+						<div class="flex items-center justify-between">
+							<div>
+								<h4 class="text-sm font-semibold text-slate-100">{metric.name}</h4>
+								<p class="text-[11px] text-slate-400">{formatLabels(metric.labels)}</p>
+							</div>
+							<div class="text-right text-xs text-slate-300">
+								<div class="text-slate-100">{latestValue(metric).toLocaleString()}</div>
+								<div>Latest value</div>
+							</div>
+						</div>
+						<div class="relative h-32 overflow-hidden rounded bg-slate-950/60">
+							{#if metric.points.length > 1}
+								<svg class="h-full w-full" viewBox="0 0 100 40" preserveAspectRatio="none">
+									<path
+										class="text-primary stroke-current"
+										d={toPath(metric.points)}
+										fill="none"
+										stroke-width="1.5"
+									/>
+								</svg>
+							{:else}
+								<div class="flex h-full items-center justify-center text-xs text-slate-500">
+									Insufficient data for sparkline
+								</div>
+							{/if}
+						</div>
+						<div class="flex items-center justify-between text-[11px] text-slate-400">
+							<span>Points: {metric.points.length}</span>
+							<span>
+								Range:
+								{metric.points.length
+									? `${Math.min(...metric.points.map((p) => p.value)).toLocaleString()} → ${Math.max(...metric.points.map((p) => p.value)).toLocaleString()}`
+									: '—'}
+							</span>
+						</div>
+					</div>
+				{/each}
 			</div>
 		{/if}
 	</section>

@@ -8,18 +8,32 @@ export type MetricSample = {
 	labels: Record<string, string>;
 };
 
+export type MetricSeriesPoint = {
+	timestamp: number;
+	value: number;
+};
+
+export type MetricSeries = {
+	key: string;
+	name: string;
+	labels: Record<string, string>;
+	points: MetricSeriesPoint[];
+};
+
 export type MonitoringState = {
 	status: 'disconnected' | 'connecting' | 'connected' | 'polling';
 	error: string | null;
 	lastUpdated: number | null;
 	samples: MetricSample[];
+	series: MetricSeries[];
 };
 
 const INITIAL_STATE: MonitoringState = {
 	status: 'disconnected',
 	error: null,
 	lastUpdated: null,
-	samples: []
+	samples: [],
+	series: []
 };
 
 const METRICS_WS_PATH = '/metrics/stream';
@@ -77,10 +91,47 @@ const parsePrometheusText = (text: string): MetricSample[] => {
 	return samples;
 };
 
+const HISTORY_LIMIT = 200;
+
 const createMonitoringStore = () => {
 	let ws: WebSocket | null = null;
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let manualDisconnect = false;
+	const seriesMap = new Map<string, MetricSeries>();
 	const { subscribe, update, set } = writable<MonitoringState>(INITIAL_STATE);
+
+	const applySamples = (samples: MetricSample[]) => {
+		const timestamp = Date.now();
+
+		for (const sample of samples) {
+			const key = `${sample.name}|${JSON.stringify(sample.labels)}`;
+			const existing = seriesMap.get(key) ?? {
+				key,
+				name: sample.name,
+				labels: sample.labels,
+				points: []
+			};
+
+			const nextPoints =
+				existing.points.length >= HISTORY_LIMIT
+					? existing.points.slice(existing.points.length - HISTORY_LIMIT + 1)
+					: [...existing.points];
+
+			nextPoints.push({ timestamp, value: sample.value });
+
+			seriesMap.set(key, {
+				key,
+				name: sample.name,
+				labels: sample.labels,
+				points: nextPoints
+			});
+		}
+
+		return Array.from(seriesMap.values()).map((series) => ({
+			...series,
+			points: [...series.points]
+		}));
+	};
 
 	const stopPolling = () => {
 		if (pollTimer) {
@@ -101,11 +152,13 @@ const createMonitoringStore = () => {
 			}
 			const text = await response.text();
 			const samples = parsePrometheusText(text);
+			const series = applySamples(samples);
 			set({
 				status: 'polling',
 				error: null,
 				lastUpdated: Date.now(),
-				samples
+				samples,
+				series
 			});
 		} catch (error) {
 			update((state) => ({
@@ -122,12 +175,15 @@ const createMonitoringStore = () => {
 	};
 
 	const disconnect = () => {
+		manualDisconnect = true;
 		stopPolling();
 		if (ws) {
 			ws.close();
 			ws = null;
 		}
+		seriesMap.clear();
 		set({ ...INITIAL_STATE, status: 'disconnected' });
+		manualDisconnect = false;
 	};
 
 	const connect = () => {
@@ -146,10 +202,12 @@ const createMonitoringStore = () => {
 				status: 'connecting',
 				error: null,
 				lastUpdated: null,
-				samples: []
+				samples: [],
+				series: []
 			});
 
 			ws.onopen = () => {
+				stopPolling();
 				update((state) => ({ ...state, status: 'connected', error: null }));
 			};
 
@@ -161,22 +219,26 @@ const createMonitoringStore = () => {
 				} else if (event.data instanceof Blob) {
 					event.data.text().then((text) => {
 						const samples = parsePrometheusText(text);
+						const series = applySamples(samples);
 						set({
 							status: 'connected',
 							error: null,
 							lastUpdated: Date.now(),
-							samples
+							samples,
+							series
 						});
 					});
 					return;
 				}
 
 				const samples = parsePrometheusText(payload);
+				const series = applySamples(samples);
 				set({
 					status: 'connected',
 					error: null,
 					lastUpdated: Date.now(),
-					samples
+					samples,
+					series
 				});
 			};
 
@@ -191,7 +253,7 @@ const createMonitoringStore = () => {
 			ws.onclose = () => {
 				ws = null;
 				// start polling fallback if we were not explicitly disconnected
-				if (!pollTimer) {
+				if (!manualDisconnect && !pollTimer) {
 					startPolling();
 				}
 			};
