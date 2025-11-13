@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		createTransaction,
 		deleteTransactions,
@@ -47,7 +48,7 @@
 	let search = '';
 	let includeArchived = false;
 	let formState = defaultForm();
-	let selection: Set<UUID> = new Set();
+	let selection = new SvelteSet<UUID>();
 
 	const numberFormatter = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 2,
@@ -62,7 +63,7 @@
 			if (!state.isAuthenticated || !currentUserId) {
 				summary = null;
 				transactions = [];
-				selection = new Set();
+				selection = new SvelteSet();
 				return;
 			}
 
@@ -83,7 +84,7 @@
 		try {
 			summary = await fetchSummary();
 			transactions = await fetchTransactions({ search, includeArchived });
-			selection = new Set();
+			selection = new SvelteSet();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Unable to load finances';
 		} finally {
@@ -169,7 +170,7 @@
 	}
 
 	function toggleSelection(id: UUID, checked: boolean) {
-		const next = new Set(selection);
+		const next = new SvelteSet(selection);
 		if (checked) {
 			next.add(id);
 		} else {
@@ -374,7 +375,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each transactions as transaction}
+								{#each transactions as transaction (transaction.id)}
 									<tr class="rounded border border-slate-800 bg-slate-950/40">
 										<td class="px-2">
 											<input

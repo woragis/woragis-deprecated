@@ -44,6 +44,7 @@
 	let board: KanbanBoard | null = null;
 	let milestones: Milestone[] = [];
 	let dependencies: ProjectDependency[] = [];
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let loading = false;
 	let error: string | null = null;
 
@@ -416,7 +417,7 @@
 							class="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
 							bind:value={projectForm.status}
 						>
-							{#each statusOptions as status}
+							{#each statusOptions as status (status)}
 								<option value={status}>{status}</option>
 							{/each}
 						</select>
@@ -463,7 +464,7 @@
 								class="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
 								bind:value={duplicateForm.status}
 							>
-								{#each statusOptions as status}
+								{#each statusOptions as status (status)}
 									<option value={status}>{status}</option>
 								{/each}
 							</select>
@@ -504,7 +505,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each projects as project}
+								{#each projects as project (project.id)}
 									<tr class="rounded border border-slate-800 bg-slate-950/40">
 										<td class="px-3 py-2 font-semibold">{project.name}</td>
 										<td class="px-3 py-2 text-slate-300">{project.status}</td>
@@ -540,7 +541,7 @@
 										bind:value={activeProject.status}
 										class="rounded border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
 									>
-										{#each statusOptions as status}
+										{#each statusOptions as status (status)}
 											<option value={status}>{status}</option>
 										{/each}
 									</select>
@@ -609,7 +610,7 @@
 								<h3 class="text-sm font-semibold text-slate-100">Kanban Board</h3>
 								<div class="overflow-x-auto">
 									<div class="flex min-w-full gap-4">
-										{#each board.columns as column}
+										{#each board.columns as column (column.column.id)}
 											<div
 												class="w-72 flex-shrink-0 space-y-3 rounded border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-200"
 											>
@@ -626,7 +627,7 @@
 													WIP limit: {column.column.wip_limit || '∞'}
 												</p>
 												<ul class="space-y-2">
-													{#each column.cards as card}
+													{#each column.cards as card (card.id)}
 														<li class="rounded border border-slate-800 bg-slate-950/60 p-2">
 															<p class="font-semibold text-slate-100">{card.title}</p>
 															<p class="text-[11px] text-slate-400">{card.description}</p>
@@ -640,7 +641,7 @@
 																		)}
 																>
 																	<option value="">Move to…</option>
-																	{#each board.columns as target}
+																	{#each board.columns as target (target.column.id)}
 																		{#if target.column.id !== column.column.id}
 																			<option value={target.column.id}>{target.column.name}</option>
 																		{/if}
@@ -708,7 +709,7 @@
 												bind:value={cardForm.columnId}
 											>
 												<option value="">Choose column…</option>
-												{#each board.columns as col}
+												{#each board.columns as col (col.column.id)}
 													<option value={col.column.id}>{col.column.name}</option>
 												{/each}
 											</select>
@@ -742,7 +743,7 @@
 												bind:value={cardForm.milestoneId}
 											>
 												<option value="">None</option>
-												{#each milestones as milestone}
+												{#each milestones as milestone (milestone.id)}
 													<option value={milestone.id}>{milestone.title}</option>
 												{/each}
 											</select>
@@ -768,7 +769,7 @@
 									</h4>
 								</header>
 								<ul class="mt-3 space-y-2">
-									{#each milestones as milestone}
+									{#each milestones as milestone (milestone.id)}
 										<li class="rounded border border-slate-800 bg-slate-950/60 p-3">
 											<div class="flex items-center justify-between">
 												<div>
@@ -827,7 +828,7 @@
 									</h4>
 								</header>
 								<ul class="mt-3 space-y-2">
-									{#each dependencies as dependency}
+									{#each dependencies as dependency (dependency.id)}
 										<li
 											class="flex items-center justify-between rounded border border-slate-800 bg-slate-950/60 px-3 py-2"
 										>
@@ -849,7 +850,7 @@
 											bind:value={dependencyForm.dependsOnProjectId}
 										>
 											<option value="">Select project</option>
-											{#each otherProjects(activeProject?.id) as project}
+											{#each otherProjects(activeProject?.id) as project (project.id)}
 												<option value={project.id}>{project.name}</option>
 											{/each}
 										</select>

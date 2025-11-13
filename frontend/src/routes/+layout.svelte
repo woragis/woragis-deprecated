@@ -12,6 +12,38 @@
 		`rounded px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
 			match ? 'bg-slate-800/80 text-primary' : 'text-slate-300 hover:text-slate-100'
 		}`;
+
+	const navLinks = [
+		{ href: '/', label: 'Home', match: (pathname: string) => pathname === '/' },
+		{
+			href: '/finances',
+			label: 'Finances',
+			match: (pathname: string) => pathname.startsWith('/finances')
+		},
+		{
+			href: '/projects',
+			label: 'Projects',
+			match: (pathname: string) => pathname.startsWith('/projects')
+		},
+		{
+			href: '/monitoring',
+			label: 'Monitoring',
+			match: (pathname: string) => pathname.startsWith('/monitoring')
+		}
+	];
+
+	const authLinks = [
+		{
+			href: '/auth/login',
+			label: 'Sign in',
+			match: (pathname: string) => pathname.startsWith('/auth/login')
+		},
+		{
+			href: '/auth/register',
+			label: 'Register',
+			match: (pathname: string) => pathname.startsWith('/auth/register')
+		}
+	];
 </script>
 
 <svelte:head>
@@ -24,46 +56,29 @@
 	>
 		<h1 class="text-lg font-semibold tracking-wide">Woragis Console</h1>
 		<nav class="mt-8 flex flex-col gap-1 text-sm font-medium">
-			<a
-				class={linkClass({ match: $page.url.pathname === '/' })}
-				aria-current={$page.url.pathname === '/' ? 'page' : undefined}
-				href="/"
-			>
-				Home
-			</a>
-			<a
-				class={linkClass({ match: $page.url.pathname.startsWith('/finances') })}
-				aria-current={$page.url.pathname.startsWith('/finances') ? 'page' : undefined}
-				href="/finances"
-			>
-				Finances
-			</a>
-			<a
-				class={linkClass({ match: $page.url.pathname.startsWith('/projects') })}
-				aria-current={$page.url.pathname.startsWith('/projects') ? 'page' : undefined}
-				href="/projects"
-			>
-				Projects
-			</a>
+			{#each navLinks as item (item.href)}
+				<a
+					class={linkClass({ match: item.match($page.url.pathname) })}
+					aria-current={item.match($page.url.pathname) ? 'page' : undefined}
+					href={item.href}
+				>
+					{item.label}
+				</a>
+			{/each}
 			<div
 				class="mt-6 border-t border-slate-800/60 pt-4 text-xs tracking-wide text-slate-500 uppercase"
 			>
 				Auth
 			</div>
-			<a
-				class={linkClass({ match: $page.url.pathname.startsWith('/auth/login') })}
-				aria-current={$page.url.pathname.startsWith('/auth/login') ? 'page' : undefined}
-				href="/auth/login"
-			>
-				Sign in
-			</a>
-			<a
-				class={linkClass({ match: $page.url.pathname.startsWith('/auth/register') })}
-				aria-current={$page.url.pathname.startsWith('/auth/register') ? 'page' : undefined}
-				href="/auth/register"
-			>
-				Register
-			</a>
+			{#each authLinks as item (item.href)}
+				<a
+					class={linkClass({ match: item.match($page.url.pathname) })}
+					aria-current={item.match($page.url.pathname) ? 'page' : undefined}
+					href={item.href}
+				>
+					{item.label}
+				</a>
+			{/each}
 		</nav>
 	</aside>
 
@@ -72,41 +87,24 @@
 			<div class="flex flex-col gap-2">
 				<h1 class="text-lg font-semibold tracking-wide">Woragis Console</h1>
 				<nav class="flex items-center gap-3 text-sm font-medium">
-					<a
-						class={mobileLinkClass({ match: $page.url.pathname === '/' })}
-						aria-current={$page.url.pathname === '/' ? 'page' : undefined}
-						href="/"
-					>
-						Home
-					</a>
-					<a
-						class={mobileLinkClass({ match: $page.url.pathname.startsWith('/finances') })}
-						aria-current={$page.url.pathname.startsWith('/finances') ? 'page' : undefined}
-						href="/finances"
-					>
-						Finances
-					</a>
-					<a
-						class={mobileLinkClass({ match: $page.url.pathname.startsWith('/projects') })}
-						aria-current={$page.url.pathname.startsWith('/projects') ? 'page' : undefined}
-						href="/projects"
-					>
-						Projects
-					</a>
-					<a
-						class={mobileLinkClass({ match: $page.url.pathname.startsWith('/auth/login') })}
-						aria-current={$page.url.pathname.startsWith('/auth/login') ? 'page' : undefined}
-						href="/auth/login"
-					>
-						Sign in
-					</a>
-					<a
-						class={mobileLinkClass({ match: $page.url.pathname.startsWith('/auth/register') })}
-						aria-current={$page.url.pathname.startsWith('/auth/register') ? 'page' : undefined}
-						href="/auth/register"
-					>
-						Register
-					</a>
+					{#each navLinks as item (item.href + '-mobile')}
+						<a
+							class={mobileLinkClass({ match: item.match($page.url.pathname) })}
+							aria-current={item.match($page.url.pathname) ? 'page' : undefined}
+							href={item.href}
+						>
+							{item.label}
+						</a>
+					{/each}
+					{#each authLinks as item (item.href + '-mobile')}
+						<a
+							class={mobileLinkClass({ match: item.match($page.url.pathname) })}
+							aria-current={item.match($page.url.pathname) ? 'page' : undefined}
+							href={item.href}
+						>
+							{item.label}
+						</a>
+					{/each}
 				</nav>
 			</div>
 		</header>

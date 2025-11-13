@@ -1,3 +1,4 @@
+<!-- eslint-disable svelte/no-navigation-without-resolve -->
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { apiClient } from '$lib/api/client';
