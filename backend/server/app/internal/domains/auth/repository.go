@@ -3,7 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"gorm.io/gorm"
 )
@@ -12,6 +14,8 @@ import (
 type Repository interface {
 	Create(ctx context.Context, user *User) error
 	FindByEmail(ctx context.Context, email string) (*User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*User, error)
+	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string) error
 }
 
 // GormRepository implements Repository using PostgreSQL via GORM.
@@ -49,6 +53,45 @@ func (r *GormRepository) FindByEmail(ctx context.Context, email string) (*User, 
 	}
 
 	return &user, nil
+}
+
+// FindByID retrieves a user by ID.
+func (r *GormRepository) FindByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	var user User
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, NewDomainError(ErrCodeUserNotFound, ErrUserNotFound)
+		}
+		return nil, mapPersistenceError(err)
+	}
+
+	return &user, nil
+}
+
+// UpdatePasswordHash updates the stored password hash.
+func (r *GormRepository) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string) error {
+	if hash == "" {
+		return NewDomainError(ErrCodeInvalidPassword, ErrEmptyPasswordHash)
+	}
+
+	result := r.db.WithContext(ctx).
+		Model(&User{}).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"password_hash": hash,
+			"updated_at":    time.Now().UTC(),
+		})
+
+	if result.Error != nil {
+		return mapPersistenceError(result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return NewDomainError(ErrCodeUserNotFound, ErrUserNotFound)
+	}
+
+	return nil
 }
 
 func mapPersistenceError(err error) error {

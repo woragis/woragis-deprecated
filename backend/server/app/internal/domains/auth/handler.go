@@ -33,6 +33,15 @@ type loginPayload struct {
 	Password string `json:"password"`
 }
 
+type requestResetPayload struct {
+	Email string `json:"email"`
+}
+
+type resetConfirmPayload struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
 type userResponse struct {
 	ID        string    `json:"id"`
 	Email     string    `json:"email"`
@@ -82,6 +91,36 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	})
 }
 
+// RequestPasswordReset handles POST /auth/password/reset/request.
+func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
+	var payload requestResetPayload
+	if err := c.BodyParser(&payload); err != nil {
+		h.logError(ErrMalformedPayload, err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	if err := h.service.RequestPasswordReset(c.Context(), PasswordResetRequest{Email: payload.Email}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "email dispatched"})
+}
+
+// ConfirmPasswordReset handles POST /auth/password/reset/confirm.
+func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
+	var payload resetConfirmPayload
+	if err := c.BodyParser(&payload); err != nil {
+		h.logError(ErrMalformedPayload, err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	if err := h.service.ResetPassword(c.Context(), PasswordResetConfirmRequest{Token: payload.Token, Password: payload.Password}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "password updated"})
+}
+
 func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 	if domainErr, ok := AsDomainError(err); ok {
 		status := statusFromErrorCode(domainErr.Code)
@@ -103,6 +142,8 @@ func statusFromErrorCode(code int) int {
 		return fiber.StatusUnauthorized
 	case ErrCodeUserNotFound:
 		return fiber.StatusNotFound
+	case ErrCodeInvalidToken:
+		return fiber.StatusUnauthorized
 	case ErrCodePasswordHashFailure, ErrCodeRepositoryFailure, ErrCodeEmailDispatchFailure:
 		return fiber.StatusInternalServerError
 	default:

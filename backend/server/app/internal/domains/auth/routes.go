@@ -8,4 +8,6 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 
 	authGroup.Post("/register", handler.Register)
 	authGroup.Post("/login", handler.Login)
+	authGroup.Post("/password/reset/request", handler.RequestPasswordReset)
+	authGroup.Post("/password/reset/confirm", handler.ConfirmPasswordReset)
 }

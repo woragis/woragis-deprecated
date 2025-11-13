@@ -18,4 +18,3 @@ func LoadRedisConfig() RedisConfig {
 		URL: url,
 	}
 }
-

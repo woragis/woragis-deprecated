@@ -29,4 +29,3 @@ func LoadAIConfig() AIConfig {
 		ProviderAlias: os.Getenv("CHAT_PROVIDER"),
 	}
 }
-

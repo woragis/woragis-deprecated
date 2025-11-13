@@ -43,8 +43,15 @@ services:
       APP_ENV: development
       APP_NAME: woragis-server
       APP_PORT: 8080
+      APP_PUBLIC_URL: http://localhost:8080
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
       REDIS_URL: redis://redis:6379/0
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_TLS: ${SMTP_TLS}
     ports:
       - "8080:8080"
     restart: on-failure

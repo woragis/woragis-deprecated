@@ -13,6 +13,7 @@ const (
 	ErrCodeRepositoryFailure    = 1006
 	ErrCodeEmailDispatchFailure = 1007
 	ErrCodePasswordHashFailure  = 1008
+	ErrCodeInvalidToken         = 1009
 )
 
 const (
@@ -31,6 +32,7 @@ const (
 	ErrUnableToSendEmail   = "auth: unable to send email"
 	ErrHashPassword        = "auth: unable to hash password"
 	ErrMalformedPayload    = "auth: malformed payload"
+	ErrInvalidResetToken   = "auth: reset token invalid or expired"
 )
 
 // DomainError wraps an error message with a machine-readable code.

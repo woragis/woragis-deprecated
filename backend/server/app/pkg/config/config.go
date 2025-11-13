@@ -8,9 +8,10 @@ import (
 
 // Config holds application level configuration.
 type Config struct {
-	AppName string
-	Port    int
-	Env     string
+	AppName   string
+	Port      int
+	Env       string
+	PublicURL string
 }
 
 // Load reads configuration from environment variables with sane defaults.
@@ -22,10 +23,13 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	publicURL := getEnv("APP_PUBLIC_URL", "http://localhost:8080")
+
 	return Config{
-		AppName: name,
-		Port:    port,
-		Env:     env,
+		AppName:   name,
+		Port:      port,
+		Env:       env,
+		PublicURL: publicURL,
 	}, nil
 }
 
