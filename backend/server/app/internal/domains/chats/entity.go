@@ -9,10 +9,12 @@ import (
 
 // Conversation represents a chat thread persisted by Woragis.
 type Conversation struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID `gorm:"type:uuid;index;not null"`
-	Title       string    `gorm:"size:120;not null"`
-	Description string    `gorm:"size:255"`
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID      uuid.UUID  `gorm:"type:uuid;index;not null"`
+	Title       string     `gorm:"size:120;not null"`
+	Description string     `gorm:"size:255"`
+	IdeaID      *uuid.UUID `gorm:"type:uuid;index"`
+	ProjectID   *uuid.UUID `gorm:"type:uuid;index"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -27,12 +29,14 @@ type Message struct {
 }
 
 // NewConversation creates a new conversation.
-func NewConversation(userID uuid.UUID, title, description string) (*Conversation, error) {
+func NewConversation(userID uuid.UUID, title, description string, ideaID, projectID *uuid.UUID) (*Conversation, error) {
 	conv := &Conversation{
 		ID:          uuid.New(),
 		UserID:      userID,
 		Title:       strings.TrimSpace(title),
 		Description: strings.TrimSpace(description),
+		IdeaID:      ideaID,
+		ProjectID:   projectID,
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}

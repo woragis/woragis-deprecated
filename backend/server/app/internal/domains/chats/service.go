@@ -34,6 +34,8 @@ type CreateConversationRequest struct {
 	UserID      uuid.UUID
 	Title       string
 	Description string
+	IdeaID      *uuid.UUID
+	ProjectID   *uuid.UUID
 }
 
 // AppendMessageRequest contains data to append a user message and optionally request an AI response.
@@ -51,7 +53,7 @@ type AppendMessageRequest struct {
 
 // CreateConversation starts a new thread.
 func (s *Service) CreateConversation(ctx context.Context, req CreateConversationRequest) (*Conversation, error) {
-	conversation, err := NewConversation(req.UserID, req.Title, req.Description)
+	conversation, err := NewConversation(req.UserID, req.Title, req.Description, req.IdeaID, req.ProjectID)
 	if err != nil {
 		return nil, err
 	}

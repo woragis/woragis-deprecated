@@ -30,6 +30,8 @@ type createConversationPayload struct {
 	UserID      string `json:"user_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	IdeaID      string `json:"idea_id"`
+	ProjectID   string `json:"project_id"`
 }
 
 type appendMessagePayload struct {
@@ -44,12 +46,14 @@ type appendMessagePayload struct {
 }
 
 type conversationResponse struct {
-	ID          string `json:"id"`
-	UserID      string `json:"user_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID          string  `json:"id"`
+	UserID      string  `json:"user_id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	IdeaID      *string `json:"idea_id"`
+	ProjectID   *string `json:"project_id"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
 }
 
 type messageResponse struct {
@@ -72,10 +76,30 @@ func (h *Handler) CreateConversation(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	var ideaID *uuid.UUID
+	if payload.IdeaID != "" {
+		parsed, err := uuid.Parse(payload.IdeaID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		ideaID = &parsed
+	}
+
+	var projectID *uuid.UUID
+	if payload.ProjectID != "" {
+		parsed, err := uuid.Parse(payload.ProjectID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		projectID = &parsed
+	}
+
 	conversation, err := h.service.CreateConversation(c.Context(), CreateConversationRequest{
 		UserID:      userID,
 		Title:       payload.Title,
 		Description: payload.Description,
+		IdeaID:      ideaID,
+		ProjectID:   projectID,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -187,11 +211,25 @@ func statusFromError(code int) int {
 }
 
 func toConversationResponse(conv *Conversation) conversationResponse {
+	var ideaID *string
+	if conv.IdeaID != nil {
+		str := conv.IdeaID.String()
+		ideaID = &str
+	}
+
+	var projectID *string
+	if conv.ProjectID != nil {
+		str := conv.ProjectID.String()
+		projectID = &str
+	}
+
 	return conversationResponse{
 		ID:          conv.ID.String(),
 		UserID:      conv.UserID.String(),
 		Title:       conv.Title,
 		Description: conv.Description,
+		IdeaID:      ideaID,
+		ProjectID:   projectID,
 		CreatedAt:   conv.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   conv.UpdatedAt.Format(time.RFC3339),
 	}

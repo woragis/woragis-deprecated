@@ -20,7 +20,13 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
+	financesdomain "github.com/woragis/backend/server/app/internal/domains/finances"
+	ideasdomain "github.com/woragis/backend/server/app/internal/domains/ideas"
+	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
+	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
+	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 )
@@ -30,6 +36,8 @@ func main() {
 	if err != nil {
 		stdlog.Fatalf("config: %v", err)
 	}
+
+	aiCfg := appconfig.LoadAIConfig()
 
 	slogLogger := applogger.New(cfg.Env)
 	slogLogger.Info("starting woragis backend",
@@ -62,6 +70,41 @@ func main() {
 	authService := authdomain.NewService(authRepo, emailSender, slogLogger)
 	authHandler := authdomain.NewHandler(authService, slogLogger)
 	authdomain.SetupRoutes(api, authHandler)
+
+	financeRepo := financesdomain.NewGormRepository(db)
+	financeService := financesdomain.NewService(financeRepo, slogLogger)
+	financeHandler := financesdomain.NewHandler(financeService, slogLogger)
+	financesdomain.SetupRoutes(api, financeHandler)
+
+	languageRepo := languagesdomain.NewGormRepository(db)
+	languageService := languagesdomain.NewService(languageRepo, slogLogger)
+	languageHandler := languagesdomain.NewHandler(languageService, slogLogger)
+	languagesdomain.SetupRoutes(api, languageHandler)
+
+	projectRepo := projectsdomain.NewGormRepository(db)
+	projectService := projectsdomain.NewService(projectRepo, slogLogger)
+	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
+	projectsdomain.SetupRoutes(api, projectHandler)
+
+	ideaRepo := ideasdomain.NewGormRepository(db)
+	ideaService := ideasdomain.NewService(ideaRepo, slogLogger)
+	ideaHandler := ideasdomain.NewHandler(ideaService, slogLogger)
+	ideasdomain.SetupRoutes(api, ideaHandler)
+
+	langchainClient := langchainservice.NewClient(slogLogger)
+	defaultProvider := langchainservice.ModelProvider(strings.ToLower(aiCfg.ProviderAlias))
+	if defaultProvider == "" {
+		defaultProvider = langchainservice.ProviderOpenAI
+	}
+	defaultModel := aiCfg.DefaultAlias
+	if defaultModel == "" {
+		defaultModel = "chatgpt"
+	}
+
+	chatsRepo := chatsdomain.NewGormRepository(db)
+	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel)
+	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger)
+	chatsdomain.SetupRoutes(api, chatsHandler)
 
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.Port)
@@ -152,6 +195,15 @@ func configurePool(dsn string, db *gorm.DB) error {
 func migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&authdomain.User{},
+		&ideasdomain.Idea{},
+		&ideasdomain.IdeaLink{},
+		&chatsdomain.Conversation{},
+		&chatsdomain.Message{},
+		&financesdomain.Transaction{},
+		&languagesdomain.StudySession{},
+		&languagesdomain.VocabularyEntry{},
+		&projectsdomain.Project{},
+		&projectsdomain.Milestone{},
 	)
 }
 
