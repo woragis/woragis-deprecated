@@ -3,6 +3,13 @@
 ## Domains Requiring Deeper CRUD / Advanced Workflows
 - **Auth**
   - [ ] Implement session/device management, multi-factor tokens, audit trails, OAuth provider links, bulk user admin actions.
+  - [ ] Build email confirmation workflow (token issuance, expiry handling, resend limits, transactional templates).
+  - [ ] Integrate SMTP provider or notification service for confirmation, password reset, and magic link emails.
+  - [ ] Create HTML/email templates for account confirmation, password reset, welcome, and session notifications with responsive design.
+  - [ ] Implement template rendering pipeline (layout partials, localization support, preview tooling).
+  - [ ] Harden domain services for `RegisterUser`, `ConfirmEmail`, `Login`, `Logout`, `RefreshSession`, `RequestPasswordReset`, `CompletePasswordReset`.
+  - [ ] Ensure domain validation rules (password policy, unique email, unconfirmed account login handling) emit typed errors and domain events.
+  - [ ] Document auth use cases with sequence diagrams and acceptance criteria for QA.
 - **Finances**
   - [x] Extend reporting (cash-flow projections, tagging).
   - [x] Multi-currency normalization pipeline.

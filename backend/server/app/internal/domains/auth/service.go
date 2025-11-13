@@ -22,10 +22,19 @@ type Service struct {
 	logger      *slog.Logger
 	publicURL   string
 	tokenTTL    time.Duration
+	jwtManager  *JWTManager
 }
 
 // NewService wires a Service with its collaborators.
-func NewService(repo Repository, emailSender emailservice.Sender, tokenStore TokenStore, monitor monitoring.Tracker, publicURL string, logger *slog.Logger) *Service {
+func NewService(
+	repo Repository,
+	emailSender emailservice.Sender,
+	tokenStore TokenStore,
+	monitor monitoring.Tracker,
+	publicURL string,
+	jwtManager *JWTManager,
+	logger *slog.Logger,
+) *Service {
 	if publicURL == "" {
 		publicURL = "http://localhost:8080"
 	}
@@ -37,6 +46,7 @@ func NewService(repo Repository, emailSender emailservice.Sender, tokenStore Tok
 		logger:      logger,
 		publicURL:   publicURL,
 		tokenTTL:    30 * time.Minute,
+		jwtManager:  jwtManager,
 	}
 }
 
@@ -192,6 +202,27 @@ func (s *Service) ResetPassword(ctx context.Context, req PasswordResetConfirmReq
 	}
 
 	return nil
+}
+
+// IssueToken generates a signed JWT for the provided user.
+func (s *Service) IssueToken(_ context.Context, user *User) (string, error) {
+	if user == nil {
+		return "", NewDomainError(ErrCodeInvalidPayload, ErrNilUser)
+	}
+
+	if s.jwtManager == nil {
+		return "", NewDomainError(ErrCodeTokenIssuanceFailure, ErrUnableToIssueToken)
+	}
+
+	token, err := s.jwtManager.Generate(user.ID, user.Email)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Error("auth: failed to issue token", slog.Any("error", err), slog.String("user_id", user.ID.String()))
+		}
+		return "", NewDomainError(ErrCodeTokenIssuanceFailure, ErrUnableToIssueToken)
+	}
+
+	return token, nil
 }
 
 func (s *Service) sendEmail(ctx context.Context, to, subject, body string) {

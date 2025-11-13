@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -49,7 +50,6 @@ func NewHandler(service Service, logger *slog.Logger) Handler {
 }
 
 type recordTransactionPayload struct {
-	UserID       string   `json:"user_id"`
 	Type         string   `json:"type"`
 	Category     string   `json:"category"`
 	Description  string   `json:"description"`
@@ -69,7 +69,6 @@ type bulkRecordPayload struct {
 }
 
 type updateTransactionPayload struct {
-	UserID       string   `json:"user_id"`
 	Category     string   `json:"category"`
 	Description  string   `json:"description"`
 	Amount       *float64 `json:"amount"`
@@ -83,35 +82,29 @@ type updateTransactionPayload struct {
 }
 
 type bulkCategoryPayload struct {
-	UserID         string   `json:"user_id"`
 	TransactionIDs []string `json:"transaction_ids"`
 	Category       string   `json:"category"`
 }
 
 type bulkTypePayload struct {
-	UserID         string   `json:"user_id"`
 	TransactionIDs []string `json:"transaction_ids"`
 	Type           string   `json:"type"`
 }
 
 type bulkDeletePayload struct {
-	UserID         string   `json:"user_id"`
 	TransactionIDs []string `json:"transaction_ids"`
 }
 
 type togglePayload struct {
-	UserID string `json:"user_id"`
-	Value  bool   `json:"value"`
+	Value bool `json:"value"`
 }
 
 type summaryQueryPayload struct {
-	UserID string `query:"user_id"`
-	From   string `query:"from"`
-	To     string `query:"to"`
+	From string `query:"from"`
+	To   string `query:"to"`
 }
 
 type transactionQueryPayload struct {
-	UserID          string `query:"user_id"`
 	Types           string `query:"types"`
 	Categories      string `query:"categories"`
 	Tags            string `query:"tags"`
@@ -175,7 +168,6 @@ type templateResponse struct {
 }
 
 type createTemplatePayload struct {
-	UserID       string   `json:"user_id"`
 	Name         string   `json:"name"`
 	Type         string   `json:"type"`
 	Category     string   `json:"category"`
@@ -192,7 +184,6 @@ type createTemplatePayload struct {
 }
 
 type updateTemplatePayload struct {
-	UserID       string   `json:"user_id"`
 	Name         string   `json:"name"`
 	Category     string   `json:"category"`
 	Description  string   `json:"description"`
@@ -207,18 +198,12 @@ type updateTemplatePayload struct {
 	Tags         []string `json:"tags"`
 }
 
-type templateQueryPayload struct {
-	UserID string `query:"user_id"`
-}
-
 type cashflowQueryPayload struct {
-	UserID       string `query:"user_id"`
 	PastMonths   string `query:"past_months"`
 	FutureMonths string `query:"future_months"`
 }
 
 type importTransactionsPayload struct {
-	UserID          string             `json:"user_id"`
 	Format          string             `json:"format"`
 	BaseCurrency    string             `json:"base_currency"`
 	DefaultCurrency string             `json:"default_currency"`
@@ -234,7 +219,12 @@ func (h *handler) RecordTransaction(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toRecordRequest(payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toRecordRequest(userID, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -254,9 +244,14 @@ func (h *handler) BulkRecord(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
 	req := BulkRecordRequest{}
 	for _, p := range payload.Transactions {
-		recordReq, err := h.toRecordRequest(p)
+		recordReq, err := h.toRecordRequest(userID, p)
 		if err != nil {
 			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 		}
@@ -288,7 +283,12 @@ func (h *handler) UpdateTransaction(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toUpdateRequest(id, payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toUpdateRequest(userID, id, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -308,7 +308,12 @@ func (h *handler) BulkUpdateCategory(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toBulkCategoryRequest(payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toBulkCategoryRequest(userID, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -327,7 +332,12 @@ func (h *handler) BulkUpdateType(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toBulkTypeRequest(payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toBulkTypeRequest(userID, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -346,7 +356,12 @@ func (h *handler) BulkDelete(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toBulkDeleteRequest(payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toBulkDeleteRequest(userID, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -380,7 +395,12 @@ func (h *handler) ListTransactions(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	filter, err := h.toTransactionFilter(query)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	filter, err := h.toTransactionFilter(userID, query)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidQuery, nil)
 	}
@@ -406,9 +426,9 @@ func (h *handler) Summary(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(query.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	from, to, err := parseRange(query.From, query.To)
@@ -440,7 +460,12 @@ func (h *handler) CreateTemplate(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toCreateTemplateRequest(payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toCreateTemplateRequest(userID, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -465,7 +490,12 @@ func (h *handler) UpdateTemplate(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toUpdateTemplateRequest(id, payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toUpdateTemplateRequest(userID, id, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -485,14 +515,9 @@ func (h *handler) DeleteTemplate(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	var query templateQueryPayload
-	if err := c.QueryParser(&query); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
-	}
-
-	userID, err := uuid.Parse(query.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	if err := h.service.DeleteTemplate(c.Context(), userID, id); err != nil {
@@ -504,14 +529,9 @@ func (h *handler) DeleteTemplate(c *fiber.Ctx) error {
 
 // ListTemplates handles GET /finance/templates
 func (h *handler) ListTemplates(c *fiber.Ctx) error {
-	var query templateQueryPayload
-	if err := c.QueryParser(&query); err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
-	}
-
-	userID, err := uuid.Parse(query.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	templates, err := h.service.ListTemplates(c.Context(), userID)
@@ -535,7 +555,12 @@ func (h *handler) Cashflow(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toCashflowRequest(query)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toCashflowRequest(userID, query)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -555,7 +580,12 @@ func (h *handler) ImportTransactions(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	req, err := h.toImportRequest(payload)
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	req, err := h.toImportRequest(userID, payload)
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -575,16 +605,13 @@ func (h *handler) ImportTransactions(c *fiber.Ctx) error {
 
 // Helpers
 
-func (h *handler) toRecordRequest(payload recordTransactionPayload) (RecordTransactionRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return RecordTransactionRequest{}, err
-	}
-
+func (h *handler) toRecordRequest(userID uuid.UUID, payload recordTransactionPayload) (RecordTransactionRequest, error) {
 	var occurredAt time.Time
 	if payload.OccurredAt != "" {
-		if occurredAt, err = time.Parse(time.RFC3339, payload.OccurredAt); err != nil {
+		if parsed, err := time.Parse(time.RFC3339, payload.OccurredAt); err != nil {
 			return RecordTransactionRequest{}, err
+		} else {
+			occurredAt = parsed
 		}
 	}
 
@@ -615,12 +642,7 @@ func (h *handler) toRecordRequest(payload recordTransactionPayload) (RecordTrans
 	}, nil
 }
 
-func (h *handler) toUpdateRequest(id uuid.UUID, payload updateTransactionPayload) (UpdateTransactionRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return UpdateTransactionRequest{}, err
-	}
-
+func (h *handler) toUpdateRequest(userID uuid.UUID, id uuid.UUID, payload updateTransactionPayload) (UpdateTransactionRequest, error) {
 	var occurredAt *time.Time
 	if payload.OccurredAt != "" {
 		parsed, err := time.Parse(time.RFC3339, payload.OccurredAt)
@@ -658,12 +680,7 @@ func (h *handler) toUpdateRequest(id uuid.UUID, payload updateTransactionPayload
 	}, nil
 }
 
-func (h *handler) toBulkCategoryRequest(payload bulkCategoryPayload) (BulkCategoryUpdateRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return BulkCategoryUpdateRequest{}, err
-	}
-
+func (h *handler) toBulkCategoryRequest(userID uuid.UUID, payload bulkCategoryPayload) (BulkCategoryUpdateRequest, error) {
 	ids, err := parseUUIDList(payload.TransactionIDs)
 	if err != nil {
 		return BulkCategoryUpdateRequest{}, err
@@ -672,12 +689,7 @@ func (h *handler) toBulkCategoryRequest(payload bulkCategoryPayload) (BulkCatego
 	return BulkCategoryUpdateRequest{UserID: userID, IDs: ids, Category: payload.Category}, nil
 }
 
-func (h *handler) toBulkTypeRequest(payload bulkTypePayload) (BulkTypeUpdateRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return BulkTypeUpdateRequest{}, err
-	}
-
+func (h *handler) toBulkTypeRequest(userID uuid.UUID, payload bulkTypePayload) (BulkTypeUpdateRequest, error) {
 	ids, err := parseUUIDList(payload.TransactionIDs)
 	if err != nil {
 		return BulkTypeUpdateRequest{}, err
@@ -686,12 +698,7 @@ func (h *handler) toBulkTypeRequest(payload bulkTypePayload) (BulkTypeUpdateRequ
 	return BulkTypeUpdateRequest{UserID: userID, IDs: ids, Type: TransactionType(payload.Type)}, nil
 }
 
-func (h *handler) toBulkDeleteRequest(payload bulkDeletePayload) (BulkDeleteRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return BulkDeleteRequest{}, err
-	}
-
+func (h *handler) toBulkDeleteRequest(userID uuid.UUID, payload bulkDeletePayload) (BulkDeleteRequest, error) {
 	ids, err := parseUUIDList(payload.TransactionIDs)
 	if err != nil {
 		return BulkDeleteRequest{}, err
@@ -711,9 +718,9 @@ func (h *handler) handleToggle(c *fiber.Ctx, fn func(context.Context, ToggleRequ
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	req := ToggleRequest{UserID: userID, ID: id, Value: payload.Value}
@@ -725,12 +732,7 @@ func (h *handler) handleToggle(c *fiber.Ctx, fn func(context.Context, ToggleRequ
 	return response.Success(c, fiber.StatusOK, fiber.Map{"id": id})
 }
 
-func (h *handler) toTransactionFilter(query transactionQueryPayload) (TransactionFilter, error) {
-	userID, err := uuid.Parse(query.UserID)
-	if err != nil {
-		return TransactionFilter{}, err
-	}
-
+func (h *handler) toTransactionFilter(userID uuid.UUID, query transactionQueryPayload) (TransactionFilter, error) {
 	filter := TransactionFilter{UserID: userID}
 
 	if query.From != "" {
@@ -942,12 +944,7 @@ func toTemplateResponse(template *RecurringTemplate) templateResponse {
 	}
 }
 
-func (h *handler) toCreateTemplateRequest(payload createTemplatePayload) (CreateTemplateRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return CreateTemplateRequest{}, err
-	}
-
+func (h *handler) toCreateTemplateRequest(userID uuid.UUID, payload createTemplatePayload) (CreateTemplateRequest, error) {
 	frequency, err := parseFrequency(payload.Frequency)
 	if err != nil {
 		return CreateTemplateRequest{}, err
@@ -981,12 +978,7 @@ func (h *handler) toCreateTemplateRequest(payload createTemplatePayload) (Create
 	}, nil
 }
 
-func (h *handler) toUpdateTemplateRequest(id uuid.UUID, payload updateTemplatePayload) (UpdateTemplateRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return UpdateTemplateRequest{}, err
-	}
-
+func (h *handler) toUpdateTemplateRequest(userID uuid.UUID, id uuid.UUID, payload updateTemplatePayload) (UpdateTemplateRequest, error) {
 	var frequency *RecurringFrequency
 	if strings.TrimSpace(payload.Frequency) != "" {
 		freq, err := parseFrequency(payload.Frequency)
@@ -1015,12 +1007,7 @@ func (h *handler) toUpdateTemplateRequest(id uuid.UUID, payload updateTemplatePa
 	}, nil
 }
 
-func (h *handler) toCashflowRequest(payload cashflowQueryPayload) (CashflowProjectionRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return CashflowProjectionRequest{}, err
-	}
-
+func (h *handler) toCashflowRequest(userID uuid.UUID, payload cashflowQueryPayload) (CashflowProjectionRequest, error) {
 	pastMonths := parseIntDefault(payload.PastMonths, 6)
 	futureMonths := parseIntDefault(payload.FutureMonths, 6)
 
@@ -1031,12 +1018,7 @@ func (h *handler) toCashflowRequest(payload cashflowQueryPayload) (CashflowProje
 	}, nil
 }
 
-func (h *handler) toImportRequest(payload importTransactionsPayload) (ImportTransactionsRequest, error) {
-	userID, err := uuid.Parse(payload.UserID)
-	if err != nil {
-		return ImportTransactionsRequest{}, err
-	}
-
+func (h *handler) toImportRequest(userID uuid.UUID, payload importTransactionsPayload) (ImportTransactionsRequest, error) {
 	format := ImportFormat(strings.ToLower(strings.TrimSpace(payload.Format)))
 	if format != ImportFormatCSV && format != ImportFormatOFX {
 		return ImportTransactionsRequest{}, fmt.Errorf("unsupported import format")
@@ -1099,6 +1081,12 @@ func (h *handler) handleError(c *fiber.Ctx, err error) error {
 
 	h.logError("finances: unexpected error", err)
 	return response.Error(c, fiber.StatusInternalServerError, ErrCodeRepositoryFailure, nil)
+}
+
+func unauthorizedResponse(c *fiber.Ctx) error {
+	return response.Error(c, fiber.StatusUnauthorized, authdomain.ErrCodeInvalidToken, fiber.Map{
+		"message": "authentication required",
+	})
 }
 
 func statusFromErrorCode(code int) int {

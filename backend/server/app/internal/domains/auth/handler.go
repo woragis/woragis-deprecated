@@ -46,6 +46,7 @@ type userResponse struct {
 	ID        string    `json:"id"`
 	Email     string    `json:"email"`
 	CreatedAt time.Time `json:"created_at"`
+	Token     string    `json:"token,omitempty"`
 }
 
 // Register handles user registration requests.
@@ -64,10 +65,17 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	token, err := h.service.IssueToken(c.Context(), user)
+	if err != nil {
+		h.logError("auth: token issuance failed", err)
+		return response.Error(c, fiber.StatusInternalServerError, ErrCodeTokenIssuanceFailure, nil)
+	}
+
 	return response.Success(c, fiber.StatusCreated, userResponse{
 		ID:        user.ID.String(),
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
+		Token:     token,
 	})
 }
 
@@ -84,10 +92,17 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	token, err := h.service.IssueToken(c.Context(), user)
+	if err != nil {
+		h.logError("auth: token issuance failed", err)
+		return response.Error(c, fiber.StatusInternalServerError, ErrCodeTokenIssuanceFailure, nil)
+	}
+
 	return response.Success(c, fiber.StatusOK, userResponse{
 		ID:        user.ID.String(),
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
+		Token:     token,
 	})
 }
 
@@ -144,6 +159,8 @@ func statusFromErrorCode(code int) int {
 		return fiber.StatusNotFound
 	case ErrCodeInvalidToken:
 		return fiber.StatusUnauthorized
+	case ErrCodeTokenIssuanceFailure:
+		return fiber.StatusInternalServerError
 	case ErrCodePasswordHashFailure, ErrCodeRepositoryFailure, ErrCodeEmailDispatchFailure:
 		return fiber.StatusInternalServerError
 	default:

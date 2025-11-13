@@ -46,6 +46,8 @@ services:
       APP_NAME: woragis-server
       APP_PORT: 8080
       APP_PUBLIC_URL: http://localhost:8080
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-secret-change-me}
+      AUTH_JWT_TTL: ${AUTH_JWT_TTL:-24h}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       SMTP_HOST: ${SMTP_HOST:-}
@@ -57,6 +59,13 @@ services:
       MONITORING_ENABLED: "true"
       MONITORING_DB_URL: ""
       METRICS_NAMESPACE: woragis
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+      CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
+      CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Authorization,Content-Type,X-Requested-With}
+      CORS_EXPOSED_HEADERS: ${CORS_EXPOSED_HEADERS:-}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-true}
+      CORS_MAX_AGE: ${CORS_MAX_AGE:-86400}
     ports:
       - "8080:8080"
     restart: on-failure

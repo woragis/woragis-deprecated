@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/redis/go-redis/v9"
@@ -45,10 +46,16 @@ func main() {
 		stdlog.Fatalf("config: %v", err)
 	}
 
+	authCfg, err := appconfig.LoadAuthConfig()
+	if err != nil {
+		stdlog.Fatalf("auth config: %v", err)
+	}
+
 	emailCfg, _ := appconfig.LoadEmailConfig()
 	monitoringCfg := appconfig.LoadMonitoringConfig()
 	aiCfg := appconfig.LoadAIConfig()
 	redisCfg := appconfig.LoadRedisConfig()
+	corsCfg := appconfig.LoadCORSConfig()
 
 	slogLogger := applogger.New(cfg.Env)
 	slogLogger.Info("starting woragis backend",
@@ -84,6 +91,17 @@ func main() {
 	app := fiber.New(fiber.Config{
 		AppName: cfg.AppName,
 	})
+
+	if corsCfg.Enabled {
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     corsCfg.AllowedOrigins,
+			AllowMethods:     corsCfg.AllowedMethods,
+			AllowHeaders:     corsCfg.AllowedHeaders,
+			ExposeHeaders:    corsCfg.ExposedHeaders,
+			AllowCredentials: corsCfg.AllowCredentials,
+			MaxAge:           corsCfg.MaxAge,
+		}))
+	}
 
 	app.Use(recover.New())
 	app.Use(fiberlogger.New())
@@ -128,9 +146,17 @@ func main() {
 		slogLogger.Error("failed to start whatsapp worker", slog.Any("error", err))
 	}
 	authRepo := authdomain.NewGormRepository(db)
-	authService := authdomain.NewService(authRepo, emailSender, tokenStore, monitoringService, cfg.PublicURL, slogLogger)
+	jwtManager, err := authdomain.NewJWTManager(authCfg.JWTSecret, authCfg.JWTTTL, cfg.AppName)
+	if err != nil {
+		slogLogger.Error("failed to initialize jwt manager", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	authService := authdomain.NewService(authRepo, emailSender, tokenStore, monitoringService, cfg.PublicURL, jwtManager, slogLogger)
 	authHandler := authdomain.NewHandler(authService, slogLogger)
 	authdomain.SetupRoutes(api, authHandler)
+
+	protectedAPI := api.Group("", authdomain.NewAuthMiddleware(jwtManager, slogLogger))
 
 	if monitoringRepo != nil {
 		monitoringHandler := monitoring.NewHandler(monitoringService)
@@ -140,22 +166,22 @@ func main() {
 	financeRepo := financesdomain.NewGormRepository(db)
 	financeService := financesdomain.NewService(financeRepo, slogLogger)
 	financeHandler := financesdomain.NewHandler(financeService, slogLogger)
-	financesdomain.SetupRoutes(api, financeHandler)
+	financesdomain.SetupRoutes(protectedAPI, financeHandler)
 
 	languageRepo := languagesdomain.NewGormRepository(db)
 	languageService := languagesdomain.NewService(languageRepo, slogLogger)
 	languageHandler := languagesdomain.NewHandler(languageService, slogLogger)
-	languagesdomain.SetupRoutes(api, languageHandler)
+	languagesdomain.SetupRoutes(protectedAPI, languageHandler)
 
 	projectRepo := projectsdomain.NewGormRepository(db)
 	projectService := projectsdomain.NewService(projectRepo, slogLogger)
 	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
-	projectsdomain.SetupRoutes(api, projectHandler)
+	projectsdomain.SetupRoutes(protectedAPI, projectHandler)
 
 	ideaRepo := ideasdomain.NewGormRepository(db)
 	ideaService := ideasdomain.NewService(ideaRepo, slogLogger)
 	ideaHandler := ideasdomain.NewHandler(ideaService, slogLogger)
-	ideasdomain.SetupRoutes(api, ideaHandler)
+	ideasdomain.SetupRoutes(protectedAPI, ideaHandler)
 
 	langchainClient := langchainservice.NewClient(slogLogger)
 	defaultProvider := langchainservice.ModelProvider(strings.ToLower(aiCfg.ProviderAlias))
@@ -170,7 +196,7 @@ func main() {
 	chatsRepo := chatsdomain.NewGormRepository(db)
 	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel)
 	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger)
-	chatsdomain.SetupRoutes(api, chatsHandler)
+	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
 
 	reportsService := reportsdomain.NewService(
 		ideaRepo,
@@ -181,12 +207,12 @@ func main() {
 		slogLogger,
 	)
 	reportsHandler := reportsdomain.NewHandler(reportsService, slogLogger)
-	reportsdomain.SetupRoutes(api, reportsHandler)
+	reportsdomain.SetupRoutes(protectedAPI, reportsHandler)
 
 	schedulerRepo := schedulerdomain.NewGormRepository(db)
 	schedulerService := schedulerdomain.NewService(schedulerRepo, reportsService, slogLogger)
 	schedulerHandler := schedulerdomain.NewHandler(schedulerService, slogLogger)
-	schedulerdomain.SetupRoutes(api, schedulerHandler)
+	schedulerdomain.SetupRoutes(protectedAPI, schedulerHandler)
 
 	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)
 	go schedulerRunner.Start(workerCtx)
