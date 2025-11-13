@@ -17,7 +17,8 @@ const (
 type ReportEnvelope struct {
 	UserID      string `json:"user_id"`
 	Subject     string `json:"subject"`
-	Message     string `json:"message"`
+	TextMessage string `json:"text_message"`
+	HTMLMessage string `json:"html_message,omitempty"`
 	Destination string `json:"destination,omitempty"`
 }
 

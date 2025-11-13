@@ -1,0 +1,24 @@
+{{define "subject"}}Confirm your Woragis account{{end}}
+{{define "body"}}
+  <p>Hi {{.DisplayName}},</p>
+  <p>
+    Welcome to Woragis! Please confirm your email address to activate your account and begin exploring your workspace.
+  </p>
+  <a class="button" href="{{.ConfirmationURL}}">Confirm my email</a>
+  <p>
+    This link expires in {{.ConfirmationTTL}}. If you didn't request this, you can safely ignore the message and your account will remain inactive.
+  </p>
+{{end}}
+{{define "text"}}
+Confirm your Woragis account
+
+Hi {{.DisplayName}},
+
+Welcome to Woragis! Please confirm your email address to activate your account and begin exploring your workspace.
+
+Confirmation link ({{.ConfirmationTTL}}):
+{{.ConfirmationURL}}
+
+If you didn't request this, you can ignore the message and your account will remain inactive.
+{{end}}
+

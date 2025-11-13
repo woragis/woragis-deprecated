@@ -10,21 +10,31 @@ import (
 
 // User represents an authenticated account inside Woragis.
 type User struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Email        string    `gorm:"uniqueIndex;size:255;not null"`
-	PasswordHash string    `gorm:"size:255;not null"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Email             string    `gorm:"uniqueIndex;size:255;not null"`
+	PasswordHash      string    `gorm:"size:255;not null"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	EmailConfirmedAt  *time.Time
+	LastLoginAt       *time.Time
+	PasswordUpdatedAt *time.Time
+	Role              string `gorm:"size:50;default:user"`
+	MFAEnabled        bool
+	MFAMethod         string `gorm:"size:32"`
+	PreferredLocale   string `gorm:"size:10;default:en"`
 }
 
 // NewUser constructs a User aggregate with the provided e-mail and password hash.
 func NewUser(email, passwordHash string) (*User, error) {
+	now := time.Now().UTC()
 	user := &User{
-		ID:           uuid.New(),
-		Email:        strings.TrimSpace(email),
-		PasswordHash: passwordHash,
-		CreatedAt:    time.Now().UTC(),
-		UpdatedAt:    time.Now().UTC(),
+		ID:                uuid.New(),
+		Email:             strings.TrimSpace(email),
+		PasswordHash:      strings.TrimSpace(passwordHash),
+		CreatedAt:         now,
+		UpdatedAt:         now,
+		PasswordUpdatedAt: &now,
+		Role:              "user",
 	}
 
 	return user, user.Validate()
@@ -52,6 +62,10 @@ func (u *User) Validate() error {
 		return NewDomainError(ErrCodeInvalidPassword, ErrEmptyPasswordHash)
 	}
 
+	if len(u.PasswordHash) > 255 {
+		return NewDomainError(ErrCodeInvalidPassword, ErrPasswordTooLong)
+	}
+
 	return nil
 }
 
@@ -61,8 +75,24 @@ func (u *User) UpdatePassword(newHash string) error {
 		return NewDomainError(ErrCodeInvalidPassword, ErrEmptyPasswordHash)
 	}
 
-	u.PasswordHash = newHash
-	u.UpdatedAt = time.Now().UTC()
+	u.PasswordHash = strings.TrimSpace(newHash)
+	now := time.Now().UTC()
+	u.UpdatedAt = now
+	u.PasswordUpdatedAt = &now
 
 	return nil
+}
+
+// ConfirmEmail marks the account as verified.
+func (u *User) ConfirmEmail() {
+	now := time.Now().UTC()
+	u.EmailConfirmedAt = &now
+	u.UpdatedAt = now
+}
+
+// MarkLogin updates bookkeeping fields for successful authentication.
+func (u *User) MarkLogin() {
+	now := time.Now().UTC()
+	u.LastLoginAt = &now
+	u.UpdatedAt = now
 }

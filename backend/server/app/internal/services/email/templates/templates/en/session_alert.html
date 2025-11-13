@@ -1,0 +1,44 @@
+{{define "subject"}}New Woragis sign-in detected{{end}}
+{{define "body"}}
+  <p>Hi {{.DisplayName}},</p>
+  <p>
+    We noticed a new sign-in to your Woragis account.
+  </p>
+  <table style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 8px 0; color: #64748b;">Device</td>
+      <td style="padding: 8px 0;">{{.DeviceName}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0; color: #64748b;">Location</td>
+      <td style="padding: 8px 0;">{{.ApproxLocation}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0; color: #64748b;">IP Address</td>
+      <td style="padding: 8px 0;">{{.IPAddress}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0; color: #64748b;">Time</td>
+      <td style="padding: 8px 0;">{{.SignedInAt}}</td>
+    </tr>
+  </table>
+  <p>
+    If this was you, no action is needed. If not, please secure your account by resetting your password immediately and revoking unfamiliar sessions.
+  </p>
+  <a class="button" href="{{.ManageSessionsURL}}">Review active sessions</a>
+{{end}}
+{{define "text"}}
+New Woragis sign-in detected
+
+Hi {{.DisplayName}},
+
+We noticed a new sign-in to your Woragis account.
+
+Device: {{.DeviceName}}
+Location: {{.ApproxLocation}}
+IP Address: {{.IPAddress}}
+Time: {{.SignedInAt}}
+
+If this was you, no action is needed. If not, reset your password immediately and revoke unfamiliar sessions: {{.ManageSessionsURL}}
+{{end}}
+

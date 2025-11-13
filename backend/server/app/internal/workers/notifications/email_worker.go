@@ -33,7 +33,13 @@ func StartEmailWorker(ctx context.Context, client *redis.Client, sender emailser
 					}
 					continue
 				}
-				if err := sender.Send(ctx, envelope.Destination, envelope.Subject, envelope.Message); err != nil && logger != nil {
+				message := emailservice.Message{
+					To:       envelope.Destination,
+					Subject:  envelope.Subject,
+					TextBody: envelope.TextMessage,
+					HTMLBody: envelope.HTMLMessage,
+				}
+				if err := sender.Send(ctx, message); err != nil && logger != nil {
 					logger.Error("email worker: send failed", slog.String("user_id", envelope.UserID), slog.Any("error", err))
 				}
 			case <-ctx.Done():

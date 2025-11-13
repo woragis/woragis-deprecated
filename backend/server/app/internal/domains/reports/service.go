@@ -146,7 +146,7 @@ func (s *Service) DispatchSummary(ctx context.Context, summary Summary, opts Dis
 		env := notifications.ReportEnvelope{
 			UserID:      summary.UserID.String(),
 			Subject:     subject,
-			Message:     message,
+			TextMessage: message,
 			Destination: opts.EmailAddress,
 		}
 		if err := s.publisher.PublishEmailReport(ctx, env); err != nil && s.logger != nil {
@@ -157,7 +157,7 @@ func (s *Service) DispatchSummary(ctx context.Context, summary Summary, opts Dis
 	if opts.SendWhatsApp {
 		env := notifications.ReportEnvelope{
 			UserID:      summary.UserID.String(),
-			Message:     message,
+			TextMessage: message,
 			Destination: opts.PhoneNumber,
 		}
 		if err := s.publisher.PublishWhatsAppReport(ctx, env); err != nil && s.logger != nil {

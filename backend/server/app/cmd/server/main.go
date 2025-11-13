@@ -193,6 +193,7 @@ func main() {
 	authdomain.SetupRoutes(api, authHandler)
 
 	protectedAPI := api.Group("", authdomain.NewAuthMiddleware(jwtManager, slogLogger))
+	authdomain.SetupProtectedRoutes(protectedAPI, authHandler)
 
 	if monitoringRepo != nil {
 		monitoringHandler := monitoring.NewHandler(monitoringService)
@@ -342,6 +343,12 @@ func configurePool(dsn string, db *gorm.DB) error {
 func migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&authdomain.User{},
+		&authdomain.Session{},
+		&authdomain.Device{},
+		&authdomain.MFAToken{},
+		&authdomain.AuditLog{},
+		&authdomain.OAuthAccount{},
+		&authdomain.EmailToken{},
 		&ideasdomain.Idea{},
 		&ideasdomain.IdeaLink{},
 		&chatsdomain.Conversation{},

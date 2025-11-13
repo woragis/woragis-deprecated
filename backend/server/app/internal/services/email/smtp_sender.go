@@ -5,8 +5,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"mime/quotedprintable"
 	"net/smtp"
 	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/woragis/backend/server/app/pkg/config"
 )
@@ -27,21 +30,36 @@ func NewSMTPSender(cfg config.EmailConfig, logger *slog.Logger) (*SMTPSender, er
 }
 
 // Send dispatches an email using SMTP.
-func (s *SMTPSender) Send(ctx context.Context, to, subject, body string) error {
-	if to == "" {
+func (s *SMTPSender) Send(ctx context.Context, msg Message) error {
+	_ = ctx
+	if msg.To == "" {
 		return fmt.Errorf("recipient email required")
 	}
 
+	messageID := fmt.Sprintf("<%s@woragis>", uuid.New().String())
+	boundary := "mixed_" + uuid.New().String()
+
 	headers := []string{
 		fmt.Sprintf("From: %s", s.cfg.From),
-		fmt.Sprintf("To: %s", to),
-		fmt.Sprintf("Subject: %s", subject),
+		fmt.Sprintf("To: %s", msg.To),
+		fmt.Sprintf("Message-ID: %s", messageID),
+		fmt.Sprintf("Subject: %s", msg.Subject),
 		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=UTF-8",
-		"",
+		fmt.Sprintf(`Content-Type: multipart/alternative; boundary="%s"`, boundary),
 	}
 
-	message := strings.Join(headers, "\r\n") + body
+	var builder strings.Builder
+	builder.WriteString(strings.Join(headers, "\r\n"))
+	builder.WriteString("\r\n\r\n")
+
+	writePart(&builder, boundary, "text/plain; charset=UTF-8", msg.TextBody)
+	writePart(&builder, boundary, "text/html; charset=UTF-8", msg.HTMLBody)
+
+	builder.WriteString("--")
+	builder.WriteString(boundary)
+	builder.WriteString("--")
+
+	message := builder.String()
 
 	auth := smtp.PlainAuth("", s.cfg.Username, s.cfg.Password, s.cfg.Host)
 
@@ -68,7 +86,7 @@ func (s *SMTPSender) Send(ctx context.Context, to, subject, body string) error {
 		if err := client.Mail(s.cfg.From); err != nil {
 			return err
 		}
-		if err := client.Rcpt(to); err != nil {
+		if err := client.Rcpt(msg.To); err != nil {
 			return err
 		}
 
@@ -89,8 +107,35 @@ func (s *SMTPSender) Send(ctx context.Context, to, subject, body string) error {
 	}
 
 	if s.cfg.Username != "" {
-		return smtp.SendMail(addr, auth, s.cfg.From, []string{to}, []byte(message))
+		return smtp.SendMail(addr, auth, s.cfg.From, []string{msg.To}, []byte(message))
 	}
 
-	return smtp.SendMail(addr, nil, s.cfg.From, []string{to}, []byte(message))
+	return smtp.SendMail(addr, nil, s.cfg.From, []string{msg.To}, []byte(message))
+}
+
+func writePart(builder *strings.Builder, boundary, contentType, body string) {
+	if body == "" {
+		return
+	}
+
+	builder.WriteString("--")
+	builder.WriteString(boundary)
+	builder.WriteString("\r\n")
+	builder.WriteString("Content-Transfer-Encoding: quoted-printable\r\n")
+	builder.WriteString("Content-Type: ")
+	builder.WriteString(contentType)
+	builder.WriteString("\r\n\r\n")
+
+	qp := quotedprintable.NewWriter(builderWriter{builder})
+	_, _ = qp.Write([]byte(body))
+	_ = qp.Close()
+	builder.WriteString("\r\n")
+}
+
+type builderWriter struct {
+	builder *strings.Builder
+}
+
+func (w builderWriter) Write(p []byte) (int, error) {
+	return w.builder.Write(p)
 }

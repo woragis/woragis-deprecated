@@ -33,7 +33,7 @@ func StartWhatsAppWorker(ctx context.Context, client *redis.Client, notifier wha
 					}
 					continue
 				}
-				if err := notifier.Send(ctx, envelope.Destination, envelope.Message); err != nil && logger != nil {
+				if err := notifier.Send(ctx, envelope.Destination, envelope.TextMessage); err != nil && logger != nil {
 					logger.Error("whatsapp worker: send failed", slog.String("user_id", envelope.UserID), slog.Any("error", err))
 				}
 			case <-ctx.Done():

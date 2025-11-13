@@ -1,0 +1,31 @@
+{{define "subject"}}Welcome to Woragis{{end}}
+{{define "body"}}
+  <p>Hi {{.DisplayName}},</p>
+  <p>
+    We're thrilled to have you on board! Here are a few next steps to make the most out of Woragis:
+  </p>
+  <ul>
+    <li>Invite teammates to collaborate on projects.</li>
+    <li>Connect your favourite integrations to automate workflows.</li>
+    <li>Visit the help center to explore power-user features.</li>
+  </ul>
+  <a class="button" href="{{.GettingStartedURL}}">Open Woragis</a>
+  <p>
+    Need anything? Our support team is here for you.
+  </p>
+{{end}}
+{{define "text"}}
+Welcome to Woragis
+
+Hi {{.DisplayName}},
+
+We're thrilled to have you on board! Here are a few next steps to make the most out of Woragis:
+- Invite teammates to collaborate on projects.
+- Connect your favourite integrations to automate workflows.
+- Visit the help center to explore power-user features.
+
+Get started: {{.GettingStartedURL}}
+
+Need anything? Our support team is here for you.
+{{end}}
+
