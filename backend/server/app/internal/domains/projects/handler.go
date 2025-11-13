@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -56,7 +57,6 @@ func NewHandler(service Service, logger *slog.Logger) Handler {
 // Payloads
 
 type createProjectPayload struct {
-	UserID      string  `json:"user_id"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Status      string  `json:"status"`
@@ -68,12 +68,10 @@ type createProjectPayload struct {
 }
 
 type updateStatusPayload struct {
-	UserID string `json:"user_id"`
 	Status string `json:"status"`
 }
 
 type updateMetricsPayload struct {
-	UserID      string  `json:"user_id"`
 	HealthScore int     `json:"health_score"`
 	MRR         float64 `json:"mrr"`
 	CAC         float64 `json:"cac"`
@@ -82,19 +80,16 @@ type updateMetricsPayload struct {
 }
 
 type addMilestonePayload struct {
-	UserID      string `json:"user_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	DueDate     string `json:"due_date"`
 }
 
 type toggleMilestonePayload struct {
-	UserID    string `json:"user_id"`
-	Completed bool   `json:"completed"`
+	Completed bool `json:"completed"`
 }
 
 type bulkMilestoneUpdatePayload struct {
-	UserID  string                           `json:"user_id"`
 	Updates []bulkMilestoneUpdateItemPayload `json:"updates"`
 }
 
@@ -107,29 +102,23 @@ type bulkMilestoneUpdateItemPayload struct {
 }
 
 type createColumnPayload struct {
-	UserID   string `json:"user_id"`
 	Name     string `json:"name"`
 	WIPLimit *int   `json:"wip_limit"`
 	Position *int   `json:"position"`
 }
 
 type updateColumnPayload struct {
-	UserID   string  `json:"user_id"`
 	Name     *string `json:"name"`
 	WIPLimit *int    `json:"wip_limit"`
 }
 
 type reorderColumnsPayload struct {
-	UserID      string   `json:"user_id"`
 	ColumnOrder []string `json:"column_order"`
 }
 
-type deleteColumnPayload struct {
-	UserID string `json:"user_id"`
-}
+type deleteColumnPayload struct{}
 
 type createCardPayload struct {
-	UserID      string `json:"user_id"`
 	ColumnID    string `json:"column_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -139,7 +128,6 @@ type createCardPayload struct {
 }
 
 type updateCardPayload struct {
-	UserID      string  `json:"user_id"`
 	Title       *string `json:"title"`
 	Description *string `json:"description"`
 	DueDate     *string `json:"due_date"`
@@ -147,27 +135,20 @@ type updateCardPayload struct {
 }
 
 type moveCardPayload struct {
-	UserID         string `json:"user_id"`
 	TargetColumnID string `json:"target_column_id"`
 	TargetPosition int    `json:"target_position"`
 }
 
-type deleteCardPayload struct {
-	UserID string `json:"user_id"`
-}
+type deleteCardPayload struct{}
 
 type dependencyPayload struct {
-	UserID             string `json:"user_id"`
 	DependsOnProjectID string `json:"depends_on_project_id"`
 	Type               string `json:"type"`
 }
 
-type deleteDependencyPayload struct {
-	UserID string `json:"user_id"`
-}
+type deleteDependencyPayload struct{}
 
 type duplicateProjectPayload struct {
-	UserID         string   `json:"user_id"`
 	Name           string   `json:"name"`
 	Description    string   `json:"description"`
 	Status         *string  `json:"status"`
@@ -255,9 +236,9 @@ func (h *handler) CreateProject(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	project, err := h.service.CreateProject(c.Context(), CreateProjectRequest{
@@ -279,9 +260,9 @@ func (h *handler) CreateProject(c *fiber.Ctx) error {
 }
 
 func (h *handler) ListProjects(c *fiber.Ctx) error {
-	userID, err := uuid.Parse(c.Query("user_id"))
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	projects, err := h.service.ListProjects(c.Context(), userID)
@@ -309,9 +290,9 @@ func (h *handler) UpdateStatus(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	project, err := h.service.UpdateProjectStatus(c.Context(), UpdateStatusRequest{
@@ -337,9 +318,9 @@ func (h *handler) UpdateMetrics(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	project, err := h.service.UpdateProjectMetrics(c.Context(), UpdateMetricsRequest{
@@ -369,9 +350,9 @@ func (h *handler) AddMilestone(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	var due time.Time
@@ -406,9 +387,9 @@ func (h *handler) ToggleMilestoneCompletion(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	milestone, err := h.service.ToggleMilestone(c.Context(), ToggleMilestoneRequest{
@@ -429,9 +410,9 @@ func (h *handler) ListMilestones(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(c.Query("user_id"))
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	milestones, err := h.service.ListMilestones(c.Context(), projectID, userID)
@@ -459,9 +440,9 @@ func (h *handler) BulkUpdateMilestones(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	updates := make([]MilestoneUpdate, 0, len(payload.Updates))
@@ -519,9 +500,9 @@ func (h *handler) CreateKanbanColumn(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	board, err := h.service.CreateKanbanColumn(c.Context(), CreateKanbanColumnRequest{
@@ -553,9 +534,9 @@ func (h *handler) UpdateKanbanColumn(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	board, err := h.service.UpdateKanbanColumn(c.Context(), UpdateKanbanColumnRequest{
@@ -583,9 +564,9 @@ func (h *handler) ReorderKanbanColumns(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	columnOrder := make([]uuid.UUID, 0, len(payload.ColumnOrder))
@@ -624,9 +605,9 @@ func (h *handler) DeleteKanbanColumn(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	board, err := h.service.DeleteKanbanColumn(c.Context(), DeleteKanbanColumnRequest{
@@ -652,9 +633,9 @@ func (h *handler) CreateKanbanCard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	columnID, err := uuid.Parse(payload.ColumnID)
@@ -712,9 +693,9 @@ func (h *handler) UpdateKanbanCard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	var due *time.Time
@@ -766,9 +747,9 @@ func (h *handler) MoveKanbanCard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	targetColumnID, err := uuid.Parse(payload.TargetColumnID)
@@ -805,9 +786,9 @@ func (h *handler) DeleteKanbanCard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	board, err := h.service.DeleteKanbanCard(c.Context(), DeleteKanbanCardRequest{
@@ -828,9 +809,9 @@ func (h *handler) GetKanbanBoard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(c.Query("user_id"))
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	board, err := h.service.GetKanbanBoard(c.Context(), projectID, userID)
@@ -854,9 +835,9 @@ func (h *handler) CreateDependency(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	dependsOn, err := uuid.Parse(payload.DependsOnProjectID)
@@ -883,9 +864,9 @@ func (h *handler) ListDependencies(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(c.Query("user_id"))
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	dependencies, err := h.service.ListDependencies(c.Context(), projectID, userID)
@@ -913,9 +894,9 @@ func (h *handler) DeleteDependency(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	if err := h.service.DeleteDependency(c.Context(), DeleteDependencyRequest{
@@ -941,9 +922,9 @@ func (h *handler) DuplicateProject(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := uuid.Parse(payload.UserID)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		return unauthorizedResponse(c)
 	}
 
 	var status *ProjectStatus
@@ -1000,6 +981,12 @@ func (h *handler) handleError(c *fiber.Ctx, err error) error {
 
 	h.logError("projects: unexpected error", err)
 	return response.Error(c, fiber.StatusInternalServerError, ErrCodeRepositoryFailure, nil)
+}
+
+func unauthorizedResponse(c *fiber.Ctx) error {
+	return response.Error(c, fiber.StatusUnauthorized, authdomain.ErrCodeInvalidToken, fiber.Map{
+		"message": "authentication required",
+	})
 }
 
 func statusFromErrorCode(code int) int {
