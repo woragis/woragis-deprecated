@@ -23,6 +23,7 @@ const (
 	ErrAmountMustBePositive       = "finances: amount must be positive"
 	ErrEmptyCurrency              = "finances: currency cannot be empty"
 	ErrCurrencyMustBeISO          = "finances: currency must be a 3-letter ISO code"
+	ErrMissingExchangeRate        = "finances: exchange rate is required when base currency differs"
 	ErrUnableToPersist            = "finances: unable to persist transaction"
 	ErrUnableToFetch              = "finances: unable to fetch transactions"
 	ErrUnableToSummarize          = "finances: unable to build summary"
@@ -31,6 +32,8 @@ const (
 	ErrUnableToBulkPersist        = "finances: unable to persist bulk transactions"
 	ErrInvalidFilter              = "finances: invalid query filters"
 	ErrTransactionNotFound        = "finances: transaction not found"
+	ErrTemplateNotFound          = "finances: recurring template not found"
+	ErrUnsupportedTagEncoding     = "finances: unsupported tag storage encoding"
 )
 
 type DomainError struct {

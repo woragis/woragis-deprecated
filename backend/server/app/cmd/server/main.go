@@ -285,6 +285,7 @@ func migrate(db *gorm.DB) error {
 		&chatsdomain.Conversation{},
 		&chatsdomain.Message{},
 		&financesdomain.Transaction{},
+		&financesdomain.RecurringTemplate{},
 		&languagesdomain.StudySession{},
 		&languagesdomain.VocabularyEntry{},
 		&projectsdomain.Project{},

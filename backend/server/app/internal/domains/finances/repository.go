@@ -2,6 +2,8 @@ package finances
 
 import (
 	"context"
+	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +26,12 @@ type Repository interface {
 	SetRecurring(ctx context.Context, userID, id uuid.UUID, recurring bool) error
 	SetEssential(ctx context.Context, userID, id uuid.UUID, essential bool) error
 	AggregateSummary(ctx context.Context, userID uuid.UUID, from, to time.Time) (Summary, error)
+	CreateTemplate(ctx context.Context, template *RecurringTemplate) error
+	UpdateTemplate(ctx context.Context, template *RecurringTemplate) error
+	DeleteTemplate(ctx context.Context, userID, templateID uuid.UUID) error
+	GetTemplate(ctx context.Context, userID, templateID uuid.UUID) (*RecurringTemplate, error)
+	ListTemplates(ctx context.Context, userID uuid.UUID) ([]RecurringTemplate, error)
+	MonthlyTotals(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]MonthlyTotal, error)
 }
 
 // TransactionFilter represents advanced query filters.
@@ -31,6 +39,7 @@ type TransactionFilter struct {
 	UserID          uuid.UUID
 	Types           []TransactionType
 	Categories      []string
+	Tags            []string
 	MinAmount       *float64
 	MaxAmount       *float64
 	IncludeArchived *bool
@@ -49,6 +58,15 @@ type Summary struct {
 	IncomeTotal       float64
 	ExpenseTotal      float64
 	SavingsAllocation float64
+	BaseCurrency      string
+}
+
+// MonthlyTotal groups normalized income and expenses per calendar month.
+type MonthlyTotal struct {
+	Year         int
+	Month        int
+	IncomeTotal  float64
+	ExpenseTotal float64
 }
 
 type gormRepository struct {
@@ -80,16 +98,20 @@ func (r *gormRepository) UpdateTransaction(ctx context.Context, tx *Transaction)
 	if err := r.db.WithContext(ctx).Model(&Transaction{}).
 		Where("id = ? AND user_id = ?", tx.ID, tx.UserID).
 		Updates(map[string]any{
-			"type":         tx.Type,
-			"category":     tx.Category,
-			"description":  tx.Description,
-			"amount":       tx.Amount,
-			"currency":     tx.Currency,
-			"occurred_at":  tx.OccurredAt,
-			"is_recurring": tx.IsRecurring,
-			"is_essential": tx.IsEssential,
-			"is_archived":  tx.IsArchived,
-			"updated_at":   tx.UpdatedAt,
+			"type":              tx.Type,
+			"category":          tx.Category,
+			"description":       tx.Description,
+			"amount":            tx.Amount,
+			"currency":          tx.Currency,
+			"base_currency":     tx.BaseCurrency,
+			"normalized_amount": tx.NormalizedAmount,
+			"occurred_at":       tx.OccurredAt,
+			"is_recurring":      tx.IsRecurring,
+			"is_essential":      tx.IsEssential,
+			"is_archived":       tx.IsArchived,
+			"template_id":       tx.TemplateID,
+			"tags":              tx.Tags,
+			"updated_at":        tx.UpdatedAt,
 		}).Error; err != nil {
 		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
 	}
@@ -165,10 +187,11 @@ func (r *gormRepository) QueryTransactions(ctx context.Context, filter Transacti
 	}
 	query = query.Order(sort)
 
-	if filter.Limit > 0 {
+	applyPagination := len(filter.Tags) == 0
+	if applyPagination && filter.Limit > 0 {
 		query = query.Limit(filter.Limit)
 	}
-	if filter.Offset > 0 {
+	if applyPagination && filter.Offset > 0 {
 		query = query.Offset(filter.Offset)
 	}
 
@@ -177,7 +200,41 @@ func (r *gormRepository) QueryTransactions(ctx context.Context, filter Transacti
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 
+	if len(filter.Tags) > 0 {
+		transactions = filterTransactionsByTags(transactions, filter.Tags)
+
+		// Manual pagination after filtering.
+		start := filter.Offset
+		if start > len(transactions) {
+			return []Transaction{}, nil
+		}
+
+		end := len(transactions)
+		if filter.Limit > 0 && start+filter.Limit < end {
+			end = start + filter.Limit
+		}
+		transactions = transactions[start:end]
+	}
+
 	return transactions, nil
+}
+
+func filterTransactionsByTags(transactions []Transaction, tags []string) []Transaction {
+	if len(tags) == 0 {
+		return transactions
+	}
+
+	normalizedTarget := normalizeTags(tags)
+	target := []string(normalizedTarget)
+
+	filtered := make([]Transaction, 0, len(transactions))
+	for _, tx := range transactions {
+		if tx.Tags.ContainsAll(target) {
+			filtered = append(filtered, tx)
+		}
+	}
+
+	return filtered
 }
 
 func (r *gormRepository) BulkCreateTransactions(ctx context.Context, txs []*Transaction) error {
@@ -292,7 +349,7 @@ func (r *gormRepository) AggregateSummary(ctx context.Context, userID uuid.UUID,
 
 	query := r.db.WithContext(ctx).
 		Model(&Transaction{}).
-		Select("type, SUM(amount) as total").
+		Select("type, SUM(normalized_amount) as total").
 		Where("user_id = ? AND is_archived = ?", userID, false).
 		Group("type")
 
@@ -317,9 +374,140 @@ func (r *gormRepository) AggregateSummary(ctx context.Context, userID uuid.UUID,
 		}
 	}
 
+	var baseCurrency string
+	if err := r.db.WithContext(ctx).
+		Model(&Transaction{}).
+		Select("base_currency").
+		Where("user_id = ? AND is_archived = ?", userID, false).
+		Order("occurred_at DESC").
+		Limit(1).
+		Scan(&baseCurrency).Error; err == nil && baseCurrency != "" {
+		summary.BaseCurrency = baseCurrency
+	}
+
 	summary.SavingsAllocation = summary.IncomeTotal * 0.5
 
 	return summary, nil
+}
+
+func (r *gormRepository) CreateTemplate(ctx context.Context, template *RecurringTemplate) error {
+	if err := template.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Create(template).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) UpdateTemplate(ctx context.Context, template *RecurringTemplate) error {
+	if err := template.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(&RecurringTemplate{}).
+		Where("id = ? AND user_id = ?", template.ID, template.UserID).
+		Updates(map[string]any{
+			"name":              template.Name,
+			"type":              template.Type,
+			"category":          template.Category,
+			"description":       template.Description,
+			"amount":            template.Amount,
+			"currency":          template.Currency,
+			"base_currency":     template.BaseCurrency,
+			"normalized_amount": template.NormalizedAmount,
+			"frequency":         template.Frequency,
+			"interval":          template.Interval,
+			"day_of_month":      template.DayOfMonth,
+			"weekday":           template.Weekday,
+			"tags":              template.Tags,
+			"updated_at":        template.UpdatedAt,
+		}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) DeleteTemplate(ctx context.Context, userID, templateID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ? AND id = ?", userID, templateID).
+		Delete(&RecurringTemplate{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToDelete)
+	}
+	return nil
+}
+
+func (r *gormRepository) GetTemplate(ctx context.Context, userID, templateID uuid.UUID) (*RecurringTemplate, error) {
+	var template RecurringTemplate
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ? AND id = ?", userID, templateID).
+		First(&template).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrTemplateNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &template, nil
+}
+
+func (r *gormRepository) ListTemplates(ctx context.Context, userID uuid.UUID) ([]RecurringTemplate, error) {
+	var templates []RecurringTemplate
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at ASC").
+		Find(&templates).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return templates, nil
+}
+
+func (r *gormRepository) MonthlyTotals(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]MonthlyTotal, error) {
+	if from.After(to) {
+		from, to = to, from
+	}
+
+	var transactions []Transaction
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ? AND occurred_at >= ? AND occurred_at <= ? AND is_archived = ?", userID, from, to, false).
+		Find(&transactions).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	monthly := make(map[string]*MonthlyTotal)
+	for _, tx := range transactions {
+		occurred := tx.OccurredAt.UTC()
+		year, month, _ := occurred.Date()
+		key := fmt.Sprintf("%04d-%02d", year, int(month))
+
+		entry, exists := monthly[key]
+		if !exists {
+			entry = &MonthlyTotal{Year: year, Month: int(month)}
+			monthly[key] = entry
+		}
+
+		if tx.Type == TransactionTypeIncome {
+			entry.IncomeTotal += tx.NormalizedAmount
+		} else if tx.Type == TransactionTypeExpense {
+			entry.ExpenseTotal += tx.NormalizedAmount
+		}
+	}
+
+	keys := make([]string, 0, len(monthly))
+	for key := range monthly {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	result := make([]MonthlyTotal, 0, len(keys))
+	for _, key := range keys {
+		result = append(result, *monthly[key])
+	}
+
+	return result, nil
 }
 
 func normalizeSort(sort string) string {
