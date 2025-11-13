@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -88,6 +89,7 @@ type DispatchOptions struct {
 	EmailAddress string
 	SendWhatsApp bool
 	PhoneNumber  string
+	AgentAlias   string
 }
 
 // GenerateSummary compiles a report snapshot.
@@ -138,11 +140,12 @@ func (s *Service) DispatchSummary(ctx context.Context, summary Summary, opts Dis
 		return nil
 	}
 
-	message := formatSummary(summary)
+	message := formatSummary(summary, opts.AgentAlias)
+	subject := formatSubject(opts.AgentAlias)
 	if opts.SendEmail {
 		env := notifications.ReportEnvelope{
 			UserID:      summary.UserID.String(),
-			Subject:     "Woragis Daily Insights",
+			Subject:     subject,
 			Message:     message,
 			Destination: opts.EmailAddress,
 		}
@@ -165,9 +168,62 @@ func (s *Service) DispatchSummary(ctx context.Context, summary Summary, opts Dis
 	return nil
 }
 
-func formatSummary(summary Summary) string {
+type agentProfile struct {
+	Name    string
+	Persona string
+	Signoff string
+	Subject string
+}
+
+var agentProfiles = map[string]agentProfile{
+	"chatgpt": {
+		Name:    "Atlas",
+		Persona: "Here is your general Woragis status update. I applied balanced, data-driven insights.",
+		Signoff: "— Atlas, your Woragis co-pilot",
+		Subject: "Woragis Daily Insights",
+	},
+	"grok": {
+		Name:    "Grok Analyst",
+		Persona: "Snapshot with emphasis on recent trends and headlines.",
+		Signoff: "— Grok Analyst",
+		Subject: "Woragis Real-Time Briefing",
+	},
+	"claude": {
+		Name:    "Claude Strategist",
+		Persona: "Thoughtful summary to guide decisions.",
+		Signoff: "— Claude Strategist",
+		Subject: "Woragis Strategic Digest",
+	},
+	"manus": {
+		Name:    "Manus",
+		Persona: "Advanced strategic advisor weighing probabilities.",
+		Signoff: "— Manus Strategic Intelligence",
+		Subject: "Woragis Deep Strategy Report",
+	},
+	"cipher": {
+		Name:    "Cipher",
+		Persona: "Quietly sharing candid insights. Keep this between us.",
+		Signoff: "— Cipher",
+		Subject: "Woragis Confidential Brief",
+	},
+}
+
+func formatSubject(agentAlias string) string {
+	if profile, ok := agentProfiles[strings.ToLower(agentAlias)]; ok && profile.Subject != "" {
+		return profile.Subject
+	}
+	return "Woragis Daily Insights"
+}
+
+func formatSummary(summary Summary, agentAlias string) string {
+	profile, ok := agentProfiles[strings.ToLower(agentAlias)]
+	if !ok {
+		profile = agentProfiles["chatgpt"]
+	}
+
 	return fmt.Sprintf(
-		"Insights (%s)\nIdeas: %d\nProjects: %d\nChats: %d\nIncome: %.2f\nExpenses: %.2f\n50/50 Savings: %.2f",
+		"%s\n\nGenerated: %s\nIdeas: %d\nProjects: %d\nChats: %d\nIncome: %.2f\nExpenses: %.2f\n50/50 Savings: %.2f\n\n%s",
+		profile.Persona,
 		summary.GeneratedAt.Format(time.RFC822),
 		summary.IdeaCount,
 		summary.ProjectCount,
@@ -175,5 +231,6 @@ func formatSummary(summary Summary) string {
 		summary.IncomeTotal,
 		summary.ExpenseTotal,
 		summary.SavingsAllocation,
+		profile.Signoff,
 	)
 }

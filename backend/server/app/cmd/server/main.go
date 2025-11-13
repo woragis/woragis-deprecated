@@ -27,10 +27,12 @@ import (
 	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
+	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
 	notifications "github.com/woragis/backend/server/app/internal/workers/notifications"
+	schedulerworker "github.com/woragis/backend/server/app/internal/workers/scheduler"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 )
@@ -145,6 +147,14 @@ func main() {
 	reportsHandler := reportsdomain.NewHandler(reportsService, slogLogger)
 	reportsdomain.SetupRoutes(api, reportsHandler)
 
+	schedulerRepo := schedulerdomain.NewGormRepository(db)
+	schedulerService := schedulerdomain.NewService(schedulerRepo, reportsService, slogLogger)
+	schedulerHandler := schedulerdomain.NewHandler(schedulerService, slogLogger)
+	schedulerdomain.SetupRoutes(api, schedulerHandler)
+
+	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)
+	go schedulerRunner.Start(workerCtx)
+
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.Port)
 		slogLogger.Info("http server listening", slog.String("addr", addr))
@@ -243,6 +253,7 @@ func migrate(db *gorm.DB) error {
 		&languagesdomain.VocabularyEntry{},
 		&projectsdomain.Project{},
 		&projectsdomain.Milestone{},
+		&schedulerdomain.Schedule{},
 	)
 }
 

@@ -29,6 +29,7 @@ type generateSummaryPayload struct {
 	EmailAddress string `json:"email_address"`
 	SendWhatsApp bool   `json:"send_whatsapp"`
 	PhoneNumber  string `json:"phone_number"`
+	AgentAlias   string `json:"agent_alias"`
 }
 
 // PostSummary generates a summary and dispatches it.
@@ -53,6 +54,7 @@ func (h *Handler) PostSummary(c *fiber.Ctx) error {
 		EmailAddress: payload.EmailAddress,
 		SendWhatsApp: payload.SendWhatsApp,
 		PhoneNumber:  payload.PhoneNumber,
+		AgentAlias:   payload.AgentAlias,
 	}
 
 	if err := h.service.DispatchSummary(c.Context(), summary, opts); err != nil {
