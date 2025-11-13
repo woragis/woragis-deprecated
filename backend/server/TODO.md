@@ -20,4 +20,5 @@
 - Dedicated monitoring database connection string for production.
 - CI pipeline to build/push Docker images and validate Grafana/Prometheus configs.
 - Secrets management for SMTP, AI providers, and future gRPC credentials.
+- Comprehensive automated tests (unit/integration) covering new domain workflows before release.
 - Kubernetes deployment plan (Helm charts, manifests, GitOps workflow) for production-like environments.
