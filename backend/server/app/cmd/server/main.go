@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -28,6 +29,7 @@ import (
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
+	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
@@ -43,6 +45,8 @@ func main() {
 		stdlog.Fatalf("config: %v", err)
 	}
 
+	emailCfg, _ := appconfig.LoadEmailConfig()
+	monitoringCfg := appconfig.LoadMonitoringConfig()
 	aiCfg := appconfig.LoadAIConfig()
 	redisCfg := appconfig.LoadRedisConfig()
 
@@ -84,11 +88,38 @@ func main() {
 	app.Use(recover.New())
 	app.Use(fiberlogger.New())
 
+	var monitoringRepo monitoring.Repository
+	if monitoringCfg.Enabled && cfg.Env == "production" && monitoringCfg.DBURL != "" {
+		if monitorDB, err := connectAuxDatabase(monitoringCfg.DBURL, slogLogger); err != nil {
+			slogLogger.Warn("monitoring database disabled", slog.Any("error", err))
+		} else {
+			if err := monitorDB.AutoMigrate(&monitoring.Event{}); err != nil {
+				slogLogger.Warn("monitoring migration failed", slog.Any("error", err))
+			} else {
+				monitoringRepo = monitoring.NewGormRepository(monitorDB)
+			}
+		}
+	}
+
+	monitoringService := monitoring.NewService(monitoringCfg, monitoringRepo, slogLogger)
+	app.Use(monitoringService.MetricsMiddleware())
+	app.Get("/metrics", adaptor.HTTPHandler(monitoringService.MetricsHandler()))
+
 	api := app.Group("/api")
 
-	emailSender := emailservice.NewNoopSender(slogLogger)
+	var emailSender emailservice.Sender = emailservice.NewNoopSender(slogLogger)
+	if emailCfg.Enabled() {
+		if sender, err := emailservice.NewSMTPSender(emailCfg, slogLogger); err != nil {
+			slogLogger.Warn("smtp initialization failed", slog.Any("error", err))
+		} else {
+			emailSender = sender
+		}
+	}
+
 	whatsappNotifier := whatsappservice.NewNoopNotifier(slogLogger)
 	publisher := notifications.NewPublisher(redisClient)
+
+	tokenStore := authdomain.NewRedisTokenStore(redisClient)
 
 	if err := notifications.StartEmailWorker(workerCtx, redisClient, emailSender, slogLogger); err != nil && slogLogger != nil {
 		slogLogger.Error("failed to start email worker", slog.Any("error", err))
@@ -97,9 +128,14 @@ func main() {
 		slogLogger.Error("failed to start whatsapp worker", slog.Any("error", err))
 	}
 	authRepo := authdomain.NewGormRepository(db)
-	authService := authdomain.NewService(authRepo, emailSender, slogLogger)
+	authService := authdomain.NewService(authRepo, emailSender, tokenStore, monitoringService, cfg.PublicURL, slogLogger)
 	authHandler := authdomain.NewHandler(authService, slogLogger)
 	authdomain.SetupRoutes(api, authHandler)
+
+	if monitoringRepo != nil {
+		monitoringHandler := monitoring.NewHandler(monitoringService)
+		monitoring.SetupRoutes(api, monitoringHandler)
+	}
 
 	financeRepo := financesdomain.NewGormRepository(db)
 	financeService := financesdomain.NewService(financeRepo, slogLogger)
@@ -255,6 +291,31 @@ func migrate(db *gorm.DB) error {
 		&projectsdomain.Milestone{},
 		&schedulerdomain.Schedule{},
 	)
+}
+
+func connectAuxDatabase(dsn string, log *slog.Logger) (*gorm.DB, error) {
+	gormLogger := gormlogger.New(
+		stdlog.New(os.Stdout, "\r\n", stdlog.LstdFlags),
+		gormlogger.Config{
+			SlowThreshold:             time.Second,
+			LogLevel:                  gormlogger.Warn,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		},
+	)
+
+	config := &gorm.Config{Logger: gormLogger}
+
+	db, err := openDatabase(dsn, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := configurePool(dsn, db); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 func waitForShutdown(log *slog.Logger, app *fiber.App, cancel context.CancelFunc, redisClient *redis.Client) {

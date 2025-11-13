@@ -9,8 +9,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	"github.com/woragis/backend/server/app/internal/monitoring"
+	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 )
 
 // Service exposes use-cases for the auth domain.
@@ -33,9 +33,9 @@ func NewService(repo Repository, emailSender emailservice.Sender, tokenStore Tok
 		repo:        repo,
 		emailSender: emailSender,
 		tokenStore:  tokenStore,
-		monitor:    monitor,
-		logger:     logger,
-		publicURL:  publicURL,
+		monitor:     monitor,
+		logger:      logger,
+		publicURL:   publicURL,
 		tokenTTL:    30 * time.Minute,
 	}
 }
