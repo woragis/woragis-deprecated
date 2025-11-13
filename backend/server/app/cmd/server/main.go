@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -25,8 +26,11 @@ import (
 	ideasdomain "github.com/woragis/backend/server/app/internal/domains/ideas"
 	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
+	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
+	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
+	notifications "github.com/woragis/backend/server/app/internal/workers/notifications"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 )
@@ -38,6 +42,7 @@ func main() {
 	}
 
 	aiCfg := appconfig.LoadAIConfig()
+	redisCfg := appconfig.LoadRedisConfig()
 
 	slogLogger := applogger.New(cfg.Env)
 	slogLogger.Info("starting woragis backend",
@@ -56,6 +61,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	redisOpts, err := redis.ParseURL(redisCfg.URL)
+	if err != nil {
+		slogLogger.Error("redis configuration invalid", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	redisClient := redis.NewClient(redisOpts)
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		slogLogger.Error("redis connection failed", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+
 	app := fiber.New(fiber.Config{
 		AppName: cfg.AppName,
 	})
@@ -66,6 +85,15 @@ func main() {
 	api := app.Group("/api")
 
 	emailSender := emailservice.NewNoopSender(slogLogger)
+	whatsappNotifier := whatsappservice.NewNoopNotifier(slogLogger)
+	publisher := notifications.NewPublisher(redisClient)
+
+	if err := notifications.StartEmailWorker(workerCtx, redisClient, emailSender, slogLogger); err != nil && slogLogger != nil {
+		slogLogger.Error("failed to start email worker", slog.Any("error", err))
+	}
+	if err := notifications.StartWhatsAppWorker(workerCtx, redisClient, whatsappNotifier, slogLogger); err != nil && slogLogger != nil {
+		slogLogger.Error("failed to start whatsapp worker", slog.Any("error", err))
+	}
 	authRepo := authdomain.NewGormRepository(db)
 	authService := authdomain.NewService(authRepo, emailSender, slogLogger)
 	authHandler := authdomain.NewHandler(authService, slogLogger)
@@ -106,6 +134,17 @@ func main() {
 	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger)
 	chatsdomain.SetupRoutes(api, chatsHandler)
 
+	reportsService := reportsdomain.NewService(
+		ideaRepo,
+		projectRepo,
+		financeRepo,
+		chatsRepo,
+		publisher,
+		slogLogger,
+	)
+	reportsHandler := reportsdomain.NewHandler(reportsService, slogLogger)
+	reportsdomain.SetupRoutes(api, reportsHandler)
+
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.Port)
 		slogLogger.Info("http server listening", slog.String("addr", addr))
@@ -114,7 +153,7 @@ func main() {
 		}
 	}()
 
-	waitForShutdown(slogLogger, app)
+	waitForShutdown(slogLogger, app, workerCancel, redisClient)
 }
 
 func connectDatabase(log *slog.Logger) (*gorm.DB, error) {
@@ -207,7 +246,7 @@ func migrate(db *gorm.DB) error {
 	)
 }
 
-func waitForShutdown(log *slog.Logger, app *fiber.App) {
+func waitForShutdown(log *slog.Logger, app *fiber.App, cancel context.CancelFunc, redisClient *redis.Client) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -215,10 +254,20 @@ func waitForShutdown(log *slog.Logger, app *fiber.App) {
 
 	log.Info("shutdown signal received")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelShutdown()
 
 	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
 		log.Error("error during fiber shutdown", slog.Any("error", err))
+	}
+
+	if cancel != nil {
+		cancel()
+	}
+
+	if redisClient != nil {
+		if err := redisClient.Close(); err != nil {
+			log.Error("error closing redis client", slog.Any("error", err))
+		}
 	}
 }
