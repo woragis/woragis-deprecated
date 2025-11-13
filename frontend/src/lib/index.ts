@@ -1,1 +1,2 @@
-// place files you want to import through the `$lib` alias in this folder.
+export { authStore } from './stores/auth';
+export type { AuthState, AuthUser } from './stores/auth';

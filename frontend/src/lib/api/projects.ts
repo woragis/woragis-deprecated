@@ -43,7 +43,10 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
 	return response.data.data;
 }
 
-export async function updateProjectStatus(projectId: UUID, status: ProjectStatus): Promise<Project> {
+export async function updateProjectStatus(
+	projectId: UUID,
+	status: ProjectStatus
+): Promise<Project> {
 	const response = await apiClient.patch<ApiResponse<Project>>(`/projects/${projectId}/status`, {
 		status
 	});
@@ -74,16 +77,21 @@ export async function addMilestone(
 	projectId: UUID,
 	payload: { title: string; description: string; dueDate: string }
 ): Promise<Milestone> {
-	const response = await apiClient.post<ApiResponse<Milestone>>(`/projects/${projectId}/milestones`, {
-		title: payload.title,
-		description: payload.description,
-		due_date: payload.dueDate
-	});
+	const response = await apiClient.post<ApiResponse<Milestone>>(
+		`/projects/${projectId}/milestones`,
+		{
+			title: payload.title,
+			description: payload.description,
+			due_date: payload.dueDate
+		}
+	);
 	return response.data.data;
 }
 
 export async function listMilestones(projectId: UUID): Promise<Milestone[]> {
-	const response = await apiClient.get<ApiResponse<Milestone[]>>(`/projects/${projectId}/milestones`);
+	const response = await apiClient.get<ApiResponse<Milestone[]>>(
+		`/projects/${projectId}/milestones`
+	);
 	return response.data.data ?? [];
 }
 
@@ -115,9 +123,12 @@ export async function bulkUpdateMilestones(
 }
 
 export async function toggleMilestone(milestoneId: UUID, completed: boolean): Promise<Milestone> {
-	const response = await apiClient.patch<ApiResponse<Milestone>>(`/projects/milestones/${milestoneId}`, {
-		completed
-	});
+	const response = await apiClient.patch<ApiResponse<Milestone>>(
+		`/projects/milestones/${milestoneId}`,
+		{
+			completed
+		}
+	);
 	return response.data.data;
 }
 
@@ -156,7 +167,10 @@ export async function updateKanbanColumn(
 	return response.data.data;
 }
 
-export async function reorderKanbanColumns(projectId: UUID, columnOrder: UUID[]): Promise<KanbanBoard> {
+export async function reorderKanbanColumns(
+	projectId: UUID,
+	columnOrder: UUID[]
+): Promise<KanbanBoard> {
 	const response = await apiClient.patch<ApiResponse<KanbanBoard>>(
 		`/projects/${projectId}/kanban/columns/reorder`,
 		{

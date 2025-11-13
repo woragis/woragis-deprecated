@@ -125,4 +125,3 @@ const createAuthStore = () => {
 };
 
 export const authStore = createAuthStore();
-

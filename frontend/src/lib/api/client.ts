@@ -4,7 +4,10 @@ import { get } from 'svelte/store';
 
 import { authStore } from '$lib';
 
-const baseURL = (import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
+const baseURL = (import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080').replace(
+	/\/+$/,
+	''
+);
 const apiBaseURL = `${baseURL}/api`;
 
 const isAuthBypass = (url?: string) => {
