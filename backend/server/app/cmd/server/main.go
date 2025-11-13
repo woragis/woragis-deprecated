@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -122,6 +123,41 @@ func main() {
 	monitoringService := monitoring.NewService(monitoringCfg, monitoringRepo, slogLogger)
 	app.Use(monitoringService.MetricsMiddleware())
 	app.Get("/metrics", adaptor.HTTPHandler(monitoringService.MetricsHandler()))
+
+	app.Use("/metrics/stream", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
+	app.Get("/metrics/stream", websocket.New(func(conn *websocket.Conn) {
+		defer conn.Close()
+
+		sendSnapshot := func() error {
+			snapshot, err := monitoringService.MetricsSnapshot()
+			if err != nil {
+				if conn.WriteMessage(websocket.TextMessage, []byte("# error: "+err.Error())) != nil {
+					return err
+				}
+				return err
+			}
+			return conn.WriteMessage(websocket.TextMessage, []byte(snapshot))
+		}
+
+		if err := sendSnapshot(); err != nil {
+			return
+		}
+
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if err := sendSnapshot(); err != nil {
+				return
+			}
+		}
+	}))
 
 	api := app.Group("/api")
 

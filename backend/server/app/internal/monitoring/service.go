@@ -72,3 +72,8 @@ func (s *Service) MetricsMiddleware() fiber.Handler {
 func (s *Service) MetricsHandler() http.Handler {
 	return s.metrics.metricsHandler()
 }
+
+// MetricsSnapshot renders the current metric families in Prometheus text format.
+func (s *Service) MetricsSnapshot() (string, error) {
+	return s.metrics.snapshot()
+}

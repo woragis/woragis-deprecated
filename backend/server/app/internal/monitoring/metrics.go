@@ -1,6 +1,7 @@
 package monitoring
 
 import (
+	"bytes"
 	"net/http"
 	"strconv"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/expfmt"
 )
 
 type metricsRegistry struct {
@@ -72,4 +74,21 @@ func (m *metricsRegistry) metricsHandler() http.Handler {
 
 func (m *metricsRegistry) incrementRegistrations() {
 	m.userRegistrations.Inc()
+}
+
+func (m *metricsRegistry) snapshot() (string, error) {
+	families, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	encoder := expfmt.NewEncoder(&buf, expfmt.FmtText)
+	for _, mf := range families {
+		if err := encoder.Encode(mf); err != nil {
+			return "", err
+		}
+	}
+
+	return buf.String(), nil
 }
