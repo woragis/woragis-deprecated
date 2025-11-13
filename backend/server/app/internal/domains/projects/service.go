@@ -3,26 +3,60 @@ package projects
 import (
 	"context"
 	"log/slog"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 // Service orchestrates project workflows.
-type Service struct {
+type Service interface {
+	CreateProject(ctx context.Context, req CreateProjectRequest) (*Project, error)
+	UpdateProjectStatus(ctx context.Context, req UpdateStatusRequest) (*Project, error)
+	UpdateProjectMetrics(ctx context.Context, req UpdateMetricsRequest) (*Project, error)
+	ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error)
+
+	AddMilestone(ctx context.Context, req AddMilestoneRequest) (*Milestone, error)
+	ToggleMilestone(ctx context.Context, req ToggleMilestoneRequest) (*Milestone, error)
+	ListMilestones(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]Milestone, error)
+	BulkUpdateMilestones(ctx context.Context, req BulkUpdateMilestonesRequest) ([]*Milestone, error)
+
+	CreateKanbanColumn(ctx context.Context, req CreateKanbanColumnRequest) (KanbanBoard, error)
+	UpdateKanbanColumn(ctx context.Context, req UpdateKanbanColumnRequest) (KanbanBoard, error)
+	ReorderKanbanColumns(ctx context.Context, req ReorderKanbanColumnsRequest) (KanbanBoard, error)
+	DeleteKanbanColumn(ctx context.Context, req DeleteKanbanColumnRequest) (KanbanBoard, error)
+
+	CreateKanbanCard(ctx context.Context, req CreateKanbanCardRequest) (KanbanBoard, error)
+	UpdateKanbanCard(ctx context.Context, req UpdateKanbanCardRequest) (KanbanBoard, error)
+	MoveKanbanCard(ctx context.Context, req MoveKanbanCardRequest) (KanbanBoard, error)
+	DeleteKanbanCard(ctx context.Context, req DeleteKanbanCardRequest) (KanbanBoard, error)
+	GetKanbanBoard(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (KanbanBoard, error)
+
+	CreateDependency(ctx context.Context, req CreateDependencyRequest) (*ProjectDependency, error)
+	DeleteDependency(ctx context.Context, req DeleteDependencyRequest) error
+	ListDependencies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectDependency, error)
+
+	DuplicateProject(ctx context.Context, req DuplicateProjectRequest) (*Project, error)
+}
+
+type service struct {
 	repo   Repository
 	logger *slog.Logger
 }
 
+var _ Service = (*service)(nil)
+
 // NewService constructs a Service.
-func NewService(repo Repository, logger *slog.Logger) *Service {
-	return &Service{
+func NewService(repo Repository, logger *slog.Logger) Service {
+	return &service{
 		repo:   repo,
 		logger: logger,
 	}
 }
 
-// CreateProjectRequest holds project creation payload.
+// Request payloads
+
 type CreateProjectRequest struct {
 	UserID      uuid.UUID
 	Name        string
@@ -35,14 +69,12 @@ type CreateProjectRequest struct {
 	ChurnRate   float64
 }
 
-// UpdateStatusRequest updates project stage.
 type UpdateStatusRequest struct {
 	ProjectID uuid.UUID
 	UserID    uuid.UUID
 	Status    ProjectStatus
 }
 
-// UpdateMetricsRequest updates KPI metrics.
 type UpdateMetricsRequest struct {
 	ProjectID   uuid.UUID
 	UserID      uuid.UUID
@@ -53,7 +85,6 @@ type UpdateMetricsRequest struct {
 	ChurnRate   float64
 }
 
-// AddMilestoneRequest captures milestone creation data.
 type AddMilestoneRequest struct {
 	ProjectID   uuid.UUID
 	UserID      uuid.UUID
@@ -62,15 +93,130 @@ type AddMilestoneRequest struct {
 	DueDate     time.Time
 }
 
-// ToggleMilestoneRequest toggles milestone completion.
 type ToggleMilestoneRequest struct {
 	MilestoneID uuid.UUID
 	UserID      uuid.UUID
 	Completed   bool
 }
 
-// CreateProject creates a new project aggregate.
-func (s *Service) CreateProject(ctx context.Context, req CreateProjectRequest) (*Project, error) {
+type MilestoneUpdate struct {
+	MilestoneID uuid.UUID
+	Title       *string
+	Description *string
+	DueDate     *time.Time
+	Completed   *bool
+}
+
+type BulkUpdateMilestonesRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Updates   []MilestoneUpdate
+}
+
+type CreateKanbanColumnRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Name      string
+	WIPLimit  *int
+	Position  *int
+}
+
+type UpdateKanbanColumnRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	ColumnID  uuid.UUID
+	Name      *string
+	WIPLimit  *int
+}
+
+type ReorderKanbanColumnsRequest struct {
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	ColumnOrder []uuid.UUID
+}
+
+type DeleteKanbanColumnRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	ColumnID  uuid.UUID
+}
+
+type CreateKanbanCardRequest struct {
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	ColumnID    uuid.UUID
+	Title       string
+	Description string
+	DueDate     *time.Time
+	MilestoneID *uuid.UUID
+	Position    *int
+}
+
+type UpdateKanbanCardRequest struct {
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	CardID      uuid.UUID
+	Title       *string
+	Description *string
+	DueDate     *time.Time
+	MilestoneID *uuid.UUID
+}
+
+type MoveKanbanCardRequest struct {
+	ProjectID      uuid.UUID
+	UserID         uuid.UUID
+	CardID         uuid.UUID
+	TargetColumnID uuid.UUID
+	TargetPosition int
+}
+
+type DeleteKanbanCardRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	CardID    uuid.UUID
+}
+
+type CreateDependencyRequest struct {
+	ProjectID          uuid.UUID
+	UserID             uuid.UUID
+	DependsOnProjectID uuid.UUID
+	Type               DependencyType
+}
+
+type DeleteDependencyRequest struct {
+	DependencyID uuid.UUID
+	UserID       uuid.UUID
+}
+
+type DuplicateProjectRequest struct {
+	TemplateProjectID uuid.UUID
+	UserID            uuid.UUID
+	Name              string
+	Description       string
+	Status            *ProjectStatus
+	HealthScore       *int
+	MRR               *float64
+	CAC               *float64
+	LTV               *float64
+	ChurnRate         *float64
+	CopyBoard         bool
+	CopyMilestones    bool
+	CopyDependencies  bool
+}
+
+type KanbanColumnWithCards struct {
+	Column KanbanColumn
+	Cards  []KanbanCard
+}
+
+type KanbanBoard struct {
+	ProjectID uuid.UUID
+	Columns   []KanbanColumnWithCards
+}
+
+// Project CRUD
+
+func (s *service) CreateProject(ctx context.Context, req CreateProjectRequest) (*Project, error) {
 	if req.Status == "" {
 		req.Status = ProjectStatusIdea
 	}
@@ -87,8 +233,7 @@ func (s *Service) CreateProject(ctx context.Context, req CreateProjectRequest) (
 	return project, nil
 }
 
-// UpdateProjectStatus updates the status of a project.
-func (s *Service) UpdateProjectStatus(ctx context.Context, req UpdateStatusRequest) (*Project, error) {
+func (s *service) UpdateProjectStatus(ctx context.Context, req UpdateStatusRequest) (*Project, error) {
 	project, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID)
 	if err != nil {
 		return nil, err
@@ -105,8 +250,7 @@ func (s *Service) UpdateProjectStatus(ctx context.Context, req UpdateStatusReque
 	return project, nil
 }
 
-// UpdateProjectMetrics updates KPI metrics.
-func (s *Service) UpdateProjectMetrics(ctx context.Context, req UpdateMetricsRequest) (*Project, error) {
+func (s *service) UpdateProjectMetrics(ctx context.Context, req UpdateMetricsRequest) (*Project, error) {
 	project, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID)
 	if err != nil {
 		return nil, err
@@ -123,13 +267,13 @@ func (s *Service) UpdateProjectMetrics(ctx context.Context, req UpdateMetricsReq
 	return project, nil
 }
 
-// ListProjects returns all user projects.
-func (s *Service) ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error) {
+func (s *service) ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error) {
 	return s.repo.ListProjects(ctx, userID)
 }
 
-// AddMilestone adds a new milestone to a project.
-func (s *Service) AddMilestone(ctx context.Context, req AddMilestoneRequest) (*Milestone, error) {
+// Milestones
+
+func (s *service) AddMilestone(ctx context.Context, req AddMilestoneRequest) (*Milestone, error) {
 	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
 		return nil, err
 	}
@@ -146,8 +290,7 @@ func (s *Service) AddMilestone(ctx context.Context, req AddMilestoneRequest) (*M
 	return milestone, nil
 }
 
-// ToggleMilestone updates milestone completion.
-func (s *Service) ToggleMilestone(ctx context.Context, req ToggleMilestoneRequest) (*Milestone, error) {
+func (s *service) ToggleMilestone(ctx context.Context, req ToggleMilestoneRequest) (*Milestone, error) {
 	milestone, err := s.repo.GetMilestone(ctx, req.MilestoneID, req.UserID)
 	if err != nil {
 		return nil, err
@@ -162,7 +305,747 @@ func (s *Service) ToggleMilestone(ctx context.Context, req ToggleMilestoneReques
 	return milestone, nil
 }
 
-// ListMilestones returns milestones for a project.
-func (s *Service) ListMilestones(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]Milestone, error) {
+func (s *service) ListMilestones(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]Milestone, error) {
 	return s.repo.ListMilestones(ctx, projectID, userID)
+}
+
+func (s *service) BulkUpdateMilestones(ctx context.Context, req BulkUpdateMilestonesRequest) ([]*Milestone, error) {
+	if len(req.Updates) == 0 {
+		return []*Milestone{}, nil
+	}
+
+	updated := make([]*Milestone, 0, len(req.Updates))
+	for _, payload := range req.Updates {
+		milestone, err := s.repo.GetMilestone(ctx, payload.MilestoneID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		if payload.Title != nil {
+			milestone.Title = strings.TrimSpace(*payload.Title)
+		}
+		if payload.Description != nil {
+			milestone.Description = strings.TrimSpace(*payload.Description)
+		}
+		if payload.DueDate != nil {
+			d := payload.DueDate.UTC()
+			milestone.DueDate = d
+		}
+		if payload.Completed != nil {
+			milestone.MarkCompleted(*payload.Completed)
+		}
+		milestone.UpdatedAt = time.Now().UTC()
+
+		if err := milestone.Validate(); err != nil {
+			return nil, err
+		}
+
+		updated = append(updated, milestone)
+	}
+
+	if err := s.repo.BulkUpdateMilestones(ctx, updated); err != nil {
+		return nil, err
+	}
+
+	return updated, nil
+}
+
+// Kanban board helpers
+
+func (s *service) CreateKanbanColumn(ctx context.Context, req CreateKanbanColumnRequest) (KanbanBoard, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	existingColumns, err := s.repo.ListKanbanColumns(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	position := len(existingColumns)
+	if req.Position != nil {
+		if *req.Position < 0 || *req.Position > len(existingColumns) {
+			return KanbanBoard{}, NewDomainError(ErrCodeInvalidPayload, ErrInvalidKanbanPosition)
+		}
+		position = *req.Position
+	}
+
+	limit := 0
+	if req.WIPLimit != nil {
+		if *req.WIPLimit < 0 {
+			return KanbanBoard{}, NewDomainError(ErrCodeInvalidPayload, ErrInvalidWIPLimit)
+		}
+		limit = *req.WIPLimit
+	}
+
+	column, err := NewKanbanColumn(req.ProjectID, req.Name, position, limit)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repo.CreateKanbanColumn(ctx, column); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repositionColumn(ctx, req.ProjectID, req.UserID, column.ID, position); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) UpdateKanbanColumn(ctx context.Context, req UpdateKanbanColumnRequest) (KanbanBoard, error) {
+	column, err := s.repo.GetKanbanColumn(ctx, req.ColumnID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if req.Name != nil {
+		if err := column.Rename(*req.Name); err != nil {
+			return KanbanBoard{}, err
+		}
+	}
+	if req.WIPLimit != nil {
+		if err := column.SetWIPLimit(*req.WIPLimit); err != nil {
+			return KanbanBoard{}, err
+		}
+	}
+
+	if err := s.repo.UpdateKanbanColumn(ctx, column); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) ReorderKanbanColumns(ctx context.Context, req ReorderKanbanColumnsRequest) (KanbanBoard, error) {
+	columns, err := s.repo.ListKanbanColumns(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if len(columns) != len(req.ColumnOrder) {
+		return KanbanBoard{}, NewDomainError(ErrCodeInvalidPayload, ErrInvalidColumnOrder)
+	}
+
+	lookup := make(map[uuid.UUID]KanbanColumn, len(columns))
+	for _, column := range columns {
+		lookup[column.ID] = column
+	}
+
+	ordered := make([]KanbanColumn, 0, len(columns))
+	for _, id := range req.ColumnOrder {
+		column, ok := lookup[id]
+		if !ok {
+			return KanbanBoard{}, NewDomainError(ErrCodeInvalidPayload, ErrInvalidColumnOrder)
+		}
+		ordered = append(ordered, column)
+	}
+
+	if err := s.normalizeColumnPositions(ctx, req.ProjectID, req.UserID, ordered); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) DeleteKanbanColumn(ctx context.Context, req DeleteKanbanColumnRequest) (KanbanBoard, error) {
+	if err := s.repo.DeleteKanbanColumn(ctx, req.ColumnID, req.UserID); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	columns, err := s.repo.ListKanbanColumns(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.normalizeColumnPositions(ctx, req.ProjectID, req.UserID, columns); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) CreateKanbanCard(ctx context.Context, req CreateKanbanCardRequest) (KanbanBoard, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	column, err := s.repo.GetKanbanColumn(ctx, req.ColumnID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+	if column.ProjectID != req.ProjectID {
+		return KanbanBoard{}, NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+
+	allCards, err := s.repo.ListKanbanCards(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	columnCards := filterCardsByColumn(allCards, req.ColumnID)
+	if column.WIPLimit > 0 && len(columnCards) >= column.WIPLimit {
+		return KanbanBoard{}, NewDomainError(ErrCodeConflict, ErrWIPLimitExceeded)
+	}
+
+	position := len(columnCards)
+	if req.Position != nil {
+		if *req.Position < 0 || *req.Position > len(columnCards) {
+			return KanbanBoard{}, NewDomainError(ErrCodeInvalidPayload, ErrInvalidKanbanPosition)
+		}
+		position = *req.Position
+	}
+
+	var due *time.Time
+	if req.DueDate != nil {
+		d := req.DueDate.UTC()
+		due = &d
+	}
+
+	var milestoneID *uuid.UUID
+	if req.MilestoneID != nil {
+		id := *req.MilestoneID
+		milestoneID = &id
+	}
+
+	card, err := NewKanbanCard(req.ProjectID, req.ColumnID, req.Title, req.Description, position, due, milestoneID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repo.CreateKanbanCard(ctx, card); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	pos := position
+	cardID := card.ID
+	if err := s.repositionCards(ctx, req.ProjectID, req.UserID, req.ColumnID, &cardID, &pos); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) UpdateKanbanCard(ctx context.Context, req UpdateKanbanCardRequest) (KanbanBoard, error) {
+	card, err := s.repo.GetKanbanCard(ctx, req.CardID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	title := card.Title
+	if req.Title != nil {
+		title = strings.TrimSpace(*req.Title)
+	}
+
+	description := card.Description
+	if req.Description != nil {
+		description = strings.TrimSpace(*req.Description)
+	}
+
+	var due *time.Time
+	if req.DueDate != nil {
+		d := req.DueDate.UTC()
+		due = &d
+	} else if card.DueDate != nil {
+		d := card.DueDate.UTC()
+		due = &d
+	}
+
+	var milestoneID *uuid.UUID
+	if req.MilestoneID != nil {
+		id := *req.MilestoneID
+		milestoneID = &id
+	} else if card.MilestoneID != nil {
+		id := *card.MilestoneID
+		milestoneID = &id
+	}
+
+	if err := card.UpdateDetails(title, description, due, milestoneID); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repo.UpdateKanbanCard(ctx, card); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) MoveKanbanCard(ctx context.Context, req MoveKanbanCardRequest) (KanbanBoard, error) {
+	card, err := s.repo.GetKanbanCard(ctx, req.CardID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	sourceColumnID := card.ColumnID
+
+	targetColumn, err := s.repo.GetKanbanColumn(ctx, req.TargetColumnID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	allCards, err := s.repo.ListKanbanCards(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	targetCards := filterCardsByColumn(allCards, req.TargetColumnID)
+	if targetColumn.WIPLimit > 0 {
+		cardCount := len(targetCards)
+		if sourceColumnID != req.TargetColumnID {
+			cardCount++
+		}
+		if cardCount > targetColumn.WIPLimit {
+			return KanbanBoard{}, NewDomainError(ErrCodeConflict, ErrWIPLimitExceeded)
+		}
+	}
+
+	if err := card.MoveToColumn(req.TargetColumnID, req.TargetPosition); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repo.UpdateKanbanCard(ctx, card); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if sourceColumnID != req.TargetColumnID {
+		if err := s.repositionCards(ctx, req.ProjectID, req.UserID, sourceColumnID, nil, nil); err != nil {
+			return KanbanBoard{}, err
+		}
+	}
+
+	pos := req.TargetPosition
+	cardID := card.ID
+	if err := s.repositionCards(ctx, req.ProjectID, req.UserID, req.TargetColumnID, &cardID, &pos); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) DeleteKanbanCard(ctx context.Context, req DeleteKanbanCardRequest) (KanbanBoard, error) {
+	card, err := s.repo.GetKanbanCard(ctx, req.CardID, req.UserID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repo.DeleteKanbanCard(ctx, req.CardID, req.UserID); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	if err := s.repositionCards(ctx, req.ProjectID, req.UserID, card.ColumnID, nil, nil); err != nil {
+		return KanbanBoard{}, err
+	}
+
+	return s.buildKanbanBoard(ctx, req.ProjectID, req.UserID)
+}
+
+func (s *service) GetKanbanBoard(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (KanbanBoard, error) {
+	return s.buildKanbanBoard(ctx, projectID, userID)
+}
+
+// Dependencies
+
+func (s *service) CreateDependency(ctx context.Context, req CreateDependencyRequest) (*ProjectDependency, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+	if _, err := s.repo.GetProject(ctx, req.DependsOnProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	if exists, err := s.repo.DependencyExists(ctx, req.DependsOnProjectID, req.ProjectID); err == nil && exists {
+		return nil, NewDomainError(ErrCodeConflict, ErrDependencyAlreadyExists)
+	}
+
+	dependency, err := NewProjectDependency(req.ProjectID, req.DependsOnProjectID, req.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateDependency(ctx, dependency); err != nil {
+		return nil, err
+	}
+
+	return dependency, nil
+}
+
+func (s *service) DeleteDependency(ctx context.Context, req DeleteDependencyRequest) error {
+	return s.repo.DeleteDependency(ctx, req.DependencyID, req.UserID)
+}
+
+func (s *service) ListDependencies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectDependency, error) {
+	return s.repo.ListDependencies(ctx, projectID, userID)
+}
+
+// Duplication
+
+func (s *service) DuplicateProject(ctx context.Context, req DuplicateProjectRequest) (*Project, error) {
+	template, err := s.repo.GetProject(ctx, req.TemplateProjectID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		name = template.Name + " Copy"
+	}
+	description := template.Description
+	if strings.TrimSpace(req.Description) != "" {
+		description = strings.TrimSpace(req.Description)
+	}
+
+	status := template.Status
+	if req.Status != nil {
+		status = *req.Status
+	}
+
+	health := template.HealthScore
+	if req.HealthScore != nil {
+		health = *req.HealthScore
+	}
+
+	mrr := template.MRR
+	if req.MRR != nil {
+		mrr = *req.MRR
+	}
+
+	cac := template.CAC
+	if req.CAC != nil {
+		cac = *req.CAC
+	}
+
+	ltv := template.LTV
+	if req.LTV != nil {
+		ltv = *req.LTV
+	}
+
+	churn := template.ChurnRate
+	if req.ChurnRate != nil {
+		churn = *req.ChurnRate
+	}
+
+	project, err := NewProject(template.UserID, name, description, status, health, mrr, cac, ltv, churn)
+	if err != nil {
+		return nil, err
+	}
+
+	var columns []*KanbanColumn
+	var cards []*KanbanCard
+	var milestones []*Milestone
+
+	columnMap := make(map[uuid.UUID]uuid.UUID)
+	milestoneMap := make(map[uuid.UUID]uuid.UUID)
+
+	if req.CopyBoard {
+		existingColumns, err := s.repo.ListKanbanColumns(ctx, template.ID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+		sort.Slice(existingColumns, func(i, j int) bool {
+			return existingColumns[i].Position < existingColumns[j].Position
+		})
+		for _, col := range existingColumns {
+			clone, err := NewKanbanColumn(project.ID, col.Name, col.Position, col.WIPLimit)
+			if err != nil {
+				return nil, err
+			}
+			clone.Position = col.Position
+			columns = append(columns, clone)
+			columnMap[col.ID] = clone.ID
+		}
+	}
+
+	if req.CopyMilestones {
+		existingMilestones, err := s.repo.ListMilestones(ctx, template.ID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+		for _, milestone := range existingMilestones {
+			due := milestone.DueDate
+			clone, err := NewMilestone(project.ID, milestone.Title, milestone.Description, due)
+			if err != nil {
+				return nil, err
+			}
+			if milestone.Completed {
+				clone.MarkCompleted(true)
+			}
+			milestones = append(milestones, clone)
+			milestoneMap[milestone.ID] = clone.ID
+		}
+	}
+
+	if req.CopyBoard {
+		existingCards, err := s.repo.ListKanbanCards(ctx, template.ID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+		sort.Slice(existingCards, func(i, j int) bool {
+			if existingCards[i].ColumnID == existingCards[j].ColumnID {
+				return existingCards[i].Position < existingCards[j].Position
+			}
+			return existingCards[i].ColumnID.String() < existingCards[j].ColumnID.String()
+		})
+		for _, card := range existingCards {
+			newColumnID, ok := columnMap[card.ColumnID]
+			if !ok {
+				continue
+			}
+
+			var due *time.Time
+			if card.DueDate != nil {
+				d := card.DueDate.UTC()
+				due = &d
+			}
+
+			var newMilestoneID *uuid.UUID
+			if card.MilestoneID != nil {
+				if mapped, ok := milestoneMap[*card.MilestoneID]; ok {
+					id := mapped
+					newMilestoneID = &id
+				}
+			}
+
+			clone, err := NewKanbanCard(project.ID, newColumnID, card.Title, card.Description, card.Position, due, newMilestoneID)
+			if err != nil {
+				return nil, err
+			}
+			clone.Position = card.Position
+			cards = append(cards, clone)
+		}
+	}
+
+	if err := s.repo.CreateProjectWithRelated(ctx, project, columns, cards, milestones); err != nil {
+		return nil, err
+	}
+
+	if req.CopyDependencies {
+		deps, err := s.repo.ListDependencies(ctx, template.ID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+		for _, dep := range deps {
+			if dep.DependsOnProjectID == template.ID {
+				// Skip self-referential dependencies during duplication
+				continue
+			}
+			if _, err := s.CreateDependency(ctx, CreateDependencyRequest{
+				ProjectID:          project.ID,
+				UserID:             req.UserID,
+				DependsOnProjectID: dep.DependsOnProjectID,
+				Type:               dep.Type,
+			}); err != nil {
+				if s.logger != nil {
+					s.logger.Warn("projects: unable to clone dependency", slog.Any("error", err))
+				}
+			}
+		}
+	}
+
+	return project, nil
+}
+
+// Helpers
+
+func (s *service) normalizeColumnPositions(ctx context.Context, projectID, userID uuid.UUID, columns []KanbanColumn) error {
+	for idx := range columns {
+		if err := columns[idx].SetPosition(idx); err != nil {
+			return err
+		}
+		if err := s.repo.UpdateKanbanColumn(ctx, &columns[idx]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *service) normalizeCardPositions(ctx context.Context, userID uuid.UUID, cards []KanbanCard) error {
+	for idx := range cards {
+		if err := cards[idx].SetPosition(idx); err != nil {
+			return err
+		}
+		if err := s.repo.UpdateKanbanCard(ctx, &cards[idx]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *service) repositionColumn(ctx context.Context, projectID, userID, columnID uuid.UUID, desiredPosition int) error {
+	columns, err := s.repo.ListKanbanColumns(ctx, projectID, userID)
+	if err != nil {
+		return err
+	}
+
+	var target *KanbanColumn
+	others := make([]KanbanColumn, 0, len(columns))
+	for _, column := range columns {
+		if column.ID == columnID {
+			copy := column
+			target = &copy
+			continue
+		}
+		others = append(others, column)
+	}
+
+	if target == nil {
+		return NewDomainError(ErrCodeNotFound, ErrKanbanColumnNotFound)
+	}
+
+	if desiredPosition < 0 {
+		desiredPosition = 0
+	}
+	if desiredPosition > len(others) {
+		desiredPosition = len(others)
+	}
+
+	ordered := make([]KanbanColumn, 0, len(columns))
+	ordered = append(ordered, others[:desiredPosition]...)
+	ordered = append(ordered, *target)
+	ordered = append(ordered, others[desiredPosition:]...)
+
+	return s.normalizeColumnPositions(ctx, projectID, userID, ordered)
+}
+
+func (s *service) repositionCards(ctx context.Context, projectID, userID, columnID uuid.UUID, cardID *uuid.UUID, desiredPosition *int) error {
+	cards, err := s.repo.ListKanbanCards(ctx, projectID, userID)
+	if err != nil {
+		return err
+	}
+
+	var target *KanbanCard
+	others := make([]KanbanCard, 0)
+	for _, card := range cards {
+		if card.ColumnID != columnID {
+			continue
+		}
+		if cardID != nil && card.ID == *cardID {
+			copy := card
+			target = &copy
+			continue
+		}
+		others = append(others, card)
+	}
+
+	if cardID != nil && target == nil {
+		return NewDomainError(ErrCodeNotFound, ErrKanbanCardNotFound)
+	}
+
+	if cardID == nil {
+		return s.normalizeCardPositions(ctx, userID, others)
+	}
+
+	position := len(others)
+	if desiredPosition != nil {
+		position = *desiredPosition
+		if position < 0 {
+			position = 0
+		}
+		if position > len(others) {
+			position = len(others)
+		}
+	}
+
+	ordered := make([]KanbanCard, 0, len(others)+1)
+	ordered = append(ordered, others[:position]...)
+	ordered = append(ordered, *target)
+	ordered = append(ordered, others[position:]...)
+
+	return s.normalizeCardPositions(ctx, userID, ordered)
+}
+
+func filterCardsByColumn(cards []KanbanCard, columnID uuid.UUID) []KanbanCard {
+	var filtered []KanbanCard
+	for _, card := range cards {
+		if card.ColumnID == columnID {
+			filtered = append(filtered, card)
+		}
+	}
+	return filtered
+}
+
+func (s *service) buildKanbanBoard(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (KanbanBoard, error) {
+	columns, err := s.repo.ListKanbanColumns(ctx, projectID, userID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	cards, err := s.repo.ListKanbanCards(ctx, projectID, userID)
+	if err != nil {
+		return KanbanBoard{}, err
+	}
+
+	sort.Slice(columns, func(i, j int) bool {
+		return columns[i].Position < columns[j].Position
+	})
+
+	cardMap := make(map[uuid.UUID][]KanbanCard)
+	for _, card := range cards {
+		cardMap[card.ColumnID] = append(cardMap[card.ColumnID], card)
+	}
+
+	board := KanbanBoard{ProjectID: projectID}
+	for _, column := range columns {
+		colCards := cardMap[column.ID]
+		sort.Slice(colCards, func(i, j int) bool {
+			if colCards[i].Position == colCards[j].Position {
+				return colCards[i].CreatedAt.Before(colCards[j].CreatedAt)
+			}
+			return colCards[i].Position < colCards[j].Position
+		})
+		board.Columns = append(board.Columns, KanbanColumnWithCards{
+			Column: column,
+			Cards:  colCards,
+		})
+	}
+
+	return board, nil
+}
+
+func insertColumn(columns []KanbanColumn, position int) []KanbanColumn {
+	if position >= len(columns)-1 {
+		return columns
+	}
+
+	inserted := make([]KanbanColumn, 0, len(columns))
+	for idx, column := range columns {
+		if idx == len(columns)-1 {
+			continue
+		}
+		if idx == position {
+			inserted = append(inserted, columns[len(columns)-1])
+		}
+		inserted = append(inserted, column)
+	}
+	return append(inserted, columns[len(columns)-1])
+}
+
+func insertCard(cards []KanbanCard, position int) []KanbanCard {
+	if position >= len(cards)-1 {
+		return cards
+	}
+	for i := len(cards) - 1; i > position; i-- {
+		cards[i] = cards[i-1]
+	}
+	return cards
+}
+
+func removeCard(cards []KanbanCard, cardID uuid.UUID) []KanbanCard {
+	filtered := cards[:0]
+	for _, card := range cards {
+		if card.ID != cardID {
+			filtered = append(filtered, card)
+		}
+	}
+	return filtered
+}
+
+func (b KanbanBoard) findColumnIndex(columnID uuid.UUID) int {
+	for idx, column := range b.Columns {
+		if column.Column.ID == columnID {
+			return idx
+		}
+	}
+	return -1
 }

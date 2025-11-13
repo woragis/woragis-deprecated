@@ -290,6 +290,9 @@ func migrate(db *gorm.DB) error {
 		&languagesdomain.VocabularyEntry{},
 		&projectsdomain.Project{},
 		&projectsdomain.Milestone{},
+		&projectsdomain.KanbanColumn{},
+		&projectsdomain.KanbanCard{},
+		&projectsdomain.ProjectDependency{},
 		&schedulerdomain.Schedule{},
 	)
 }

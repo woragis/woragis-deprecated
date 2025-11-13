@@ -18,6 +18,15 @@ const (
 	ProjectStatusCompleted  ProjectStatus = "completed"
 )
 
+// DependencyType describes the relationship between projects.
+type DependencyType string
+
+const (
+	DependencyTypeBlocks   DependencyType = "blocks"
+	DependencyTypeRelates  DependencyType = "relates"
+	DependencyTypeSupports DependencyType = "supports"
+)
+
 // Project captures high-level roadmap metadata.
 type Project struct {
 	ID          uuid.UUID     `gorm:"type:uuid;primaryKey"`
@@ -174,4 +183,239 @@ func (m *Milestone) Validate() error {
 func (m *Milestone) MarkCompleted(completed bool) {
 	m.Completed = completed
 	m.UpdatedAt = time.Now().UTC()
+}
+
+// KanbanColumn represents a column on the kanban board for a project.
+type KanbanColumn struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ProjectID uuid.UUID `gorm:"type:uuid;index;not null"`
+	Name      string    `gorm:"size:80;not null"`
+	WIPLimit  int       `gorm:"not null;default:0"`
+	Position  int       `gorm:"not null;index:idx_kanban_column_position"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// NewKanbanColumn constructs a new kanban column with sensible defaults.
+func NewKanbanColumn(projectID uuid.UUID, name string, position int, wipLimit int) (*KanbanColumn, error) {
+	column := &KanbanColumn{
+		ID:        uuid.New(),
+		ProjectID: projectID,
+		Name:      strings.TrimSpace(name),
+		WIPLimit:  wipLimit,
+		Position:  position,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	return column, column.Validate()
+}
+
+// Validate enforces invariants for a kanban column.
+func (c *KanbanColumn) Validate() error {
+	if c == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilKanbanColumn)
+	}
+
+	if c.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyKanbanColumnID)
+	}
+
+	if c.ProjectID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+
+	if c.Name == "" {
+		return NewDomainError(ErrCodeInvalidName, ErrEmptyKanbanColumnName)
+	}
+
+	if c.Position < 0 {
+		return NewDomainError(ErrCodeInvalidPayload, ErrInvalidKanbanPosition)
+	}
+
+	if c.WIPLimit < 0 {
+		return NewDomainError(ErrCodeInvalidPayload, ErrInvalidWIPLimit)
+	}
+
+	return nil
+}
+
+// Rename updates the column name.
+func (c *KanbanColumn) Rename(name string) error {
+	c.Name = strings.TrimSpace(name)
+	c.UpdatedAt = time.Now().UTC()
+	return c.Validate()
+}
+
+// SetWIPLimit updates the WIP limit value.
+func (c *KanbanColumn) SetWIPLimit(limit int) error {
+	c.WIPLimit = limit
+	c.UpdatedAt = time.Now().UTC()
+	return c.Validate()
+}
+
+// SetPosition updates the board order position.
+func (c *KanbanColumn) SetPosition(position int) error {
+	c.Position = position
+	c.UpdatedAt = time.Now().UTC()
+	return c.Validate()
+}
+
+// KanbanCard represents a task card on the kanban board.
+type KanbanCard struct {
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	ProjectID   uuid.UUID  `gorm:"type:uuid;index;not null"`
+	ColumnID    uuid.UUID  `gorm:"type:uuid;index;not null"`
+	MilestoneID *uuid.UUID `gorm:"type:uuid"`
+	Title       string     `gorm:"size:160;not null"`
+	Description string     `gorm:"size:512"`
+	DueDate     *time.Time
+	Position    int `gorm:"not null;index:idx_kanban_card_position"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// NewKanbanCard creates a new kanban card instance.
+func NewKanbanCard(projectID, columnID uuid.UUID, title, description string, position int, dueDate *time.Time, milestoneID *uuid.UUID) (*KanbanCard, error) {
+	card := &KanbanCard{
+		ID:          uuid.New(),
+		ProjectID:   projectID,
+		ColumnID:    columnID,
+		Title:       strings.TrimSpace(title),
+		Description: strings.TrimSpace(description),
+		Position:    position,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+
+	if dueDate != nil {
+		d := dueDate.UTC()
+		card.DueDate = &d
+	}
+
+	if milestoneID != nil {
+		id := *milestoneID
+		card.MilestoneID = &id
+	}
+
+	return card, card.Validate()
+}
+
+// Validate enforces invariants for a kanban card.
+func (c *KanbanCard) Validate() error {
+	if c == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilKanbanCard)
+	}
+
+	if c.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyKanbanCardID)
+	}
+
+	if c.ProjectID == uuid.Nil || c.ColumnID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+
+	if c.Title == "" {
+		return NewDomainError(ErrCodeInvalidName, ErrEmptyKanbanCardTitle)
+	}
+
+	if c.Position < 0 {
+		return NewDomainError(ErrCodeInvalidPayload, ErrInvalidKanbanPosition)
+	}
+
+	return nil
+}
+
+// SetPosition adjusts the card order inside a column.
+func (c *KanbanCard) SetPosition(position int) error {
+	c.Position = position
+	c.UpdatedAt = time.Now().UTC()
+	return c.Validate()
+}
+
+// MoveToColumn reassigns card to another column.
+func (c *KanbanCard) MoveToColumn(columnID uuid.UUID, position int) error {
+	if columnID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyKanbanColumnID)
+	}
+	c.ColumnID = columnID
+	return c.SetPosition(position)
+}
+
+// UpdateDetails updates mutable card fields.
+func (c *KanbanCard) UpdateDetails(title, description string, dueDate *time.Time, milestoneID *uuid.UUID) error {
+	if title != "" {
+		c.Title = strings.TrimSpace(title)
+	}
+	if description != "" {
+		c.Description = strings.TrimSpace(description)
+	}
+	if dueDate != nil {
+		d := dueDate.UTC()
+		c.DueDate = &d
+	}
+	if milestoneID != nil {
+		id := *milestoneID
+		c.MilestoneID = &id
+	}
+	c.UpdatedAt = time.Now().UTC()
+	return c.Validate()
+}
+
+// ProjectDependency models dependency relationships between projects.
+type ProjectDependency struct {
+	ID                 uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	ProjectID          uuid.UUID      `gorm:"type:uuid;index:idx_project_dependency,unique;not null"`
+	DependsOnProjectID uuid.UUID      `gorm:"type:uuid;index:idx_project_dependency,unique;not null"`
+	Type               DependencyType `gorm:"size:32;not null"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// NewProjectDependency constructs a dependency edge.
+func NewProjectDependency(projectID, dependsOn uuid.UUID, depType DependencyType) (*ProjectDependency, error) {
+	dependency := &ProjectDependency{
+		ID:                 uuid.New(),
+		ProjectID:          projectID,
+		DependsOnProjectID: dependsOn,
+		Type:               depType,
+		CreatedAt:          time.Now().UTC(),
+		UpdatedAt:          time.Now().UTC(),
+	}
+
+	return dependency, dependency.Validate()
+}
+
+// Validate enforces invariants for dependency edges.
+func (d *ProjectDependency) Validate() error {
+	if d == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilDependency)
+	}
+
+	if d.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyDependencyID)
+	}
+
+	if d.ProjectID == uuid.Nil || d.DependsOnProjectID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+
+	if d.ProjectID == d.DependsOnProjectID {
+		return NewDomainError(ErrCodeInvalidPayload, ErrSelfDependencyNotAllowed)
+	}
+
+	switch d.Type {
+	case DependencyTypeBlocks, DependencyTypeRelates, DependencyTypeSupports:
+	default:
+		return NewDomainError(ErrCodeInvalidPayload, ErrUnsupportedDependencyType)
+	}
+
+	return nil
+}
+
+// UpdateType updates the dependency classification.
+func (d *ProjectDependency) UpdateType(depType DependencyType) error {
+	d.Type = depType
+	d.UpdatedAt = time.Now().UTC()
+	return d.Validate()
 }
