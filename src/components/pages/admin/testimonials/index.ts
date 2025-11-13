@@ -1,1 +1,0 @@
-export { TestimonialForm } from "./TestimonialForm";
