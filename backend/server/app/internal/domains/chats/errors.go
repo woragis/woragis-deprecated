@@ -11,6 +11,9 @@ const (
 	ErrCodeNotFound                 = 5005
 	ErrCodeLLMFailure               = 5006
 	ErrCodeConversationAccessDenied = 5007
+	ErrCodeTranscriptNotFound       = 5008
+	ErrCodeAssignmentFailure        = 5009
+	ErrCodeStreamFailure            = 5010
 )
 
 const (
@@ -28,6 +31,10 @@ const (
 	ErrUnableToFetch        = "chats: unable to fetch data"
 	ErrUnableToInvokeLLM    = "chats: unable to invoke LLM"
 	ErrUnauthorizedAccess   = "chats: conversation access denied"
+	ErrTranscriptNotFound   = "chats: transcript not found"
+	ErrAssignmentNotFound   = "chats: assignment not found"
+	ErrUnableToStream       = "chats: unable to stream messages"
+	ErrInvalidSearchQuery   = "chats: invalid search query"
 )
 
 type DomainError struct {

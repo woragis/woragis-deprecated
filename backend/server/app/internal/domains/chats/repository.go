@@ -2,6 +2,8 @@ package chats
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -13,8 +15,18 @@ type Repository interface {
 	UpdateConversation(ctx context.Context, conversation *Conversation) error
 	GetConversation(ctx context.Context, id, userID uuid.UUID) (*Conversation, error)
 	ListConversations(ctx context.Context, userID uuid.UUID) ([]Conversation, error)
+	SearchConversations(ctx context.Context, userID uuid.UUID, filters SearchFilters) ([]Conversation, error)
+	BulkArchive(ctx context.Context, userID uuid.UUID, conversationIDs []uuid.UUID) error
+	BulkDelete(ctx context.Context, userID uuid.UUID, conversationIDs []uuid.UUID) error
+	BulkRestore(ctx context.Context, userID uuid.UUID, conversationIDs []uuid.UUID) error
 	CreateMessage(ctx context.Context, message *Message) error
 	ListMessages(ctx context.Context, conversationID, userID uuid.UUID) ([]Message, error)
+	CreateTranscript(ctx context.Context, transcript *ConversationTranscript) error
+	GetTranscriptByCode(ctx context.Context, shareCode string) (*ConversationTranscript, error)
+	ListTranscripts(ctx context.Context, conversationID, userID uuid.UUID) ([]ConversationTranscript, error)
+	CreateAssignment(ctx context.Context, assignment *ConversationAssignment) error
+	CloseAssignments(ctx context.Context, conversationID uuid.UUID) error
+	ListAssignments(ctx context.Context, conversationID uuid.UUID) ([]ConversationAssignment, error)
 }
 
 type gormRepository struct {
@@ -66,13 +78,86 @@ func (r *gormRepository) GetConversation(ctx context.Context, id, userID uuid.UU
 func (r *gormRepository) ListConversations(ctx context.Context, userID uuid.UUID) ([]Conversation, error) {
 	var conversations []Conversation
 	if err := r.db.WithContext(ctx).
-		Where("user_id = ?", userID).
+		Where("user_id = ? AND deleted_at IS NULL", userID).
 		Order("updated_at desc").
 		Find(&conversations).Error; err != nil {
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 
 	return conversations, nil
+}
+
+// SearchFilters describes conversation filtering options.
+type SearchFilters struct {
+	Query           string
+	IncludeArchived bool
+	Limit           int
+}
+
+func (r *gormRepository) SearchConversations(ctx context.Context, userID uuid.UUID, filters SearchFilters) ([]Conversation, error) {
+	var conversations []Conversation
+
+	db := r.db.WithContext(ctx).Model(&Conversation{}).
+		Where("user_id = ? AND deleted_at IS NULL", userID)
+
+	if !filters.IncludeArchived {
+		db = db.Where("archived_at IS NULL")
+	}
+
+	if strings.TrimSpace(filters.Query) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(filters.Query)) + "%"
+		db = db.Where(`
+			LOWER(title) LIKE ? OR
+			LOWER(description) LIKE ? OR
+			EXISTS (
+				SELECT 1 FROM messages
+				WHERE messages.conversation_id = conversations.id
+				AND LOWER(messages.content) LIKE ?
+			)
+		`, pattern, pattern, pattern)
+	}
+
+	if filters.Limit > 0 {
+		db = db.Limit(filters.Limit)
+	}
+
+	if err := db.Order("updated_at DESC").Find(&conversations).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return conversations, nil
+}
+
+func (r *gormRepository) BulkArchive(ctx context.Context, userID uuid.UUID, conversationIDs []uuid.UUID) error {
+	now := time.Now().UTC()
+	if err := r.db.WithContext(ctx).Model(&Conversation{}).
+		Where("user_id = ? AND id IN ?", userID, conversationIDs).
+		Update("archived_at", now).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) BulkDelete(ctx context.Context, userID uuid.UUID, conversationIDs []uuid.UUID) error {
+	now := time.Now().UTC()
+	if err := r.db.WithContext(ctx).Model(&Conversation{}).
+		Where("user_id = ? AND id IN ?", userID, conversationIDs).
+		Update("deleted_at", now).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) BulkRestore(ctx context.Context, userID uuid.UUID, conversationIDs []uuid.UUID) error {
+	if err := r.db.WithContext(ctx).Model(&Conversation{}).
+		Where("user_id = ? AND id IN ?", userID, conversationIDs).
+		Updates(map[string]any{
+			"archived_at": nil,
+			"deleted_at":  nil,
+		}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
 }
 
 func (r *gormRepository) CreateMessage(ctx context.Context, message *Message) error {
@@ -92,7 +177,7 @@ func (r *gormRepository) ListMessages(ctx context.Context, conversationID, userI
 
 	err := r.db.WithContext(ctx).
 		Joins("JOIN conversations ON conversations.id = messages.conversation_id").
-		Where("messages.conversation_id = ? AND conversations.user_id = ?", conversationID, userID).
+		Where("messages.conversation_id = ? AND conversations.user_id = ? AND conversations.deleted_at IS NULL", conversationID, userID).
 		Order("messages.created_at asc").
 		Find(&messages).Error
 	if err != nil {
@@ -100,4 +185,76 @@ func (r *gormRepository) ListMessages(ctx context.Context, conversationID, userI
 	}
 
 	return messages, nil
+}
+
+func (r *gormRepository) CreateTranscript(ctx context.Context, transcript *ConversationTranscript) error {
+	if transcript == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrUnableToPersist)
+	}
+	if err := r.db.WithContext(ctx).Create(transcript).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) GetTranscriptByCode(ctx context.Context, shareCode string) (*ConversationTranscript, error) {
+	var transcript ConversationTranscript
+	if err := r.db.WithContext(ctx).
+		Where("share_code = ?", shareCode).
+		First(&transcript).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrUnableToFetch)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	if transcript.ExpiresAt != nil && transcript.ExpiresAt.Before(time.Now().UTC()) {
+		return nil, NewDomainError(ErrCodeNotFound, ErrUnableToFetch)
+	}
+	return &transcript, nil
+}
+
+func (r *gormRepository) ListTranscripts(ctx context.Context, conversationID, userID uuid.UUID) ([]ConversationTranscript, error) {
+	var transcripts []ConversationTranscript
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN conversations ON conversations.id = conversation_transcripts.conversation_id").
+		Where("conversation_id = ? AND conversations.user_id = ?", conversationID, userID).
+		Order("created_at DESC").
+		Find(&transcripts).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return transcripts, nil
+}
+
+func (r *gormRepository) CreateAssignment(ctx context.Context, assignment *ConversationAssignment) error {
+	if assignment == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrUnableToPersist)
+	}
+	if err := r.db.WithContext(ctx).Create(assignment).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) CloseAssignments(ctx context.Context, conversationID uuid.UUID) error {
+	now := time.Now().UTC()
+	if err := r.db.WithContext(ctx).Model(&ConversationAssignment{}).
+		Where("conversation_id = ? AND unassigned_at IS NULL", conversationID).
+		Updates(map[string]any{
+			"unassigned_at": now,
+			"updated_at":    now,
+		}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) ListAssignments(ctx context.Context, conversationID uuid.UUID) ([]ConversationAssignment, error) {
+	var assignments []ConversationAssignment
+	if err := r.db.WithContext(ctx).
+		Where("conversation_id = ?", conversationID).
+		Order("assigned_at DESC").
+		Find(&assignments).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return assignments, nil
 }

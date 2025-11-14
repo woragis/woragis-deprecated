@@ -131,6 +131,13 @@ func main() {
 		return fiber.ErrUpgradeRequired
 	})
 
+	app.Use("/api/chats/conversations/:id/stream", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
 	app.Get("/metrics/stream", websocket.New(func(conn *websocket.Conn) {
 		defer conn.Close()
 
@@ -231,8 +238,9 @@ func main() {
 	}
 
 	chatsRepo := chatsdomain.NewGormRepository(db)
-	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel)
-	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger)
+	chatsStream := chatsdomain.NewStreamHub()
+	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel, chatsStream)
+	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
 	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
 
 	reportsService := reportsdomain.NewService(
@@ -353,6 +361,8 @@ func migrate(db *gorm.DB) error {
 		&ideasdomain.IdeaLink{},
 		&chatsdomain.Conversation{},
 		&chatsdomain.Message{},
+		&chatsdomain.ConversationTranscript{},
+		&chatsdomain.ConversationAssignment{},
 		&financesdomain.Transaction{},
 		&financesdomain.RecurringTemplate{},
 		&languagesdomain.StudySession{},

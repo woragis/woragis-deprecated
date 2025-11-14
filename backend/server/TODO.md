@@ -25,7 +25,14 @@
   - [x] Bulk milestone updates.
   - [x] Templated project duplication.
 - **Chats**
-  - [ ] Conversation search, bulk archive/delete, shared transcripts, agent assignment history, streaming responses with websockets.
+  - [x] Ship conversation search endpoint with message body filtering.
+  - [x] Implement bulk archive/delete/restore workflows with soft-delete metadata.
+  - [x] Persist shared transcript exports and assignment history records.
+  - [x] Provide websocket streaming hub for live message delivery.
+  - [ ] Build frontend search UI consuming new chat search API.
+  - [ ] Wire bulk archive/delete/restore controls in chat list view.
+  - [ ] Add transcript viewer/share flow in frontend chats module.
+  - [ ] Integrate websocket client for live message streaming in chat UI.
 - **Ideas**
   - [ ] Version history, bulk node operations, collaborative editing, advanced filters for relationships.
 - **Scheduler**

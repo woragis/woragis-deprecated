@@ -9,14 +9,19 @@ import (
 
 // Conversation represents a chat thread persisted by Woragis.
 type Conversation struct {
-	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID  `gorm:"type:uuid;index;not null"`
-	Title       string     `gorm:"size:120;not null"`
-	Description string     `gorm:"size:255"`
-	IdeaID      *uuid.UUID `gorm:"type:uuid;index"`
-	ProjectID   *uuid.UUID `gorm:"type:uuid;index"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID               uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID           uuid.UUID  `gorm:"type:uuid;index;not null"`
+	Title            string     `gorm:"size:120;not null"`
+	Description      string     `gorm:"size:255"`
+	IdeaID           *uuid.UUID `gorm:"type:uuid;index"`
+	ProjectID        *uuid.UUID `gorm:"type:uuid;index"`
+	AssignedAgentID  *uuid.UUID `gorm:"type:uuid;index"`
+	SharedTranscript string     `gorm:"size:255"`
+	ArchivedAt       *time.Time `gorm:"index"`
+	DeletedAt        *time.Time `gorm:"index"`
+	LastAssignedAt   *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // Message represents a single message in a conversation.
@@ -70,6 +75,16 @@ func (c *Conversation) Touch() {
 	c.UpdatedAt = time.Now().UTC()
 }
 
+// IsArchived reports if the conversation is archived.
+func (c *Conversation) IsArchived() bool {
+	return c.ArchivedAt != nil
+}
+
+// IsDeleted reports if the conversation is soft deleted.
+func (c *Conversation) IsDeleted() bool {
+	return c.DeletedAt != nil
+}
+
 // NewMessage constructs a new message entity.
 func NewMessage(conversationID uuid.UUID, role, content string) (*Message, error) {
 	msg := &Message{
@@ -106,4 +121,52 @@ func (m *Message) Validate() error {
 	}
 
 	return nil
+}
+
+// ConversationTranscript represents a shared transcript snapshot.
+type ConversationTranscript struct {
+	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ConversationID uuid.UUID `gorm:"type:uuid;index;not null"`
+	ShareCode      string    `gorm:"size:64;uniqueIndex;not null"`
+	Content        string    `gorm:"type:text;not null"`
+	CreatedAt      time.Time
+	ExpiresAt      *time.Time
+}
+
+// NewTranscript constructs a transcript entity.
+func NewTranscript(conversationID uuid.UUID, shareCode, content string, ttl time.Duration) *ConversationTranscript {
+	now := time.Now().UTC()
+	var expiresAt *time.Time
+	if ttl > 0 {
+		exp := now.Add(ttl)
+		expiresAt = &exp
+	}
+	return &ConversationTranscript{
+		ID:             uuid.New(),
+		ConversationID: conversationID,
+		ShareCode:      shareCode,
+		Content:        content,
+		CreatedAt:      now,
+		ExpiresAt:      expiresAt,
+	}
+}
+
+// ConversationAssignment stores assignment history for agents.
+type ConversationAssignment struct {
+	ID             uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	ConversationID uuid.UUID  `gorm:"type:uuid;index;not null"`
+	AgentID        uuid.UUID  `gorm:"type:uuid;index;not null"`
+	AgentName      string     `gorm:"size:120"`
+	AssignedAt     time.Time  `gorm:"index"`
+	UnassignedAt   *time.Time `gorm:"index"`
+	Notes          string     `gorm:"size:255"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Close marks the assignment as closed.
+func (a *ConversationAssignment) Close() {
+	now := time.Now().UTC()
+	a.UnassignedAt = &now
+	a.UpdatedAt = now
 }
