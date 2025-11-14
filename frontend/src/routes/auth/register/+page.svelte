@@ -1,14 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { apiClient } from '$lib/api/client';
-	import { authStore, type AuthUser } from '$lib';
-
-	type RegisterPayload = AuthUser & { token?: string | null };
-
-	interface RegisterResponse {
-		data: RegisterPayload | null;
-		success: boolean;
-	}
+	import { browser } from '$app/environment';
+	import { apiClient } from '@clients/apiClient';
+	import { getApiErrorMessage, toastError, toastSuccess } from '$lib/utils/toast';
 
 	let name = '';
 	let email = '';
@@ -17,34 +11,46 @@
 	let loading = false;
 	let error = '';
 
+	const storePendingEmail = (value: string) => {
+		if (!browser) return;
+		try {
+			localStorage.setItem('woragis_pending_confirmation', value);
+		} catch (err) {
+			console.warn('Unable to persist pending confirmation email.', err);
+		}
+	};
+
 	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
 		error = '';
 
 		if (password !== confirmPassword) {
 			error = 'Passwords do not match.';
+			toastError(error);
 			return;
 		}
 
 		loading = true;
 		try {
-			const response = await apiClient.post<RegisterResponse>('/auth/register', {
-				name,
+			const response = await apiClient.post('/auth/register', {
+				display_name: name,
 				email,
 				password
 			});
 
-			const payload = response.data?.data;
-			if (payload?.token) {
-				const { token, ...user } = payload;
-				authStore.setSession(user, token);
-				goto('/');
+			const payload = response.data?.data as Record<string, any> | null;
+			if (payload?.status === 'confirmation_required') {
+				storePendingEmail(email);
+				toastSuccess('Account created. Check your inbox to confirm your email.');
+				goto(`/auth/confirm-email?email=${encodeURIComponent(email)}`);
 				return;
 			}
 
+			toastSuccess('Account created. You can now sign in.');
 			goto('/auth/login');
-		} catch (err) {
-			error = 'Unable to create account. Please try again.';
+		} catch (err: unknown) {
+			error = getApiErrorMessage(err, 'Unable to create account. Please try again.');
+			toastError(error);
 			console.error(err);
 		} finally {
 			loading = false;
