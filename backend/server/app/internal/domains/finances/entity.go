@@ -19,23 +19,23 @@ const (
 
 // Transaction represents a financial movement.
 type Transaction struct {
-	ID               uuid.UUID       `gorm:"type:uuid;primaryKey"`
-	UserID           uuid.UUID       `gorm:"type:uuid;index;not null"`
-	Type             TransactionType `gorm:"type:varchar(16);not null"`
-	Category         string          `gorm:"size:120;not null"`
-	Description      string          `gorm:"size:255"`
-	Amount           float64         `gorm:"not null"`
-	Currency         string          `gorm:"size:8;not null"`
-	BaseCurrency     string          `gorm:"size:8;not null"`
-	NormalizedAmount float64         `gorm:"not null"`
-	OccurredAt       time.Time       `gorm:"not null"`
-	IsRecurring      bool            `gorm:"not null;default:false"`
-	IsEssential      bool            `gorm:"not null;default:false"`
-	IsArchived       bool            `gorm:"not null;default:false;index"`
-	TemplateID       *uuid.UUID      `gorm:"type:uuid;index"`
-	Tags             TagList         `gorm:"type:jsonb"`
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID               uuid.UUID       `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID           uuid.UUID       `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Type             TransactionType `gorm:"column:type;type:varchar(16);not null" json:"type"`
+	Category         string          `gorm:"column:category;size:120;not null" json:"category"`
+	Description      string          `gorm:"column:description;size:255" json:"description"`
+	Amount           float64         `gorm:"column:amount;not null" json:"amount"`
+	Currency         string          `gorm:"column:currency;size:8;not null" json:"currency"`
+	BaseCurrency     string          `gorm:"column:base_currency;size:8;not null" json:"baseCurrency"`
+	NormalizedAmount float64         `gorm:"column:normalized_amount;not null" json:"normalizedAmount"`
+	OccurredAt       time.Time       `gorm:"column:occurred_at;not null" json:"occurredAt"`
+	IsRecurring      bool            `gorm:"column:is_recurring;not null;default:false" json:"isRecurring"`
+	IsEssential      bool            `gorm:"column:is_essential;not null;default:false" json:"isEssential"`
+	IsArchived       bool            `gorm:"column:is_archived;not null;default:false;index" json:"isArchived"`
+	TemplateID       *uuid.UUID      `gorm:"column:template_id;type:uuid;index" json:"templateId,omitempty"`
+	Tags             TagList         `gorm:"column:tags;type:jsonb" json:"tags"`
+	CreatedAt        time.Time       `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt        time.Time       `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // TagList represents a normalized list of tags persisted as JSON.
@@ -300,23 +300,23 @@ const (
 
 // RecurringTemplate represents a reusable blueprint for scheduled transactions.
 type RecurringTemplate struct {
-	ID               uuid.UUID          `gorm:"type:uuid;primaryKey"`
-	UserID           uuid.UUID          `gorm:"type:uuid;index;not null"`
-	Name             string             `gorm:"size:120;not null"`
-	Type             TransactionType    `gorm:"type:varchar(16);not null"`
-	Category         string             `gorm:"size:120;not null"`
-	Description      string             `gorm:"size:255"`
-	Amount           float64            `gorm:"not null"`
-	Currency         string             `gorm:"size:8;not null"`
-	BaseCurrency     string             `gorm:"size:8;not null"`
-	NormalizedAmount float64            `gorm:"not null"`
-	Frequency        RecurringFrequency `gorm:"size:32;not null"`
-	Interval         int                `gorm:"not null;default:1"`
-	DayOfMonth       *int               `gorm:"type:int"`
-	Weekday          *int               `gorm:"type:int"`
-	Tags             TagList            `gorm:"type:jsonb"`
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID               uuid.UUID          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID           uuid.UUID          `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Name             string             `gorm:"column:name;size:120;not null" json:"name"`
+	Type             TransactionType    `gorm:"column:type;type:varchar(16);not null" json:"type"`
+	Category         string             `gorm:"column:category;size:120;not null" json:"category"`
+	Description      string             `gorm:"column:description;size:255" json:"description"`
+	Amount           float64            `gorm:"column:amount;not null" json:"amount"`
+	Currency         string             `gorm:"column:currency;size:8;not null" json:"currency"`
+	BaseCurrency     string             `gorm:"column:base_currency;size:8;not null" json:"baseCurrency"`
+	NormalizedAmount float64            `gorm:"column:normalized_amount;not null" json:"normalizedAmount"`
+	Frequency        RecurringFrequency `gorm:"column:frequency;size:32;not null" json:"frequency"`
+	Interval         int                `gorm:"column:interval;not null;default:1" json:"interval"`
+	DayOfMonth       *int               `gorm:"column:day_of_month;type:int" json:"dayOfMonth,omitempty"`
+	Weekday          *int               `gorm:"column:weekday;type:int" json:"weekday,omitempty"`
+	Tags             TagList            `gorm:"column:tags;type:jsonb" json:"tags"`
+	CreatedAt        time.Time          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt        time.Time          `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewRecurringTemplate builds a recurring template and validates invariants.

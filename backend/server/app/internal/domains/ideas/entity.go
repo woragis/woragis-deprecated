@@ -17,30 +17,30 @@ const (
 
 // Idea represents a graph node in the ideas canvas.
 type Idea struct {
-	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID  `gorm:"type:uuid;index;not null"`
-	Title       string     `gorm:"size:160;not null"`
-	Description string     `gorm:"type:text"`
-	PosX        float64    `gorm:"not null"`
-	PosY        float64    `gorm:"not null"`
-	Color       string     `gorm:"size:16"`
-	ProjectID   *uuid.UUID `gorm:"type:uuid;index"`
-	Version     int        `gorm:"not null;default:1"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	ID          uuid.UUID      `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID      uuid.UUID      `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Title       string         `gorm:"column:title;size:160;not null" json:"title"`
+	Description string         `gorm:"column:description;type:text" json:"description"`
+	PosX        float64        `gorm:"column:pos_x;not null" json:"posX"`
+	PosY        float64        `gorm:"column:pos_y;not null" json:"posY"`
+	Color       string         `gorm:"column:color;size:16" json:"color"`
+	ProjectID   *uuid.UUID     `gorm:"column:project_id;type:uuid;index" json:"projectId,omitempty"`
+	Version     int            `gorm:"column:version;not null;default:1" json:"version"`
+	CreatedAt   time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time      `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
 }
 
 // IdeaLink represents a relationship between two ideas/projects.
 type IdeaLink struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID        uuid.UUID `gorm:"type:uuid;index;not null"`
-	SourceIdeaID  uuid.UUID `gorm:"type:uuid;index;not null"`
-	TargetIdeaID  uuid.UUID `gorm:"type:uuid;index;not null"`
-	Relation      string    `gorm:"size:64;not null"`
-	Weight        float64   `gorm:"default:1"`
-	Bidirectional bool      `gorm:"default:false"`
-	CreatedAt     time.Time
+	ID            uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID        uuid.UUID `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	SourceIdeaID  uuid.UUID `gorm:"column:source_idea_id;type:uuid;index;not null" json:"sourceIdeaId"`
+	TargetIdeaID  uuid.UUID `gorm:"column:target_idea_id;type:uuid;index;not null" json:"targetIdeaId"`
+	Relation      string    `gorm:"column:relation;size:64;not null" json:"relation"`
+	Weight        float64   `gorm:"column:weight;default:1" json:"weight"`
+	Bidirectional bool      `gorm:"column:bidirectional;default:false" json:"bidirectional"`
+	CreatedAt     time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
 // NewIdea constructs a new idea node.
@@ -158,18 +158,18 @@ func (l *IdeaLink) Validate() error {
 
 // IdeaVersion captures a snapshot of idea metadata.
 type IdeaVersion struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	IdeaID      uuid.UUID `gorm:"type:uuid;index;not null"`
-	UserID      uuid.UUID `gorm:"type:uuid;index;not null"`
-	EditorID    uuid.UUID `gorm:"type:uuid;index;not null"`
-	Version     int       `gorm:"index;not null"`
-	Title       string    `gorm:"size:160;not null"`
-	Description string    `gorm:"type:text"`
-	PosX        float64   `gorm:"not null"`
-	PosY        float64   `gorm:"not null"`
-	Color       string    `gorm:"size:16"`
-	ChangeType  string    `gorm:"size:32;not null"`
-	CreatedAt   time.Time
+	ID          uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	IdeaID      uuid.UUID `gorm:"column:idea_id;type:uuid;index;not null" json:"ideaId"`
+	UserID      uuid.UUID `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	EditorID    uuid.UUID `gorm:"column:editor_id;type:uuid;index;not null" json:"editorId"`
+	Version     int       `gorm:"column:version;index;not null" json:"version"`
+	Title       string    `gorm:"column:title;size:160;not null" json:"title"`
+	Description string    `gorm:"column:description;type:text" json:"description"`
+	PosX        float64   `gorm:"column:pos_x;not null" json:"posX"`
+	PosY        float64   `gorm:"column:pos_y;not null" json:"posY"`
+	Color       string    `gorm:"column:color;size:16" json:"color"`
+	ChangeType  string    `gorm:"column:change_type;size:32;not null" json:"changeType"`
+	CreatedAt   time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
 // NewIdeaVersion builds a snapshot representation.
@@ -195,12 +195,12 @@ func NewIdeaVersion(idea *Idea, editorID uuid.UUID, changeType string) *IdeaVers
 
 // IdeaCollaborator tracks shared access to an idea canvas.
 type IdeaCollaborator struct {
-	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
-	OwnerID        uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_owner_collaborator"`
-	CollaboratorID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_owner_collaborator"`
-	Role           string    `gorm:"size:32;not null"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID             uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	OwnerID        uuid.UUID `gorm:"column:owner_id;type:uuid;not null;uniqueIndex:idx_owner_collaborator" json:"ownerId"`
+	CollaboratorID uuid.UUID `gorm:"column:collaborator_id;type:uuid;not null;uniqueIndex:idx_owner_collaborator" json:"collaboratorId"`
+	Role           string    `gorm:"column:role;size:32;not null" json:"role"`
+	CreatedAt      time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt      time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewIdeaCollaborator constructs a collaborator entry.

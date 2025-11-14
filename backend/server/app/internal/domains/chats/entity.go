@@ -9,28 +9,28 @@ import (
 
 // Conversation represents a chat thread persisted by Woragis.
 type Conversation struct {
-	ID               uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	UserID           uuid.UUID  `gorm:"type:uuid;index;not null"`
-	Title            string     `gorm:"size:120;not null"`
-	Description      string     `gorm:"size:255"`
-	IdeaID           *uuid.UUID `gorm:"type:uuid;index"`
-	ProjectID        *uuid.UUID `gorm:"type:uuid;index"`
-	AssignedAgentID  *uuid.UUID `gorm:"type:uuid;index"`
-	SharedTranscript string     `gorm:"size:255"`
-	ArchivedAt       *time.Time `gorm:"index"`
-	DeletedAt        *time.Time `gorm:"index"`
-	LastAssignedAt   *time.Time
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID               uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID           uuid.UUID  `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Title            string     `gorm:"column:title;size:120;not null" json:"title"`
+	Description      string     `gorm:"column:description;size:255" json:"description"`
+	IdeaID           *uuid.UUID `gorm:"column:idea_id;type:uuid;index" json:"ideaId,omitempty"`
+	ProjectID        *uuid.UUID `gorm:"column:project_id;type:uuid;index" json:"projectId,omitempty"`
+	AssignedAgentID  *uuid.UUID `gorm:"column:assigned_agent_id;type:uuid;index" json:"assignedAgentId,omitempty"`
+	SharedTranscript string     `gorm:"column:shared_transcript;size:255" json:"sharedTranscript"`
+	ArchivedAt       *time.Time `gorm:"column:archived_at;index" json:"archivedAt,omitempty"`
+	DeletedAt        *time.Time `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
+	LastAssignedAt   *time.Time `gorm:"column:last_assigned_at" json:"lastAssignedAt,omitempty"`
+	CreatedAt        time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt        time.Time  `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // Message represents a single message in a conversation.
 type Message struct {
-	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ConversationID uuid.UUID `gorm:"type:uuid;index;not null"`
-	Role           string    `gorm:"size:32;not null"`
-	Content        string    `gorm:"type:text;not null"`
-	CreatedAt      time.Time
+	ID             uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ConversationID uuid.UUID `gorm:"column:conversation_id;type:uuid;index;not null" json:"conversationId"`
+	Role           string    `gorm:"column:role;size:32;not null" json:"role"`
+	Content        string    `gorm:"column:content;type:text;not null" json:"content"`
+	CreatedAt      time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
 // NewConversation creates a new conversation.
@@ -125,12 +125,12 @@ func (m *Message) Validate() error {
 
 // ConversationTranscript represents a shared transcript snapshot.
 type ConversationTranscript struct {
-	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ConversationID uuid.UUID `gorm:"type:uuid;index;not null"`
-	ShareCode      string    `gorm:"size:64;uniqueIndex;not null"`
-	Content        string    `gorm:"type:text;not null"`
-	CreatedAt      time.Time
-	ExpiresAt      *time.Time
+	ID             uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ConversationID uuid.UUID  `gorm:"column:conversation_id;type:uuid;index;not null" json:"conversationId"`
+	ShareCode      string     `gorm:"column:share_code;size:64;uniqueIndex;not null" json:"shareCode"`
+	Content        string     `gorm:"column:content;type:text;not null" json:"content"`
+	CreatedAt      time.Time  `gorm:"column:created_at" json:"createdAt"`
+	ExpiresAt      *time.Time `gorm:"column:expires_at" json:"expiresAt,omitempty"`
 }
 
 // NewTranscript constructs a transcript entity.
@@ -153,15 +153,15 @@ func NewTranscript(conversationID uuid.UUID, shareCode, content string, ttl time
 
 // ConversationAssignment stores assignment history for agents.
 type ConversationAssignment struct {
-	ID             uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	ConversationID uuid.UUID  `gorm:"type:uuid;index;not null"`
-	AgentID        uuid.UUID  `gorm:"type:uuid;index;not null"`
-	AgentName      string     `gorm:"size:120"`
-	AssignedAt     time.Time  `gorm:"index"`
-	UnassignedAt   *time.Time `gorm:"index"`
-	Notes          string     `gorm:"size:255"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID             uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ConversationID uuid.UUID  `gorm:"column:conversation_id;type:uuid;index;not null" json:"conversationId"`
+	AgentID        uuid.UUID  `gorm:"column:agent_id;type:uuid;index;not null" json:"agentId"`
+	AgentName      string     `gorm:"column:agent_name;size:120" json:"agentName"`
+	AssignedAt     time.Time  `gorm:"column:assigned_at;index" json:"assignedAt"`
+	UnassignedAt   *time.Time `gorm:"column:unassigned_at;index" json:"unassignedAt,omitempty"`
+	Notes          string     `gorm:"column:notes;size:255" json:"notes"`
+	CreatedAt      time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt      time.Time  `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // Close marks the assignment as closed.

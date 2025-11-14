@@ -11,17 +11,17 @@ import (
 
 // ReportDefinition models a saved custom report configuration.
 type ReportDefinition struct {
-	ID          uuid.UUID                          `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID                          `gorm:"type:uuid;index;not null"`
-	Name        string                             `gorm:"size:120;not null"`
-	Description string                             `gorm:"size:255"`
-	Sections    datatypes.JSONType[map[string]any] `gorm:"type:jsonb"`
-	Filters     datatypes.JSONType[map[string]any] `gorm:"type:jsonb"`
-	IsFavorite  bool
-	ArchivedAt  *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	ID          uuid.UUID                          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID      uuid.UUID                          `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Name        string                             `gorm:"column:name;size:120;not null" json:"name"`
+	Description string                             `gorm:"column:description;size:255" json:"description"`
+	Sections    datatypes.JSONType[map[string]any] `gorm:"column:sections;type:jsonb" json:"sections"`
+	Filters     datatypes.JSONType[map[string]any] `gorm:"column:filters;type:jsonb" json:"filters"`
+	IsFavorite  bool                               `gorm:"column:is_favorite" json:"isFavorite"`
+	ArchivedAt  *time.Time                         `gorm:"column:archived_at" json:"archivedAt,omitempty"`
+	CreatedAt   time.Time                          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time                          `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt                     `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
 }
 
 // NewReportDefinition constructs a report definition entity.
@@ -72,18 +72,18 @@ func (r *ReportDefinition) Restore() {
 
 // ReportSchedule defines automation for a report.
 type ReportSchedule struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ReportID  uuid.UUID `gorm:"type:uuid;index;not null"`
-	Cron      string    `gorm:"size:120"`
-	Frequency string    `gorm:"size:32"`
-	Timezone  string    `gorm:"size:64"`
-	NextRun   *time.Time
-	LastRunAt *time.Time
-	Enabled   bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt                     `gorm:"index"`
-	Meta      datatypes.JSONType[map[string]any] `gorm:"type:jsonb"`
+	ID        uuid.UUID                          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ReportID  uuid.UUID                          `gorm:"column:report_id;type:uuid;index;not null" json:"reportId"`
+	Cron      string                             `gorm:"column:cron;size:120" json:"cron"`
+	Frequency string                             `gorm:"column:frequency;size:32" json:"frequency"`
+	Timezone  string                             `gorm:"column:timezone;size:64" json:"timezone"`
+	NextRun   *time.Time                         `gorm:"column:next_run" json:"nextRun,omitempty"`
+	LastRunAt *time.Time                         `gorm:"column:last_run_at" json:"lastRunAt,omitempty"`
+	Enabled   bool                               `gorm:"column:enabled" json:"enabled"`
+	CreatedAt time.Time                          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt time.Time                          `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt gorm.DeletedAt                     `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
+	Meta      datatypes.JSONType[map[string]any] `gorm:"column:meta;type:jsonb" json:"meta"`
 }
 
 // NewReportSchedule constructs a schedule entity.
@@ -125,15 +125,15 @@ func (s *ReportSchedule) Toggle(enabled bool) {
 
 // ReportDelivery defines how a report is delivered.
 type ReportDelivery struct {
-	ID        uuid.UUID                          `gorm:"type:uuid;primaryKey"`
-	ReportID  uuid.UUID                          `gorm:"type:uuid;index;not null"`
-	Channel   string                             `gorm:"size:32;not null"`
-	Target    string                             `gorm:"size:255"`
-	Template  datatypes.JSONType[map[string]any] `gorm:"type:jsonb"`
-	Enabled   bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	ID        uuid.UUID                          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ReportID  uuid.UUID                          `gorm:"column:report_id;type:uuid;index;not null" json:"reportId"`
+	Channel   string                             `gorm:"column:channel;size:32;not null" json:"channel"`
+	Target    string                             `gorm:"column:target;size:255" json:"target"`
+	Template  datatypes.JSONType[map[string]any] `gorm:"column:template;type:jsonb" json:"template"`
+	Enabled   bool                               `gorm:"column:enabled" json:"enabled"`
+	CreatedAt time.Time                          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt time.Time                          `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt gorm.DeletedAt                     `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
 }
 
 // NewReportDelivery constructs a delivery entity.
@@ -176,17 +176,17 @@ func (d *ReportDelivery) Toggle(enabled bool) {
 
 // ReportRun tracks regeneration/export requests.
 type ReportRun struct {
-	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ReportID       uuid.UUID `gorm:"type:uuid;index;not null"`
-	RequestedBy    uuid.UUID `gorm:"type:uuid;index"`
-	Status         string    `gorm:"size:32;index"`
-	StartedAt      *time.Time
-	CompletedAt    *time.Time
-	OutputLocation string                             `gorm:"size:255"`
-	ErrorMessage   string                             `gorm:"size:255"`
-	Metadata       datatypes.JSONType[map[string]any] `gorm:"type:jsonb"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID             uuid.UUID                          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ReportID       uuid.UUID                          `gorm:"column:report_id;type:uuid;index;not null" json:"reportId"`
+	RequestedBy    uuid.UUID                          `gorm:"column:requested_by;type:uuid;index" json:"requestedBy"`
+	Status         string                             `gorm:"column:status;size:32;index" json:"status"`
+	StartedAt      *time.Time                         `gorm:"column:started_at" json:"startedAt,omitempty"`
+	CompletedAt    *time.Time                         `gorm:"column:completed_at" json:"completedAt,omitempty"`
+	OutputLocation string                             `gorm:"column:output_location;size:255" json:"outputLocation"`
+	ErrorMessage   string                             `gorm:"column:error_message;size:255" json:"errorMessage"`
+	Metadata       datatypes.JSONType[map[string]any] `gorm:"column:metadata;type:jsonb" json:"metadata"`
+	CreatedAt      time.Time                          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt      time.Time                          `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewReportRun constructs a pending run entity.

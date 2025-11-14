@@ -17,25 +17,25 @@ const (
 
 // Schedule represents an automated report dispatch configuration.
 type Schedule struct {
-	ID          uuid.UUID                           `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID                           `gorm:"type:uuid;index;not null"`
-	ReportType  string                              `gorm:"size:64;not null"`
-	AgentAlias  string                              `gorm:"size:64;not null"`
-	Frequency   string                              `gorm:"size:32;not null"` // daily, weekly, custom
-	Weekday     string                              `gorm:"size:16"`          // monday ... sunday
-	TimeOfDay   string                              `gorm:"size:8;not null"`  // HH:MM (24h)
-	Timezone    string                              `gorm:"size:64;not null"`
-	RRule       string                              `gorm:"type:text"`
-	Priority    int                                 `gorm:"default:0"`
-	Email       string                              `gorm:"size:255"`
-	PhoneNumber string                              `gorm:"size:64"`
-	Channels    datatypes.JSONType[map[string]bool] `gorm:"type:jsonb"`
-	Active      bool                                `gorm:"default:true"`
-	Paused      bool                                `gorm:"default:false"`
-	NextRun     time.Time                           `gorm:"index"`
-	LastRun     *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID                           `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID      uuid.UUID                           `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	ReportType  string                              `gorm:"column:report_type;size:64;not null" json:"reportType"`
+	AgentAlias  string                              `gorm:"column:agent_alias;size:64;not null" json:"agentAlias"`
+	Frequency   string                              `gorm:"column:frequency;size:32;not null" json:"frequency"`  // daily, weekly, custom
+	Weekday     string                              `gorm:"column:weekday;size:16" json:"weekday"`               // monday ... sunday
+	TimeOfDay   string                              `gorm:"column:time_of_day;size:8;not null" json:"timeOfDay"` // HH:MM (24h)
+	Timezone    string                              `gorm:"column:timezone;size:64;not null" json:"timezone"`
+	RRule       string                              `gorm:"column:rrule;type:text" json:"rrule"`
+	Priority    int                                 `gorm:"column:priority;default:0" json:"priority"`
+	Email       string                              `gorm:"column:email;size:255" json:"email"`
+	PhoneNumber string                              `gorm:"column:phone_number;size:64" json:"phoneNumber"`
+	Channels    datatypes.JSONType[map[string]bool] `gorm:"column:channels;type:jsonb" json:"channels"`
+	Active      bool                                `gorm:"column:active;default:true" json:"active"`
+	Paused      bool                                `gorm:"column:paused;default:false" json:"paused"`
+	NextRun     time.Time                           `gorm:"column:next_run;index" json:"nextRun"`
+	LastRun     *time.Time                          `gorm:"column:last_run" json:"lastRun,omitempty"`
+	CreatedAt   time.Time                           `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time                           `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewSchedule constructs a schedule.
@@ -150,17 +150,17 @@ func (s *Schedule) Resume() {
 
 // ExecutionRun keeps history of schedule executions.
 type ExecutionRun struct {
-	ID           uuid.UUID                          `gorm:"type:uuid;primaryKey"`
-	UserID       uuid.UUID                          `gorm:"type:uuid;index;not null"`
-	ScheduleID   uuid.UUID                          `gorm:"type:uuid;index;not null"`
-	Status       string                             `gorm:"size:32;index"`
-	Output       string                             `gorm:"size:255"`
-	ErrorMessage string                             `gorm:"size:255"`
-	Metadata     datatypes.JSONType[map[string]any] `gorm:"type:jsonb"`
-	StartedAt    *time.Time
-	CompletedAt  *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID                          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID       uuid.UUID                          `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	ScheduleID   uuid.UUID                          `gorm:"column:schedule_id;type:uuid;index;not null" json:"scheduleId"`
+	Status       string                             `gorm:"column:status;size:32;index" json:"status"`
+	Output       string                             `gorm:"column:output;size:255" json:"output"`
+	ErrorMessage string                             `gorm:"column:error_message;size:255" json:"errorMessage"`
+	Metadata     datatypes.JSONType[map[string]any] `gorm:"column:metadata;type:jsonb" json:"metadata"`
+	StartedAt    *time.Time                         `gorm:"column:started_at" json:"startedAt,omitempty"`
+	CompletedAt  *time.Time                         `gorm:"column:completed_at" json:"completedAt,omitempty"`
+	CreatedAt    time.Time                          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt    time.Time                          `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewExecutionRun constructs a new run entry.

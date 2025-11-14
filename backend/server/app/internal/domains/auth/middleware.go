@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,21 +22,21 @@ func NewAuthMiddleware(manager *JWTManager, logger *slog.Logger) fiber.Handler {
 			})
 		}
 
-		authHeader := strings.TrimSpace(c.Get("Authorization"))
-		if authHeader == "" {
+		rawToken := extractTokenFromHeader(c.Get("Authorization"))
+		if rawToken == "" {
+			var err error
+			rawToken, err = extractTokenFromCookie(c)
+			if err != nil && logger != nil {
+				logger.Warn("auth: failed to parse auth cookie", slog.Any("error", err))
+			}
+		}
+
+		if rawToken == "" {
 			return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidToken, fiber.Map{
-				"message": "missing Authorization header",
+				"message": "missing credentials",
 			})
 		}
 
-		const prefix = "bearer "
-		if len(authHeader) < len(prefix) || !strings.EqualFold(authHeader[:len(prefix)], prefix) {
-			return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidToken, fiber.Map{
-				"message": "invalid Authorization header format",
-			})
-		}
-
-		rawToken := strings.TrimSpace(authHeader[len(prefix):])
 		claims, err := manager.Verify(rawToken)
 		if err != nil {
 			if logger != nil {
@@ -58,4 +60,39 @@ func NewAuthMiddleware(manager *JWTManager, logger *slog.Logger) fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+func extractTokenFromHeader(header string) string {
+	authHeader := strings.TrimSpace(header)
+	if authHeader == "" {
+		return ""
+	}
+
+	const prefix = "bearer "
+	if len(authHeader) < len(prefix) || !strings.EqualFold(authHeader[:len(prefix)], prefix) {
+		return ""
+	}
+
+	return strings.TrimSpace(authHeader[len(prefix):])
+}
+
+func extractTokenFromCookie(c *fiber.Ctx) (string, error) {
+	cookieValue := strings.TrimSpace(c.Cookies("woragis_auth"))
+	if cookieValue == "" {
+		return "", nil
+	}
+
+	decoded, err := url.QueryUnescape(cookieValue)
+	if err != nil {
+		return "", err
+	}
+
+	var payload struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal([]byte(decoded), &payload); err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(payload.Token), nil
 }

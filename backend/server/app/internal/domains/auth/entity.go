@@ -10,18 +10,18 @@ import (
 
 // User represents an authenticated account inside Woragis.
 type User struct {
-	ID                uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Email             string    `gorm:"uniqueIndex;size:255;not null"`
-	PasswordHash      string    `gorm:"size:255;not null"`
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	EmailConfirmedAt  *time.Time
-	LastLoginAt       *time.Time
-	PasswordUpdatedAt *time.Time
-	Role              string `gorm:"size:50;default:user"`
-	MFAEnabled        bool
-	MFAMethod         string `gorm:"size:32"`
-	PreferredLocale   string `gorm:"size:10;default:en"`
+	ID                uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	Email             string     `gorm:"column:email;uniqueIndex;size:255;not null" json:"email"`
+	PasswordHash      string     `gorm:"column:password_hash;size:255;not null" json:"passwordHash"`
+	CreatedAt         time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt         time.Time  `gorm:"column:updated_at" json:"updatedAt"`
+	EmailConfirmedAt  *time.Time `gorm:"column:email_confirmed_at" json:"emailConfirmedAt,omitempty"`
+	LastLoginAt       *time.Time `gorm:"column:last_login_at" json:"lastLoginAt,omitempty"`
+	PasswordUpdatedAt *time.Time `gorm:"column:password_updated_at" json:"passwordUpdatedAt,omitempty"`
+	Role              string     `gorm:"column:role;size:50;default:user" json:"role"`
+	MFAEnabled        bool       `gorm:"column:mfa_enabled" json:"mfaEnabled"`
+	MFAMethod         string     `gorm:"column:mfa_method;size:32" json:"mfaMethod"`
+	PreferredLocale   string     `gorm:"column:preferred_locale;size:10;default:en" json:"preferredLocale"`
 }
 
 // NewUser constructs a User aggregate with the provided e-mail and password hash.

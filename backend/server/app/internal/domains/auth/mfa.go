@@ -21,18 +21,18 @@ const (
 
 // MFAToken holds enrollment information per user.
 type MFAToken struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID `gorm:"type:uuid;not null;index"`
-	Type        MFAType   `gorm:"size:32;not null;index"`
-	Secret      string    `gorm:"size:160;not null"`
-	Issuer      string    `gorm:"size:64"`
-	Label       string    `gorm:"size:128"`
-	ActivatedAt *time.Time
-	LastUsedAt  *time.Time
-	RevokedAt   *time.Time
-	BackupCodes []string `gorm:"serializer:json"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID      uuid.UUID  `gorm:"column:user_id;type:uuid;not null;index" json:"userId"`
+	Type        MFAType    `gorm:"column:type;size:32;not null;index" json:"type"`
+	Secret      string     `gorm:"column:secret;size:160;not null" json:"secret"`
+	Issuer      string     `gorm:"column:issuer;size:64" json:"issuer"`
+	Label       string     `gorm:"column:label;size:128" json:"label"`
+	ActivatedAt *time.Time `gorm:"column:activated_at" json:"activatedAt,omitempty"`
+	LastUsedAt  *time.Time `gorm:"column:last_used_at" json:"lastUsedAt,omitempty"`
+	RevokedAt   *time.Time `gorm:"column:revoked_at" json:"revokedAt,omitempty"`
+	BackupCodes []string   `gorm:"column:backup_codes;serializer:json" json:"backupCodes"`
+	CreatedAt   time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewMFAToken generates a new MFA enrollment.

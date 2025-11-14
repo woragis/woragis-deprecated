@@ -19,16 +19,16 @@ const (
 
 // EmailToken persists single-use tokens for email flows.
 type EmailToken struct {
-	ID         uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	UserID     uuid.UUID      `gorm:"type:uuid;not null;index"`
-	Type       EmailTokenType `gorm:"size:32;index"`
-	TokenHash  string         `gorm:"size:128;uniqueIndex"`
-	ExpiresAt  time.Time      `gorm:"index"`
-	ConsumedAt *time.Time
-	SentCount  int
-	LastSentAt *time.Time
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID         uuid.UUID      `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID     uuid.UUID      `gorm:"column:user_id;type:uuid;not null;index" json:"userId"`
+	Type       EmailTokenType `gorm:"column:type;size:32;index" json:"type"`
+	TokenHash  string         `gorm:"column:token_hash;size:128;uniqueIndex" json:"tokenHash"`
+	ExpiresAt  time.Time      `gorm:"column:expires_at;index" json:"expiresAt"`
+	ConsumedAt *time.Time     `gorm:"column:consumed_at" json:"consumedAt,omitempty"`
+	SentCount  int            `gorm:"column:sent_count" json:"sentCount"`
+	LastSentAt *time.Time     `gorm:"column:last_sent_at" json:"lastSentAt,omitempty"`
+	CreatedAt  time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt  time.Time      `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewEmailToken creates a new email token entry.

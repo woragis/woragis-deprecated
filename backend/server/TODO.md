@@ -29,15 +29,17 @@
   - [x] Implement bulk archive/delete/restore workflows with soft-delete metadata.
   - [x] Persist shared transcript exports and assignment history records.
   - [x] Provide websocket streaming hub for live message delivery.
-  - [ ] Build frontend search UI consuming new chat search API.
-  - [ ] Wire bulk archive/delete/restore controls in chat list view.
-  - [ ] Add transcript viewer/share flow in frontend chats module.
-  - [ ] Integrate websocket client for live message streaming in chat UI.
+  - [x] Build frontend search UI consuming new chat search API.
+  - [x] Wire bulk archive/delete/restore controls in chat list view.
+  - [x] Add transcript viewer/share flow in frontend chats module.
+  - [x] Integrate websocket client for live message streaming in chat UI.
 - **Ideas**
   - [x] Add version history snapshots for edits/moves with history endpoint.
   - [x] Implement bulk move/update/delete/restore APIs with validation.
   - [x] Enable collaborator sharing with role-based access controls.
   - [x] Provide relationship search filters (relation, weight, direction, owner scope).
+  - [x] Build Svelte Flow-based canvas UI for ideas graph (frontend).
+  - [ ] Ship collaborator & version side panels in frontend with optimistic updates.
   - [ ] Document enhanced ideas workflows and extend regression tests.
 - **Scheduler**
   - [x] Extend schedule model with rrule/cron support, priority, channels, and pause state.

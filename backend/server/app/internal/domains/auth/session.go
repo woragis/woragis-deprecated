@@ -11,18 +11,18 @@ import (
 
 // Session represents a refresh-token backed session scoped to a device.
 type Session struct {
-	ID               uuid.UUID         `gorm:"type:uuid;primaryKey"`
-	UserID           uuid.UUID         `gorm:"type:uuid;not null;index"`
-	DeviceID         uuid.UUID         `gorm:"type:uuid;not null;index"`
-	RefreshTokenHash string            `gorm:"size:255;not null;uniqueIndex"`
-	UserAgent        string            `gorm:"size:512"`
-	IP               string            `gorm:"size:64"`
-	Location         datatypes.JSONMap `gorm:"type:jsonb"`
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	ExpiresAt        time.Time
-	RevokedAt        *time.Time
-	LastSeenAt       time.Time
+	ID               uuid.UUID         `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID           uuid.UUID         `gorm:"column:user_id;type:uuid;not null;index" json:"userId"`
+	DeviceID         uuid.UUID         `gorm:"column:device_id;type:uuid;not null;index" json:"deviceId"`
+	RefreshTokenHash string            `gorm:"column:refresh_token_hash;size:255;not null;uniqueIndex" json:"refreshTokenHash"`
+	UserAgent        string            `gorm:"column:user_agent;size:512" json:"userAgent"`
+	IP               string            `gorm:"column:ip;size:64" json:"ip"`
+	Location         datatypes.JSONMap `gorm:"column:location;type:jsonb" json:"location"`
+	CreatedAt        time.Time         `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt        time.Time         `gorm:"column:updated_at" json:"updatedAt"`
+	ExpiresAt        time.Time         `gorm:"column:expires_at" json:"expiresAt"`
+	RevokedAt        *time.Time        `gorm:"column:revoked_at" json:"revokedAt,omitempty"`
+	LastSeenAt       time.Time         `gorm:"column:last_seen_at" json:"lastSeenAt"`
 }
 
 // NewSession constructs a new session and validates its invariants.
@@ -110,14 +110,14 @@ func (s *Session) IsActive(reference time.Time) bool {
 
 // Device describes a physical or virtual client accessing the system.
 type Device struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID `gorm:"type:uuid;not null;index"`
-	Name        string    `gorm:"size:120"`
-	Fingerprint string    `gorm:"size:255;uniqueIndex"`
-	LastSeenAt  time.Time
-	IsTrusted   bool
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID      uuid.UUID `gorm:"column:user_id;type:uuid;not null;index" json:"userId"`
+	Name        string    `gorm:"column:name;size:120" json:"name"`
+	Fingerprint string    `gorm:"column:fingerprint;size:255;uniqueIndex" json:"fingerprint"`
+	LastSeenAt  time.Time `gorm:"column:last_seen_at" json:"lastSeenAt"`
+	IsTrusted   bool      `gorm:"column:is_trusted" json:"isTrusted"`
+	CreatedAt   time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewDevice constructs a device aggregate.
