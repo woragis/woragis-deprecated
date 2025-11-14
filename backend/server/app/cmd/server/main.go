@@ -244,6 +244,7 @@ func main() {
 	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
 
 	reportsService := reportsdomain.NewService(
+		reportsdomain.NewGormRepository(db),
 		ideaRepo,
 		projectRepo,
 		financeRepo,
@@ -359,6 +360,8 @@ func migrate(db *gorm.DB) error {
 		&authdomain.EmailToken{},
 		&ideasdomain.Idea{},
 		&ideasdomain.IdeaLink{},
+		&ideasdomain.IdeaVersion{},
+		&ideasdomain.IdeaCollaborator{},
 		&chatsdomain.Conversation{},
 		&chatsdomain.Message{},
 		&chatsdomain.ConversationTranscript{},
@@ -372,7 +375,12 @@ func migrate(db *gorm.DB) error {
 		&projectsdomain.KanbanColumn{},
 		&projectsdomain.KanbanCard{},
 		&projectsdomain.ProjectDependency{},
+		&reportsdomain.ReportDefinition{},
+		&reportsdomain.ReportSchedule{},
+		&reportsdomain.ReportDelivery{},
+		&reportsdomain.ReportRun{},
 		&schedulerdomain.Schedule{},
+		&schedulerdomain.ExecutionRun{},
 	)
 }
 

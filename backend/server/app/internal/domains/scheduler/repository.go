@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,18 @@ type Repository interface {
 	Get(ctx context.Context, id, userID uuid.UUID) (*Schedule, error)
 	List(ctx context.Context, userID uuid.UUID) ([]Schedule, error)
 	ListDue(ctx context.Context, now time.Time) ([]Schedule, error)
+	BulkUpdateState(ctx context.Context, userID uuid.UUID, ids []uuid.UUID, updates map[string]any) error
+	InsertRun(ctx context.Context, run *ExecutionRun) error
+	UpdateRun(ctx context.Context, run *ExecutionRun) error
+	ListRuns(ctx context.Context, userID uuid.UUID, filters RunFilters) ([]ExecutionRun, error)
+}
+
+// RunFilters filters execution history.
+type RunFilters struct {
+	ScheduleID uuid.UUID
+	Status     string
+	Limit      int
+	Offset     int
 }
 
 type gormRepository struct {
@@ -78,10 +91,62 @@ func (r *gormRepository) List(ctx context.Context, userID uuid.UUID) ([]Schedule
 func (r *gormRepository) ListDue(ctx context.Context, now time.Time) ([]Schedule, error) {
 	var schedules []Schedule
 	if err := r.db.WithContext(ctx).
-		Where("active = ? AND next_run <= ?", true, now).
+		Where("active = ? AND paused = ? AND next_run <= ?", true, false, now).
 		Find(&schedules).Error; err != nil {
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 
 	return schedules, nil
+}
+
+func (r *gormRepository) BulkUpdateState(ctx context.Context, userID uuid.UUID, ids []uuid.UUID, updates map[string]any) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(&Schedule{}).
+		Where("user_id = ? AND id IN ?", userID, ids).
+		Updates(updates).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) InsertRun(ctx context.Context, run *ExecutionRun) error {
+	if err := r.db.WithContext(ctx).Create(run).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) UpdateRun(ctx context.Context, run *ExecutionRun) error {
+	if err := r.db.WithContext(ctx).Save(run).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) ListRuns(ctx context.Context, userID uuid.UUID, filters RunFilters) ([]ExecutionRun, error) {
+	var runs []ExecutionRun
+
+	db := r.db.WithContext(ctx).Where("user_id = ?", userID)
+	if filters.ScheduleID != uuid.Nil {
+		db = db.Where("schedule_id = ?", filters.ScheduleID)
+	}
+	if strings.TrimSpace(filters.Status) != "" {
+		db = db.Where("LOWER(status) = ?", strings.ToLower(filters.Status))
+	}
+	if filters.Limit > 0 {
+		db = db.Limit(filters.Limit)
+	}
+	if filters.Offset > 0 {
+		db = db.Offset(filters.Offset)
+	}
+
+	if err := db.Order("created_at DESC").Find(&runs).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return runs, nil
 }

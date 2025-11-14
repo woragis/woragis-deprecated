@@ -34,11 +34,21 @@
   - [ ] Add transcript viewer/share flow in frontend chats module.
   - [ ] Integrate websocket client for live message streaming in chat UI.
 - **Ideas**
-  - [ ] Version history, bulk node operations, collaborative editing, advanced filters for relationships.
+  - [x] Add version history snapshots for edits/moves with history endpoint.
+  - [x] Implement bulk move/update/delete/restore APIs with validation.
+  - [x] Enable collaborator sharing with role-based access controls.
+  - [x] Provide relationship search filters (relation, weight, direction, owner scope).
+  - [ ] Document enhanced ideas workflows and extend regression tests.
 - **Scheduler**
-  - [ ] Complex recurrence rules (cron/rrule), bulk activation/deactivation, execution history dashboard, alerting workflows.
+  - [x] Extend schedule model with rrule/cron support, priority, channels, and pause state.
+  - [x] Implement bulk activation/pausing/resume APIs and authenticated handlers.
+  - [x] Track execution history with execution runs and run listing endpoints.
+  - [ ] Add alerting hooks for schedule failures and SLA breaches.
 - **Reports**
-  - [ ] Custom report builder, scheduling templates, multi-channel delivery, bulk regeneration and export management.
+  - [x] Introduce custom report builder workflows (define sections, filters, data sources).
+  - [x] Implement scheduling templates for recurring report generation.
+  - [x] Enable multi-channel delivery (email, download, share links) with templated messages.
+  - [x] Support bulk regeneration/export management for selected reports.
 - **Monitoring**
   - [ ] Persist structured events in production DB, alert threshold management, Grafana dashboard provisioning.
 

@@ -9,21 +9,24 @@ const (
 	ErrCodeInvalidFrequency  = 8003
 	ErrCodeRepositoryFailure = 8004
 	ErrCodeNotFound          = 8005
+	ErrCodeInvalidChannel    = 8006
 )
 
 const (
-	ErrNilSchedule          = "scheduler: schedule entity is nil"
-	ErrEmptyScheduleID      = "scheduler: schedule id cannot be empty"
-	ErrEmptyUserID          = "scheduler: user id cannot be empty"
-	ErrEmptyReportType      = "scheduler: report type cannot be empty"
-	ErrEmptyAgentAlias      = "scheduler: agent alias cannot be empty"
-	ErrUnsupportedFrequency = "scheduler: frequency must be daily or weekly"
-	ErrWeekdayRequired      = "scheduler: weekday required for weekly schedules"
-	ErrTimeRequired         = "scheduler: time of day must be provided"
-	ErrScheduleNotFound     = "scheduler: schedule not found"
-	ErrUnableToPersist      = "scheduler: unable to persist schedule"
-	ErrUnableToFetch        = "scheduler: unable to fetch schedules"
-	ErrUnableToUpdate       = "scheduler: unable to update schedule"
+	ErrNilSchedule            = "scheduler: schedule entity is nil"
+	ErrEmptyScheduleID        = "scheduler: schedule id cannot be empty"
+	ErrEmptyUserID            = "scheduler: user id cannot be empty"
+	ErrEmptyReportType        = "scheduler: report type cannot be empty"
+	ErrEmptyAgentAlias        = "scheduler: agent alias cannot be empty"
+	ErrUnsupportedFrequency   = "scheduler: frequency must be daily, weekly, or custom"
+	ErrWeekdayRequired        = "scheduler: weekday required for weekly schedules"
+	ErrTimeRequired           = "scheduler: time of day must be provided"
+	ErrRRuleRequired          = "scheduler: rrule is required for custom schedules"
+	ErrUnableToComputeNextRun = "scheduler: unable to compute next run"
+	ErrScheduleNotFound       = "scheduler: schedule not found"
+	ErrUnableToPersist        = "scheduler: unable to persist schedule"
+	ErrUnableToFetch          = "scheduler: unable to fetch schedules"
+	ErrUnableToUpdate         = "scheduler: unable to update schedule"
 )
 
 type DomainError struct {

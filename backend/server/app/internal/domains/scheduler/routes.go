@@ -9,4 +9,9 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 	group.Post("/", handler.PostSchedule)
 	group.Get("/", handler.GetSchedules)
 	group.Patch("/:id", handler.PatchSchedule)
+	group.Post("/bulk/activate", handler.BulkActivate)
+	group.Post("/bulk/deactivate", handler.BulkDeactivate)
+	group.Post("/bulk/pause", handler.BulkPause)
+	group.Post("/bulk/resume", handler.BulkResume)
+	group.Get("/runs", handler.ListRuns)
 }
