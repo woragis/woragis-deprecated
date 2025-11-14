@@ -9,8 +9,8 @@ import (
 
 // RequestUser holds authentication data extracted from the Fiber context.
 type RequestUser struct {
-	ID    uuid.UUID
-	Email string
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
 }
 
 // ErrNoUserInContext indicates that the request is missing authentication data.

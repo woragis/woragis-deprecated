@@ -6,7 +6,9 @@ import (
 	"encoding/base32"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +24,7 @@ const (
 	defaultPasswordResetTTL     = 30 * time.Minute
 	defaultEmailConfirmationTTL = 48 * time.Hour
 	defaultSessionTTL           = 30 * 24 * time.Hour
+	defaultOAuthStateTTL        = 10 * time.Minute
 	refreshTokenEntropyBytes    = 48
 	minPasswordLength           = 8
 	maxPasswordLength           = 72
@@ -40,6 +43,11 @@ type Service struct {
 	sessionTTL       time.Duration
 	jwtManager       *JWTManager
 	renderer         *emailtemplates.Renderer
+	httpClient       *http.Client
+	oauthProviders   map[OAuthProvider]*oauthProviderConfig
+	oauthStates      map[string]oauthStateData
+	oauthMu          sync.Mutex
+	oauthStateTTL    time.Duration
 }
 
 // NewService wires a Service with its collaborators.
@@ -68,6 +76,12 @@ func NewService(
 		sessionTTL:       defaultSessionTTL,
 		jwtManager:       jwtManager,
 		renderer:         emailtemplates.NewRenderer("en"),
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+		oauthProviders: make(map[OAuthProvider]*oauthProviderConfig),
+		oauthStates:    make(map[string]oauthStateData),
+		oauthStateTTL:  defaultOAuthStateTTL,
 	}
 }
 
@@ -342,47 +356,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, 
 		}
 	}
 
-	device, err := s.ensureDevice(ctx, user.ID, req.DeviceFingerprint, req.DeviceName)
+	resp, err := s.issueLoginArtifacts(ctx, user, req.DeviceFingerprint, req.DeviceName, req.IPAddress, req.UserAgent, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := generateSecureToken(refreshTokenEntropyBytes)
-	if err != nil {
-		return nil, NewDomainError(ErrCodeTokenIssuanceFailure, ErrUnableToIssueToken)
-	}
-
-	session, err := NewSession(user.ID, device.ID, hashToken(refreshToken), req.UserAgent, req.IPAddress, s.sessionTTL)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.repo.CreateSession(ctx, session); err != nil {
-		return nil, err
-	}
-
-	user.MarkLogin()
-	if err := s.repo.Update(ctx, user); err != nil {
-		return nil, err
-	}
-
-	accessToken, err := s.issueAccessToken(user.ID, user.Email)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.sendSessionAlert(ctx, user, session, device); err != nil && s.logger != nil {
-		s.logger.Warn("auth: session alert send failed", slog.Any("error", err), slog.String("user_id", user.ID.String()))
-	}
-
-	_ = s.recordAudit(ctx, &user.ID, AuditActionLoginSucceeded, map[string]any{"session_id": session.ID.String()}, req.IPAddress, req.UserAgent)
-
-	return &LoginResponse{
-		User:         user,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		SessionID:    session.ID,
-	}, nil
+	return resp, nil
 }
 
 // Logout revokes an active session.
@@ -697,6 +676,61 @@ func (s *Service) ListAuditLogs(ctx context.Context, userID uuid.UUID, limit int
 }
 
 // Helper methods ---------------------------------------------------------
+
+func (s *Service) issueLoginArtifacts(ctx context.Context, user *User, deviceFingerprint, deviceName, ip, userAgent string, metadata map[string]any) (*LoginResponse, error) {
+	if user == nil {
+		return nil, NewDomainError(ErrCodeInvalidPayload, ErrNilUser)
+	}
+
+	device, err := s.ensureDevice(ctx, user.ID, deviceFingerprint, deviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := generateSecureToken(refreshTokenEntropyBytes)
+	if err != nil {
+		return nil, NewDomainError(ErrCodeTokenIssuanceFailure, ErrUnableToIssueToken)
+	}
+
+	session, err := NewSession(user.ID, device.ID, hashToken(refreshToken), userAgent, ip, s.sessionTTL)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateSession(ctx, session); err != nil {
+		return nil, err
+	}
+
+	user.MarkLogin()
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	accessToken, err := s.issueAccessToken(user.ID, user.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.sendSessionAlert(ctx, user, session, device); err != nil && s.logger != nil {
+		s.logger.Warn("auth: session alert send failed", slog.Any("error", err), slog.String("user_id", user.ID.String()))
+	}
+
+	auditMetadata := map[string]any{
+		"session_id": session.ID.String(),
+	}
+	for key, value := range metadata {
+		auditMetadata[key] = value
+	}
+
+	_ = s.recordAudit(ctx, &user.ID, AuditActionLoginSucceeded, auditMetadata, ip, userAgent)
+
+	return &LoginResponse{
+		User:         user,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		SessionID:    session.ID,
+	}, nil
+}
 
 func (s *Service) dispatchConfirmationEmail(ctx context.Context, user *User) error {
 	if user == nil {

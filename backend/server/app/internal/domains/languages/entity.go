@@ -9,29 +9,29 @@ import (
 
 // StudySession tracks focused study periods per language.
 type StudySession struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID       uuid.UUID `gorm:"type:uuid;index;not null"`
-	LanguageCode string    `gorm:"size:8;not null"`
-	SkillFocus   string    `gorm:"size:32"`
-	DurationMin  int       `gorm:"not null"`
-	Notes        string    `gorm:"size:255"`
-	CompletedAt  time.Time `gorm:"not null"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID       uuid.UUID `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	LanguageCode string    `gorm:"column:language_code;size:8;not null" json:"languageCode"`
+	SkillFocus   string    `gorm:"column:skill_focus;size:32" json:"skillFocus"`
+	DurationMin  int       `gorm:"column:duration_min;not null" json:"durationMin"`
+	Notes        string    `gorm:"column:notes;size:255" json:"notes"`
+	CompletedAt  time.Time `gorm:"column:completed_at;not null" json:"completedAt"`
+	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // VocabularyEntry keeps vocabulary and review metadata.
 type VocabularyEntry struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID       uuid.UUID `gorm:"type:uuid;index;not null"`
-	LanguageCode string    `gorm:"size:8;index;not null"`
-	Term         string    `gorm:"size:120;not null"`
-	Translation  string    `gorm:"size:255;not null"`
-	Context      string    `gorm:"size:255"`
-	AddedAt      time.Time `gorm:"not null"`
-	ReviewAt     time.Time `gorm:"not null"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID       uuid.UUID `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	LanguageCode string    `gorm:"column:language_code;size:8;index;not null" json:"languageCode"`
+	Term         string    `gorm:"column:term;size:120;not null" json:"term"`
+	Translation  string    `gorm:"column:translation;size:255;not null" json:"translation"`
+	Context      string    `gorm:"column:context;size:255" json:"context"`
+	AddedAt      time.Time `gorm:"column:added_at;not null" json:"addedAt"`
+	ReviewAt     time.Time `gorm:"column:review_at;not null" json:"reviewAt"`
+	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewStudySession builds a new StudySession aggregate.

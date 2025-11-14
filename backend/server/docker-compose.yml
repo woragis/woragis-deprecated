@@ -45,7 +45,7 @@ services:
       APP_ENV: development
       APP_NAME: woragis-server
       APP_PORT: 8080
-      APP_PUBLIC_URL: http://localhost:8080
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-secret-change-me}
       AUTH_JWT_TTL: ${AUTH_JWT_TTL:-24h}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable

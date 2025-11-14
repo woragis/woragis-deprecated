@@ -10,17 +10,22 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgconn v1.14.0
+	github.com/pquerna/otp v1.3.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/common v0.44.0
 	github.com/redis/go-redis/v9 v9.16.0
+	github.com/teambition/rrule-go v1.8.2
 	github.com/tmc/langchaingo v0.1.11
 	golang.org/x/crypto v0.27.0
+	golang.org/x/oauth2 v0.20.0
+	gorm.io/datatypes v1.1.1
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/driver/sqlite v1.5.5
 	gorm.io/gorm v1.25.10
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
@@ -49,13 +54,11 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
-	github.com/pquerna/otp v1.3.0 // indirect
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
-	github.com/teambition/rrule-go v1.8.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
@@ -63,7 +66,6 @@ require (
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
-	gorm.io/datatypes v1.1.1 // indirect
 	gorm.io/driver/mysql v1.4.7 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect

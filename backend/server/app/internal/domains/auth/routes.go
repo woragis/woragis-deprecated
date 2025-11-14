@@ -13,6 +13,9 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 	authGroup.Post("/refresh", handler.RefreshSession)
 	authGroup.Post("/password/reset/request", handler.RequestPasswordReset)
 	authGroup.Post("/password/reset/confirm", handler.ConfirmPasswordReset)
+	authGroup.Get("/oauth/providers", handler.ListOAuthProviders)
+	authGroup.Post("/oauth/start", handler.StartOAuth)
+	authGroup.Get("/oauth/callback/:provider", handler.OAuthCallback)
 }
 
 // SetupProtectedRoutes wires protected auth handlers requiring JWT middleware.
@@ -25,4 +28,6 @@ func SetupProtectedRoutes(api fiber.Router, handler *Handler) {
 	authGroup.Post("/mfa/enable", handler.EnableMFA)
 	authGroup.Post("/mfa/verify", handler.VerifyMFA)
 	authGroup.Post("/mfa/disable", handler.DisableMFA)
+	authGroup.Get("/oauth/accounts", handler.ListOAuthAccounts)
+	authGroup.Delete("/oauth/accounts/:provider", handler.UnlinkOAuthAccount)
 }

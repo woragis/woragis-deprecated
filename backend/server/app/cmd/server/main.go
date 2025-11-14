@@ -18,6 +18,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
+	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/microsoft"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -51,6 +55,8 @@ func main() {
 	if err != nil {
 		stdlog.Fatalf("auth config: %v", err)
 	}
+
+	oauthCfg := appconfig.LoadOAuthConfig(cfg.PublicURL)
 
 	emailCfg, _ := appconfig.LoadEmailConfig()
 	monitoringCfg := appconfig.LoadMonitoringConfig()
@@ -196,6 +202,44 @@ func main() {
 	}
 
 	authService := authdomain.NewService(authRepo, emailSender, tokenStore, monitoringService, cfg.PublicURL, jwtManager, slogLogger)
+	if len(oauthCfg.Providers) > 0 {
+		providerSettings := make(map[authdomain.OAuthProvider]authdomain.OAuthProviderSettings)
+		for key, providerCfg := range oauthCfg.Providers {
+			providerID := authdomain.OAuthProvider(key)
+			oauthConfig := &oauth2.Config{
+				ClientID:     providerCfg.ClientID,
+				ClientSecret: providerCfg.ClientSecret,
+				RedirectURL:  providerCfg.RedirectURL,
+				Scopes:       providerCfg.Scopes,
+			}
+
+			var userInfoURL string
+
+			switch providerID {
+			case authdomain.OAuthProviderGoogle:
+				oauthConfig.Endpoint = google.Endpoint
+				userInfoURL = "https://www.googleapis.com/oauth2/v2/userinfo"
+			case authdomain.OAuthProviderGithub:
+				oauthConfig.Endpoint = github.Endpoint
+				userInfoURL = "https://api.github.com/user"
+			case authdomain.OAuthProviderMicrosoft:
+				oauthConfig.Endpoint = microsoft.AzureADEndpoint("common")
+				userInfoURL = "https://graph.microsoft.com/v1.0/me"
+			default:
+				continue
+			}
+
+			providerSettings[providerID] = authdomain.OAuthProviderSettings{
+				Name:        providerCfg.Name,
+				Config:      oauthConfig,
+				UserInfoURL: userInfoURL,
+			}
+		}
+
+		if len(providerSettings) > 0 {
+			authService.ConfigureOAuthProviders(providerSettings)
+		}
+	}
 	authHandler := authdomain.NewHandler(authService, slogLogger)
 	authdomain.SetupRoutes(api, authHandler)
 

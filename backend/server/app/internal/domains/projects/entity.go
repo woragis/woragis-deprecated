@@ -29,30 +29,30 @@ const (
 
 // Project captures high-level roadmap metadata.
 type Project struct {
-	ID          uuid.UUID     `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID     `gorm:"type:uuid;index;not null"`
-	Name        string        `gorm:"size:120;not null"`
-	Description string        `gorm:"size:255"`
-	Status      ProjectStatus `gorm:"type:varchar(32);not null"`
-	HealthScore int           `gorm:"not null"`
-	MRR         float64       `gorm:"default:0"`
-	CAC         float64       `gorm:"default:0"`
-	LTV         float64       `gorm:"default:0"`
-	ChurnRate   float64       `gorm:"default:0"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID     `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID      uuid.UUID     `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Name        string        `gorm:"column:name;size:120;not null" json:"name"`
+	Description string        `gorm:"column:description;size:255" json:"description"`
+	Status      ProjectStatus `gorm:"column:status;type:varchar(32);not null" json:"status"`
+	HealthScore int           `gorm:"column:health_score;not null" json:"healthScore"`
+	MRR         float64       `gorm:"column:mrr;default:0" json:"mrr"`
+	CAC         float64       `gorm:"column:cac;default:0" json:"cac"`
+	LTV         float64       `gorm:"column:ltv;default:0" json:"ltv"`
+	ChurnRate   float64       `gorm:"column:churn_rate;default:0" json:"churnRate"`
+	CreatedAt   time.Time     `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time     `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // Milestone represents a roadmap milestone.
 type Milestone struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ProjectID   uuid.UUID `gorm:"type:uuid;index;not null"`
-	Title       string    `gorm:"size:120;not null"`
-	Description string    `gorm:"size:255"`
-	DueDate     time.Time `gorm:"index"`
-	Completed   bool      `gorm:"not null;default:false"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID   uuid.UUID `gorm:"column:project_id;type:uuid;index;not null" json:"projectId"`
+	Title       string    `gorm:"column:title;size:120;not null" json:"title"`
+	Description string    `gorm:"column:description;size:255" json:"description"`
+	DueDate     time.Time `gorm:"column:due_date;index" json:"dueDate"`
+	Completed   bool      `gorm:"column:completed;not null;default:false" json:"completed"`
+	CreatedAt   time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewProject constructs a new project aggregate.
@@ -187,13 +187,13 @@ func (m *Milestone) MarkCompleted(completed bool) {
 
 // KanbanColumn represents a column on the kanban board for a project.
 type KanbanColumn struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ProjectID uuid.UUID `gorm:"type:uuid;index;not null"`
-	Name      string    `gorm:"size:80;not null"`
-	WIPLimit  int       `gorm:"not null;default:0"`
-	Position  int       `gorm:"not null;index:idx_kanban_column_position"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uuid.UUID `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID uuid.UUID `gorm:"column:project_id;type:uuid;index;not null" json:"projectId"`
+	Name      string    `gorm:"column:name;size:80;not null" json:"name"`
+	WIPLimit  int       `gorm:"column:wip_limit;not null;default:0" json:"wipLimit"`
+	Position  int       `gorm:"column:position;not null;index:idx_kanban_column_position" json:"position"`
+	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewKanbanColumn constructs a new kanban column with sensible defaults.
@@ -263,16 +263,16 @@ func (c *KanbanColumn) SetPosition(position int) error {
 
 // KanbanCard represents a task card on the kanban board.
 type KanbanCard struct {
-	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	ProjectID   uuid.UUID  `gorm:"type:uuid;index;not null"`
-	ColumnID    uuid.UUID  `gorm:"type:uuid;index;not null"`
-	MilestoneID *uuid.UUID `gorm:"type:uuid"`
-	Title       string     `gorm:"size:160;not null"`
-	Description string     `gorm:"size:512"`
-	DueDate     *time.Time
-	Position    int `gorm:"not null;index:idx_kanban_card_position"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID   uuid.UUID  `gorm:"column:project_id;type:uuid;index;not null" json:"projectId"`
+	ColumnID    uuid.UUID  `gorm:"column:column_id;type:uuid;index;not null" json:"columnId"`
+	MilestoneID *uuid.UUID `gorm:"column:milestone_id;type:uuid" json:"milestoneId,omitempty"`
+	Title       string     `gorm:"column:title;size:160;not null" json:"title"`
+	Description string     `gorm:"column:description;size:512" json:"description"`
+	DueDate     *time.Time `gorm:"column:due_date" json:"dueDate,omitempty"`
+	Position    int        `gorm:"column:position;not null;index:idx_kanban_card_position" json:"position"`
+	CreatedAt   time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewKanbanCard creates a new kanban card instance.
@@ -364,12 +364,12 @@ func (c *KanbanCard) UpdateDetails(title, description string, dueDate *time.Time
 
 // ProjectDependency models dependency relationships between projects.
 type ProjectDependency struct {
-	ID                 uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	ProjectID          uuid.UUID      `gorm:"type:uuid;index:idx_project_dependency,unique;not null"`
-	DependsOnProjectID uuid.UUID      `gorm:"type:uuid;index:idx_project_dependency,unique;not null"`
-	Type               DependencyType `gorm:"size:32;not null"`
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	ID                 uuid.UUID      `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID          uuid.UUID      `gorm:"column:project_id;type:uuid;index:idx_project_dependency,unique;not null" json:"projectId"`
+	DependsOnProjectID uuid.UUID      `gorm:"column:depends_on_project_id;type:uuid;index:idx_project_dependency,unique;not null" json:"dependsOnProjectId"`
+	Type               DependencyType `gorm:"column:type;size:32;not null" json:"type"`
+	CreatedAt          time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt          time.Time      `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // NewProjectDependency constructs a dependency edge.

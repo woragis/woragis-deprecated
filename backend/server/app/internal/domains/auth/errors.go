@@ -23,6 +23,7 @@ const (
 	ErrCodeMFAGenerationFailure = 1016
 	ErrCodeOAuthLinkFailure     = 1017
 	ErrCodeRateLimited          = 1018
+	ErrCodeOAuthStateInvalid    = 1019
 )
 
 const (
@@ -71,6 +72,7 @@ const (
 	ErrNilAuditLog               = "auth: audit log entry is nil"
 	ErrNilOAuthAccount           = "auth: oauth account entity is nil"
 	ErrNilEmailToken             = "auth: email token entity is nil"
+	ErrInvalidOAuthState         = "auth: oauth state invalid or expired"
 )
 
 // DomainError wraps an error message with a machine-readable code.

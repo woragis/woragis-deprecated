@@ -1,7 +1,11 @@
 package auth
 
 import (
+	"encoding/json"
+	"fmt"
+	"html/template"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -80,6 +84,35 @@ type enableMFAPayload struct {
 
 type verifyMFAPayload struct {
 	Code string `json:"code"`
+}
+
+type oauthStartPayload struct {
+	Provider          string `json:"provider"`
+	Mode              string `json:"mode"`
+	RedirectOrigin    string `json:"redirect_origin"`
+	DeviceFingerprint string `json:"device_fingerprint"`
+	DeviceName        string `json:"device_name"`
+}
+
+type oauthProviderResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type oauthAccountResponse struct {
+	Provider  string    `json:"provider"`
+	LinkedAt  time.Time `json:"linked_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Scopes    []string  `json:"scopes"`
+}
+
+type oauthCallbackMessage struct {
+	Type     string `json:"type"`
+	Provider string `json:"provider"`
+	Mode     string `json:"mode"`
+	Success  bool   `json:"success"`
+	Message  string `json:"message,omitempty"`
+	Payload  any    `json:"payload,omitempty"`
 }
 
 type userResponse struct {
@@ -203,12 +236,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
-	return response.Success(c, fiber.StatusOK, loginResponse{
-		User:         toUserResponse(resp.User),
-		AccessToken:  resp.AccessToken,
-		RefreshToken: resp.RefreshToken,
-		SessionID:    resp.SessionID.String(),
-	})
+	return response.Success(c, fiber.StatusOK, toLoginResponsePayload(resp))
 }
 
 // RefreshSession rotates session tokens.
@@ -417,6 +445,248 @@ func (h *Handler) DisableMFA(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "mfa_disabled"})
 }
 
+// ListOAuthProviders returns configured OAuth providers.
+func (h *Handler) ListOAuthProviders(c *fiber.Ctx) error {
+	providers := h.service.ListOAuthProviders()
+	result := make([]oauthProviderResponse, 0, len(providers))
+	for _, provider := range providers {
+		result = append(result, oauthProviderResponse{
+			ID:   string(provider.ID),
+			Name: provider.Name,
+		})
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"providers": result})
+}
+
+// StartOAuth initialises an OAuth flow and returns an authorisation URL.
+func (h *Handler) StartOAuth(c *fiber.Ctx) error {
+	var payload oauthStartPayload
+	if err := c.BodyParser(&payload); err != nil {
+		h.logError(ErrMalformedPayload, err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid payload"})
+	}
+
+	provider := parseOAuthProvider(payload.Provider)
+	if provider == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "unknown provider"})
+	}
+
+	mode := strings.ToLower(strings.TrimSpace(payload.Mode))
+	if mode == "" {
+		mode = string(OAuthModeLogin)
+	}
+
+	flowMode := OAuthFlowMode(mode)
+	if flowMode != OAuthModeLogin && flowMode != OAuthModeLink {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid oauth mode"})
+	}
+
+	options := OAuthStartOptions{
+		Mode:              flowMode,
+		RedirectOrigin:    strings.TrimSpace(payload.RedirectOrigin),
+		DeviceFingerprint: strings.TrimSpace(payload.DeviceFingerprint),
+		DeviceName:        strings.TrimSpace(payload.DeviceName),
+	}
+
+	if flowMode == OAuthModeLink {
+		userID, err := currentUserID(c)
+		if err != nil {
+			return err
+		}
+		options.UserID = &userID
+	}
+
+	state, url, err := h.service.BeginOAuth(c.Context(), provider, options)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{
+		"provider":          string(provider),
+		"mode":              flowMode,
+		"authorization_url": url,
+		"state":             state,
+	})
+}
+
+// OAuthCallback completes the OAuth flow when the provider redirects back.
+func (h *Handler) OAuthCallback(c *fiber.Ctx) error {
+	provider := parseOAuthProvider(c.Params("provider"))
+	redirectOrigin := strings.TrimSpace(c.Query("redirect_origin"))
+
+	message := oauthCallbackMessage{
+		Type:     "oauth:result",
+		Provider: string(provider),
+		Mode:     string(OAuthModeLogin),
+		Success:  false,
+	}
+
+	if provider == "" {
+		message.Message = "Unknown OAuth provider."
+		return h.renderOAuthCallback(c, redirectOrigin, message)
+	}
+
+	if errParam := strings.TrimSpace(c.Query("error")); errParam != "" {
+		message.Message = c.Query("error_description", errParam)
+		return h.renderOAuthCallback(c, redirectOrigin, message)
+	}
+
+	state := c.Query("state")
+	code := c.Query("code")
+	if strings.TrimSpace(state) == "" || strings.TrimSpace(code) == "" {
+		message.Message = "Missing OAuth parameters."
+		return h.renderOAuthCallback(c, redirectOrigin, message)
+	}
+
+	result, err := h.service.CompleteOAuth(c.Context(), OAuthCallbackInput{
+		Provider:  provider,
+		State:     state,
+		Code:      code,
+		IPAddress: c.IP(),
+		UserAgent: c.Get("User-Agent"),
+	})
+
+	if result != nil {
+		if redirectOrigin == "" {
+			redirectOrigin = result.RedirectOrigin
+		}
+		message.Mode = string(result.Mode)
+		message.Success = result.Success && err == nil
+		if result.Message != "" {
+			message.Message = result.Message
+		}
+		if result.Login != nil && result.Mode == OAuthModeLogin && message.Success {
+			payload := toLoginResponsePayload(result.Login)
+			message.Payload = payload
+		} else if result.Success && result.Mode == OAuthModeLink {
+			message.Payload = fiber.Map{"status": "linked"}
+		}
+	}
+
+	if err != nil {
+		if domainErr, ok := AsDomainError(err); ok {
+			message.Message = domainErr.Message
+		} else if message.Message == "" {
+			message.Message = "Unable to complete OAuth flow."
+		}
+		message.Success = false
+	}
+
+	if message.Message == "" && !message.Success {
+		message.Message = "OAuth flow did not complete successfully."
+	}
+
+	return h.renderOAuthCallback(c, redirectOrigin, message)
+}
+
+// ListOAuthAccounts enumerates linked OAuth providers for the current user.
+func (h *Handler) ListOAuthAccounts(c *fiber.Ctx) error {
+	userID, err := currentUserID(c)
+	if err != nil {
+		return err
+	}
+
+	accounts, err := h.service.ListOAuthAccounts(c.Context(), userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	result := make([]oauthAccountResponse, 0, len(accounts))
+	for _, account := range accounts {
+		result = append(result, oauthAccountResponse{
+			Provider:  string(account.Provider),
+			LinkedAt:  account.CreatedAt,
+			UpdatedAt: account.UpdatedAt,
+			Scopes:    splitScopeString(account.Scopes),
+		})
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"accounts": result})
+}
+
+// UnlinkOAuthAccount removes an OAuth association for the authenticated user.
+func (h *Handler) UnlinkOAuthAccount(c *fiber.Ctx) error {
+	userID, err := currentUserID(c)
+	if err != nil {
+		return err
+	}
+
+	provider := parseOAuthProvider(c.Params("provider"))
+	if provider == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "unknown provider"})
+	}
+
+	if err := h.service.UnlinkOAuthAccount(c.Context(), userID, provider); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "provider_unlinked"})
+}
+
+func (h *Handler) renderOAuthCallback(c *fiber.Ctx, origin string, payload oauthCallbackMessage) error {
+	if origin == "" {
+		origin = h.service.publicURL
+	}
+
+	payload.Provider = strings.TrimSpace(payload.Provider)
+	payload.Mode = strings.TrimSpace(payload.Mode)
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		h.logError("auth: oauth callback marshal failed", err)
+		data = []byte(`{"type":"oauth:result","success":false,"message":"internal error"}`)
+	}
+
+	escapedPayload := template.JSEscapeString(string(data))
+	escapedOrigin := template.JSEscapeString(origin)
+
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>OAuth Completed</title>
+</head>
+<body>
+<script>
+(function() {
+	const data = JSON.parse("%s");
+	const targetOrigin = "%s";
+	try {
+		if (window.opener && !window.opener.closed) {
+			window.opener.postMessage(data, targetOrigin);
+		}
+	} catch (err) {
+		console.error('oauth callback error', err);
+	}
+	window.close();
+	setTimeout(function () { window.close(); }, 500);
+})();
+</script>
+<p>Authentication flow complete. You can close this window.</p>
+</body>
+</html>`, escapedPayload, escapedOrigin)
+
+	c.Set("Content-Type", "text/html; charset=utf-8")
+	return c.SendString(html)
+}
+
+func splitScopeString(scopes string) []string {
+	fields := strings.Fields(scopes)
+	if len(fields) == 0 {
+		return []string{}
+	}
+	return fields
+}
+
+func parseOAuthProvider(value string) OAuthProvider {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return ""
+	}
+	return OAuthProvider(value)
+}
+
 func (h *Handler) handleError(c *fiber.Ctx, err error) error {
 	if domainErr, ok := AsDomainError(err); ok {
 		status := statusFromErrorCode(domainErr.Code)
@@ -438,7 +708,7 @@ func statusFromErrorCode(code int) int {
 		return fiber.StatusUnauthorized
 	case ErrCodeUserNotFound:
 		return fiber.StatusNotFound
-	case ErrCodeInvalidToken, ErrCodeSessionRevoked, ErrCodeSessionExpired, ErrCodeMFARequired, ErrCodeMFAInvalid:
+	case ErrCodeInvalidToken, ErrCodeSessionRevoked, ErrCodeSessionExpired, ErrCodeMFARequired, ErrCodeMFAInvalid, ErrCodeOAuthStateInvalid:
 		return fiber.StatusUnauthorized
 	case ErrCodeTokenIssuanceFailure:
 		return fiber.StatusInternalServerError
@@ -474,6 +744,19 @@ func toUserResponse(user *User) userResponse {
 		MFAEnabled:      user.MFAEnabled,
 		PreferredLocale: user.PreferredLocale,
 		Role:            user.Role,
+	}
+}
+
+func toLoginResponsePayload(resp *LoginResponse) loginResponse {
+	if resp == nil {
+		return loginResponse{}
+	}
+
+	return loginResponse{
+		User:         toUserResponse(resp.User),
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+		SessionID:    resp.SessionID.String(),
 	}
 }
 

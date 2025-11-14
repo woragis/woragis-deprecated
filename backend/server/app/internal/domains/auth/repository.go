@@ -37,6 +37,7 @@ type Repository interface {
 	InsertAuditLog(ctx context.Context, entry *AuditLog) error
 	ListAuditLogs(ctx context.Context, userID uuid.UUID, limit int) ([]AuditLog, error)
 
+	FindOAuthAccount(ctx context.Context, provider OAuthProvider, providerUserID string) (*OAuthAccount, error)
 	UpsertOAuthAccount(ctx context.Context, account *OAuthAccount) error
 	ListOAuthAccounts(ctx context.Context, userID uuid.UUID) ([]OAuthAccount, error)
 	DeleteOAuthAccount(ctx context.Context, userID uuid.UUID, provider OAuthProvider) error
@@ -354,6 +355,21 @@ func (r *GormRepository) ListAuditLogs(ctx context.Context, userID uuid.UUID, li
 		return nil, mapPersistenceError(err)
 	}
 	return entries, nil
+}
+
+// FindOAuthAccount retrieves an OAuth account by provider and subject.
+func (r *GormRepository) FindOAuthAccount(ctx context.Context, provider OAuthProvider, providerUserID string) (*OAuthAccount, error) {
+	var account OAuthAccount
+	err := r.db.WithContext(ctx).
+		Where("provider = ? AND provider_user_id = ?", provider, providerUserID).
+		First(&account).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, mapPersistenceError(err)
+	}
+	return &account, nil
 }
 
 // UpsertOAuthAccount stores external identity binding.

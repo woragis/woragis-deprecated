@@ -27,13 +27,13 @@ const (
 
 // AuditLog captures security-sensitive operations.
 type AuditLog struct {
-	ID        uuid.UUID   `gorm:"type:uuid;primaryKey"`
-	UserID    *uuid.UUID  `gorm:"type:uuid;index"`
-	Action    AuditAction `gorm:"size:64;index"`
-	Metadata  []byte      `gorm:"type:jsonb"`
-	IP        string      `gorm:"size:64"`
-	UserAgent string      `gorm:"size:512"`
-	CreatedAt time.Time
+	ID        uuid.UUID   `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID    *uuid.UUID  `gorm:"column:user_id;type:uuid;index" json:"userId,omitempty"`
+	Action    AuditAction `gorm:"column:action;size:64;index" json:"action"`
+	Metadata  []byte      `gorm:"column:metadata;type:jsonb" json:"metadata"`
+	IP        string      `gorm:"column:ip;size:64" json:"ip"`
+	UserAgent string      `gorm:"column:user_agent;size:512" json:"userAgent"`
+	CreatedAt time.Time   `gorm:"column:created_at" json:"createdAt"`
 }
 
 // NewAuditLog constructs a new audit entry.
