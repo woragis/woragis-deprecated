@@ -1,68 +1,53 @@
 import { createMutation, createQuery } from '@tanstack/svelte-query';
 
-import {
-	createTransaction,
-	deleteTransactions,
-	fetchSummary,
-	fetchTransactions,
-	toggleArchived,
-	toggleEssential,
-	toggleRecurring
-} from '$lib/api/finances';
+import { financesApi } from '$lib/api/finances';
 import type { Transaction, TransactionSummary, UUID } from '$lib/api/types';
 
 export interface FinanceSummaryOptions {
-	userId: string | null;
 	enabled?: boolean;
 }
 
-export const useFinanceSummaryQuery = (getOptions: () => FinanceSummaryOptions) =>
-	createQuery<TransactionSummary>(() => {
-		const { userId, enabled = true } = getOptions();
-		return {
-			queryKey: ['finances', 'summary', userId],
-			queryFn: () => fetchSummary(),
-			enabled: Boolean(userId) && enabled
-		};
+export const useFinanceSummaryQuery = (
+	userId: string | null,
+	options: FinanceSummaryOptions = {}
+) =>
+	createQuery<TransactionSummary>({
+		queryKey: ['finances', 'summary', userId],
+		queryFn: () => financesApi.fetchSummary(),
+		enabled: Boolean(userId) && (options.enabled ?? true)
 	});
 
 export interface FinanceTransactionsOptions {
-	userId: string | null;
 	search?: string;
 	includeArchived?: boolean;
 	enabled?: boolean;
 }
 
-export const useFinanceTransactionsQuery = (getOptions: () => FinanceTransactionsOptions) =>
-	createQuery<Transaction[]>(() => {
-		const {
-			userId,
-			search = '',
-			includeArchived = false,
-			enabled = true
-		} = getOptions();
+export const useFinanceTransactionsQuery = (
+	userId: string | null,
+	options: FinanceTransactionsOptions = {}
+) => {
+	const filters = {
+		search: options.search ?? '',
+		includeArchived: options.includeArchived ?? false
+	};
 
-		const filters = {
-			search,
-			includeArchived
-		};
-
-		return {
-			queryKey: ['finances', 'transactions', { userId, ...filters }],
-			queryFn: () => fetchTransactions(filters),
-			enabled: Boolean(userId) && enabled,
-			placeholderData: (previous) => previous ?? []
-		};
+	return createQuery<Transaction[]>({
+		queryKey: ['finances', 'transactions', { userId, ...filters }],
+		queryFn: () => financesApi.fetchTransactions(filters),
+		enabled: Boolean(userId) && (options.enabled ?? true),
+		placeholderData: (previous) => previous ?? []
 	});
+};
 
 export const useCreateTransactionMutation = () =>
 	createMutation({
-		mutationFn: createTransaction
+		mutationFn: financesApi.createTransaction
 	});
 
 export const useDeleteTransactionsMutation = () =>
 	createMutation({
-		mutationFn: deleteTransactions
+		mutationFn: financesApi.deleteTransactions
 	});
 
 interface TogglePayload {
@@ -72,16 +57,16 @@ interface TogglePayload {
 
 export const useToggleArchivedMutation = () =>
 	createMutation({
-		mutationFn: ({ id, value }: TogglePayload) => toggleArchived(id, value)
+		mutationFn: ({ id, value }: TogglePayload) => financesApi.toggleArchived(id, value)
 	});
 
 export const useToggleRecurringMutation = () =>
 	createMutation({
-		mutationFn: ({ id, value }: TogglePayload) => toggleRecurring(id, value)
+		mutationFn: ({ id, value }: TogglePayload) => financesApi.toggleRecurring(id, value)
 	});
 
 export const useToggleEssentialMutation = () =>
 	createMutation({
-		mutationFn: ({ id, value }: TogglePayload) => toggleEssential(id, value)
+		mutationFn: ({ id, value }: TogglePayload) => financesApi.toggleEssential(id, value)
 	});
 

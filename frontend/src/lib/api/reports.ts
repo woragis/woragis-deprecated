@@ -249,3 +249,24 @@ export async function deleteReportDelivery(deliveryId: UUID): Promise<void> {
 	});
 }
 
+export const reportsApi = {
+	listReportDefinitions,
+	createReportDefinition,
+	updateReportDefinition,
+	archiveReportDefinitions,
+	restoreReportDefinitions,
+	deleteReportDefinitions,
+	toggleReportFavorite,
+	getReportDefinition,
+	listReportRuns,
+	queueReportRuns,
+	createReportSchedule,
+	updateReportSchedule,
+	toggleReportSchedule,
+	deleteReportSchedule,
+	createReportDelivery,
+	updateReportDelivery,
+	toggleReportDelivery,
+	deleteReportDelivery
+};
+

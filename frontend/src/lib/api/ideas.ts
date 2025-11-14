@@ -304,3 +304,20 @@ export async function removeCollaborator(ownerId: UUID | undefined, collaborator
 	});
 }
 
+export const ideasApi = {
+	fetchIdeas,
+	createIdea,
+	updateIdea,
+	moveIdea,
+	bulkMoveIdeas,
+	bulkUpdateIdeas,
+	deleteIdeas,
+	restoreIdeas,
+	fetchLinks,
+	createLink,
+	fetchVersions,
+	addCollaborator,
+	listCollaborators,
+	removeCollaborator
+};
+

@@ -1,26 +1,23 @@
 import { createMutation, createQuery } from '@tanstack/svelte-query';
 
-import {
-	archiveReportDefinitions,
-	createReportDefinition,
-	createReportDelivery,
-	createReportSchedule,
-	deleteReportDefinitions,
-	deleteReportDelivery,
-	deleteReportSchedule,
-	getReportDefinition,
-	listReportDefinitions,
-	listReportRuns,
-	queueReportRuns,
-	restoreReportDefinitions,
-	toggleReportDelivery,
-	toggleReportFavorite,
-	toggleReportSchedule,
-	updateReportDefinition,
-	updateReportDelivery,
-	updateReportSchedule
-} from '$lib/api/reports';
+import { reportsApi } from '$lib/api/reports';
 import type { ReportDefinition, ReportDefinitionDetail, ReportRun, UUID } from '$lib/api/types';
+
+const createEmptyReportDetail = (): ReportDefinitionDetail => ({
+	definition: {
+		id: '',
+		name: '',
+		description: '',
+		sections: {},
+		filters: {},
+		is_favorite: false,
+		archived_at: null,
+		created_at: '',
+		updated_at: ''
+	},
+	schedules: [],
+	deliveries: []
+});
 
 export interface ReportDefinitionsOptions {
 	search?: string;
@@ -45,7 +42,7 @@ export const useReportDefinitionsQuery = (options: ReportDefinitionsOptions = {}
 	return createQuery<ReportDefinition[]>({
 		queryKey: ['reports', 'definitions', filters],
 		queryFn: () =>
-			listReportDefinitions({
+			reportsApi.listReportDefinitions({
 				search: filters.search,
 				includeArchived: filters.includeArchived,
 				favorites: filters.favoritesOnly,
@@ -69,8 +66,8 @@ export const useReportDetailQuery = (
 		queryKey: ['reports', definitionId, 'detail'],
 		queryFn: async () => {
 			const [detailResponse, runsResponse] = await Promise.all([
-				getReportDefinition(definitionId!),
-				listReportRuns(definitionId!)
+				reportsApi.getReportDefinition(definitionId!),
+				reportsApi.listReportRuns(definitionId!)
 			]);
 			return {
 				detail: detailResponse,
@@ -79,14 +76,14 @@ export const useReportDetailQuery = (
 		},
 		enabled: Boolean(definitionId) && (options.enabled ?? true),
 		placeholderData: () => ({
-			detail: { definition: null, schedules: [], deliveries: [] },
+			detail: createEmptyReportDetail(),
 			runs: []
 		})
 	});
 
 export const useCreateReportDefinitionMutation = () =>
 	createMutation({
-		mutationFn: createReportDefinition
+		mutationFn: reportsApi.createReportDefinition
 	});
 
 export const useUpdateReportDefinitionMutation = () =>
@@ -96,23 +93,23 @@ export const useUpdateReportDefinitionMutation = () =>
 			payload
 		}: {
 			definitionId: UUID;
-			payload: Parameters<typeof updateReportDefinition>[1];
-		}) => updateReportDefinition(definitionId, payload)
+			payload: Parameters<typeof reportsApi.updateReportDefinition>[1];
+		}) => reportsApi.updateReportDefinition(definitionId, payload)
 	});
 
 export const useArchiveReportDefinitionsMutation = () =>
 	createMutation({
-		mutationFn: archiveReportDefinitions
+		mutationFn: reportsApi.archiveReportDefinitions
 	});
 
 export const useRestoreReportDefinitionsMutation = () =>
 	createMutation({
-		mutationFn: restoreReportDefinitions
+		mutationFn: reportsApi.restoreReportDefinitions
 	});
 
 export const useDeleteReportDefinitionsMutation = () =>
 	createMutation({
-		mutationFn: deleteReportDefinitions
+		mutationFn: reportsApi.deleteReportDefinitions
 	});
 
 export const useToggleReportFavoriteMutation = () =>
@@ -123,7 +120,7 @@ export const useToggleReportFavoriteMutation = () =>
 		}: {
 			definitionId: UUID;
 			favorite: boolean;
-		}) => toggleReportFavorite(definitionId, favorite)
+		}) => reportsApi.toggleReportFavorite(definitionId, favorite)
 	});
 
 export const useQueueReportRunsMutation = () =>
@@ -134,7 +131,7 @@ export const useQueueReportRunsMutation = () =>
 		}: {
 			definitionIds: UUID[];
 			metadata?: Record<string, unknown>;
-		}) => queueReportRuns(definitionIds, metadata)
+		}) => reportsApi.queueReportRuns(definitionIds, metadata)
 	});
 
 export const useCreateReportScheduleMutation = () =>
@@ -144,8 +141,8 @@ export const useCreateReportScheduleMutation = () =>
 			payload
 		}: {
 			definitionId: UUID;
-			payload: Parameters<typeof createReportSchedule>[1];
-		}) => createReportSchedule(definitionId, payload)
+			payload: Parameters<typeof reportsApi.createReportSchedule>[1];
+		}) => reportsApi.createReportSchedule(definitionId, payload)
 	});
 
 export const useUpdateReportScheduleMutation = () =>
@@ -155,8 +152,8 @@ export const useUpdateReportScheduleMutation = () =>
 			payload
 		}: {
 			scheduleId: UUID;
-			payload: Parameters<typeof updateReportSchedule>[1];
-		}) => updateReportSchedule(scheduleId, payload)
+			payload: Parameters<typeof reportsApi.updateReportSchedule>[1];
+		}) => reportsApi.updateReportSchedule(scheduleId, payload)
 	});
 
 export const useToggleReportScheduleMutation = () =>
@@ -167,12 +164,12 @@ export const useToggleReportScheduleMutation = () =>
 		}: {
 			scheduleId: UUID;
 			enabled: boolean;
-		}) => toggleReportSchedule(scheduleId, enabled)
+		}) => reportsApi.toggleReportSchedule(scheduleId, enabled)
 	});
 
 export const useDeleteReportScheduleMutation = () =>
 	createMutation({
-		mutationFn: (scheduleId: UUID) => deleteReportSchedule(scheduleId)
+		mutationFn: (scheduleId: UUID) => reportsApi.deleteReportSchedule(scheduleId)
 	});
 
 export const useCreateReportDeliveryMutation = () =>
@@ -182,8 +179,8 @@ export const useCreateReportDeliveryMutation = () =>
 			payload
 		}: {
 			definitionId: UUID;
-			payload: Parameters<typeof createReportDelivery>[1];
-		}) => createReportDelivery(definitionId, payload)
+			payload: Parameters<typeof reportsApi.createReportDelivery>[1];
+		}) => reportsApi.createReportDelivery(definitionId, payload)
 	});
 
 export const useUpdateReportDeliveryMutation = () =>
@@ -193,8 +190,8 @@ export const useUpdateReportDeliveryMutation = () =>
 			payload
 		}: {
 			deliveryId: UUID;
-			payload: Parameters<typeof updateReportDelivery>[1];
-		}) => updateReportDelivery(deliveryId, payload)
+			payload: Parameters<typeof reportsApi.updateReportDelivery>[1];
+		}) => reportsApi.updateReportDelivery(deliveryId, payload)
 	});
 
 export const useToggleReportDeliveryMutation = () =>
@@ -205,11 +202,11 @@ export const useToggleReportDeliveryMutation = () =>
 		}: {
 			deliveryId: UUID;
 			enabled: boolean;
-		}) => toggleReportDelivery(deliveryId, enabled)
+		}) => reportsApi.toggleReportDelivery(deliveryId, enabled)
 	});
 
 export const useDeleteReportDeliveryMutation = () =>
 	createMutation({
-		mutationFn: (deliveryId: UUID) => deleteReportDelivery(deliveryId)
+		mutationFn: (deliveryId: UUID) => reportsApi.deleteReportDelivery(deliveryId)
 	});
 

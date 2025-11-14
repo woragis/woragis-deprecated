@@ -1,27 +1,6 @@
 import { createMutation, createQuery } from '@tanstack/svelte-query';
 
-import {
-	addMilestone,
-	bulkUpdateMilestones,
-	createDependency,
-	createKanbanCard,
-	createKanbanColumn,
-	createProject,
-	deleteDependency,
-	deleteKanbanCard,
-	deleteKanbanColumn,
-	duplicateProject,
-	getKanbanBoard,
-	listDependencies,
-	listMilestones,
-	listProjects,
-	moveKanbanCard,
-	reorderKanbanColumns,
-	updateKanbanCard,
-	updateKanbanColumn,
-	updateProjectMetrics,
-	updateProjectStatus
-} from '$lib/api/projects';
+import { projectsApi } from '$lib/api/projects';
 import type { CreateProjectInput } from '$lib/api/projects';
 import type { KanbanBoard, Milestone, Project, ProjectDependency, ProjectStatus, UUID } from '$lib/api/types';
 
@@ -32,7 +11,7 @@ export interface ProjectsListOptions {
 export const useProjectsListQuery = (options: ProjectsListOptions = {}) =>
 	createQuery<Project[]>({
 		queryKey: ['projects', 'list'],
-		queryFn: () => listProjects(),
+		queryFn: () => projectsApi.listProjects(),
 		enabled: options.enabled ?? true,
 		placeholderData: () => []
 	});
@@ -43,7 +22,7 @@ export const useProjectBoardQuery = (
 ) =>
 	createQuery<KanbanBoard>({
 		queryKey: ['projects', projectId, 'board'],
-		queryFn: () => getKanbanBoard(projectId!),
+		queryFn: () => projectsApi.getKanbanBoard(projectId!),
 		enabled: Boolean(projectId) && (options.enabled ?? true)
 	});
 
@@ -53,7 +32,7 @@ export const useProjectMilestonesQuery = (
 ) =>
 	createQuery<Milestone[]>({
 		queryKey: ['projects', projectId, 'milestones'],
-		queryFn: () => listMilestones(projectId!),
+		queryFn: () => projectsApi.listMilestones(projectId!),
 		enabled: Boolean(projectId) && (options.enabled ?? true),
 		placeholderData: () => []
 	});
@@ -64,20 +43,20 @@ export const useProjectDependenciesQuery = (
 ) =>
 	createQuery<ProjectDependency[]>({
 		queryKey: ['projects', projectId, 'dependencies'],
-		queryFn: () => listDependencies(projectId!),
+		queryFn: () => projectsApi.listDependencies(projectId!),
 		enabled: Boolean(projectId) && (options.enabled ?? true),
 		placeholderData: () => []
 	});
 
 export const useCreateProjectMutation = () =>
 	createMutation({
-		mutationFn: (input: CreateProjectInput) => createProject(input)
+		mutationFn: (input: CreateProjectInput) => projectsApi.createProject(input)
 	});
 
 export const useUpdateProjectStatusMutation = () =>
 	createMutation({
 		mutationFn: ({ projectId, status }: { projectId: UUID; status: ProjectStatus }) =>
-			updateProjectStatus(projectId, status)
+			projectsApi.updateProjectStatus(projectId, status)
 	});
 
 export const useUpdateProjectMetricsMutation = () =>
@@ -87,8 +66,8 @@ export const useUpdateProjectMetricsMutation = () =>
 			payload
 		}: {
 			projectId: UUID;
-			payload: Parameters<typeof updateProjectMetrics>[1];
-		}) => updateProjectMetrics(projectId, payload)
+			payload: Parameters<typeof projectsApi.updateProjectMetrics>[1];
+		}) => projectsApi.updateProjectMetrics(projectId, payload)
 	});
 
 export const useAddMilestoneMutation = () =>
@@ -98,8 +77,8 @@ export const useAddMilestoneMutation = () =>
 			payload
 		}: {
 			projectId: UUID;
-			payload: Parameters<typeof addMilestone>[1];
-		}) => addMilestone(projectId, payload)
+			payload: Parameters<typeof projectsApi.addMilestone>[1];
+		}) => projectsApi.addMilestone(projectId, payload)
 	});
 
 export const useBulkUpdateMilestonesMutation = () =>
@@ -109,8 +88,8 @@ export const useBulkUpdateMilestonesMutation = () =>
 			updates
 		}: {
 			projectId: UUID;
-			updates: Parameters<typeof bulkUpdateMilestones>[1];
-		}) => bulkUpdateMilestones(projectId, updates)
+			updates: Parameters<typeof projectsApi.bulkUpdateMilestones>[1];
+		}) => projectsApi.bulkUpdateMilestones(projectId, updates)
 	});
 
 export const useCreateKanbanColumnMutation = () =>
@@ -120,8 +99,8 @@ export const useCreateKanbanColumnMutation = () =>
 			payload
 		}: {
 			projectId: UUID;
-			payload: Parameters<typeof createKanbanColumn>[1];
-		}) => createKanbanColumn(projectId, payload)
+			payload: Parameters<typeof projectsApi.createKanbanColumn>[1];
+		}) => projectsApi.createKanbanColumn(projectId, payload)
 	});
 
 export const useUpdateKanbanColumnMutation = () =>
@@ -133,8 +112,8 @@ export const useUpdateKanbanColumnMutation = () =>
 		}: {
 			projectId: UUID;
 			columnId: UUID;
-			payload: Parameters<typeof updateKanbanColumn>[2];
-		}) => updateKanbanColumn(projectId, columnId, payload)
+			payload: Parameters<typeof projectsApi.updateKanbanColumn>[2];
+		}) => projectsApi.updateKanbanColumn(projectId, columnId, payload)
 	});
 
 export const useReorderKanbanColumnsMutation = () =>
@@ -145,13 +124,13 @@ export const useReorderKanbanColumnsMutation = () =>
 		}: {
 			projectId: UUID;
 			columnOrder: UUID[];
-		}) => reorderKanbanColumns(projectId, columnOrder)
+		}) => projectsApi.reorderKanbanColumns(projectId, columnOrder)
 	});
 
 export const useDeleteKanbanColumnMutation = () =>
 	createMutation({
 		mutationFn: ({ projectId, columnId }: { projectId: UUID; columnId: UUID }) =>
-			deleteKanbanColumn(projectId, columnId)
+			projectsApi.deleteKanbanColumn(projectId, columnId)
 	});
 
 export const useCreateKanbanCardMutation = () =>
@@ -161,8 +140,8 @@ export const useCreateKanbanCardMutation = () =>
 			payload
 		}: {
 			projectId: UUID;
-			payload: Parameters<typeof createKanbanCard>[1];
-		}) => createKanbanCard(projectId, payload)
+			payload: Parameters<typeof projectsApi.createKanbanCard>[1];
+		}) => projectsApi.createKanbanCard(projectId, payload)
 	});
 
 export const useUpdateKanbanCardMutation = () =>
@@ -174,8 +153,8 @@ export const useUpdateKanbanCardMutation = () =>
 		}: {
 			projectId: UUID;
 			cardId: UUID;
-			payload: Parameters<typeof updateKanbanCard>[2];
-		}) => updateKanbanCard(projectId, cardId, payload)
+			payload: Parameters<typeof projectsApi.updateKanbanCard>[2];
+		}) => projectsApi.updateKanbanCard(projectId, cardId, payload)
 	});
 
 export const useMoveKanbanCardMutation = () =>
@@ -190,13 +169,13 @@ export const useMoveKanbanCardMutation = () =>
 			cardId: UUID;
 			targetColumnId: UUID;
 			targetPosition: number;
-		}) => moveKanbanCard(projectId, cardId, targetColumnId, targetPosition)
+		}) => projectsApi.moveKanbanCard(projectId, cardId, targetColumnId, targetPosition)
 	});
 
 export const useDeleteKanbanCardMutation = () =>
 	createMutation({
 		mutationFn: ({ projectId, cardId }: { projectId: UUID; cardId: UUID }) =>
-			deleteKanbanCard(projectId, cardId)
+			projectsApi.deleteKanbanCard(projectId, cardId)
 	});
 
 export const useCreateDependencyMutation = () =>
@@ -206,14 +185,14 @@ export const useCreateDependencyMutation = () =>
 			payload
 		}: {
 			projectId: UUID;
-			payload: Parameters<typeof createDependency>[1];
-		}) => createDependency(projectId, payload)
+			payload: Parameters<typeof projectsApi.createDependency>[1];
+		}) => projectsApi.createDependency(projectId, payload)
 	});
 
 export const useDeleteDependencyMutation = () =>
 	createMutation({
 		mutationFn: ({ projectId, dependencyId }: { projectId: UUID; dependencyId: UUID }) =>
-			deleteDependency(projectId, dependencyId)
+			projectsApi.deleteDependency(projectId, dependencyId)
 	});
 
 export const useDuplicateProjectMutation = () =>
@@ -223,7 +202,7 @@ export const useDuplicateProjectMutation = () =>
 			payload
 		}: {
 			templateProjectId: UUID;
-			payload: Parameters<typeof duplicateProject>[1];
-		}) => duplicateProject(templateProjectId, payload)
+			payload: Parameters<typeof projectsApi.duplicateProject>[1];
+		}) => projectsApi.duplicateProject(templateProjectId, payload)
 	});
 

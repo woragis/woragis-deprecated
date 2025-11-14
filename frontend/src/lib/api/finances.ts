@@ -110,3 +110,13 @@ export function toggleRecurring(transactionId: UUID, value: boolean) {
 export function toggleEssential(transactionId: UUID, value: boolean) {
 	return toggleTransactionFlag(transactionId, value, 'essential');
 }
+
+export const financesApi = {
+	fetchTransactions,
+	fetchSummary,
+	createTransaction,
+	deleteTransactions,
+	toggleArchived,
+	toggleRecurring,
+	toggleEssential
+};

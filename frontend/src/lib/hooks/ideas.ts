@@ -1,18 +1,6 @@
 import { createMutation, createQuery } from '@tanstack/svelte-query';
 
-import {
-	bulkMoveIdeas,
-	bulkUpdateIdeas,
-	createIdea,
-	createLink,
-	deleteIdeas,
-	fetchIdeas,
-	fetchLinks,
-	fetchVersions,
-	moveIdea,
-	restoreIdeas,
-	updateIdea
-} from '$lib/api/ideas';
+import { ideasApi } from '$lib/api/ideas';
 import type {
 	CreateIdeaInput,
 	CreateLinkInput,
@@ -24,14 +12,14 @@ import type { Idea, IdeaLink, IdeaVersion, UUID } from '$lib/api/types';
 export const useIdeasCanvasQuery = (enabled = true) =>
 	createQuery<Idea[]>({
 		queryKey: ['ideas', 'canvas'],
-		queryFn: () => fetchIdeas(),
+		queryFn: () => ideasApi.fetchIdeas(),
 		enabled
 	});
 
 export const useIdeaLinksQuery = (enabled = true) =>
 	createQuery<IdeaLink[]>({
 		queryKey: ['ideas', 'links'],
-		queryFn: () => fetchLinks(),
+		queryFn: () => ideasApi.fetchLinks(),
 		enabled
 	});
 
@@ -41,14 +29,14 @@ export const useIdeaVersionsQuery = (
 ) =>
 	createQuery<IdeaVersion[]>({
 		queryKey: ['ideas', ideaId, 'versions', options?.limit ?? 15],
-		queryFn: () => fetchVersions(ideaId!, options?.limit ?? 15),
+		queryFn: () => ideasApi.fetchVersions(ideaId!, options?.limit ?? 15),
 		enabled: Boolean(ideaId) && (options?.enabled ?? true),
 		placeholderData: () => []
 	});
 
 export const useCreateIdeaMutation = () =>
 	createMutation({
-		mutationFn: (input: CreateIdeaInput) => createIdea(input)
+		mutationFn: (input: CreateIdeaInput) => ideasApi.createIdea(input)
 	});
 
 interface UpdateIdeaVariables {
@@ -58,7 +46,7 @@ interface UpdateIdeaVariables {
 
 export const useUpdateIdeaMutation = () =>
 	createMutation({
-		mutationFn: ({ ideaId, input }: UpdateIdeaVariables) => updateIdea(ideaId, input)
+		mutationFn: ({ ideaId, input }: UpdateIdeaVariables) => ideasApi.updateIdea(ideaId, input)
 	});
 
 interface MoveIdeaVariables {
@@ -68,31 +56,31 @@ interface MoveIdeaVariables {
 
 export const useMoveIdeaMutation = () =>
 	createMutation({
-		mutationFn: ({ ideaId, input }: MoveIdeaVariables) => moveIdea(ideaId, input)
+		mutationFn: ({ ideaId, input }: MoveIdeaVariables) => ideasApi.moveIdea(ideaId, input)
 	});
 
 export const useBulkMoveIdeasMutation = () =>
 	createMutation({
-		mutationFn: bulkMoveIdeas
+		mutationFn: ideasApi.bulkMoveIdeas
 	});
 
 export const useBulkUpdateIdeasMutation = () =>
 	createMutation({
-		mutationFn: bulkUpdateIdeas
+		mutationFn: ideasApi.bulkUpdateIdeas
 	});
 
 export const useDeleteIdeasMutation = () =>
 	createMutation({
-		mutationFn: deleteIdeas
+		mutationFn: ideasApi.deleteIdeas
 	});
 
 export const useRestoreIdeasMutation = () =>
 	createMutation({
-		mutationFn: restoreIdeas
+		mutationFn: ideasApi.restoreIdeas
 	});
 
 export const useCreateLinkMutation = () =>
 	createMutation({
-		mutationFn: (input: CreateLinkInput) => createLink(input)
+		mutationFn: (input: CreateLinkInput) => ideasApi.createLink(input)
 	});
 

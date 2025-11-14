@@ -324,3 +324,27 @@ export async function duplicateProject(
 	);
 	return response.data.data;
 }
+
+export const projectsApi = {
+	listProjects,
+	createProject,
+	updateProjectStatus,
+	updateProjectMetrics,
+	addMilestone,
+	listMilestones,
+	bulkUpdateMilestones,
+	toggleMilestone,
+	getKanbanBoard,
+	createKanbanColumn,
+	updateKanbanColumn,
+	reorderKanbanColumns,
+	deleteKanbanColumn,
+	createKanbanCard,
+	updateKanbanCard,
+	moveKanbanCard,
+	deleteKanbanCard,
+	createDependency,
+	listDependencies,
+	deleteDependency,
+	duplicateProject
+};
