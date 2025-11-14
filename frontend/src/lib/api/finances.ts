@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from '@clients/apiClient';
 import type { Transaction, TransactionSummary, TransactionType, UUID } from './types';
 
 const DEFAULT_BASE_CURRENCY = 'USD';

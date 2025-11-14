@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from '@clients/apiClient';
 import type {
 	KanbanBoard,
 	Milestone,

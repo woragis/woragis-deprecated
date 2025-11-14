@@ -10,13 +10,27 @@ const baseURL = (import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080')
 );
 const apiBaseURL = `${baseURL}/api`;
 
+export const API_BASE_URL = apiBaseURL;
+
+const AUTH_BYPASS_PREFIXES = [
+	'/auth/login',
+	'/auth/register',
+	'/auth/refresh',
+	'/auth/confirm',
+	'/auth/confirm/resend',
+	'/auth/password/reset/request',
+	'/auth/password/reset/confirm',
+	'/auth/oauth/start',
+	'/auth/oauth/providers'
+];
+
 const isAuthBypass = (url?: string) => {
 	if (!url) {
 		return false;
 	}
 
 	const endpoint = url.startsWith('http') ? new URL(url).pathname : url;
-	return endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register');
+	return AUTH_BYPASS_PREFIXES.some((prefix) => endpoint.startsWith(prefix));
 };
 
 export const apiClient = axios.create({
@@ -49,6 +63,10 @@ apiClient.interceptors.response.use(
 				status: error.response.status,
 				data: error.response.data
 			});
+
+			if (error.response.status === 401) {
+				authStore.clear();
+			}
 		}
 		return Promise.reject(error);
 	}
