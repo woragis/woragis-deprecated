@@ -12,6 +12,7 @@ export interface AuthUser {
 	email_confirmed?: boolean;
 	mfa_enabled?: boolean;
 	preferred_locale?: string;
+	phone_number?: string;
 	role?: string;
 }
 
@@ -79,6 +80,7 @@ const normalizeUser = (user: Partial<AuthUser> & Record<string, any>): AuthUser 
 		email_confirmed: user.email_confirmed ?? user.emailConfirmed ?? undefined,
 		mfa_enabled: user.mfa_enabled ?? user.mfaEnabled ?? undefined,
 		preferred_locale: user.preferred_locale ?? user.preferredLocale ?? undefined,
+		phone_number: user.phone_number ?? user.phoneNumber ?? undefined,
 		role: user.role ?? undefined
 	};
 };

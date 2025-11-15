@@ -10,6 +10,7 @@
 	import DefinitionModal from './_components/DefinitionModal.svelte';
 	import ScheduleModal from './_components/ScheduleModal.svelte';
 	import DeliveryModal from './_components/DeliveryModal.svelte';
+	import ReportsTutorial from './_components/ReportsTutorial.svelte';
 
 	const {
 		isLoading,
@@ -63,6 +64,7 @@
 	} = createReportsLogic();
 
 	let hasSelectedInitial = false;
+	let showTutorial = false;
 
 	onMount(async () => {
 		await loadDefinitions();
@@ -89,11 +91,24 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-	<ReportsHeader
-		isLoading={$isLoading}
-		onRefresh={loadDefinitions}
-		onCreate={openCreateDefinition}
-	/>
+	<div class="flex items-center justify-between">
+		<ReportsHeader
+			isLoading={$isLoading}
+			onRefresh={loadDefinitions}
+			onCreate={openCreateDefinition}
+		/>
+		<button
+			class="rounded-lg border border-slate-700/60 px-3 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:bg-slate-800/60"
+			type="button"
+			on:click={() => (showTutorial = !showTutorial)}
+		>
+			{showTutorial ? '📚 Hide Tutorial' : '📚 Show Tutorial'}
+		</button>
+	</div>
+
+	{#if showTutorial}
+		<ReportsTutorial show={showTutorial} onClose={() => (showTutorial = false)} />
+	{/if}
 
 	<section class="grid gap-6 lg:grid-cols-[350px_1fr]">
 		<div class="flex flex-col gap-4 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">

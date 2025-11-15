@@ -149,3 +149,29 @@ export async function disableMFA() {
 	return apiClient.post('/auth/mfa/disable', {});
 }
 
+export interface UserProfile {
+	id: string;
+	email: string;
+	created_at: string;
+	email_confirmed?: boolean;
+	mfa_enabled?: boolean;
+	preferred_locale?: string;
+	phone_number?: string;
+	role?: string;
+}
+
+export interface UpdateProfilePayload {
+	phone_number?: string;
+	preferred_locale?: string;
+}
+
+export async function getCurrentUser(): Promise<UserProfile> {
+	const response = await apiClient.get<{ data: UserProfile }>('/auth/me');
+	return response.data.data;
+}
+
+export async function updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
+	const response = await apiClient.patch<{ data: UserProfile }>('/auth/profile', payload);
+	return response.data.data;
+}
+
