@@ -3,6 +3,7 @@ package ideas
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -317,7 +318,14 @@ func (s *Service) ListIdeas(ctx context.Context, req ListIdeasRequest) ([]Idea, 
 	if err := s.ensureAccess(ctx, ownerID, req.ActorID); err != nil {
 		return nil, err
 	}
-	return s.repo.ListIdeas(ctx, ownerID)
+	ideas, err := s.repo.ListIdeas(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	for idx := range ideas {
+		s.ensureIdeaSlug(ctx, &ideas[idx])
+	}
+	return ideas, nil
 }
 
 // ListLinks returns links with filters.
@@ -350,6 +358,24 @@ func (s *Service) ListVersions(ctx context.Context, req ListVersionsRequest) ([]
 		return nil, err
 	}
 	return s.repo.ListVersions(ctx, idea.ID, idea.UserID, req.Limit)
+}
+
+// GetIdeaBySlug fetches an idea using its slug.
+func (s *Service) GetIdeaBySlug(ctx context.Context, userID uuid.UUID, slug string) (*Idea, error) {
+	if userID == uuid.Nil {
+		return nil, NewDomainError(ErrCodeInvalidPayload, ErrEmptyUserID)
+	}
+	if strings.TrimSpace(slug) == "" {
+		return nil, NewDomainError(ErrCodeInvalidPayload, ErrEmptyIdeaSlug)
+	}
+
+	idea, err := s.repo.GetIdeaBySlug(ctx, slug, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.ensureIdeaSlug(ctx, idea)
+	return idea, nil
 }
 
 // AddCollaborator grants canvas access.
@@ -405,6 +431,7 @@ func (s *Service) loadIdea(ctx context.Context, ideaID, actorID uuid.UUID) (*Ide
 
 	idea, err := s.repo.GetIdea(ctx, ideaID, actorID)
 	if err == nil {
+		s.ensureIdeaSlug(ctx, idea)
 		return idea, nil
 	}
 	if domainErr, ok := AsDomainError(err); ok && domainErr.Code == ErrCodeNotFound {
@@ -415,6 +442,7 @@ func (s *Service) loadIdea(ctx context.Context, ideaID, actorID uuid.UUID) (*Ide
 		if err := s.ensureAccess(ctx, idea.UserID, actorID); err != nil {
 			return nil, err
 		}
+		s.ensureIdeaSlug(ctx, idea)
 		return idea, nil
 	}
 	return nil, err
@@ -444,5 +472,18 @@ func (s *Service) recordVersion(ctx context.Context, idea *Idea, editorID uuid.U
 	version := NewIdeaVersion(idea, editorID, changeType)
 	if err := s.repo.CreateVersion(ctx, version); err != nil && s.logger != nil {
 		s.logger.Warn("ideas: failed to persist version history", slog.Any("error", err), slog.String("idea_id", idea.ID.String()))
+	}
+}
+
+func (s *Service) ensureIdeaSlug(ctx context.Context, idea *Idea) {
+	if idea == nil {
+		return
+	}
+	if strings.TrimSpace(idea.Slug) != "" {
+		return
+	}
+	idea.Slug = generateIdeaSlug(idea.Title, idea.ID)
+	if err := s.repo.UpdateIdea(ctx, idea); err != nil && s.logger != nil {
+		s.logger.Warn("ideas: unable to backfill slug", slog.Any("error", err), slog.String("idea_id", idea.ID.String()))
 	}
 }

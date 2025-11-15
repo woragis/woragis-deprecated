@@ -16,6 +16,7 @@ type Repository interface {
 	UpdateIdea(ctx context.Context, idea *Idea) error
 	GetIdea(ctx context.Context, id, userID uuid.UUID) (*Idea, error)
 	GetIdeaByID(ctx context.Context, id uuid.UUID) (*Idea, error)
+	GetIdeaBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Idea, error)
 	ListIdeas(ctx context.Context, userID uuid.UUID) ([]Idea, error)
 	BulkMoveIdeas(ctx context.Context, userID uuid.UUID, updates []IdeaPositionUpdate) error
 	BulkUpdateDetails(ctx context.Context, userID uuid.UUID, updates []IdeaDetailUpdate) error
@@ -80,6 +81,18 @@ func (r *gormRepository) GetIdea(ctx context.Context, id, userID uuid.UUID) (*Id
 func (r *gormRepository) GetIdeaByID(ctx context.Context, id uuid.UUID) (*Idea, error) {
 	var idea Idea
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&idea).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrIdeaNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &idea, nil
+}
+
+func (r *gormRepository) GetIdeaBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Idea, error) {
+	var idea Idea
+	err := r.db.WithContext(ctx).Where("slug = ? AND user_id = ?", slug, userID).First(&idea).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, NewDomainError(ErrCodeNotFound, ErrIdeaNotFound)

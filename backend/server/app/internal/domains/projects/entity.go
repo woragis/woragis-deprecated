@@ -118,8 +118,6 @@ func (p *Project) Validate() error {
 	return nil
 }
 
-const slugDelimiter = "--"
-
 var slugSanitizer = regexp.MustCompile(`[^a-z0-9]+`)
 
 func generateProjectSlug(name string, id uuid.UUID) string {
@@ -129,7 +127,7 @@ func generateProjectSlug(name string, id uuid.UUID) string {
 	if slug == "" {
 		slug = "project"
 	}
-	return fmt.Sprintf("%s%s%s", slug, slugDelimiter, strings.ToLower(id.String()))
+	return slug
 }
 
 // UpdateStatus updates the stage and timestamp.

@@ -3,6 +3,7 @@ package ideas
 import (
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -384,6 +385,26 @@ func (h *Handler) ListIdeas(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, ideas)
+}
+
+// GetIdeaBySlug returns an idea resolved by slug.
+func (h *Handler) GetIdeaBySlug(c *fiber.Ctx) error {
+	slug := strings.TrimSpace(c.Params("slug"))
+	if slug == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	idea, err := h.service.GetIdeaBySlug(c.Context(), actorID, slug)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, idea)
 }
 
 // GetIdeaVersions returns version history for an idea.

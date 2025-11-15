@@ -8,6 +8,7 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 
 	group.Post("/", handler.PostIdea)
 	group.Get("/", handler.ListIdeas)
+	group.Get("/slug/:slug", handler.GetIdeaBySlug)
 	group.Get("/:id/versions", handler.GetIdeaVersions)
 	group.Patch("/:id", handler.PatchIdea)
 	group.Patch("/:id/position", handler.PatchIdeaPosition)

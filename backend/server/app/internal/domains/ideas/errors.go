@@ -17,6 +17,7 @@ const (
 	ErrNilLink                  = "ideas: link entity is nil"
 	ErrNilCollaborator          = "ideas: collaborator entity is nil"
 	ErrEmptyIdeaID              = "ideas: idea id cannot be empty"
+	ErrEmptyIdeaSlug            = "ideas: idea slug cannot be empty"
 	ErrEmptyLinkID              = "ideas: link id cannot be empty"
 	ErrEmptyUserID              = "ideas: user id cannot be empty"
 	ErrEmptyTitle               = "ideas: title cannot be empty"

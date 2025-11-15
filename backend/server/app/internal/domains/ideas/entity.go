@@ -1,6 +1,8 @@
 package ideas
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -21,6 +23,7 @@ type Idea struct {
 	UserID      uuid.UUID      `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
 	Title       string         `gorm:"column:title;size:160;not null" json:"title"`
 	Description string         `gorm:"column:description;type:text" json:"description"`
+	Slug        string         `gorm:"column:slug;size:200;uniqueIndex" json:"slug"`
 	PosX        float64        `gorm:"column:pos_x;not null" json:"posX"`
 	PosY        float64        `gorm:"column:pos_y;not null" json:"posY"`
 	Color       string         `gorm:"column:color;size:16" json:"color"`
@@ -50,6 +53,7 @@ func NewIdea(userID uuid.UUID, title, description string, posX, posY float64, co
 		UserID:      userID,
 		Title:       strings.TrimSpace(title),
 		Description: strings.TrimSpace(description),
+		Slug:        "",
 		PosX:        posX,
 		PosY:        posY,
 		Color:       strings.TrimSpace(color),
@@ -58,6 +62,7 @@ func NewIdea(userID uuid.UUID, title, description string, posX, posY float64, co
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
+	idea.Slug = generateIdeaSlug(idea.Title, idea.ID)
 
 	return idea, idea.Validate()
 }
@@ -78,6 +83,10 @@ func (i *Idea) Validate() error {
 
 	if strings.TrimSpace(i.Title) == "" {
 		return NewDomainError(ErrCodeInvalidTitle, ErrEmptyTitle)
+	}
+
+	if strings.TrimSpace(i.Slug) == "" {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyIdeaSlug)
 	}
 
 	return nil
@@ -191,6 +200,20 @@ func NewIdeaVersion(idea *Idea, editorID uuid.UUID, changeType string) *IdeaVers
 		ChangeType:  strings.ToLower(strings.TrimSpace(changeType)),
 		CreatedAt:   time.Now().UTC(),
 	}
+}
+
+const ideaSlugDelimiter = "--"
+
+var ideaSlugSanitizer = regexp.MustCompile(`[^a-z0-9]+`)
+
+func generateIdeaSlug(title string, id uuid.UUID) string {
+	slug := strings.ToLower(strings.TrimSpace(title))
+	slug = ideaSlugSanitizer.ReplaceAllString(slug, "-")
+	slug = strings.Trim(slug, "-")
+	if slug == "" {
+		slug = "idea"
+	}
+	return fmt.Sprintf("%s%s%s", slug, ideaSlugDelimiter, strings.ToLower(id.String()))
 }
 
 // IdeaCollaborator tracks shared access to an idea canvas.
