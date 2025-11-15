@@ -22,6 +22,7 @@ const (
 	AuditActionMFADisabled            AuditAction = "mfa_disabled"
 	AuditActionOAuthLinked            AuditAction = "oauth_linked"
 	AuditActionOAuthUnlinked          AuditAction = "oauth_unlinked"
+	AuditActionProfileUpdated         AuditAction = "profile_updated"
 	AuditActionBulkUserAction         AuditAction = "bulk_user_action"
 )
 

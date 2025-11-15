@@ -675,6 +675,56 @@ func (s *Service) ListAuditLogs(ctx context.Context, userID uuid.UUID, limit int
 	return s.repo.ListAuditLogs(ctx, userID, limit)
 }
 
+// GetCurrentUser retrieves the current authenticated user.
+func (s *Service) GetCurrentUser(ctx context.Context, userID uuid.UUID) (*User, error) {
+	return s.repo.FindByID(ctx, userID)
+}
+
+// UpdateProfileRequest contains profile update data.
+type UpdateProfileRequest struct {
+	UserID       uuid.UUID
+	PhoneNumber  *string
+	PreferredLocale *string
+}
+
+// UpdateProfile updates user profile information.
+func (s *Service) UpdateProfile(ctx context.Context, req UpdateProfileRequest) (*User, error) {
+	user, err := s.repo.FindByID(ctx, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	updated := false
+	if req.PhoneNumber != nil {
+		// Normalize phone number (remove spaces, keep + prefix)
+		phone := strings.TrimSpace(*req.PhoneNumber)
+		if phone != user.PhoneNumber {
+			user.PhoneNumber = phone
+			updated = true
+		}
+	}
+
+	if req.PreferredLocale != nil {
+		locale := strings.TrimSpace(*req.PreferredLocale)
+		if locale != "" && locale != user.PreferredLocale {
+			user.PreferredLocale = locale
+			updated = true
+		}
+	}
+
+	if !updated {
+		return user, nil
+	}
+
+	user.UpdatedAt = time.Now().UTC()
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+
+	_ = s.recordAudit(ctx, &req.UserID, AuditActionProfileUpdated, nil, "", "")
+	return user, nil
+}
+
 // Helper methods ---------------------------------------------------------
 
 func (s *Service) issueLoginArtifacts(ctx context.Context, user *User, deviceFingerprint, deviceName, ip, userAgent string, metadata map[string]any) (*LoginResponse, error) {

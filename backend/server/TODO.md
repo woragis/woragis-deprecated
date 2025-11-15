@@ -51,6 +51,15 @@
   - [x] Implement scheduling templates for recurring report generation.
   - [x] Enable multi-channel delivery (email, download, share links) with templated messages.
   - [x] Support bulk regeneration/export management for selected reports.
+  - [ ] **Implement report definition execution**: Use stored `sections` and `filters` from ReportDefinition during report generation (currently ignored).
+  - [ ] **Dynamic data source selection**: Allow report definitions to specify which domains to include (ideas, projects, chats, finances) instead of always querying all.
+  - [ ] **Auto-retrieve delivery targets**: Automatically use user's email from auth context for email delivery instead of requiring manual input.
+  - [ ] **Add phone number to User entity**: Store phone number in User model or profile table to enable automatic WhatsApp delivery.
+  - [ ] **Custom aggregation support**: Allow report definitions to specify custom SQL aggregations, date range filters, and field selections.
+  - [ ] **Report generation from definitions**: Create `GenerateReportFromDefinition()` that respects definition's sections/filters and generates custom reports.
+  - [ ] **Date range filtering**: Implement date range filtering from definition filters (e.g., "last_30_days", custom ranges) in finance aggregation and other queries.
+  - [ ] **Section-based formatting**: Format report output based on definition sections (e.g., only include sections specified in definition).
+  - [ ] **Report run tracking**: Link ReportRun entities to specific definitions and store generated output for historical access.
 - **Monitoring**
   - [ ] Persist structured events in production DB, alert threshold management, Grafana dashboard provisioning.
 

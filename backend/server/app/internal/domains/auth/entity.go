@@ -22,6 +22,7 @@ type User struct {
 	MFAEnabled        bool       `gorm:"column:mfa_enabled" json:"mfaEnabled"`
 	MFAMethod         string     `gorm:"column:mfa_method;size:32" json:"mfaMethod"`
 	PreferredLocale   string     `gorm:"column:preferred_locale;size:10;default:en" json:"preferredLocale"`
+	PhoneNumber       string     `gorm:"column:phone_number;size:20;index" json:"phoneNumber,omitempty"`
 }
 
 // NewUser constructs a User aggregate with the provided e-mail and password hash.

@@ -1,6 +1,9 @@
-FROM golang:1.22-bookworm AS builder
+FROM golang:1.24-bookworm AS builder
 
 WORKDIR /build
+
+# Enable automatic toolchain download if needed
+ENV GOTOOLCHAIN=auto
 
 COPY go.mod go.sum ./
 

@@ -29,6 +29,7 @@ import (
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
+	clientsdomain "github.com/woragis/backend/server/app/internal/domains/clients"
 	financesdomain "github.com/woragis/backend/server/app/internal/domains/finances"
 	ideasdomain "github.com/woragis/backend/server/app/internal/domains/ideas"
 	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
@@ -59,6 +60,7 @@ func main() {
 	oauthCfg := appconfig.LoadOAuthConfig(cfg.PublicURL)
 
 	emailCfg, _ := appconfig.LoadEmailConfig()
+	whatsappCfg := appconfig.LoadWhatsAppConfig()
 	monitoringCfg := appconfig.LoadMonitoringConfig()
 	aiCfg := appconfig.LoadAIConfig()
 	redisCfg := appconfig.LoadRedisConfig()
@@ -183,7 +185,24 @@ func main() {
 		}
 	}
 
-	whatsappNotifier := whatsappservice.NewNoopNotifier(slogLogger)
+	var whatsappNotifier whatsappservice.Notifier = whatsappservice.NewNoopNotifier(slogLogger)
+	var whatsmeowNotifier *whatsappservice.WhatsmeowNotifier
+	var whatsappHandler *whatsappservice.Handler
+	var whatsappService whatsappservice.Service
+	if whatsappCfg.Enabled() {
+		if notifier, err := whatsappservice.NewWhatsmeowNotifier(whatsappCfg.SessionPath, slogLogger); err != nil {
+			slogLogger.Warn("whatsapp initialization failed, using noop", slog.Any("error", err))
+		} else {
+			whatsappNotifier = notifier
+			whatsmeowNotifier = notifier
+			// Connect to WhatsApp in a goroutine
+			go func() {
+				if err := notifier.Connect(workerCtx); err != nil {
+					slogLogger.Error("failed to connect whatsapp", slog.Any("error", err))
+				}
+			}()
+		}
+	}
 	publisher := notifications.NewPublisher(redisClient)
 
 	tokenStore := authdomain.NewRedisTokenStore(redisClient)
@@ -287,6 +306,11 @@ func main() {
 	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
 	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
 
+	clientsRepo := clientsdomain.NewGormRepository(db)
+	clientsService := clientsdomain.NewService(clientsRepo, slogLogger)
+	clientsHandler := clientsdomain.NewHandler(clientsService, slogLogger)
+	clientsdomain.SetupRoutes(protectedAPI, clientsHandler)
+
 	reportsService := reportsdomain.NewService(
 		reportsdomain.NewGormRepository(db),
 		ideaRepo,
@@ -304,6 +328,21 @@ func main() {
 	schedulerHandler := schedulerdomain.NewHandler(schedulerService, slogLogger)
 	schedulerdomain.SetupRoutes(protectedAPI, schedulerHandler)
 
+	// Initialize WhatsApp service with repository adapters (after clientsRepo and langchainClient are created)
+	// Initialize even if WhatsApp isn't fully enabled, so the send endpoint is available
+	userRepoAdapter := whatsappservice.NewUserRepositoryAdapter(authRepo)
+	clientRepoAdapter := whatsappservice.NewClientRepositoryAdapter(clientsRepo)
+	whatsappService = whatsappservice.NewService(whatsappNotifier, userRepoAdapter, clientRepoAdapter, slogLogger)
+	if whatsmeowNotifier != nil {
+		whatsappHandler = whatsappservice.NewHandler(whatsmeowNotifier, whatsappService, langchainClient, defaultModel, slogLogger)
+	} else {
+		// Create handler with nil notifier if whatsmeow isn't available (will use noop internally)
+		whatsappHandler = whatsappservice.NewHandler(nil, whatsappService, langchainClient, defaultModel, slogLogger)
+	}
+
+	// Setup WhatsApp routes (handler is now initialized)
+	whatsappservice.SetupRoutes(protectedAPI, whatsappHandler)
+
 	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)
 	go schedulerRunner.Start(workerCtx)
 
@@ -315,7 +354,7 @@ func main() {
 		}
 	}()
 
-	waitForShutdown(slogLogger, app, workerCancel, redisClient)
+	waitForShutdown(slogLogger, app, workerCancel, redisClient, whatsmeowNotifier)
 }
 
 func connectDatabase(log *slog.Logger) (*gorm.DB, error) {
@@ -425,6 +464,7 @@ func migrate(db *gorm.DB) error {
 		&reportsdomain.ReportRun{},
 		&schedulerdomain.Schedule{},
 		&schedulerdomain.ExecutionRun{},
+		&clientsdomain.Client{},
 	)
 }
 
@@ -453,7 +493,7 @@ func connectAuxDatabase(dsn string, log *slog.Logger) (*gorm.DB, error) {
 	return db, nil
 }
 
-func waitForShutdown(log *slog.Logger, app *fiber.App, cancel context.CancelFunc, redisClient *redis.Client) {
+func waitForShutdown(log *slog.Logger, app *fiber.App, cancel context.CancelFunc, redisClient *redis.Client, whatsmeowNotifier *whatsappservice.WhatsmeowNotifier) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -470,6 +510,10 @@ func waitForShutdown(log *slog.Logger, app *fiber.App, cancel context.CancelFunc
 
 	if cancel != nil {
 		cancel()
+	}
+
+	if whatsmeowNotifier != nil {
+		whatsmeowNotifier.Disconnect()
 	}
 
 	if redisClient != nil {

@@ -122,6 +122,7 @@ type userResponse struct {
 	EmailConfirmed  bool      `json:"email_confirmed"`
 	MFAEnabled      bool      `json:"mfa_enabled"`
 	PreferredLocale string    `json:"preferred_locale,omitempty"`
+	PhoneNumber     string    `json:"phone_number,omitempty"`
 	Role            string    `json:"role,omitempty"`
 }
 
@@ -624,6 +625,52 @@ func (h *Handler) UnlinkOAuthAccount(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "provider_unlinked"})
 }
 
+// GetCurrentUser returns the current authenticated user's profile.
+func (h *Handler) GetCurrentUser(c *fiber.Ctx) error {
+	userID, err := currentUserID(c)
+	if err != nil {
+		return err
+	}
+
+	user, err := h.service.GetCurrentUser(c.Context(), userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toUserResponse(user))
+}
+
+type updateProfilePayload struct {
+	PhoneNumber     *string `json:"phone_number"`
+	PreferredLocale *string `json:"preferred_locale"`
+}
+
+// UpdateProfile updates the current user's profile.
+func (h *Handler) UpdateProfile(c *fiber.Ctx) error {
+	userID, err := currentUserID(c)
+	if err != nil {
+		return err
+	}
+
+	var payload updateProfilePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": "Invalid request payload",
+		})
+	}
+
+	user, err := h.service.UpdateProfile(c.Context(), UpdateProfileRequest{
+		UserID:          userID,
+		PhoneNumber:     payload.PhoneNumber,
+		PreferredLocale: payload.PreferredLocale,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toUserResponse(user))
+}
+
 func (h *Handler) renderOAuthCallback(c *fiber.Ctx, origin string, payload oauthCallbackMessage) error {
 	if origin == "" {
 		origin = h.service.publicURL
@@ -743,6 +790,7 @@ func toUserResponse(user *User) userResponse {
 		EmailConfirmed:  user.EmailConfirmedAt != nil,
 		MFAEnabled:      user.MFAEnabled,
 		PreferredLocale: user.PreferredLocale,
+		PhoneNumber:     user.PhoneNumber,
 		Role:            user.Role,
 	}
 }

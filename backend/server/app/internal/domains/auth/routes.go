@@ -22,6 +22,8 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 func SetupProtectedRoutes(api fiber.Router, handler *Handler) {
 	authGroup := api.Group("/auth")
 
+	authGroup.Get("/me", handler.GetCurrentUser)
+	authGroup.Patch("/profile", handler.UpdateProfile)
 	authGroup.Post("/logout", handler.Logout)
 	authGroup.Get("/sessions", handler.ListSessions)
 	authGroup.Post("/sessions/revoke", handler.RevokeOtherSessions)
