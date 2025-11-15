@@ -13,21 +13,25 @@
 	} from '@xyflow/svelte';
 
 	import IdeaNode from './IdeaNode.svelte';
-	import {
+import {
 		createIdeasLogic,
 		type IdeaNodeData,
 		type IdeaFormState
 	} from './ideas.logic';
+	import { goto } from '$app/navigation';
 
 	const nodeTypes: NodeTypes = {
 		idea: IdeaNode
 	};
 
 	const {
+		conversationsQuery,
 		nodes,
 		edges,
 		versions,
+		ideaChats,
 		isSaving,
+		isCreatingChat,
 		isLoading,
 		uiError,
 		selectedIdea,
@@ -42,15 +46,24 @@
 		handleNodeClick,
 		handleIdeaSave,
 		handleCreateIdea,
+		createIdeaChat,
 		updateEditFormField,
 		updateNewIdeaField
 	} = createIdeasLogic();
+	const startIdeaChat = async () => {
+		const conversation = await createIdeaChat();
+		if (conversation) {
+			goto(`/chats?conversation=${conversation.id}`);
+		}
+	};
 
-	let flowNodes: Node<IdeaNodeData>[] = [];
-	let flowEdges: Edge[] = [];
+let flowNodes: Node<IdeaNodeData>[] = [];
+let flowEdges: Edge[] = [];
+let chatsForIdea = [];
 
 $: flowNodes = $nodes;
 $: flowEdges = $edges;
+$: chatsForIdea = $ideaChats;
 
 	const handleInput =
 		<T extends keyof IdeaFormState>(updater: (value: IdeaFormState[T]) => void) =>
@@ -139,9 +152,19 @@ $: flowEdges = $edges;
 			{#if $selectedIdea && $editForm}
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-semibold text-slate-100">Idea Details</h2>
-					<span class="rounded-full border border-slate-700/70 px-2 py-0.5 text-xs text-slate-400"
-						>Version {$selectedIdea.version}</span
-					>
+					<div class="flex items-center gap-2">
+						<span class="rounded-full border border-slate-700/70 px-2 py-0.5 text-xs text-slate-400"
+							>Version {$selectedIdea.version}</span
+						>
+						<button
+							class="rounded-lg border border-slate-700/70 px-2.5 py-1 text-xs font-medium text-primary transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+							type="button"
+							on:click={startIdeaChat}
+							disabled={$isCreatingChat}
+						>
+							{$isCreatingChat ? 'Creating…' : 'Create chat'}
+						</button>
+					</div>
 				</div>
 				<form class="flex flex-col gap-4 text-sm" on:submit|preventDefault={handleIdeaSave}>
 					<label class="flex flex-col gap-2">
@@ -214,6 +237,55 @@ $: flowEdges = $edges;
 			{/if}
 		</aside>
 	</div>
+
+	<section class="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-5">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div>
+				<h3 class="text-lg font-semibold text-slate-100">Idea chats</h3>
+				<p class="text-sm text-slate-400">Recent conversations linked to this idea.</p>
+			</div>
+			<a
+				class="rounded-lg border border-slate-700/70 px-3 py-1.5 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white"
+				href="/chats"
+				data-sveltekit-preload-data
+			>
+				Open chats
+			</a>
+		</div>
+
+		{#if !$selectedIdea}
+			<p class="mt-4 text-sm text-slate-500">Select an idea to see its related chats.</p>
+		{:else if $conversationsQuery.isFetching}
+			<p class="mt-4 text-sm text-slate-400">Loading chats…</p>
+		{:else if chatsForIdea.length === 0}
+			<p class="mt-4 text-sm text-slate-400">
+				No chats linked to <span class="font-semibold text-slate-200">{$selectedIdea.title}</span> yet.
+			</p>
+		{:else}
+			<div class="mt-5 grid gap-4 md:grid-cols-2">
+				{#each chatsForIdea as chat}
+					<a
+						class="rounded-xl border border-slate-800/70 bg-slate-900/60 p-4 text-sm text-slate-200 shadow-inner transition hover:border-primary/60 hover:bg-slate-900"
+						href={`/chats?conversation=${chat.id}`}
+						data-sveltekit-preload-data
+					>
+						<div class="flex items-center justify-between gap-2">
+							<h4 class="text-base font-semibold text-slate-100">{chat.title}</h4>
+							<span class="text-[11px] uppercase text-slate-500">
+								{new Date(chat.updated_at ?? chat.created_at ?? new Date()).toLocaleDateString()}
+							</span>
+						</div>
+						<p class="mt-2 line-clamp-2 text-slate-400">
+							{chat.description || 'No description provided yet.'}
+						</p>
+						<div class="mt-3 flex items-center justify-end text-xs uppercase tracking-wide text-primary/80">
+							<span class="font-medium">Open chat →</span>
+						</div>
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</section>
 
 	{#if $showCreateModal}
 		<div class="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur">

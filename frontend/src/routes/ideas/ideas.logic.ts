@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/svelte-query';
 import { onDestroy, onMount } from 'svelte';
 import { get, writable } from 'svelte/store';
 
-import type { Idea, IdeaLink, IdeaVersion } from '$lib/api/types';
+import type { ChatConversation, Idea, IdeaLink, IdeaVersion } from '$lib/api/types';
 import {
 	useCreateIdeaMutation,
 	useCreateLinkMutation,
@@ -15,6 +15,8 @@ import {
 	useMoveIdeaMutation,
 	useUpdateIdeaMutation
 } from '@hooks/ideas';
+import { useConversationsQuery } from '@hooks/chats';
+import { useCreateConversationMutation } from '@hooks/chats';
 import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
 
 export type IdeaNodeData = {
@@ -67,7 +69,9 @@ export function createIdeasLogic() {
 	const nodes = writable<Node<IdeaNodeData>[]>([]);
 	const edges = writable<Edge[]>([]);
 	const versions = writable<IdeaVersion[]>([]);
+	const ideaChats = writable<ChatConversation[]>([]);
 	const isSaving = writable(false);
+	const isCreatingChat = writable(false);
 	const isLoading = writable(false);
 	const uiError = writable('');
 	const selectedIdea = writable<Idea | null>(null);
@@ -79,11 +83,13 @@ export function createIdeasLogic() {
 
 	let ideas: Idea[] = [];
 	let links: IdeaLink[] = [];
+	let conversations: ChatConversation[] = [];
 
 	const queryClient = useQueryClient();
 
 	const ideasQuery = useIdeasCanvasQuery(browser);
 	const linksQuery = useIdeaLinksQuery(browser);
+	const conversationsQuery = useConversationsQuery({ search: '', includeArchived: false, enabled: true });
 	let versionsQuery = useIdeaVersionsQuery(null, { enabled: false, limit: 15 });
 	let versionsUnsubscribe: (() => void) | null = null;
 	let currentVersionsIdeaId: string | null = null;
@@ -116,6 +122,22 @@ export function createIdeasLogic() {
 		}
 	};
 
+	const updateRelatedChats = () => {
+		const ideaId = get(selectedIdea)?.id;
+		if (!ideaId) {
+			ideaChats.set([]);
+			return;
+		}
+		const filtered = conversations
+			.filter((chat) => chat.idea_id === ideaId)
+			.sort(
+				(a, b) =>
+					new Date(b.updated_at ?? b.created_at ?? '').getTime() -
+					new Date(a.updated_at ?? a.created_at ?? '').getTime()
+			);
+		ideaChats.set(filtered);
+	};
+
 	const applySelectedIdea = (idea: Idea | null) => {
 		selectedIdea.set(idea);
 		if (idea) {
@@ -128,6 +150,7 @@ export function createIdeasLogic() {
 			editForm.set(null);
 		}
 		setVersionsQueryTarget(idea?.id ?? null);
+		updateRelatedChats();
 	};
 
 	const syncSelectedIdea = () => {
@@ -219,10 +242,17 @@ const linksUnsubscribe = linksQuery.subscribe((state) => {
 	edges.set(links.map(toEdge));
 });
 
+	const chatsUnsubscribe = conversationsQuery.subscribe((state) => {
+		if (!state.data) return;
+		conversations = state.data;
+		updateRelatedChats();
+	});
+
 	onDestroy(() => {
 		ideasUnsubscribe();
 		linksUnsubscribe();
 		versionsUnsubscribe?.();
+	chatsUnsubscribe();
 	});
 
 	const refreshCanvas = async () => {
@@ -253,6 +283,7 @@ const linksUnsubscribe = linksQuery.subscribe((state) => {
 	const updateIdeaMutation = useUpdateIdeaMutation();
 	const moveIdeaMutation = useMoveIdeaMutation();
 	const createLinkMutation = useCreateLinkMutation();
+	const createConversationMutation = useCreateConversationMutation();
 
 	const updateEdgesWithNewLink = (link: IdeaLink) => {
 		const newEdge = toEdge(link);
@@ -417,11 +448,42 @@ const linksUnsubscribe = linksQuery.subscribe((state) => {
 		newIdea.update((current) => ({ ...current, [field]: value }));
 	};
 
+	const createIdeaChat = async () => {
+		const idea = get(selectedIdea);
+		if (!idea) {
+			toastError('Select an idea before creating a chat.');
+			return null;
+		}
+
+		isCreatingChat.set(true);
+		try {
+			const conversation = await get(createConversationMutation).mutateAsync({
+				title: idea.title || 'New idea conversation',
+				description: idea.description ?? '',
+				ideaId: idea.id,
+				projectId: idea.project_id ?? undefined
+			});
+			toastSuccess('Chat created for idea.');
+			await queryClient.invalidateQueries({ queryKey: ['chats', 'conversations'] });
+			return conversation;
+		} catch (error) {
+			const message = getApiErrorMessage(error, 'Unable to create chat for idea.');
+			uiError.set(message);
+			toastError(message);
+			return null;
+		} finally {
+			isCreatingChat.set(false);
+		}
+	};
+
 	return {
+		conversationsQuery,
 		nodes,
 		edges,
 		versions,
+		ideaChats,
 		isSaving,
+		isCreatingChat,
 		isLoading,
 		uiError,
 		selectedIdea,
@@ -436,6 +498,7 @@ const linksUnsubscribe = linksQuery.subscribe((state) => {
 		handleNodeClick,
 		handleIdeaSave,
 		handleCreateIdea,
+		createIdeaChat,
 		updateEditFormField,
 		updateNewIdeaField
 	};

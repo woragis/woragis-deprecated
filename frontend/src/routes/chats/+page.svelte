@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	import ChatFilters from './_components/ChatFilters.svelte';
 	import ChatHeader from './_components/ChatHeader.svelte';
 	import ConversationPanel from './_components/ConversationPanel.svelte';
@@ -6,7 +7,7 @@
 	import CreateConversationModal from './_components/CreateConversationModal.svelte';
 	import { createChatsLogic } from './chats.logic';
 
-	const {
+const {
 		conversationsQuery,
 		messagesQuery,
 		transcriptsQuery,
@@ -57,7 +58,9 @@
 		createConversationMutation,
 		appendMessageMutation,
 		shareTranscriptMutation
-	} = createChatsLogic();
+} = createChatsLogic();
+
+let pendingDeepLinkId: string | null = null;
 
 	$: conversationList = $conversationsQuery.data ?? [];
 	$: messages = $messagesQuery.data ?? [];
@@ -66,6 +69,21 @@
 	$: selectionCount = $selectedConversationIds.size;
 	$: projectSuggestions = getFilteredProjects();
 	$: ideaSuggestions = getFilteredIdeas();
+$: {
+	const target = $page.url.searchParams.get('conversation');
+	if (target && pendingDeepLinkId !== target && ($selectedConversation?.id ?? null) !== target) {
+		pendingDeepLinkId = target;
+	} else if (!target) {
+		pendingDeepLinkId = null;
+	}
+}
+$: if (pendingDeepLinkId && conversationList.length > 0) {
+	const match = conversationList.find((conversation) => conversation.id === pendingDeepLinkId);
+	if (match) {
+		selectConversation(match);
+		pendingDeepLinkId = null;
+	}
+}
 </script>
 
 <svelte:head>

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { Idea } from '$lib/api/types';
-	import type { CreateConversationForm } from '../chats.logic';
+import type { Idea } from '$lib/api/types';
+import type { SubmitEvent } from 'svelte/elements';
+import type { CreateConversationForm } from '../chats.logic';
 
 	export let open = false;
 	export let form: CreateConversationForm;

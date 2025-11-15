@@ -1,10 +1,11 @@
 <script lang="ts">
-	import type {
-		ChatAssignment,
-		ChatConversation,
-		ChatMessage,
-		ChatTranscript
-	} from '$lib/api/types';
+import type {
+	ChatAssignment,
+	ChatConversation,
+	ChatMessage,
+	ChatTranscript
+} from '$lib/api/types';
+import type { SubmitEvent } from 'svelte/elements';
 
 	export let conversation: ChatConversation | null = null;
 	export let messages: ChatMessage[] = [];
