@@ -16,6 +16,8 @@ type Service interface {
 	UpdateProjectStatus(ctx context.Context, req UpdateStatusRequest) (*Project, error)
 	UpdateProjectMetrics(ctx context.Context, req UpdateMetricsRequest) (*Project, error)
 	ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error)
+	GetProjectBySlug(ctx context.Context, userID uuid.UUID, slug string) (*Project, error)
+	SearchProjectsBySlug(ctx context.Context, userID uuid.UUID, slug string) ([]Project, error)
 
 	AddMilestone(ctx context.Context, req AddMilestoneRequest) (*Milestone, error)
 	ToggleMilestone(ctx context.Context, req ToggleMilestoneRequest) (*Milestone, error)
@@ -269,6 +271,22 @@ func (s *service) UpdateProjectMetrics(ctx context.Context, req UpdateMetricsReq
 
 func (s *service) ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error) {
 	return s.repo.ListProjects(ctx, userID)
+}
+
+func (s *service) GetProjectBySlug(ctx context.Context, userID uuid.UUID, slug string) (*Project, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return nil, NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectSlug)
+	}
+	return s.repo.GetProjectBySlug(ctx, slug, userID)
+}
+
+func (s *service) SearchProjectsBySlug(ctx context.Context, userID uuid.UUID, slug string) ([]Project, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return []Project{}, nil
+	}
+	return s.repo.SearchProjectsBySlug(ctx, slug, userID)
 }
 
 // Milestones

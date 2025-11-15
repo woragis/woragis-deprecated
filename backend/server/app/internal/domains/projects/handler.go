@@ -2,6 +2,7 @@ package projects
 
 import (
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,6 +16,8 @@ import (
 type Handler interface {
 	CreateProject(c *fiber.Ctx) error
 	ListProjects(c *fiber.Ctx) error
+	GetProjectBySlug(c *fiber.Ctx) error
+	SearchProjectsBySlug(c *fiber.Ctx) error
 	UpdateStatus(c *fiber.Ctx) error
 	UpdateMetrics(c *fiber.Ctx) error
 	AddMilestone(c *fiber.Ctx) error
@@ -169,6 +172,7 @@ type projectResponse struct {
 	UserID      string        `json:"user_id"`
 	Name        string        `json:"name"`
 	Description string        `json:"description"`
+	Slug        string        `json:"slug"`
 	Status      ProjectStatus `json:"status"`
 	HealthScore int           `json:"health_score"`
 	MRR         float64       `json:"mrr"`
@@ -266,6 +270,51 @@ func (h *handler) ListProjects(c *fiber.Ctx) error {
 	}
 
 	projects, err := h.service.ListProjects(c.Context(), userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]projectResponse, 0, len(projects))
+	for _, project := range projects {
+		p := project
+		resp = append(resp, toProjectResponse(&p))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+func (h *handler) GetProjectBySlug(c *fiber.Ctx) error {
+	slug := strings.TrimSpace(c.Params("slug"))
+	if slug == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	project, err := h.service.GetProjectBySlug(c.Context(), userID, slug)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toProjectResponse(project))
+}
+
+func (h *handler) SearchProjectsBySlug(c *fiber.Ctx) error {
+	slug := strings.TrimSpace(c.Query("slug"))
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if slug == "" {
+		return response.Success(c, fiber.StatusOK, []projectResponse{})
+	}
+
+	projects, err := h.service.SearchProjectsBySlug(c.Context(), userID, slug)
 	if err != nil {
 		return h.handleError(c, err)
 	}
@@ -1022,6 +1071,7 @@ func toProjectResponse(project *Project) projectResponse {
 		UserID:      project.UserID.String(),
 		Name:        project.Name,
 		Description: project.Description,
+		Slug:        project.Slug,
 		Status:      project.Status,
 		HealthScore: project.HealthScore,
 		MRR:         project.MRR,

@@ -1,6 +1,8 @@
 package projects
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -33,6 +35,7 @@ type Project struct {
 	UserID      uuid.UUID     `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
 	Name        string        `gorm:"column:name;size:120;not null" json:"name"`
 	Description string        `gorm:"column:description;size:255" json:"description"`
+	Slug        string        `gorm:"column:slug;size:160;uniqueIndex;not null" json:"slug"`
 	Status      ProjectStatus `gorm:"column:status;type:varchar(32);not null" json:"status"`
 	HealthScore int           `gorm:"column:health_score;not null" json:"healthScore"`
 	MRR         float64       `gorm:"column:mrr;default:0" json:"mrr"`
@@ -71,6 +74,7 @@ func NewProject(userID uuid.UUID, name, description string, status ProjectStatus
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
+	project.Slug = generateProjectSlug(project.Name, project.ID)
 
 	return project, project.Validate()
 }
@@ -93,6 +97,10 @@ func (p *Project) Validate() error {
 		return NewDomainError(ErrCodeInvalidName, ErrEmptyProjectName)
 	}
 
+	if strings.TrimSpace(p.Slug) == "" {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectSlug)
+	}
+
 	switch p.Status {
 	case ProjectStatusIdea, ProjectStatusPlanning, ProjectStatusExecuting, ProjectStatusMonitoring, ProjectStatusCompleted:
 	default:
@@ -108,6 +116,20 @@ func (p *Project) Validate() error {
 	}
 
 	return nil
+}
+
+const slugDelimiter = "--"
+
+var slugSanitizer = regexp.MustCompile(`[^a-z0-9]+`)
+
+func generateProjectSlug(name string, id uuid.UUID) string {
+	slug := strings.ToLower(strings.TrimSpace(name))
+	slug = slugSanitizer.ReplaceAllString(slug, "-")
+	slug = strings.Trim(slug, "-")
+	if slug == "" {
+		slug = "project"
+	}
+	return fmt.Sprintf("%s%s%s", slug, slugDelimiter, strings.ToLower(id.String()))
 }
 
 // UpdateStatus updates the stage and timestamp.

@@ -21,6 +21,7 @@ const (
 	ErrEmptyMilestoneID          = "projects: milestone id cannot be empty"
 	ErrEmptyUserID               = "projects: user id cannot be empty"
 	ErrEmptyProjectName          = "projects: project name cannot be empty"
+	ErrEmptyProjectSlug          = "projects: project slug cannot be empty"
 	ErrUnsupportedStatus         = "projects: unsupported status transition"
 	ErrHealthScoreOutOfRange     = "projects: health score must be between 0 and 100"
 	ErrMetricsMustBePositive     = "projects: metrics must be non-negative"

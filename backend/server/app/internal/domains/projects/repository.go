@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -12,6 +13,8 @@ type Repository interface {
 	CreateProject(ctx context.Context, project *Project) error
 	UpdateProject(ctx context.Context, project *Project) error
 	GetProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*Project, error)
+	GetProjectBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Project, error)
+	SearchProjectsBySlug(ctx context.Context, slug string, userID uuid.UUID) ([]Project, error)
 	ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error)
 
 	CreateMilestone(ctx context.Context, milestone *Milestone) error
@@ -83,6 +86,37 @@ func (r *gormRepository) GetProject(ctx context.Context, projectID uuid.UUID, us
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return &project, nil
+}
+
+func (r *gormRepository) GetProjectBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Project, error) {
+	var project Project
+	err := r.db.WithContext(ctx).
+		Where("slug = ? AND user_id = ?", slug, userID).
+		First(&project).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrProjectNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &project, nil
+}
+
+func (r *gormRepository) SearchProjectsBySlug(ctx context.Context, slug string, userID uuid.UUID) ([]Project, error) {
+	query := strings.TrimSpace(strings.ToLower(slug))
+	if query == "" {
+		return []Project{}, nil
+	}
+
+	var projects []Project
+	pattern := "%" + query + "%"
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ? AND LOWER(slug) LIKE ?", userID, pattern).
+		Order("created_at desc").
+		Find(&projects).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return projects, nil
 }
 
 func (r *gormRepository) ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error) {
