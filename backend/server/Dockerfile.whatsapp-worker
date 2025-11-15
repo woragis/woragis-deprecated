@@ -1,0 +1,43 @@
+FROM golang:1.24-bookworm AS builder
+
+WORKDIR /build
+
+# Enable automatic toolchain download if needed
+ENV GOTOOLCHAIN=auto
+
+COPY go.mod go.sum ./
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN go mod download
+
+COPY . .
+
+# Build WhatsApp worker
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o /build/bin/whatsapp-worker ./app/cmd/whatsapp-worker
+
+FROM debian:bookworm-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates libsqlite3-0 && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/bin/whatsapp-worker /usr/local/bin/whatsapp-worker
+
+# Create session directory
+RUN mkdir -p /data/whatsapp-session && \
+    chmod 700 /data/whatsapp-session
+
+ENV WHATSAPP_SESSION_PATH=/data/whatsapp-session \
+    WHATSAPP_ENABLED=true \
+    LOG_LEVEL=info
+
+# Health check port (if you add a health endpoint)
+EXPOSE 8081
+
+CMD ["whatsapp-worker"]
+

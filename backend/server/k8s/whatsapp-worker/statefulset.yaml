@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: whatsapp-worker
+  namespace: default
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whatsapp-session-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce  # For StatefulSet, ReadWriteOnce is sufficient
+  storageClassName: standard  # Adjust based on your cluster
+  resources:
+    requests:
+      storage: 1Gi  # WhatsApp session is small, 1GB is plenty
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: whatsapp-worker
+  namespace: default
+  labels:
+    app: whatsapp-worker
+spec:
+  serviceName: whatsapp-worker
+  replicas: 1  # Only one replica - WhatsApp allows only one active session
+  selector:
+    matchLabels:
+      app: whatsapp-worker
+  template:
+    metadata:
+      labels:
+        app: whatsapp-worker
+    spec:
+      serviceAccountName: whatsapp-worker
+      containers:
+      - name: worker
+        image: your-registry/woragis-whatsapp-worker:latest
+        imagePullPolicy: Always
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: whatsapp-worker-config
+              key: redis_url
+        - name: WHATSAPP_SESSION_PATH
+          value: /data/whatsapp-session
+        - name: WHATSAPP_ENABLED
+          value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        volumeMounts:
+        - name: whatsapp-session
+          mountPath: /data/whatsapp-session
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: whatsapp-session
+        persistentVolumeClaim:
+          claimName: whatsapp-session-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whatsapp-worker
+  namespace: default
+  labels:
+    app: whatsapp-worker
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: http
+  selector:
+    app: whatsapp-worker
+
