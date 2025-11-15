@@ -33,6 +33,28 @@ export const useProjectsListQuery = (options?: MaybeReadable<ProjectsListOptions
 	);
 };
 
+export const useProjectBySlugQuery = (
+	slug: MaybeReadable<string | null>,
+	options?: MaybeReadable<{ enabled?: boolean }>
+) => {
+	const slugStore = toReadable(slug);
+	const optionsStore = toOptionsReadable(options, {});
+
+	return createQuery<Project>(
+		derived([slugStore, optionsStore], ([$slug, $options]) => ({
+			queryKey: ['projects', 'slug', $slug],
+			queryFn: () => {
+				if (!$slug) {
+					throw new Error('Project slug is required to load project details');
+				}
+				return projectsApi.getProjectBySlug($slug);
+			},
+			enabled: Boolean($slug) && ($options.enabled ?? true),
+			retry: false
+		}))
+	);
+};
+
 export const useProjectBoardQuery = (
 	projectId: MaybeReadable<UUID | null>,
 	options?: MaybeReadable<{ enabled?: boolean }>

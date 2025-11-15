@@ -68,6 +68,7 @@ export interface Project {
 	user_id: UUID;
 	name: string;
 	description: string;
+	slug: string;
 	status: ProjectStatus;
 	health_score: number;
 	mrr: number;

@@ -29,6 +29,11 @@ export async function listProjects(): Promise<Project[]> {
 	return response.data.data ?? [];
 }
 
+export async function getProjectBySlug(slug: string): Promise<Project> {
+	const response = await apiClient.get<ApiResponse<Project>>(`/projects/slug/${slug}`);
+	return response.data.data;
+}
+
 export async function createProject(input: CreateProjectInput): Promise<Project> {
 	const response = await apiClient.post<ApiResponse<Project>>('/projects', {
 		name: input.name,
