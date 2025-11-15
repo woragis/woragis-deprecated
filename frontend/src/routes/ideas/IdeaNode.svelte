@@ -11,6 +11,7 @@
 	const idea = data.idea;
 
 	const borderColor = idea.color ?? '#2563eb';
+	const ownerLabel = idea.user_id ? `${idea.user_id.slice(0, 6)}…` : 'Unknown';
 </script>
 
 <div
@@ -35,7 +36,7 @@
 	{/if}
 	<div class="mt-3 flex items-center justify-between text-[10px] uppercase tracking-wide text-slate-500">
 		<span>{new Date(idea.updated_at ?? idea.created_at).toLocaleDateString()}</span>
-		<span>{idea.user_id.slice(0, 6)}…</span>
+		<span>{ownerLabel}</span>
 	</div>
 </div>
 

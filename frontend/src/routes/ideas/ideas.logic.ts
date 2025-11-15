@@ -140,20 +140,60 @@ export function createIdeasLogic() {
 		applySelectedIdea(refreshed);
 	};
 
-	const ideasUnsubscribe = ideasQuery.subscribe((state) => {
-		ideasQueryError.set(state.error);
-		if (!state.data) return;
-		ideas = state.data;
-		nodes.set(ideas.map(toNode));
-		syncSelectedIdea();
+const sanitizeIdeas = (items: Idea[]) => {
+	const seen = new Set<string>();
+	const result: Idea[] = [];
+	items.forEach((idea) => {
+		const id = idea.id ? String(idea.id) : '';
+		if (!id) {
+			console.warn('Skipping idea without id', idea);
+			return;
+		}
+		if (seen.has(id)) {
+			console.warn('Skipping duplicate idea id', id);
+			return;
+		}
+		seen.add(id);
+		result.push({ ...idea, id });
 	});
+	return result;
+};
 
-	const linksUnsubscribe = linksQuery.subscribe((state) => {
-		linksQueryError.set(state.error);
-		if (!state.data) return;
-		links = state.data;
-		edges.set(links.map(toEdge));
+const sanitizeLinks = (items: IdeaLink[]) => {
+	const seen = new Set<string>();
+	const result: IdeaLink[] = [];
+	items.forEach((link) => {
+		const id = link.id ? String(link.id) : '';
+		if (!id) {
+			console.warn('Skipping link without id', link);
+		 return;
+		}
+		if (seen.has(id)) {
+			return;
+		}
+		if (!link.source_idea_id || !link.target_idea_id) {
+			return;
+		}
+		seen.add(id);
+		result.push({ ...link, id });
 	});
+	return result;
+};
+
+const ideasUnsubscribe = ideasQuery.subscribe((state) => {
+	ideasQueryError.set(state.error);
+	if (!state.data) return;
+	ideas = sanitizeIdeas(state.data);
+	nodes.set(ideas.map(toNode));
+	syncSelectedIdea();
+});
+
+const linksUnsubscribe = linksQuery.subscribe((state) => {
+	linksQueryError.set(state.error);
+	if (!state.data) return;
+	links = sanitizeLinks(state.data);
+	edges.set(links.map(toEdge));
+});
 
 	onDestroy(() => {
 		ideasUnsubscribe();
@@ -256,6 +296,7 @@ export function createIdeasLogic() {
 			await refreshCanvas();
 			return;
 		}
+		nodes.set(ideas.map(toNode));
 		toastInfo('Idea position saved.');
 	};
 

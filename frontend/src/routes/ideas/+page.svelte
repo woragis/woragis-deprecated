@@ -49,11 +49,8 @@
 	let flowNodes: Node<IdeaNodeData>[] = [];
 	let flowEdges: Edge[] = [];
 
-	$: flowNodes = $nodes;
-	$: flowEdges = $edges;
-
-	$: nodes.set(flowNodes);
-	$: edges.set(flowEdges);
+$: flowNodes = $nodes;
+$: flowEdges = $edges;
 
 	const handleInput =
 		<T extends keyof IdeaFormState>(updater: (value: IdeaFormState[T]) => void) =>
