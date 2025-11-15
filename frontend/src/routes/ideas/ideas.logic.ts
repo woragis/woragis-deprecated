@@ -140,21 +140,45 @@ export function createIdeasLogic() {
 		applySelectedIdea(refreshed);
 	};
 
+const normalizeIdea = (raw: Idea | Record<string, any>): Idea | null => {
+	const id = raw.id ?? raw.ID;
+	if (!id) return null;
+
+	const userId = raw.user_id ?? raw.userId ?? '';
+	const posX = raw.pos_x ?? raw.posX ?? 0;
+	const posY = raw.pos_y ?? raw.posY ?? 0;
+	const createdAt = raw.created_at ?? raw.createdAt ?? new Date().toISOString();
+	const updatedAt = raw.updated_at ?? raw.updatedAt ?? createdAt;
+
+	return {
+		...(raw as Idea),
+		id: String(id),
+		user_id: userId ? String(userId) : undefined,
+		pos_x: Number.isFinite(posX) ? Number(posX) : 0,
+		pos_y: Number.isFinite(posY) ? Number(posY) : 0,
+		color: raw.color ?? '#2563eb',
+		version: raw.version ?? 1,
+		created_at: createdAt,
+		updated_at: updatedAt
+	};
+};
+
 const sanitizeIdeas = (items: Idea[]) => {
 	const seen = new Set<string>();
 	const result: Idea[] = [];
 	items.forEach((idea) => {
-		const id = idea.id ? String(idea.id) : '';
-		if (!id) {
+		const normalized = normalizeIdea(idea);
+		if (!normalized) {
 			console.warn('Skipping idea without id', idea);
 			return;
 		}
+		const id = normalized.id;
 		if (seen.has(id)) {
 			console.warn('Skipping duplicate idea id', id);
 			return;
 		}
 		seen.add(id);
-		result.push({ ...idea, id });
+		result.push(normalized);
 	});
 	return result;
 };
