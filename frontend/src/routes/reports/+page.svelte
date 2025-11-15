@@ -36,6 +36,7 @@
 		updateDeliveryFormField,
 		updateQueueMetadata,
 		loadDefinitions,
+		refreshDetail,
 		selectDefinition,
 		toggleSelection,
 		toggleSelectAll,
@@ -81,11 +82,6 @@
 	const archiveSelected = () => handleBulkAction('archive');
 	const restoreSelected = () => handleBulkAction('restore');
 	const deleteSelected = () => handleBulkAction('delete');
-	const refreshDetail = () => {
-		if ($selectedDefinitionId) {
-			selectDefinition($selectedDefinitionId);
-		}
-	};
 </script>
 
 <svelte:head>

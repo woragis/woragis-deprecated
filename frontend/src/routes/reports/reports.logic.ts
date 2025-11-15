@@ -1,4 +1,6 @@
-import { get, writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
+import { onDestroy } from 'svelte';
+import { useQueryClient } from '@tanstack/svelte-query';
 
 import type {
 	ReportDefinition,
@@ -9,25 +11,24 @@ import type {
 	UUID
 } from '$lib/api/types';
 import {
-	archiveReportDefinitions,
-	createReportDefinition,
-	createReportDelivery,
-	createReportSchedule,
-	deleteReportDefinitions,
-	deleteReportDelivery,
-	deleteReportSchedule,
-	getReportDefinition,
-	listReportDefinitions,
-	listReportRuns,
-	queueReportRuns,
-	restoreReportDefinitions,
-	toggleReportDelivery,
-	toggleReportFavorite,
-	toggleReportSchedule,
-	updateReportDefinition,
-	updateReportDelivery,
-	updateReportSchedule
-} from '$lib/api/reports';
+	useArchiveReportDefinitionsMutation,
+	useCreateReportDefinitionMutation,
+	useCreateReportDeliveryMutation,
+	useCreateReportScheduleMutation,
+	useDeleteReportDefinitionsMutation,
+	useDeleteReportDeliveryMutation,
+	useDeleteReportScheduleMutation,
+	useQueueReportRunsMutation,
+	useReportDefinitionsQuery,
+	useReportDetailQuery,
+	useRestoreReportDefinitionsMutation,
+	useToggleReportDeliveryMutation,
+	useToggleReportFavoriteMutation,
+	useToggleReportScheduleMutation,
+	useUpdateReportDefinitionMutation,
+	useUpdateReportDeliveryMutation,
+	useUpdateReportScheduleMutation
+} from '@hooks/reports';
 import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
 
 export interface ReportFilters {
@@ -120,13 +121,17 @@ const parseJsonField = (value: string, fieldName: string) => {
 	}
 };
 
+const areFiltersEqual = (a: ReportFilters, b: ReportFilters) =>
+	a.search === b.search &&
+	a.includeArchived === b.includeArchived &&
+	a.favoritesOnly === b.favoritesOnly &&
+	a.channel === b.channel &&
+	a.limit === b.limit &&
+	a.offset === b.offset;
+
 export function createReportsLogic() {
-	const isLoading = writable(false);
-	const detailLoading = writable(false);
-	const definitions = writable<ReportDefinition[]>([]);
-	const detail = writable<ReportDefinitionDetail | null>(null);
-	const runs = writable<ReportRun[]>([]);
 	const filters = writable<ReportFilters>(defaultFilters());
+	const appliedFilters = writable<ReportFilters>(defaultFilters());
 	const selectedDefinitionId = writable<UUID | null>(null);
 	const selectedIds = writable<Set<UUID>>(new Set());
 	const queueMetadataText = writable('');
@@ -146,6 +151,83 @@ export function createReportsLogic() {
 	const deliveryForm = writable<DeliveryFormState>(defaultDeliveryForm());
 
 	const errorMessage = writable<string | null>(null);
+
+	const queryClient = useQueryClient();
+
+	const definitionsOptionsStore = derived(appliedFilters, ($filters) => ({
+		search: $filters.search,
+		includeArchived: $filters.includeArchived,
+		favoritesOnly: $filters.favoritesOnly,
+		channel: $filters.channel,
+		limit: $filters.limit,
+		offset: $filters.offset
+	}));
+
+	const detailOptionsStore = derived(selectedDefinitionId, ($id) => ({
+		definitionId: $id,
+		enabled: Boolean($id)
+	}));
+
+	const definitionsQuery = useReportDefinitionsQuery(definitionsOptionsStore);
+	const detailQuery = useReportDetailQuery(detailOptionsStore);
+
+	const definitions = derived(
+		definitionsQuery,
+		($query) => ($query.data as ReportDefinition[] | undefined) ?? []
+	);
+	const isLoading = derived(
+		definitionsQuery,
+		($query) => $query.isFetching || $query.isLoading
+	);
+	const detail = derived(
+		[detailQuery, selectedDefinitionId],
+		([$query, $selectedId]) => ($selectedId ? $query.data?.detail ?? null : null)
+	);
+	const runs = derived(
+		[detailQuery, selectedDefinitionId],
+		([$query, $selectedId]) => ($selectedId ? $query.data?.runs ?? [] : [])
+	);
+	const detailLoading = derived(
+		detailQuery,
+		($query) => $query.isFetching || $query.isLoading
+	);
+
+	const definitionsUnsubscribe = definitions.subscribe((items) => {
+		selectedIds.update((current) => {
+			const next = new Set<UUID>();
+			for (const item of items) {
+				if (current.has(item.id)) {
+					next.add(item.id);
+				}
+			}
+			return next;
+		});
+
+		const activeId = get(selectedDefinitionId);
+		if (activeId && !items.find((definition) => definition.id === activeId)) {
+			selectedDefinitionId.set(null);
+		}
+	});
+
+	onDestroy(() => {
+		definitionsUnsubscribe();
+	});
+
+	const createDefinitionMutation = useCreateReportDefinitionMutation();
+	const updateDefinitionMutation = useUpdateReportDefinitionMutation();
+	const archiveDefinitionsMutation = useArchiveReportDefinitionsMutation();
+	const restoreDefinitionsMutation = useRestoreReportDefinitionsMutation();
+	const deleteDefinitionsMutation = useDeleteReportDefinitionsMutation();
+	const toggleFavoriteMutation = useToggleReportFavoriteMutation();
+	const queueRunsMutation = useQueueReportRunsMutation();
+	const createScheduleMutation = useCreateReportScheduleMutation();
+	const updateScheduleMutation = useUpdateReportScheduleMutation();
+	const toggleScheduleMutation = useToggleReportScheduleMutation();
+	const deleteScheduleMutation = useDeleteReportScheduleMutation();
+	const createDeliveryMutation = useCreateReportDeliveryMutation();
+	const updateDeliveryMutation = useUpdateReportDeliveryMutation();
+	const toggleDeliveryMutation = useToggleReportDeliveryMutation();
+	const deleteDeliveryMutation = useDeleteReportDeliveryMutation();
 
 	const updateDefinitionFormField = <K extends keyof DefinitionFormState>(
 		field: K,
@@ -179,66 +261,31 @@ export function createReportsLogic() {
 		}
 	};
 
+	const invalidateDefinitions = async () => {
+		await queryClient.invalidateQueries({ queryKey: ['reports', 'definitions'] });
+	};
+
+	const invalidateDetail = async (definitionId: UUID | null = get(selectedDefinitionId)) => {
+		if (!definitionId) return;
+		await queryClient.invalidateQueries({ queryKey: ['reports', definitionId, 'detail'] });
+	};
+
 	const loadDefinitions = async () => {
-		isLoading.set(true);
-		try {
-			const currentFilters = get(filters);
-			const data = await listReportDefinitions({
-				search: currentFilters.search,
-				includeArchived: currentFilters.includeArchived,
-				favorites: currentFilters.favoritesOnly,
-				channel: currentFilters.channel || undefined,
-				limit: currentFilters.limit,
-				offset: currentFilters.offset
-			});
-			definitions.set(data);
-			selectedIds.update((set) => {
-				const existingIds = new Set(data.map((item) => item.id));
-				return new Set([...set].filter((id) => existingIds.has(id)));
-			});
-			const activeId = get(selectedDefinitionId);
-			if (activeId && !data.find((definition) => definition.id === activeId)) {
-				selectedDefinitionId.set(null);
-				detail.set(null);
-				runs.set([]);
-			}
-		} catch (error) {
-			setError(getApiErrorMessage(error, 'Unable to load report definitions.'));
-		} finally {
-			isLoading.set(false);
+		const next = { ...get(filters) };
+		const currentApplied = get(appliedFilters);
+		if (areFiltersEqual(next, currentApplied)) {
+			return invalidateDefinitions();
 		}
+		appliedFilters.set(next);
 	};
 
-	const loadDetail = async (definitionId: UUID) => {
-		detailLoading.set(true);
-		try {
-			const [detailResponse, runsResponse] = await Promise.all([
-				getReportDefinition(definitionId),
-				listReportRuns(definitionId)
-			]);
-			detail.set(detailResponse);
-			runs.set(runsResponse);
-			const definition = detailResponse.definition;
-			if (definition) {
-				definitionForm.set({
-					name: definition.name,
-					description: definition.description ?? '',
-					sectionsText: JSON.stringify(definition.sections ?? {}, null, 2),
-					filtersText: JSON.stringify(definition.filters ?? {}, null, 2),
-					favorite: definition.is_favorite
-				});
-			}
-		} catch (error) {
-			setError(getApiErrorMessage(error, 'Unable to load report detail.'));
-		} finally {
-			detailLoading.set(false);
-		}
+	const refreshDetail = async () => {
+		await invalidateDetail();
 	};
 
-	const selectDefinition = async (definitionId: UUID) => {
+	const selectDefinition = (definitionId: UUID) => {
 		if (get(selectedDefinitionId) === definitionId) return;
 		selectedDefinitionId.set(definitionId);
-		await loadDetail(definitionId);
 	};
 
 	const toggleSelection = (definitionId: UUID) => {
@@ -278,7 +325,15 @@ export function createReportsLogic() {
 	};
 
 	const openEditDefinition = () => {
-		if (!get(detail)?.definition) return;
+		const currentDetail = get(detail);
+		if (!currentDetail?.definition) return;
+		definitionForm.set({
+			name: currentDetail.definition.name,
+			description: currentDetail.definition.description ?? '',
+			sectionsText: JSON.stringify(currentDetail.definition.sections ?? {}, null, 2),
+			filtersText: JSON.stringify(currentDetail.definition.filters ?? {}, null, 2),
+			favorite: currentDetail.definition.is_favorite
+		});
 		definitionFormMode.set('edit');
 		showDefinitionForm.set(true);
 	};
@@ -294,8 +349,9 @@ export function createReportsLogic() {
 		const sections = parseJsonField(form.sectionsText, 'Sections');
 		const reportFilters = parseJsonField(form.filtersText, 'Filters');
 		try {
+			errorMessage.set(null);
 			if (get(definitionFormMode) === 'create') {
-				const created = await createReportDefinition({
+				const created = await get(createDefinitionMutation).mutateAsync({
 					name: form.name,
 					description: form.description,
 					sections,
@@ -304,21 +360,25 @@ export function createReportsLogic() {
 				});
 				toastSuccess('Report definition created.');
 				closeDefinitionForm();
+				appliedFilters.set({ ...get(filters) });
 				await loadDefinitions();
 				await selectDefinition(created.id);
 			} else if (get(definitionFormMode) === 'edit' && get(selectedDefinitionId)) {
 				const definitionId = get(selectedDefinitionId)!;
-				await updateReportDefinition(definitionId, {
-					name: form.name,
-					description: form.description,
-					sections,
-					filters: reportFilters,
-					favorite: form.favorite
+				await get(updateDefinitionMutation).mutateAsync({
+					definitionId,
+					payload: {
+						name: form.name,
+						description: form.description,
+						sections,
+						filters: reportFilters,
+						favorite: form.favorite
+					}
 				});
 				toastSuccess('Report definition updated.');
 				closeDefinitionForm();
-				await loadDefinitions();
-				await loadDetail(definitionId);
+				await invalidateDefinitions();
+				await refreshDetail();
 			}
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Unable to save report definition.'));
@@ -331,25 +391,26 @@ export function createReportsLogic() {
 		const ids = Array.from(getSelectedIds());
 		if (ids.length === 0) {
 			toastInfo('Select at least one definition.');
-		 return;
+			return;
 		}
 		try {
+			errorMessage.set(null);
 			if (action === 'archive') {
-				await archiveReportDefinitions(ids);
+				await get(archiveDefinitionsMutation).mutateAsync(ids);
 				toastSuccess('Definitions archived.');
 			} else if (action === 'restore') {
-				await restoreReportDefinitions(ids);
+				await get(restoreDefinitionsMutation).mutateAsync(ids);
 				toastSuccess('Definitions restored.');
 			} else {
-				await deleteReportDefinitions(ids);
+				await get(deleteDefinitionsMutation).mutateAsync(ids);
 				toastSuccess('Definitions deleted.');
 			}
-			await loadDefinitions();
+			await invalidateDefinitions();
 			const activeId = get(selectedDefinitionId);
 			if (activeId && ids.includes(activeId)) {
 				selectedDefinitionId.set(null);
-				detail.set(null);
-				runs.set([]);
+			} else if (activeId) {
+				await refreshDetail();
 			}
 			selectedIds.set(new Set());
 		} catch (error) {
@@ -366,11 +427,9 @@ export function createReportsLogic() {
 		try {
 			const metadataText = get(queueMetadataText);
 			const metadata = metadataText.trim() ? parseJsonField(metadataText, 'Metadata') : undefined;
-			await queueReportRuns(ids, metadata);
+			await get(queueRunsMutation).mutateAsync({ definitionIds: ids, metadata });
 			toastSuccess('Runs queued successfully.');
-			if (get(selectedDefinitionId)) {
-				await loadDetail(get(selectedDefinitionId)!);
-			}
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Unable to queue runs.'));
 		}
@@ -378,17 +437,19 @@ export function createReportsLogic() {
 
 	const toggleFavorite = async (definitionId: UUID, currentFavorite: boolean) => {
 		try {
-			await toggleReportFavorite(definitionId, !currentFavorite);
+			await get(toggleFavoriteMutation).mutateAsync({
+				definitionId,
+				favorite: !currentFavorite
+			});
 			toastInfo(!currentFavorite ? 'Marked as favorite.' : 'Removed from favorites.');
-			await loadDefinitions();
+			await invalidateDefinitions();
 			if (get(selectedDefinitionId) === definitionId) {
-				await loadDetail(definitionId);
+				await refreshDetail();
 			}
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Unable to update favorite.'));
 		}
 	};
-
 	const resetScheduleForm = () => {
 		scheduleForm.set(defaultScheduleForm());
 		scheduleFormMode.set('create');
@@ -426,28 +487,36 @@ export function createReportsLogic() {
 		const meta = form.metaText.trim() ? parseJsonField(form.metaText, 'Meta') : undefined;
 		try {
 			if (get(scheduleFormMode) === 'create') {
-				await createReportSchedule(definitionId, {
-					cron: form.cron,
-					frequency: form.frequency,
-					timezone: form.timezone,
-					nextRun: form.nextRun || undefined,
-					enabled: form.enabled,
-					meta
+				await get(createScheduleMutation).mutateAsync({
+					definitionId,
+					payload: {
+						cron: form.cron,
+						frequency: form.frequency,
+						timezone: form.timezone,
+						nextRun: form.nextRun || undefined,
+						enabled: form.enabled,
+						meta
+					}
 				});
 				toastSuccess('Schedule created.');
-			} else if (get(scheduleFormMode) === 'edit' && get(editingScheduleId)) {
-				await updateReportSchedule(get(editingScheduleId)!, {
-					cron: form.cron,
-					frequency: form.frequency,
-					timezone: form.timezone,
-					nextRun: form.nextRun || undefined,
-					enabled: form.enabled,
-					meta
+			} else if (get(scheduleFormMode) === 'edit') {
+				const scheduleId = get(editingScheduleId);
+				if (!scheduleId) return;
+				await get(updateScheduleMutation).mutateAsync({
+					scheduleId,
+					payload: {
+						cron: form.cron,
+						frequency: form.frequency,
+						timezone: form.timezone,
+						nextRun: form.nextRun || undefined,
+						enabled: form.enabled,
+						meta
+					}
 				});
 				toastSuccess('Schedule updated.');
 			}
 			closeScheduleForm();
-			await loadDetail(definitionId);
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Unable to save schedule.'));
 		}
@@ -455,11 +524,12 @@ export function createReportsLogic() {
 
 	const toggleScheduleEnabled = async (schedule: ReportSchedule) => {
 		try {
-			await toggleReportSchedule(schedule.id, !schedule.enabled);
+			await get(toggleScheduleMutation).mutateAsync({
+				scheduleId: schedule.id,
+				enabled: !schedule.enabled
+			});
 			toastSuccess('Schedule updated.');
-			if (get(selectedDefinitionId)) {
-				await loadDetail(get(selectedDefinitionId)!);
-			}
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Failed to toggle schedule.'));
 		}
@@ -467,11 +537,9 @@ export function createReportsLogic() {
 
 	const deleteSchedule = async (schedule: ReportSchedule) => {
 		try {
-			await deleteReportSchedule(schedule.id);
+			await get(deleteScheduleMutation).mutateAsync(schedule.id);
 			toastInfo('Schedule deleted.');
-			if (get(selectedDefinitionId)) {
-				await loadDetail(get(selectedDefinitionId)!);
-			}
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Failed to delete schedule.'));
 		}
@@ -512,24 +580,32 @@ export function createReportsLogic() {
 		const template = form.templateText.trim() ? parseJsonField(form.templateText, 'Template') : undefined;
 		try {
 			if (get(deliveryFormMode) === 'create') {
-				await createReportDelivery(definitionId, {
-					channel: form.channel,
-					target: form.target,
-					template,
-					enabled: form.enabled
+				await get(createDeliveryMutation).mutateAsync({
+					definitionId,
+					payload: {
+						channel: form.channel,
+						target: form.target,
+						template,
+						enabled: form.enabled
+					}
 				});
 				toastSuccess('Delivery created.');
-			} else if (get(deliveryFormMode) === 'edit' && get(editingDeliveryId)) {
-				await updateReportDelivery(get(editingDeliveryId)!, {
-					channel: form.channel,
-					target: form.target,
-					template,
-					enabled: form.enabled
+			} else if (get(deliveryFormMode) === 'edit') {
+				const deliveryId = get(editingDeliveryId);
+				if (!deliveryId) return;
+				await get(updateDeliveryMutation).mutateAsync({
+					deliveryId,
+					payload: {
+						channel: form.channel,
+						target: form.target,
+						template,
+						enabled: form.enabled
+					}
 				});
 				toastSuccess('Delivery updated.');
 			}
 			closeDeliveryForm();
-			await loadDetail(definitionId);
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Unable to save delivery.'));
 		}
@@ -537,11 +613,12 @@ export function createReportsLogic() {
 
 	const toggleDeliveryEnabled = async (delivery: ReportDelivery) => {
 		try {
-			await toggleReportDelivery(delivery.id, !delivery.enabled);
+			await get(toggleDeliveryMutation).mutateAsync({
+				deliveryId: delivery.id,
+				enabled: !delivery.enabled
+			});
 			toastSuccess('Delivery updated.');
-			if (get(selectedDefinitionId)) {
-				await loadDetail(get(selectedDefinitionId)!);
-			}
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Failed to toggle delivery.'));
 		}
@@ -549,11 +626,9 @@ export function createReportsLogic() {
 
 	const deleteDelivery = async (delivery: ReportDelivery) => {
 		try {
-			await deleteReportDelivery(delivery.id);
+			await get(deleteDeliveryMutation).mutateAsync(delivery.id);
 			toastInfo('Delivery deleted.');
-			if (get(selectedDefinitionId)) {
-				await loadDetail(get(selectedDefinitionId)!);
-			}
+			await refreshDetail();
 		} catch (error) {
 			setError(getApiErrorMessage(error, 'Failed to delete delivery.'));
 		}
@@ -584,6 +659,7 @@ export function createReportsLogic() {
 		updateDeliveryFormField,
 		updateQueueMetadata,
 		loadDefinitions,
+		refreshDetail,
 		selectDefinition,
 		toggleSelection,
 		toggleSelectAll,

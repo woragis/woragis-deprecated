@@ -45,7 +45,7 @@
 					value={queueMetadataText}
 					on:input={(event) => onMetadataChange((event.target as HTMLTextAreaElement).value)}
 					placeholder={metadataPlaceholder}
-				/>
+				></textarea>
 			</label>
 			<button
 				type="button"

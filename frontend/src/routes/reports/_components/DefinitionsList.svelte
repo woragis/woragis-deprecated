@@ -56,16 +56,27 @@
 							/>
 							<h3 class="text-sm font-semibold">{def.name}</h3>
 						</div>
-						<button
-							type="button"
-							class={`text-xs ${def.is_favorite ? 'text-amber-300' : 'text-slate-500 hover:text-slate-200'}`}
+						<span
+							role="button"
+							tabindex="0"
+							aria-pressed={def.is_favorite}
+							class={`cursor-pointer text-xs ${
+								def.is_favorite ? 'text-amber-300' : 'text-slate-500 hover:text-slate-200'
+							}`}
 							on:click={(event) => {
 								event.stopPropagation();
 								onToggleFavorite(def.id, def.is_favorite);
 							}}
+							on:keydown={(event) => {
+								if (event.key === 'Enter' || event.key === ' ') {
+									event.preventDefault();
+									event.stopPropagation();
+									onToggleFavorite(def.id, def.is_favorite);
+								}
+							}}
 						>
 							{def.is_favorite ? '★' : '☆'}
-						</button>
+						</span>
 					</div>
 					<p class="mt-1 line-clamp-2 text-xs text-slate-400">{def.description}</p>
 					<div class="mt-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-500">
