@@ -63,44 +63,66 @@ type IdeaCollaboratorDTO = {
 
 const DEFAULT_COLOR = '#2563eb';
 
-const mapIdea = (dto: IdeaDTO): Idea => ({
-	id: dto.ID,
-	user_id: dto.UserID,
-	title: dto.Title,
-	description: dto.Description,
-	pos_x: dto.PosX ?? 0,
-	pos_y: dto.PosY ?? 0,
-	color: dto.Color && dto.Color.trim().length > 0 ? dto.Color : DEFAULT_COLOR,
-	project_id: dto.ProjectID ?? null,
-	version: dto.Version ?? 1,
-	created_at: dto.CreatedAt,
-	updated_at: dto.UpdatedAt
+const pick = <T, K extends keyof T, F extends string>(
+	dto: T & Record<string, any>,
+	keys: (K | F)[]
+) => {
+	for (const key of keys) {
+		const value = dto[key as keyof typeof dto];
+		if (value !== undefined && value !== null) {
+			return value as T[K];
+		}
+	}
+	return undefined;
+};
+
+const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
+	const id = pick(dto, ['ID', 'id', 'Id']);
+	const userId = pick(dto, ['UserID', 'userId', 'UserId']);
+	const posX = pick(dto, ['PosX', 'posX']);
+	const posY = pick(dto, ['PosY', 'posY']);
+	const createdAt = pick(dto, ['CreatedAt', 'createdAt']);
+	const updatedAt = pick(dto, ['UpdatedAt', 'updatedAt']) ?? createdAt;
+
+	return {
+		id: id ?? crypto.randomUUID(),
+		user_id: userId ?? null,
+		title: dto.Title ?? dto.title ?? '',
+		description: dto.Description ?? dto.description,
+		pos_x: Number(posX ?? 0),
+		pos_y: Number(posY ?? 0),
+		color: (dto.Color ?? dto.color ?? DEFAULT_COLOR) || DEFAULT_COLOR,
+		project_id: dto.ProjectID ?? dto.projectId ?? null,
+		version: dto.Version ?? dto.version ?? 1,
+		created_at: (createdAt as string) ?? new Date().toISOString(),
+		updated_at: (updatedAt as string) ?? new Date().toISOString()
+	};
+};
+
+const mapLink = (dto: IdeaLinkDTO & Record<string, any>): IdeaLink => ({
+	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
+	user_id: pick(dto, ['UserID', 'userId']) ?? null,
+	source_idea_id: pick(dto, ['SourceIdeaID', 'sourceIdeaId']) ?? '',
+	target_idea_id: pick(dto, ['TargetIdeaID', 'targetIdeaId']) ?? '',
+	relation: dto.Relation ?? dto.relation ?? 'relates',
+	weight: dto.Weight ?? dto.weight ?? 1,
+	bidirectional: Boolean(dto.Bidirectional ?? dto.bidirectional),
+	created_at: (pick(dto, ['CreatedAt', 'createdAt']) as string) ?? new Date().toISOString()
 });
 
-const mapLink = (dto: IdeaLinkDTO): IdeaLink => ({
-	id: dto.ID,
-	user_id: dto.UserID,
-	source_idea_id: dto.SourceIdeaID,
-	target_idea_id: dto.TargetIdeaID,
-	relation: dto.Relation,
-	weight: dto.Weight ?? 1,
-	bidirectional: Boolean(dto.Bidirectional),
-	created_at: dto.CreatedAt
-});
-
-const mapVersion = (dto: IdeaVersionDTO): IdeaVersion => ({
-	id: dto.ID,
-	idea_id: dto.IdeaID,
-	user_id: dto.UserID,
-	editor_id: dto.EditorID,
-	version: dto.Version,
-	title: dto.Title,
-	description: dto.Description,
-	pos_x: dto.PosX ?? 0,
-	pos_y: dto.PosY ?? 0,
-	color: dto.Color ?? DEFAULT_COLOR,
-	change_type: dto.ChangeType,
-	created_at: dto.CreatedAt
+const mapVersion = (dto: IdeaVersionDTO & Record<string, any>): IdeaVersion => ({
+	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
+	idea_id: pick(dto, ['IdeaID', 'ideaId']) ?? '',
+	user_id: pick(dto, ['UserID', 'userId']) ?? '',
+	editor_id: pick(dto, ['EditorID', 'editorId']) ?? '',
+	version: dto.Version ?? dto.version ?? 1,
+	title: dto.Title ?? dto.title ?? '',
+	description: dto.Description ?? dto.description,
+	pos_x: Number(pick(dto, ['PosX', 'posX']) ?? 0),
+	pos_y: Number(pick(dto, ['PosY', 'posY']) ?? 0),
+	color: dto.Color ?? dto.color ?? DEFAULT_COLOR,
+	change_type: dto.ChangeType ?? dto.changeType ?? 'update',
+	created_at: (pick(dto, ['CreatedAt', 'createdAt']) as string) ?? new Date().toISOString()
 });
 
 const mapCollaborator = (dto: IdeaCollaboratorDTO): IdeaCollaborator => ({
