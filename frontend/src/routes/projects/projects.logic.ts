@@ -1,6 +1,6 @@
-import { onMount } from 'svelte';
-import { get, writable } from 'svelte/store';
-import { createQuery } from '@tanstack/svelte-query';
+import { onDestroy, onMount } from 'svelte';
+import { derived, get, writable } from 'svelte/store';
+import { useQueryClient } from '@tanstack/svelte-query';
 
 import { authStore } from '$lib';
 import type {
@@ -12,26 +12,26 @@ import type {
 	ProjectStatus,
 	UUID
 } from '$lib/api/types';
-import {
-	addMilestone,
-	bulkUpdateMilestones,
-	createDependency,
-	createKanbanCard,
-	createKanbanColumn,
-	createProject,
-	deleteDependency,
-	deleteKanbanCard,
-	deleteKanbanColumn,
-	duplicateProject,
-	getKanbanBoard,
-	listDependencies,
-	listMilestones,
-	listProjects,
-	moveKanbanCard,
-	updateProjectMetrics,
-	updateProjectStatus
-} from '$lib/api/projects';
 import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
+import {
+	useAddMilestoneMutation,
+	useBulkUpdateMilestonesMutation,
+	useCreateDependencyMutation,
+	useCreateKanbanCardMutation,
+	useCreateKanbanColumnMutation,
+	useCreateProjectMutation,
+	useDeleteDependencyMutation,
+	useDeleteKanbanCardMutation,
+	useDeleteKanbanColumnMutation,
+	useDuplicateProjectMutation,
+	useMoveKanbanCardMutation,
+	useProjectBoardQuery,
+	useProjectDependenciesQuery,
+	useProjectMilestonesQuery,
+	useProjectsListQuery,
+	useUpdateProjectMetricsMutation,
+	useUpdateProjectStatusMutation
+} from '@hooks/projects';
 
 export const statusOptions: ProjectStatus[] = ['idea', 'planning', 'executing', 'monitoring', 'completed'];
 
@@ -121,9 +121,16 @@ const defaultDuplicateForm = (): DuplicateFormState => ({
 
 type FormUpdater<T> = <K extends keyof T>(field: K, value: T[K]) => void;
 
+interface AuthState {
+	isAuthenticated: boolean;
+	userId: UUID | null;
+}
+
 export function createProjectsLogic() {
-	const isAuthenticated = writable(false);
-	const loading = writable(false);
+	const queryClient = useQueryClient();
+
+	const authStateStore = writable<AuthState>({ isAuthenticated: false, userId: null });
+	const isAuthenticated = derived(authStateStore, ($auth) => $auth.isAuthenticated);
 	const error = writable<string | null>(null);
 
 	const projects = writable<Project[]>([]);
@@ -139,124 +146,48 @@ export function createProjectsLogic() {
 	const dependencyForm = writable<DependencyFormState>(defaultDependencyForm());
 	const duplicateForm = writable<DuplicateFormState>(defaultDuplicateForm());
 
-	const boardQuery = createQuery<KanbanBoard>(() => ({
-		queryKey: ['projects', get(activeProject)?.id, 'board'],
-		queryFn: () => getKanbanBoard(get(activeProject)!.id),
-		enabled: false,
-		onSuccess(data) {
-			board.set(data);
-			error.set(null);
-		},
-		onError(err: unknown) {
-			error.set(err instanceof Error ? err.message : 'Unable to load kanban board');
-		}
-	}));
+	const activeProjectId = derived(activeProject, ($project) => $project?.id ?? null);
 
-	const milestonesQuery = createQuery<Milestone[]>(() => ({
-		queryKey: ['projects', get(activeProject)?.id, 'milestones'],
-		queryFn: () => listMilestones(get(activeProject)!.id),
-		enabled: false,
-		onSuccess(data) {
-			milestones.set(data);
-			error.set(null);
-		},
-		onError(err: unknown) {
-			error.set(err instanceof Error ? err.message : 'Unable to load milestones');
-		}
-	}));
+	const projectsQueryOptions = derived(authStateStore, ($auth) => ({ enabled: $auth.isAuthenticated }));
+	const detailQueryOptions = derived(authStateStore, ($auth) => ({ enabled: $auth.isAuthenticated }));
 
-	const dependenciesQuery = createQuery<ProjectDependency[]>(() => ({
-		queryKey: ['projects', get(activeProject)?.id, 'dependencies'],
-		queryFn: () => listDependencies(get(activeProject)!.id),
-		enabled: false,
-		onSuccess(data) {
-			dependencies.set(data);
-			error.set(null);
-		},
-		onError(err: unknown) {
-			error.set(err instanceof Error ? err.message : 'Unable to load dependencies');
-		}
-	}));
+	const projectsQuery = useProjectsListQuery(projectsQueryOptions);
+	const boardQuery = useProjectBoardQuery(activeProjectId, detailQueryOptions);
+	const milestonesQuery = useProjectMilestonesQuery(activeProjectId, detailQueryOptions);
+	const dependenciesQuery = useProjectDependenciesQuery(activeProjectId, detailQueryOptions);
 
-	const projectsQuery = createQuery<Project[]>(() => ({
-		queryKey: ['projects', 'list'],
-		queryFn: listProjects,
-		enabled: false,
-		onSuccess(data) {
-			projects.set(data);
-			error.set(null);
+	const invalidateProjectsList = () => queryClient.invalidateQueries({ queryKey: ['projects', 'list'] });
+	const invalidateBoard = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProject)?.id ?? null;
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'board', targetId] });
+	};
+	const invalidateMilestones = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProject)?.id ?? null;
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'milestones', targetId] });
+	};
+	const invalidateDependencies = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProject)?.id ?? null;
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'dependencies', targetId] });
+	};
 
-			if (data.length === 0) {
-				activeProject.set(null);
-				board.set(null);
-				milestones.set([]);
-				dependencies.set([]);
-				return;
-			}
+	const createProjectMutation = useCreateProjectMutation();
+	const createColumnMutation = useCreateKanbanColumnMutation();
+	const createCardMutation = useCreateKanbanCardMutation();
+	const moveCardMutation = useMoveKanbanCardMutation();
+	const deleteCardMutation = useDeleteKanbanCardMutation();
+	const deleteColumnMutation = useDeleteKanbanColumnMutation();
+	const addMilestoneMutation = useAddMilestoneMutation();
+	const bulkUpdateMilestonesMutation = useBulkUpdateMilestonesMutation();
+	const createDependencyMutation = useCreateDependencyMutation();
+	const deleteDependencyMutation = useDeleteDependencyMutation();
+	const duplicateProjectMutation = useDuplicateProjectMutation();
+	const updateStatusMutation = useUpdateProjectStatusMutation();
+	const updateMetricsMutation = useUpdateProjectMetricsMutation();
 
-			const currentActive = get(activeProject);
-			if (!currentActive) {
-				activeProject.set(data[0]);
-			} else {
-				const existing = data.find((project) => project.id === currentActive.id);
-				activeProject.set(existing ?? data[0]);
-			}
-
-			void refetchProjectDetails();
-		},
-		onError(err: unknown) {
-			error.set(err instanceof Error ? err.message : 'Unable to load projects');
-		}
-	}));
-
-	async function refetchProjectDetails() {
-		if (!get(isAuthenticated) || !get(activeProject)) return;
-		await Promise.all([boardQuery.refetch(), milestonesQuery.refetch(), dependenciesQuery.refetch()]);
-	}
-
-	async function loadProjects() {
-		if (!get(isAuthenticated)) {
-			const message = 'You must be signed in to load projects.';
-			error.set(message);
-			toastError(message);
-			return;
-		}
-
-		loading.set(true);
-		try {
-			await projectsQuery.refetch();
-		} catch (err) {
-			const message = getApiErrorMessage(err, 'Unable to load projects.');
-			error.set(message);
-			toastError(message);
-		} finally {
-			loading.set(false);
-		}
-	}
-
-	async function selectProject(project: Project) {
-		activeProject.set(project);
-		await refetchProjectDetails();
-	}
-
-	onMount(() => {
-		const unsubscribe = authStore.subscribe(async (state) => {
-			isAuthenticated.set(state.isAuthenticated);
-
-			if (!state.isAuthenticated) {
-				resetStateForUnauthenticated();
-				return;
-			}
-
-			await loadProjects();
-		});
-
-		return () => {
-			unsubscribe();
-		};
-	});
-
-	function resetStateForUnauthenticated() {
+	const resetStateForUnauthenticated = () => {
 		projects.set([]);
 		activeProject.set(null);
 		board.set(null);
@@ -268,7 +199,118 @@ export function createProjectsLogic() {
 		milestoneForm.set(defaultMilestoneForm());
 		dependencyForm.set(defaultDependencyForm());
 		duplicateForm.set(defaultDuplicateForm());
-	}
+		error.set(null);
+		queryClient.removeQueries({ queryKey: ['projects'] });
+	};
+
+	const refetchProjectDetails = async () => {
+		const auth = get(authStateStore);
+		const current = get(activeProject);
+		if (!auth.isAuthenticated || !current) return;
+		await Promise.all([invalidateBoard(current.id), invalidateMilestones(current.id), invalidateDependencies(current.id)]);
+	};
+
+	const projectsQueryUnsubscribe = projectsQuery.subscribe((result) => {
+		if (result.data) {
+			const currentActive = get(activeProject);
+			const data = result.data;
+			const nextActive =
+				currentActive && data.length
+					? data.find((project) => project.id === currentActive.id) ?? data[0]
+					: data[0] ?? null;
+			projects.set(data);
+			activeProject.set(nextActive ?? null);
+			if (nextActive) {
+				void refetchProjectDetails();
+			} else {
+				board.set(null);
+				milestones.set([]);
+				dependencies.set([]);
+			}
+			error.set(null);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load projects.');
+		}
+	});
+
+	const boardQueryUnsubscribe = boardQuery.subscribe((result) => {
+		if (result.data) {
+			board.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load kanban board.');
+		}
+	});
+
+	const milestonesQueryUnsubscribe = milestonesQuery.subscribe((result) => {
+		if (result.data) {
+			milestones.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load milestones.');
+		}
+	});
+
+	const dependenciesQueryUnsubscribe = dependenciesQuery.subscribe((result) => {
+		if (result.data) {
+			dependencies.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load dependencies.');
+		}
+	});
+
+	const loadProjects = async () => {
+		const auth = get(authStateStore);
+		if (!auth.isAuthenticated) {
+			const message = 'You must be signed in to load projects.';
+			error.set(message);
+			toastError(message);
+			return;
+		}
+
+		try {
+			await invalidateProjectsList();
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to load projects.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const selectProject = async (project: Project) => {
+		activeProject.set(project);
+		await refetchProjectDetails();
+	};
+
+	onMount(() => {
+		const unsubscribeAuth = authStore.subscribe((state) => {
+			const next: AuthState = {
+				isAuthenticated: state.isAuthenticated,
+				userId: state.user?.id ?? null
+			};
+			authStateStore.set(next);
+
+			if (!next.isAuthenticated) {
+				resetStateForUnauthenticated();
+				return;
+			}
+
+			void loadProjects();
+		});
+
+		return () => {
+			unsubscribeAuth();
+		};
+	});
+
+	onDestroy(() => {
+		projectsQueryUnsubscribe();
+		boardQueryUnsubscribe();
+		milestonesQueryUnsubscribe();
+		dependenciesQueryUnsubscribe();
+	});
 
 	const updateProjectFormField: FormUpdater<ProjectFormState> = (field, value) => {
 		projectForm.update((current) => ({ ...current, [field]: value }));
@@ -294,8 +336,9 @@ export function createProjectsLogic() {
 		duplicateForm.update((current) => ({ ...current, [field]: value }));
 	};
 
-	async function handleCreateProject() {
-		if (!get(isAuthenticated)) {
+	const handleCreateProject = async () => {
+		const auth = get(authStateStore);
+		if (!auth.isAuthenticated) {
 			const message = 'You must be signed in to create projects.';
 			error.set(message);
 			toastError(message);
@@ -310,34 +353,28 @@ export function createProjectsLogic() {
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const created = await createProject({
-				name: form.name,
+			const newProject = await get(createProjectMutation).mutateAsync({
+				name: form.name.trim(),
 				description: form.description,
 				status: form.status,
 				healthScore: form.healthScore
 			});
 			projectForm.set(defaultProjectForm());
-			await projectsQuery.refetch();
-			const currentProjects = get(projects);
-			const nextActive = currentProjects.find((project) => project.id === created.id) ?? created;
-			await selectProject(nextActive);
+			await invalidateProjectsList();
+			await selectProject(newProject);
 			toastSuccess('Project created.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to create project.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleCreateColumn() {
-		if (!get(isAuthenticated) || !get(activeProject)) {
-			const message = 'Select a project before adding columns.';
-			error.set(message);
-			toastError(message);
+	const handleCreateColumn = async () => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before adding columns.');
 			return;
 		}
 
@@ -349,31 +386,29 @@ export function createProjectsLogic() {
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			const updatedBoard = await createKanbanColumn(projectId, {
-				name: form.name,
-				position: form.position,
-				wipLimit: form.wipLimit
+			await get(createColumnMutation).mutateAsync({
+				projectId: project.id,
+				payload: {
+					name: form.name,
+					position: form.position,
+					wipLimit: form.wipLimit
+				}
 			});
-			board.set(updatedBoard);
 			columnForm.set(defaultColumnForm());
+			await invalidateBoard();
 			toastSuccess('Column created.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to create column.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleCreateCard() {
-		if (!get(isAuthenticated) || !get(activeProject)) {
-			const message = 'Select a project before adding cards.';
-			error.set(message);
-			toastError(message);
+	const handleCreateCard = async () => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before adding cards.');
 			return;
 		}
 
@@ -385,93 +420,89 @@ export function createProjectsLogic() {
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			const updatedBoard = await createKanbanCard(projectId, {
-				columnId: form.columnId,
-				title: form.title,
-				description: form.description,
-				dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
-				milestoneId: form.milestoneId || undefined,
-				position: form.position
+			await get(createCardMutation).mutateAsync({
+				projectId: project.id,
+				payload: {
+					columnId: form.columnId,
+					title: form.title,
+					description: form.description,
+					dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
+					milestoneId: form.milestoneId || undefined,
+					position: form.position
+				}
 			});
-			board.set(updatedBoard);
 			cardForm.set(defaultCardForm());
+			await invalidateBoard();
 			toastSuccess('Card created.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to create card.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleMoveCard(card: KanbanCard, targetColumnId: UUID) {
-		if (!get(isAuthenticated) || !get(activeProject)) {
+	const handleMoveCard = async (card: KanbanCard, targetColumnId: UUID) => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Select a project before moving cards.');
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			const updatedBoard = await moveKanbanCard(projectId, card.id, targetColumnId, 0);
-			board.set(updatedBoard);
+			await get(moveCardMutation).mutateAsync({
+				projectId: project.id,
+				cardId: card.id,
+				targetColumnId,
+				targetPosition: 0
+			});
+			await invalidateBoard();
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to move card.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleDeleteCard(card: KanbanCard) {
-		if (!get(isAuthenticated) || !get(activeProject)) {
+	const handleDeleteCard = async (card: KanbanCard) => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Select a project before deleting cards.');
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			const updatedBoard = await deleteKanbanCard(projectId, card.id);
-			board.set(updatedBoard);
+			await get(deleteCardMutation).mutateAsync({ projectId: project.id, cardId: card.id });
+			await invalidateBoard();
 			toastInfo('Card deleted.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to delete card.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleDeleteColumn(columnId: UUID) {
-		if (!get(isAuthenticated) || !get(activeProject)) {
+	const handleDeleteColumn = async (columnId: UUID) => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Select a project before deleting columns.');
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			const updatedBoard = await deleteKanbanColumn(projectId, columnId);
-			board.set(updatedBoard);
+			await get(deleteColumnMutation).mutateAsync({ projectId: project.id, columnId });
+			await invalidateBoard();
 			toastInfo('Column deleted.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to delete column.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleAddMilestone() {
-		if (!get(isAuthenticated) || !get(activeProject)) {
+	const handleAddMilestone = async () => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Select a project before adding milestones.');
 			return;
 		}
@@ -484,50 +515,49 @@ export function createProjectsLogic() {
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			await addMilestone(projectId, {
-				title: form.title,
-				description: form.description,
-				dueDate: new Date(form.dueDate).toISOString()
+			await get(addMilestoneMutation).mutateAsync({
+				projectId: project.id,
+				payload: {
+					title: form.title,
+					description: form.description,
+					dueDate: new Date(form.dueDate).toISOString()
+				}
 			});
 			milestoneForm.set(defaultMilestoneForm());
-			await milestonesQuery.refetch();
+			await invalidateMilestones();
 			toastSuccess('Milestone added.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to add milestone.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleToggleMilestone(milestone: Milestone) {
-		if (!get(isAuthenticated)) {
+	const handleToggleMilestone = async (milestone: Milestone) => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Sign in to update milestones.');
 			return;
 		}
 
-		loading.set(true);
 		try {
-			await bulkUpdateMilestones(milestone.project_id, [
-				{ milestoneId: milestone.id, completed: !milestone.completed }
-			]);
-			await milestonesQuery.refetch();
+			await get(bulkUpdateMilestonesMutation).mutateAsync({
+				projectId: project.id,
+				updates: [{ milestoneId: milestone.id, completed: !milestone.completed }]
+			});
+			await invalidateMilestones();
 			toastInfo('Milestone updated.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to update milestone.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleCreateDependency() {
-		if (!get(isAuthenticated) || !get(activeProject)) {
+	const handleCreateDependency = async () => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Select a project before creating dependencies.');
 			return;
 		}
@@ -540,45 +570,45 @@ export function createProjectsLogic() {
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const projectId = get(activeProject)!.id;
-			await createDependency(projectId, {
-				dependsOnProjectId: form.dependsOnProjectId,
-				type: form.type
+			await get(createDependencyMutation).mutateAsync({
+				projectId: project.id,
+				payload: {
+					dependsOnProjectId: form.dependsOnProjectId,
+					type: form.type
+				}
 			});
 			dependencyForm.set(defaultDependencyForm());
-			await dependenciesQuery.refetch();
+			await invalidateDependencies();
 			toastSuccess('Dependency created.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to create dependency.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
-	async function handleDeleteDependency(dependencyId: UUID) {
-		if (!get(isAuthenticated) || !get(activeProject)) {
+	const handleDeleteDependency = async (dependencyId: UUID) => {
+		const project = get(activeProject);
+		if (!project) {
 			toastError('Select a project before deleting dependencies.');
 			return;
 		}
 
 		try {
-			const projectId = get(activeProject)!.id;
-			await deleteDependency(projectId, dependencyId);
-			await dependenciesQuery.refetch();
+			await get(deleteDependencyMutation).mutateAsync({ projectId: project.id, dependencyId });
+			await invalidateDependencies();
 			toastInfo('Dependency removed.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to delete dependency.');
 			error.set(message);
 			toastError(message);
 		}
-	}
+	};
 
-	async function handleDuplicateProject(templateId: UUID) {
-		if (!get(isAuthenticated)) {
+	const handleDuplicateProject = async (templateId: UUID) => {
+		const auth = get(authStateStore);
+		if (!auth.isAuthenticated) {
 			toastError('Sign in to duplicate projects.');
 			return;
 		}
@@ -591,76 +621,76 @@ export function createProjectsLogic() {
 			return;
 		}
 
-		loading.set(true);
 		try {
-			const duplicate = await duplicateProject(templateId, {
-				name: form.name,
-				description: form.description,
-				status: form.status,
-				copyBoard: form.copyBoard,
-				copyMilestones: form.copyMilestones,
-				copyDependencies: form.copyDependencies
+			const duplicate = await get(duplicateProjectMutation).mutateAsync({
+				templateProjectId: templateId,
+				payload: {
+					name: form.name,
+					description: form.description,
+					status: form.status,
+					copyBoard: form.copyBoard,
+					copyMilestones: form.copyMilestones,
+					copyDependencies: form.copyDependencies
+				}
 			});
 			duplicateForm.set(defaultDuplicateForm());
-			await loadProjects();
+			await invalidateProjectsList();
 			await selectProject(duplicate);
 			toastSuccess('Project duplicated.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to duplicate project.');
 			error.set(message);
 			toastError(message);
-		} finally {
-			loading.set(false);
 		}
-	}
+	};
 
 	const updateActiveProjectField = <K extends keyof Project>(field: K, value: Project[K]) => {
 		activeProject.update((project) => (project ? { ...project, [field]: value } : project));
 	};
 
-	async function saveProjectStatus() {
+	const saveProjectStatus = async () => {
 		const project = get(activeProject);
 		if (!project) return;
 
 		try {
-			await updateProjectStatus(project.id, project.status);
-			await loadProjects();
+			await get(updateStatusMutation).mutateAsync({ projectId: project.id, status: project.status });
+			await invalidateProjectsList();
 			toastSuccess('Status saved.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to save status.');
 			error.set(message);
 			toastError(message);
 		}
-	}
+	};
 
-	async function saveProjectMetrics() {
+	const saveProjectMetrics = async () => {
 		const project = get(activeProject);
 		if (!project) return;
 
 		try {
-			await updateProjectMetrics(project.id, {
-				healthScore: project.health_score,
-				mrr: project.mrr,
-				cac: project.cac,
-				ltv: project.ltv,
-				churnRate: project.churn_rate
+			await get(updateMetricsMutation).mutateAsync({
+				projectId: project.id,
+				payload: {
+					healthScore: project.health_score,
+					mrr: project.mrr,
+					cac: project.cac,
+					ltv: project.ltv,
+					churnRate: project.churn_rate
+				}
 			});
-			await loadProjects();
+			await invalidateProjectsList();
 			toastSuccess('Metrics saved.');
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to save metrics.');
 			error.set(message);
 			toastError(message);
 		}
-	}
+	};
 
-	function getOtherProjects(projectId?: UUID | null) {
-		return get(projects).filter((project) => project.id !== projectId);
-	}
+	const getOtherProjects = (projectId?: UUID | null) => get(projects).filter((project) => project.id !== projectId);
 
 	return {
 		isAuthenticated,
-		loading,
 		error,
 		projects,
 		activeProject,
