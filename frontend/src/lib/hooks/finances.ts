@@ -1,43 +1,68 @@
 import { createMutation, createQuery } from '@tanstack/svelte-query';
+import { derived, type Readable } from 'svelte/store';
 
 import { financesApi } from '$lib/api/finances';
 import type { Transaction, TransactionSummary, UUID } from '$lib/api/types';
 
-export interface FinanceSummaryOptions {
+type MaybeReadable<T> = T | Readable<T>;
+
+const isReadable = <T>(value: MaybeReadable<T>): value is Readable<T> =>
+	typeof value === 'object' && value !== null && typeof (value as Readable<T>).subscribe === 'function';
+
+interface FinanceSummaryQueryArgs {
+	userId: string | null;
 	enabled?: boolean;
 }
 
-export const useFinanceSummaryQuery = (
-	userId: string | null,
-	options: FinanceSummaryOptions = {}
-) =>
-	createQuery<TransactionSummary>({
-		queryKey: ['finances', 'summary', userId],
-		queryFn: () => financesApi.fetchSummary(),
-		enabled: Boolean(userId) && (options.enabled ?? true)
-	});
+const createSummaryQueryOptions = (args: FinanceSummaryQueryArgs) => ({
+	queryKey: ['finances', 'summary', args.userId],
+	queryFn: () => financesApi.fetchSummary(),
+	enabled: Boolean(args.userId) && (args.enabled ?? true)
+});
 
-export interface FinanceTransactionsOptions {
+export const useFinanceSummaryQuery = (source: MaybeReadable<FinanceSummaryQueryArgs>) => {
+	if (isReadable(source)) {
+		const optionsStore = derived(source, ($args) => createSummaryQueryOptions($args));
+		return createQuery<TransactionSummary>(optionsStore);
+	}
+
+	return createQuery<TransactionSummary>(createSummaryQueryOptions(source));
+};
+
+interface FinanceTransactionsQueryArgs {
+	userId: string | null;
 	search?: string;
 	includeArchived?: boolean;
 	enabled?: boolean;
 }
 
-export const useFinanceTransactionsQuery = (
-	userId: string | null,
-	options: FinanceTransactionsOptions = {}
-) => {
+const createTransactionsQueryOptions = (args: FinanceTransactionsQueryArgs) => {
 	const filters = {
-		search: options.search ?? '',
-		includeArchived: options.includeArchived ?? false
+		search: args.search ?? '',
+		includeArchived: args.includeArchived ?? false
 	};
 
-	return createQuery<Transaction[]>({
-		queryKey: ['finances', 'transactions', { userId, ...filters }],
+	return {
+		queryKey: [
+			'finances',
+			'transactions',
+			args.userId,
+			filters.search,
+			filters.includeArchived
+		],
 		queryFn: () => financesApi.fetchTransactions(filters),
-		enabled: Boolean(userId) && (options.enabled ?? true),
-		placeholderData: (previous) => previous ?? []
-	});
+		enabled: Boolean(args.userId) && (args.enabled ?? true),
+		placeholderData: (previous: Transaction[] | undefined) => previous ?? []
+	};
+};
+
+export const useFinanceTransactionsQuery = (source: MaybeReadable<FinanceTransactionsQueryArgs>) => {
+	if (isReadable(source)) {
+		const optionsStore = derived(source, ($args) => createTransactionsQueryOptions($args));
+		return createQuery<Transaction[]>(optionsStore);
+	}
+
+	return createQuery<Transaction[]>(createTransactionsQueryOptions(source));
 };
 
 export const useCreateTransactionMutation = () =>

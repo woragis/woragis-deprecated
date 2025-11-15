@@ -186,7 +186,7 @@ export function createFinancesLogic() {
 		actionError.set(null);
 
 		try {
-			await createTransactionMutation.mutateAsync({
+			await get(createTransactionMutation).mutateAsync({
 				type: currentForm.type,
 				category: currentForm.category,
 				description: currentForm.description,
@@ -222,11 +222,11 @@ export function createFinancesLogic() {
 
 		try {
 			if (action === 'archive') {
-				await toggleArchivedMutation.mutateAsync({ id: transaction.id, value });
+				await get(toggleArchivedMutation).mutateAsync({ id: transaction.id, value });
 			} else if (action === 'recurring') {
-				await toggleRecurringMutation.mutateAsync({ id: transaction.id, value });
+				await get(toggleRecurringMutation).mutateAsync({ id: transaction.id, value });
 			} else {
-				await toggleEssentialMutation.mutateAsync({ id: transaction.id, value });
+				await get(toggleEssentialMutation).mutateAsync({ id: transaction.id, value });
 			}
 
 			await invalidateFinances();
@@ -262,7 +262,7 @@ export function createFinancesLogic() {
 		actionError.set(null);
 
 		try {
-			await deleteTransactionsMutation.mutateAsync(currentSelection);
+			await get(deleteTransactionsMutation).mutateAsync(currentSelection);
 			await invalidateFinances();
 			toastSuccess('Selected transactions deleted.');
 		} catch (error) {
