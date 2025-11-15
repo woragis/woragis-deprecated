@@ -1,7 +1,6 @@
 package projects
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -32,10 +31,10 @@ const (
 // Project captures high-level roadmap metadata.
 type Project struct {
 	ID          uuid.UUID     `gorm:"column:id;type:uuid;primaryKey" json:"id"`
-	UserID      uuid.UUID     `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	UserID      uuid.UUID     `gorm:"column:user_id;type:uuid;index;not null;uniqueIndex:idx_projects_user_slug" json:"userId"`
 	Name        string        `gorm:"column:name;size:120;not null" json:"name"`
 	Description string        `gorm:"column:description;size:255" json:"description"`
-	Slug        string        `gorm:"column:slug;size:160;uniqueIndex;not null" json:"slug"`
+	Slug        string        `gorm:"column:slug;size:160;not null;uniqueIndex:idx_projects_user_slug" json:"slug"`
 	Status      ProjectStatus `gorm:"column:status;type:varchar(32);not null" json:"status"`
 	HealthScore int           `gorm:"column:health_score;not null" json:"healthScore"`
 	MRR         float64       `gorm:"column:mrr;default:0" json:"mrr"`
@@ -74,7 +73,7 @@ func NewProject(userID uuid.UUID, name, description string, status ProjectStatus
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
-	project.Slug = generateProjectSlug(project.Name, project.ID)
+	project.Slug = generateProjectSlug(project.Name)
 
 	return project, project.Validate()
 }
@@ -120,7 +119,7 @@ func (p *Project) Validate() error {
 
 var slugSanitizer = regexp.MustCompile(`[^a-z0-9]+`)
 
-func generateProjectSlug(name string, id uuid.UUID) string {
+func generateProjectSlug(name string) string {
 	slug := strings.ToLower(strings.TrimSpace(name))
 	slug = slugSanitizer.ReplaceAllString(slug, "-")
 	slug = strings.Trim(slug, "-")

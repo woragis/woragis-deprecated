@@ -15,6 +15,7 @@ type Repository interface {
 	GetProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*Project, error)
 	GetProjectBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Project, error)
 	SearchProjectsBySlug(ctx context.Context, slug string, userID uuid.UUID) ([]Project, error)
+	IsProjectSlugTaken(ctx context.Context, userID uuid.UUID, slug string, excludeID uuid.UUID) (bool, error)
 	ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error)
 
 	CreateMilestone(ctx context.Context, milestone *Milestone) error
@@ -117,6 +118,21 @@ func (r *gormRepository) SearchProjectsBySlug(ctx context.Context, slug string, 
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return projects, nil
+}
+
+func (r *gormRepository) IsProjectSlugTaken(ctx context.Context, userID uuid.UUID, slug string, excludeID uuid.UUID) (bool, error) {
+	var count int64
+	query := r.db.WithContext(ctx).
+		Model(&Project{}).
+		Where("user_id = ? AND slug = ?", userID, slug)
+	if excludeID != uuid.Nil {
+		query = query.Where("id <> ?", excludeID)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return false, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return count > 0, nil
 }
 
 func (r *gormRepository) ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error) {

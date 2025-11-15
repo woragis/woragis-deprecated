@@ -2,6 +2,7 @@ package ideas
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -116,6 +117,10 @@ type CollaboratorRequest struct {
 func (s *Service) CreateIdea(ctx context.Context, req CreateIdeaRequest) (*Idea, error) {
 	idea, err := NewIdea(req.UserID, req.Title, req.Description, req.PosX, req.PosY, req.Color, req.ProjectID)
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.assignIdeaSlug(ctx, idea); err != nil {
 		return nil, err
 	}
 
@@ -475,14 +480,47 @@ func (s *Service) recordVersion(ctx context.Context, idea *Idea, editorID uuid.U
 	}
 }
 
+func (s *Service) assignIdeaSlug(ctx context.Context, idea *Idea) (bool, error) {
+	if idea == nil {
+		return false, NewDomainError(ErrCodeInvalidPayload, ErrNilIdea)
+	}
+
+	base := strings.TrimSpace(idea.Slug)
+	if base == "" {
+		base = generateIdeaSlug(idea.Title)
+	}
+
+	slug := base
+	for attempt := 0; attempt < 50; attempt++ {
+		taken, err := s.repo.IsIdeaSlugTaken(ctx, idea.UserID, slug, idea.ID)
+		if err != nil {
+			return false, err
+		}
+		if !taken {
+			changed := idea.Slug != slug
+			idea.Slug = slug
+			return changed, nil
+		}
+		slug = fmt.Sprintf("%s-%d", base, attempt+2)
+	}
+
+	return false, NewDomainError(ErrCodeRepositoryFailure, "ideas: unable to generate unique slug")
+}
+
 func (s *Service) ensureIdeaSlug(ctx context.Context, idea *Idea) {
 	if idea == nil {
 		return
 	}
-	if strings.TrimSpace(idea.Slug) != "" {
+	updated, err := s.assignIdeaSlug(ctx, idea)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("ideas: unable to ensure slug", slog.Any("error", err), slog.String("idea_id", idea.ID.String()))
+		}
 		return
 	}
-	idea.Slug = generateIdeaSlug(idea.Title, idea.ID)
+	if !updated {
+		return
+	}
 	if err := s.repo.UpdateIdea(ctx, idea); err != nil && s.logger != nil {
 		s.logger.Warn("ideas: unable to backfill slug", slog.Any("error", err), slog.String("idea_id", idea.ID.String()))
 	}

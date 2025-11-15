@@ -17,6 +17,7 @@ type Repository interface {
 	GetIdea(ctx context.Context, id, userID uuid.UUID) (*Idea, error)
 	GetIdeaByID(ctx context.Context, id uuid.UUID) (*Idea, error)
 	GetIdeaBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Idea, error)
+	IsIdeaSlugTaken(ctx context.Context, userID uuid.UUID, slug string, excludeID uuid.UUID) (bool, error)
 	ListIdeas(ctx context.Context, userID uuid.UUID) ([]Idea, error)
 	BulkMoveIdeas(ctx context.Context, userID uuid.UUID, updates []IdeaPositionUpdate) error
 	BulkUpdateDetails(ctx context.Context, userID uuid.UUID, updates []IdeaDetailUpdate) error
@@ -100,6 +101,22 @@ func (r *gormRepository) GetIdeaBySlug(ctx context.Context, slug string, userID 
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return &idea, nil
+}
+
+func (r *gormRepository) IsIdeaSlugTaken(ctx context.Context, userID uuid.UUID, slug string, excludeID uuid.UUID) (bool, error) {
+	var count int64
+	query := r.db.WithContext(ctx).
+		Model(&Idea{}).
+		Where("user_id = ? AND slug = ?", userID, slug)
+	if excludeID != uuid.Nil {
+		query = query.Where("id <> ?", excludeID)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return false, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return count > 0, nil
 }
 
 func (r *gormRepository) ListIdeas(ctx context.Context, userID uuid.UUID) ([]Idea, error) {

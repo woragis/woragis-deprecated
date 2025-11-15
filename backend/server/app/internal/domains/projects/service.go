@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sort"
 	"strings"
@@ -228,6 +229,10 @@ func (s *service) CreateProject(ctx context.Context, req CreateProjectRequest) (
 		return nil, err
 	}
 
+	if err := s.assignProjectSlug(ctx, project); err != nil {
+		return nil, err
+	}
+
 	if err := s.repo.CreateProject(ctx, project); err != nil {
 		return nil, err
 	}
@@ -287,6 +292,32 @@ func (s *service) SearchProjectsBySlug(ctx context.Context, userID uuid.UUID, sl
 		return []Project{}, nil
 	}
 	return s.repo.SearchProjectsBySlug(ctx, slug, userID)
+}
+
+func (s *service) assignProjectSlug(ctx context.Context, project *Project) error {
+	if project == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilProject)
+	}
+
+	base := strings.TrimSpace(project.Slug)
+	if base == "" {
+		base = generateProjectSlug(project.Name)
+	}
+
+	slug := base
+	for attempt := 0; attempt < 50; attempt++ {
+		taken, err := s.repo.IsProjectSlugTaken(ctx, project.UserID, slug, project.ID)
+		if err != nil {
+			return err
+		}
+		if !taken {
+			project.Slug = slug
+			return nil
+		}
+		slug = fmt.Sprintf("%s-%d", base, attempt+2)
+	}
+
+	return NewDomainError(ErrCodeRepositoryFailure, "projects: unable to generate unique slug")
 }
 
 // Milestones
@@ -746,6 +777,10 @@ func (s *service) DuplicateProject(ctx context.Context, req DuplicateProjectRequ
 
 	project, err := NewProject(template.UserID, name, description, status, health, mrr, cac, ltv, churn)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := s.assignProjectSlug(ctx, project); err != nil {
 		return nil, err
 	}
 
