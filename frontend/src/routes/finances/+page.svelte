@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createFinancesLogic, numberFormatter } from './finances.logic
+	import { createFinancesLogic, numberFormatter } from './finances.logic';
 	import type { Transaction, TransactionSummary } from '$lib/api/types';
 
 	import ActionError from './_components/ActionError.svelte';

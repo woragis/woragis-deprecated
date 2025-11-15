@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Transaction, UUID } from '$lib/api/types';
-	import type { ToggleAction } from '../finances.logic
+	import type { ToggleAction } from '../finances.logic';
 
 	export let transactions: Transaction[] = [];
 	export let isFetching = false;

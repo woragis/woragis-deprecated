@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TransactionFormState } from '../finances.logic
+	import type { TransactionFormState } from '../finances.logic';
 
 	export let formState: TransactionFormState;
 	export let isMutating = false;
