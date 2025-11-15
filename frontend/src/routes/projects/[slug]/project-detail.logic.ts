@@ -1,5 +1,5 @@
 import { onDestroy, onMount } from 'svelte';
-import { derived, get, writable } from 'svelte/store';
+import { derived, get, writable, type Readable } from 'svelte/store';
 import { useQueryClient } from '@tanstack/svelte-query';
 
 import { authStore } from '$lib';
@@ -19,35 +19,20 @@ import {
 	useCreateDependencyMutation,
 	useCreateKanbanCardMutation,
 	useCreateKanbanColumnMutation,
-	useCreateProjectMutation,
 	useDeleteDependencyMutation,
 	useDeleteKanbanCardMutation,
 	useDeleteKanbanColumnMutation,
 	useDuplicateProjectMutation,
 	useMoveKanbanCardMutation,
 	useProjectBoardQuery,
+	useProjectBySlugQuery,
 	useProjectDependenciesQuery,
 	useProjectMilestonesQuery,
 	useProjectsListQuery,
 	useUpdateProjectMetricsMutation,
 	useUpdateProjectStatusMutation
 } from '@hooks/projects';
-
-export const statusOptions: ProjectStatus[] = ['idea', 'planning', 'executing', 'monitoring', 'completed'];
-
-export interface ProjectFormState {
-	name: string;
-	description: string;
-	status: ProjectStatus;
-	healthScore: number;
-}
-
-const defaultProjectForm = (): ProjectFormState => ({
-	name: '',
-	description: '',
-	status: 'planning',
-	healthScore: 60
-});
+import { statusOptions } from '../status';
 
 export interface ColumnFormState {
 	name: string;
@@ -126,7 +111,7 @@ interface AuthState {
 	userId: UUID | null;
 }
 
-export function createProjectsLogic() {
+export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 	const queryClient = useQueryClient();
 
 	const authStateStore = writable<AuthState>({ isAuthenticated: false, userId: null });
@@ -139,7 +124,6 @@ export function createProjectsLogic() {
 	const milestones = writable<Milestone[]>([]);
 	const dependencies = writable<ProjectDependency[]>([]);
 
-	const projectForm = writable<ProjectFormState>(defaultProjectForm());
 	const columnForm = writable<ColumnFormState>(defaultColumnForm());
 	const cardForm = writable<CardFormState>(defaultCardForm());
 	const milestoneForm = writable<MilestoneFormState>(defaultMilestoneForm());
@@ -147,33 +131,37 @@ export function createProjectsLogic() {
 	const duplicateForm = writable<DuplicateFormState>(defaultDuplicateForm());
 
 	const activeProjectId = derived(activeProject, ($project) => $project?.id ?? null);
-
 	const projectsQueryOptions = derived(authStateStore, ($auth) => ({ enabled: $auth.isAuthenticated }));
 	const detailQueryOptions = derived(authStateStore, ($auth) => ({ enabled: $auth.isAuthenticated }));
 
 	const projectsQuery = useProjectsListQuery(projectsQueryOptions);
+	const projectQuery = useProjectBySlugQuery(slugStore, detailQueryOptions);
 	const boardQuery = useProjectBoardQuery(activeProjectId, detailQueryOptions);
 	const milestonesQuery = useProjectMilestonesQuery(activeProjectId, detailQueryOptions);
 	const dependenciesQuery = useProjectDependenciesQuery(activeProjectId, detailQueryOptions);
 
 	const invalidateProjectsList = () => queryClient.invalidateQueries({ queryKey: ['projects', 'list'] });
+	const invalidateProjectBySlug = () => {
+		const slug = get(slugStore);
+		if (!slug) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'slug', slug] });
+	};
 	const invalidateBoard = (projectId?: UUID | null) => {
-		const targetId = projectId ?? get(activeProject)?.id ?? null;
+		const targetId = projectId ?? get(activeProjectId);
 		if (!targetId) return Promise.resolve();
 		return queryClient.invalidateQueries({ queryKey: ['projects', 'board', targetId] });
 	};
 	const invalidateMilestones = (projectId?: UUID | null) => {
-		const targetId = projectId ?? get(activeProject)?.id ?? null;
+		const targetId = projectId ?? get(activeProjectId);
 		if (!targetId) return Promise.resolve();
 		return queryClient.invalidateQueries({ queryKey: ['projects', 'milestones', targetId] });
 	};
 	const invalidateDependencies = (projectId?: UUID | null) => {
-		const targetId = projectId ?? get(activeProject)?.id ?? null;
+		const targetId = projectId ?? get(activeProjectId);
 		if (!targetId) return Promise.resolve();
 		return queryClient.invalidateQueries({ queryKey: ['projects', 'dependencies', targetId] });
 	};
 
-	const createProjectMutation = useCreateProjectMutation();
 	const createColumnMutation = useCreateKanbanColumnMutation();
 	const createCardMutation = useCreateKanbanCardMutation();
 	const moveCardMutation = useMoveKanbanCardMutation();
@@ -193,7 +181,6 @@ export function createProjectsLogic() {
 		board.set(null);
 		milestones.set([]);
 		dependencies.set([]);
-		projectForm.set(defaultProjectForm());
 		columnForm.set(defaultColumnForm());
 		cardForm.set(defaultCardForm());
 		milestoneForm.set(defaultMilestoneForm());
@@ -205,32 +192,40 @@ export function createProjectsLogic() {
 
 	const refetchProjectDetails = async () => {
 		const auth = get(authStateStore);
-		const current = get(activeProject);
-		if (!auth.isAuthenticated || !current) return;
-		await Promise.all([invalidateBoard(current.id), invalidateMilestones(current.id), invalidateDependencies(current.id)]);
+		const currentProject = get(activeProject);
+		if (!auth.isAuthenticated || !currentProject) return;
+		await Promise.all([
+			invalidateBoard(currentProject.id),
+			invalidateMilestones(currentProject.id),
+			invalidateDependencies(currentProject.id)
+		]);
 	};
 
 	const projectsQueryUnsubscribe = projectsQuery.subscribe((result) => {
 		if (result.data) {
-			const currentActive = get(activeProject);
 			const data = result.data;
-			const nextActive =
-				currentActive && data.length
-					? data.find((project) => project.id === currentActive.id) ?? data[0]
-					: data[0] ?? null;
 			projects.set(data);
-			activeProject.set(nextActive ?? null);
-			if (nextActive) {
-				void refetchProjectDetails();
-			} else {
-				board.set(null);
-				milestones.set([]);
-				dependencies.set([]);
-			}
 			error.set(null);
 		}
 		if (result.error) {
 			error.set(result.error.message ?? 'Unable to load projects.');
+		}
+	});
+
+	const projectQueryUnsubscribe = projectQuery.subscribe((result) => {
+		if (result.data) {
+			activeProject.set(result.data);
+			void refetchProjectDetails();
+			error.set(null);
+		} else if (result.error) {
+			activeProject.set(null);
+			error.set(result.error.message ?? 'Unable to load project.');
+		}
+
+		if (!result.data && !result.isLoading) {
+			board.set(null);
+			milestones.set([]);
+			dependencies.set([]);
 		}
 	});
 
@@ -271,17 +266,12 @@ export function createProjectsLogic() {
 		}
 
 		try {
-			await invalidateProjectsList();
+			await Promise.all([invalidateProjectsList(), invalidateProjectBySlug()]);
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to load projects.');
 			error.set(message);
 			toastError(message);
 		}
-	};
-
-	const selectProject = async (project: Project) => {
-		activeProject.set(project);
-		await refetchProjectDetails();
 	};
 
 	onMount(() => {
@@ -307,14 +297,11 @@ export function createProjectsLogic() {
 
 	onDestroy(() => {
 		projectsQueryUnsubscribe();
+		projectQueryUnsubscribe();
 		boardQueryUnsubscribe();
 		milestonesQueryUnsubscribe();
 		dependenciesQueryUnsubscribe();
 	});
-
-	const updateProjectFormField: FormUpdater<ProjectFormState> = (field, value) => {
-		projectForm.update((current) => ({ ...current, [field]: value }));
-	};
 
 	const updateColumnFormField: FormUpdater<ColumnFormState> = (field, value) => {
 		columnForm.update((current) => ({ ...current, [field]: value }));
@@ -334,41 +321,6 @@ export function createProjectsLogic() {
 
 	const updateDuplicateFormField: FormUpdater<DuplicateFormState> = (field, value) => {
 		duplicateForm.update((current) => ({ ...current, [field]: value }));
-	};
-
-	const handleCreateProject = async () => {
-		const auth = get(authStateStore);
-		if (!auth.isAuthenticated) {
-			const message = 'You must be signed in to create projects.';
-			error.set(message);
-			toastError(message);
-			return;
-		}
-
-		const form = get(projectForm);
-		if (!form.name.trim()) {
-			const message = 'Project name is required.';
-			error.set(message);
-			toastError(message);
-			return;
-		}
-
-		try {
-			const newProject = await get(createProjectMutation).mutateAsync({
-				name: form.name.trim(),
-				description: form.description,
-				status: form.status,
-				healthScore: form.healthScore
-			});
-			projectForm.set(defaultProjectForm());
-			await invalidateProjectsList();
-			await selectProject(newProject);
-			toastSuccess('Project created.');
-		} catch (err) {
-			const message = getApiErrorMessage(err, 'Unable to create project.');
-			error.set(message);
-			toastError(message);
-		}
 	};
 
 	const handleCreateColumn = async () => {
@@ -606,11 +558,11 @@ export function createProjectsLogic() {
 		}
 	};
 
-	const handleDuplicateProject = async (templateId: UUID) => {
+	const handleDuplicateProject = async (templateId: UUID): Promise<Project | null> => {
 		const auth = get(authStateStore);
 		if (!auth.isAuthenticated) {
 			toastError('Sign in to duplicate projects.');
-			return;
+			return null;
 		}
 
 		const form = get(duplicateForm);
@@ -618,7 +570,7 @@ export function createProjectsLogic() {
 			const message = 'Provide a name for the duplicate project.';
 			error.set(message);
 			toastError(message);
-			return;
+			return null;
 		}
 
 		try {
@@ -635,12 +587,13 @@ export function createProjectsLogic() {
 			});
 			duplicateForm.set(defaultDuplicateForm());
 			await invalidateProjectsList();
-			await selectProject(duplicate);
 			toastSuccess('Project duplicated.');
+			return duplicate;
 		} catch (err) {
 			const message = getApiErrorMessage(err, 'Unable to duplicate project.');
 			error.set(message);
 			toastError(message);
+			return null;
 		}
 	};
 
@@ -692,26 +645,22 @@ export function createProjectsLogic() {
 	return {
 		isAuthenticated,
 		error,
-		projects,
+		projectQuery,
 		activeProject,
 		board,
 		milestones,
 		dependencies,
-		projectForm,
 		columnForm,
 		cardForm,
 		milestoneForm,
 		dependencyForm,
 		duplicateForm,
 		loadProjects,
-		selectProject,
-		updateProjectFormField,
 		updateColumnFormField,
 		updateCardFormField,
 		updateMilestoneFormField,
 		updateDependencyFormField,
 		updateDuplicateFormField,
-		handleCreateProject,
 		handleCreateColumn,
 		handleCreateCard,
 		handleMoveCard,

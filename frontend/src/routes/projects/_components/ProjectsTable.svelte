@@ -2,8 +2,6 @@
 	import type { Project } from '$lib/api/types';
 
 	export let projects: Project[] = [];
-	export let activeProjectId: string | null = null;
-	export let onSelect: (project: Project) => void;
 </script>
 
 <div class="rounded border border-slate-800 bg-slate-900/60 p-4">
@@ -21,19 +19,18 @@
 			</thead>
 			<tbody>
 				{#each projects as project (project.id)}
-					<tr
-						class="rounded border border-slate-800 bg-slate-950/40 {project.id === activeProjectId
-							? 'ring-1 ring-indigo-500'
-							: ''}"
-					>
+					<tr class="rounded border border-slate-800 bg-slate-950/40">
 						<td class="px-3 py-2 font-semibold">{project.name}</td>
-						<td class="px-3 py-2 text-slate-300">{project.status}</td>
+						<td class="px-3 py-2 text-slate-300 capitalize">{project.status}</td>
 						<td class="px-3 py-2">{project.health_score}</td>
 						<td class="px-3 py-2">{project.mrr.toFixed(2)}</td>
 						<td class="px-3 py-2 text-right">
-							<button class="rounded bg-slate-800 px-3 py-1 text-xs" on:click={() => onSelect(project)}>
+							<a
+								class="rounded bg-slate-800 px-3 py-1 text-xs transition hover:bg-indigo-500"
+								href={`/projects/${project.slug ?? project.id}`}
+							>
 								View
-							</button>
+							</a>
 						</td>
 					</tr>
 				{/each}
