@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { monitoringStore, type MetricSeries } from '$lib';
-	import { PUBLIC_GRAFANA_PANELS } from '$env/static/public';
+import { toastError } from '$lib/utils/toast';
 
 	let status = 'disconnected';
 	let error: string | null = null;
 	let lastUpdated: number | null = null;
 	let series: MetricSeries[] = [];
+let lastToastError: string | null = null;
 
 	const unsubscribe = monitoringStore.subscribe((state) => {
 		status = state.status;
@@ -70,22 +71,30 @@
 	};
 
 	const grafanaPanels: GrafanaPanel[] = (() => {
-		const raw = (PUBLIC_GRAFANA_PANELS ?? '').split(',').map((value) => value.trim());
+		const raw = (import.meta.env.PUBLIC_GRAFANA_PANELS ?? '')
+			.split(',')
+			.map((value: string) => value.trim());
 		return raw
-			.filter((value) => value.length > 0)
-			.map((entry, index) => {
-				const [title, url] = entry.split('|');
+			.filter((value: string): value is string => value.length > 0)
+			.map((entry: string, index: number) => {
+				const [title, url] = entry.split('|').map((value: string) => value.trim());
 				const resolvedUrl = (url ?? title ?? '').trim();
 				return {
 					key: `${index}-${resolvedUrl}`,
-					title: title?.trim() || `Grafana panel #${index + 1}`,
+					title: title?.length ? title : `Grafana panel #${index + 1}`,
 					url: resolvedUrl
 				};
 			})
-			.filter((panel) => panel.url.length > 0);
+			.filter((panel: GrafanaPanel): panel is GrafanaPanel => panel.url.length > 0);
 	})();
 
 	$: console.log('Monitoring metrics series', series);
+	$: if (error && error !== lastToastError) {
+		toastError(error);
+		lastToastError = error;
+	} else if (!error && lastToastError) {
+		lastToastError = null;
+	}
 </script>
 
 <section class="space-y-6">
@@ -149,7 +158,8 @@
 							frameborder="0"
 							loading="lazy"
 							allow="fullscreen"
-						/>
+							title={`Grafana panel ${panel.title}`}
+						></iframe>
 					</div>
 				{/each}
 			</div>
