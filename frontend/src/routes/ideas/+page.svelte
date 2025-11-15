@@ -1,344 +1,66 @@
 <script lang="ts">
 	import '@xyflow/svelte/dist/style.css';
 
-import { onMount } from 'svelte';
-import { browser } from '$app/environment';
-import { useQueryClient } from '@tanstack/svelte-query';
-import {
-	SvelteFlow,
-	Background,
-	Controls,
-	MiniMap,
-	Panel,
-	type Edge,
-	type Node,
-	type NodeTypes
-} from '@xyflow/svelte';
-import { MarkerType, Position, type Connection } from '@xyflow/system';
+	import {
+		SvelteFlow,
+		Background,
+		Controls,
+		MiniMap,
+		Panel,
+		type Edge,
+		type Node,
+		type NodeTypes
+	} from '@xyflow/svelte';
 
 	import IdeaNode from './IdeaNode.svelte';
-	import type { Idea, IdeaLink, IdeaVersion } from '$lib/api/types';
-import {
-	useCreateIdeaMutation,
-	useCreateLinkMutation,
-	useIdeaLinksQuery,
-	useIdeaVersionsQuery,
-	useIdeasCanvasQuery,
-	useMoveIdeaMutation,
-	useUpdateIdeaMutation
-} from '@hooks/ideas';
-import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
-
-type IdeaNodeData = {
-	idea: Idea;
-};
-
-	let nodes: Node<IdeaNodeData>[] = [];
-	let edges: Edge[] = [];
-
-	let ideas: Idea[] = [];
-	let links: IdeaLink[] = [];
-	let versions: IdeaVersion[] = [];
-
-let isSaving = false;
-	let isLoading = false;
-let uiError = '';
-	let selectedIdea: Idea | null = null;
-	let editForm: { title: string; description: string; color: string } | null = null;
-	let showCreateModal = false;
-	let newIdea = {
-		title: '',
-		description: '',
-		color: '#2563eb'
-	};
+	import {
+		createIdeasLogic,
+		type IdeaNodeData,
+		type IdeaFormState
+	} from './ideas.logic';
 
 	const nodeTypes: NodeTypes = {
 		idea: IdeaNode
 	};
 
-	const toNode = (idea: Idea): Node<IdeaNodeData> => ({
-		id: idea.id,
-		type: 'idea',
-		position: {
-			x: idea.pos_x ?? Math.random() * 320,
-			y: idea.pos_y ?? Math.random() * 320
-		},
-		data: {
-			idea
-		},
-		draggable: true,
-		selectable: true,
-		connectable: true,
-		sourcePosition: Position.Right,
-		targetPosition: Position.Left
-	});
+	const {
+		nodes,
+		edges,
+		versions,
+		isSaving,
+		isLoading,
+		uiError,
+		selectedIdea,
+		editForm,
+		showCreateModal,
+		newIdea,
+		ideasQueryError,
+		linksQueryError,
+		refreshCanvas,
+		handleConnect,
+		handleNodeDragStop,
+		handleNodeClick,
+		handleIdeaSave,
+		handleCreateIdea,
+		updateEditFormField,
+		updateNewIdeaField
+	} = createIdeasLogic();
 
-const toEdge = (link: IdeaLink): Edge => ({
-	id: link.id,
-	source: link.source_idea_id,
-	target: link.target_idea_id,
-	type: 'smoothstep',
-	label: link.relation,
-	animated: Boolean(link.bidirectional),
-	markerEnd: {
-		type: MarkerType.ArrowClosed,
-		width: 18,
-		height: 18,
-		color: '#94a3b8'
-	}
-});
+	let flowNodes: Node<IdeaNodeData>[] = [];
+	let flowEdges: Edge[] = [];
 
-const syncSelectedIdea = () => {
-	if (!selectedIdea) {
-		editForm = null;
-		return;
-	}
-	const refreshed = ideas.find((idea) => idea.id === selectedIdea?.id) ?? null;
-	selectedIdea = refreshed ?? null;
-	if (selectedIdea) {
-		editForm = {
-			title: selectedIdea.title,
-			description: selectedIdea.description ?? '',
-			color: selectedIdea.color ?? '#2563eb'
+	$: flowNodes = $nodes;
+	$: flowEdges = $edges;
+
+	$: nodes.set(flowNodes);
+	$: edges.set(flowEdges);
+
+	const handleInput =
+		<T extends keyof IdeaFormState>(updater: (value: IdeaFormState[T]) => void) =>
+		(event: Event) => {
+			const target = event.currentTarget as HTMLInputElement | HTMLTextAreaElement;
+			updater(target.value as IdeaFormState[T]);
 		};
-	} else {
-		editForm = null;
-		versions = [];
-	}
-};
-
-const ideasQuery = useIdeasCanvasQuery(false);
-const linksQuery = useIdeaLinksQuery(false);
-let versionsQuery = useIdeaVersionsQuery(null, { enabled: false, limit: 15 });
-const queryClient = useQueryClient();
-
-const createIdeaMutation = useCreateIdeaMutation();
-const updateIdeaMutation = useUpdateIdeaMutation();
-const moveIdeaMutation = useMoveIdeaMutation();
-const createLinkMutation = useCreateLinkMutation();
-
-$: if ($ideasQuery.data) {
-	ideas = $ideasQuery.data;
-	nodes = ideas.map(toNode);
-	syncSelectedIdea();
-}
-
-$: if ($linksQuery.data) {
-	links = $linksQuery.data;
-	edges = links.map(toEdge);
-}
-
-$: versions = $versionsQuery.data ?? [];
-
-$: {
-	const currentId = selectedIdea?.id ?? null;
-	versionsQuery = useIdeaVersionsQuery(currentId, {
-		enabled: Boolean(currentId),
-		limit: 15
-	});
-	if (!currentId) {
-		versions = [];
-	}
-}
-
-const refreshCanvas = async () => {
-	if (!browser) return;
-	isLoading = true;
-	uiError = '';
-	try {
-		await Promise.all([
-			queryClient.invalidateQueries({ queryKey: ['ideas', 'canvas'] }),
-			queryClient.invalidateQueries({ queryKey: ['ideas', 'links'] })
-		]);
-		toastInfo('Ideas refreshed.');
-	} catch (error) {
-		console.error(error);
-		uiError = getApiErrorMessage(error, 'Unable to load ideas. Please try again.');
-		toastError(uiError);
-	} finally {
-		isLoading = false;
-	}
-};
-
-onMount(async () => {
-	await refreshCanvas();
-});
-
-const handleConnect = async (connection: Connection) => {
-		if (!connection.source || !connection.target) {
-			return;
-		}
-
-		try {
-			const link = await $createLinkMutation.mutateAsync({
-				source_idea_id: connection.source,
-				target_idea_id: connection.target,
-				relation: 'relates',
-				bidirectional: false
-			});
-			links = [...links, link];
-		const newEdge: Edge = {
-			id: link.id,
-			source: connection.source,
-			target: connection.target,
-			type: 'smoothstep',
-			label: link.relation,
-			animated: Boolean(link.bidirectional),
-			markerEnd: {
-				type: MarkerType.ArrowClosed,
-				width: 18,
-				height: 18,
-				color: '#94a3b8'
-			}
-		};
-		edges = [...edges, newEdge];
-			toastSuccess('Ideas linked.');
-		} catch (error) {
-			console.error(error);
-			uiError = getApiErrorMessage(error, 'Unable to create relation.');
-			toastError(uiError);
-		}
-	};
-
-	async function handleNodeDragStop({
-		targetNode
-	}: {
-		targetNode: Node<IdeaNodeData> | null;
-		event: MouseEvent | TouchEvent;
-		nodes: Node<IdeaNodeData>[];
-	}) {
-		const node = targetNode;
-		if (!node) return;
-
-		try {
-			await $moveIdeaMutation.mutateAsync({
-				ideaId: node.id,
-				input: {
-					pos_x: node.position.x,
-					pos_y: node.position.y
-				}
-			});
-
-			ideas = ideas.map((idea) =>
-				idea.id === node.id
-					? {
-							...idea,
-							pos_x: node.position.x,
-							pos_y: node.position.y,
-							version: idea.version + 1,
-							updated_at: new Date().toISOString()
-						}
-					: idea
-			);
-		} catch (error) {
-			console.error(error);
-			uiError = getApiErrorMessage(error, 'Unable to persist position.');
-			toastError(uiError);
-			await refreshCanvas();
-			return;
-		}
-		toastInfo('Idea position saved.');
-	}
-
-	function handleSelectIdea(idea: Idea) {
-		selectedIdea = idea;
-		editForm = {
-			title: idea.title,
-			description: idea.description ?? '',
-			color: idea.color ?? '#2563eb'
-		};
-	if (selectedIdea?.id) {
-		versionsQuery = useIdeaVersionsQuery(selectedIdea.id, {
-			enabled: true,
-			limit: 15
-		});
-	}
-	}
-
-	function handleNodeClick({
-		node
-	}: {
-		node: Node<IdeaNodeData>;
-		event: MouseEvent | TouchEvent;
-	}) {
-		const idea = node?.data?.idea;
-		if (idea) {
-			handleSelectIdea(idea);
-		}
-	}
-
-	async function handleIdeaSave() {
-		if (!selectedIdea || !editForm) return;
-
-		isSaving = true;
-		try {
-			const updated = await $updateIdeaMutation.mutateAsync({
-				ideaId: selectedIdea.id,
-				input: {
-					title: editForm.title,
-					description: editForm.description,
-					color: editForm.color
-				}
-			});
-
-			ideas = ideas.map((idea) => (idea.id === updated.id ? updated : idea));
-			nodes = nodes.map((node) =>
-				node.id === updated.id
-					? {
-							...node,
-							data: {
-								...node.data,
-								idea: updated
-							}
-						}
-					: node
-			);
-			selectedIdea = updated;
-			toastSuccess('Idea updated.');
-		} catch (error) {
-			console.error(error);
-			uiError = getApiErrorMessage(error, 'Unable to save idea changes.');
-			toastError(uiError);
-		} finally {
-			isSaving = false;
-		}
-	}
-
-	async function handleCreateIdea(event: SubmitEvent) {
-		event.preventDefault();
-		if (!newIdea.title.trim()) {
-			uiError = 'Title is required to create a new idea.';
-			toastError(uiError);
-			return;
-		}
-
-		isSaving = true;
-		try {
-			const idea = await $createIdeaMutation.mutateAsync({
-				title: newIdea.title,
-				description: newIdea.description,
-				color: newIdea.color,
-				pos_x: Math.random() * 420,
-				pos_y: Math.random() * 300
-			});
-			ideas = [...ideas, idea];
-			nodes = [...nodes, toNode(idea)];
-			await refreshCanvas();
-			newIdea = {
-				title: '',
-				description: '',
-				color: '#2563eb'
-			};
-			showCreateModal = false;
-			toastSuccess('Idea created.');
-		} catch (error) {
-			console.error(error);
-			uiError = getApiErrorMessage(error, 'Unable to create idea.');
-			toastError(uiError);
-		} finally {
-			isSaving = false;
-		}
-	}
 </script>
 
 <svelte:head>
@@ -358,25 +80,25 @@ const handleConnect = async (connection: Connection) => {
 				class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
 				type="button"
 				on:click={refreshCanvas}
-				disabled={isLoading}
+				disabled={$isLoading}
 			>
-				{isLoading ? 'Refreshing…' : 'Refresh'}
+				{$isLoading ? 'Refreshing…' : 'Refresh'}
 			</button>
 			<button
 				class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90"
 				type="button"
-				on:click={() => (showCreateModal = true)}
+				on:click={() => showCreateModal.set(true)}
 			>
 				New Idea
 			</button>
 		</div>
 	</header>
 
-	{#if uiError}
+	{#if $uiError}
 		<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-			{uiError}
+			{$uiError}
 		</div>
-	{:else if $ideasQuery.error || $linksQuery.error}
+	{:else if $ideasQueryError || $linksQueryError}
 		<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
 			Unable to load ideas. Please try again.
 		</div>
@@ -384,7 +106,7 @@ const handleConnect = async (connection: Connection) => {
 
 	<div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
 		<section class="relative min-h-[540px] overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/60">
-			{#if isLoading}
+			{#if $isLoading}
 				<div class="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/70">
 					<div class="flex items-center gap-3 text-sm text-slate-300">
 						<span class="h-3 w-3 animate-ping rounded-full bg-primary"></span>
@@ -394,8 +116,8 @@ const handleConnect = async (connection: Connection) => {
 			{/if}
 
 			<SvelteFlow
-				bind:nodes
-				bind:edges
+				bind:nodes={flowNodes}
+				bind:edges={flowEdges}
 				{nodeTypes}
 				fitView
 				class="h-[600px]"
@@ -417,18 +139,19 @@ const handleConnect = async (connection: Connection) => {
 		</section>
 
 		<aside class="flex flex-col gap-6 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-5">
-			{#if selectedIdea && editForm}
+			{#if $selectedIdea && $editForm}
 				<div class="flex items-center justify-between">
 					<h2 class="text-lg font-semibold text-slate-100">Idea Details</h2>
 					<span class="rounded-full border border-slate-700/70 px-2 py-0.5 text-xs text-slate-400"
-						>Version {selectedIdea.version}</span
+						>Version {$selectedIdea.version}</span
 					>
 				</div>
 				<form class="flex flex-col gap-4 text-sm" on:submit|preventDefault={handleIdeaSave}>
 					<label class="flex flex-col gap-2">
 						<span class="text-xs uppercase tracking-wide text-slate-400">Title</span>
 						<input
-							bind:value={editForm.title}
+							value={$editForm.title}
+							on:input={handleInput((value) => updateEditFormField('title', value))}
 							class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="Idea title"
 							required
@@ -437,7 +160,8 @@ const handleConnect = async (connection: Connection) => {
 					<label class="flex flex-col gap-2">
 						<span class="text-xs uppercase tracking-wide text-slate-400">Description</span>
 						<textarea
-							bind:value={editForm.description}
+							value={$editForm.description}
+							on:input={handleInput((value) => updateEditFormField('description', value))}
 							class="h-24 rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="Describe the problem or solution…"
 						></textarea>
@@ -446,33 +170,34 @@ const handleConnect = async (connection: Connection) => {
 						<span class="text-xs uppercase tracking-wide text-slate-400">Color</span>
 						<input
 							type="color"
-							bind:value={editForm.color}
+							value={$editForm.color}
+							on:input={handleInput((value) => updateEditFormField('color', value))}
 							class="h-10 w-20 cursor-pointer rounded border border-slate-700/70 bg-slate-900/80"
 						/>
 					</label>
 					<button
 						class="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
 						type="submit"
-						disabled={isSaving}
+						disabled={$isSaving}
 					>
-						{isSaving ? 'Saving…' : 'Save changes'}
+						{$isSaving ? 'Saving…' : 'Save changes'}
 					</button>
 				</form>
 
 				<div class="space-y-3">
 					<h3 class="text-sm font-semibold text-slate-200">Recent versions</h3>
-					{#if versions.length === 0}
+					{#if $versions.length === 0}
 						<p class="text-xs text-slate-500">Changes will show up here as you iterate.</p>
 					{:else}
 						<ul class="flex flex-col gap-2 text-xs text-slate-300">
-							{#each versions as version}
+							{#each $versions as version}
 								<li class="rounded-lg border border-slate-800/70 bg-slate-900/60 px-3 py-2">
 									<div class="flex items-center justify-between">
 										<span class="font-medium text-slate-200">v{version.version}</span>
 										<span class="text-slate-500">{new Date(version.created_at).toLocaleString()}</span>
 									</div>
 									<p class="mt-1 text-slate-400 capitalize">{version.change_type}</p>
-									{#if version.title && version.title !== selectedIdea.title}
+									{#if version.title && version.title !== $selectedIdea.title}
 										<p class="mt-1 text-slate-500">
 											Title: {version.title}
 										</p>
@@ -493,11 +218,11 @@ const handleConnect = async (connection: Connection) => {
 		</aside>
 	</div>
 
-	{#if showCreateModal}
+	{#if $showCreateModal}
 		<div class="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur">
 			<form
 				class="w-full max-w-md space-y-4 rounded-2xl border border-slate-800/80 bg-slate-900/90 p-6 shadow-2xl"
-				on:submit={handleCreateIdea}
+				on:submit|preventDefault={handleCreateIdea}
 			>
 				<header class="flex items-center justify-between">
 					<div>
@@ -507,7 +232,7 @@ const handleConnect = async (connection: Connection) => {
 					<button
 						class="rounded-full border border-slate-700/70 px-2 py-1 text-xs text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
 						type="button"
-						on:click={() => (showCreateModal = false)}
+						on:click={() => showCreateModal.set(false)}
 					>
 						Close
 					</button>
@@ -515,7 +240,8 @@ const handleConnect = async (connection: Connection) => {
 				<label class="flex flex-col gap-2 text-sm">
 					<span class="text-xs uppercase tracking-wide text-slate-400">Title</span>
 					<input
-						bind:value={newIdea.title}
+						value={$newIdea.title}
+						on:input={handleInput((value) => updateNewIdeaField('title', value))}
 						class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="Idea title"
 						required
@@ -524,7 +250,8 @@ const handleConnect = async (connection: Connection) => {
 				<label class="flex flex-col gap-2 text-sm">
 					<span class="text-xs uppercase tracking-wide text-slate-400">Description</span>
 					<textarea
-						bind:value={newIdea.description}
+						value={$newIdea.description}
+						on:input={handleInput((value) => updateNewIdeaField('description', value))}
 						class="h-24 rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="Optional context"
 					></textarea>
@@ -533,7 +260,8 @@ const handleConnect = async (connection: Connection) => {
 					<span>Color</span>
 					<input
 						type="color"
-						bind:value={newIdea.color}
+						value={$newIdea.color}
+						on:input={handleInput((value) => updateNewIdeaField('color', value))}
 						class="h-10 w-20 cursor-pointer rounded border border-slate-700/70 bg-slate-900/80"
 					/>
 				</label>
@@ -541,16 +269,16 @@ const handleConnect = async (connection: Connection) => {
 					<button
 						class="rounded-lg border border-slate-700/70 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
 						type="button"
-						on:click={() => (showCreateModal = false)}
+						on:click={() => showCreateModal.set(false)}
 					>
 						Cancel
 					</button>
 					<button
 						class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
 						type="submit"
-						disabled={isSaving}
+						disabled={$isSaving}
 					>
-						{isSaving ? 'Creating…' : 'Create idea'}
+						{$isSaving ? 'Creating…' : 'Create idea'}
 					</button>
 				</div>
 			</form>
