@@ -83,7 +83,7 @@ const sanitizeSlug = (value: string) =>
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '') || 'idea';
 
-const buildIdeaSlug = (title: string, id: string) => `${sanitizeSlug(title)}--${id}`;
+const buildIdeaSlug = (title: string) => sanitizeSlug(title) || 'idea';
 
 const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
 	const id = pick(dto, ['ID', 'id', 'Id']);
@@ -100,7 +100,7 @@ const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
 		user_id: userId ?? null,
 		title,
 		description: dto.Description ?? dto.description,
-		slug: dto.Slug ?? dto.slug ?? buildIdeaSlug(title, ideaId),
+		slug: dto.Slug ?? dto.slug ?? buildIdeaSlug(title),
 		pos_x: Number(posX ?? 0),
 		pos_y: Number(posY ?? 0),
 		color: (dto.Color ?? dto.color ?? DEFAULT_COLOR) || DEFAULT_COLOR,

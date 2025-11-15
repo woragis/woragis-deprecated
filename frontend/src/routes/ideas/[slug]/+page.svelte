@@ -17,7 +17,14 @@
 </script>
 
 <svelte:head>
-	<title>{#if $idea}{$idea.title} · Idea Details · Woragis{:else}Idea Details · Woragis{/if}</title>
+	{#if $idea}
+		<meta name="description" content="{$idea.description ?? 'No description yet. Update this idea from the canvas to add more context.'}">
+	{/if}
+	{#if $idea}
+		<meta name="title" content="{$idea.title} · Idea Details · Woragis">
+	{:else}
+		<meta name="title" content="Idea Details · Woragis">
+	{/if}
 </svelte:head>
 
 <section class="space-y-6">
