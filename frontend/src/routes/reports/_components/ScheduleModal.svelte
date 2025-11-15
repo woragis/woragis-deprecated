@@ -1,5 +1,16 @@
 <script lang="ts">
 	import type { ScheduleFormState } from '../reports.logic';
+	import {
+		getCronPresets,
+		WEEKDAYS,
+		dailyCron,
+		weeklyCron,
+		monthlyCron,
+		every7DaysCron,
+		every14DaysCron,
+		every30DaysCron,
+		parseCron
+	} from '../cron-utils';
 
 	export let open = false;
 	export let mode: 'create' | 'edit' = 'create';
@@ -10,6 +21,62 @@
 	) => void;
 	export let onClose: () => void;
 	export let onSubmit: () => void;
+
+	let scheduleType: 'preset' | 'custom' | 'weekly' | 'monthly' = 'preset';
+	let selectedWeekday: string = '1'; // Monday
+	let selectedDayOfMonth: string = '1';
+	let selectedHour: number = 8;
+	let selectedMinute: number = 0;
+
+	$: {
+		// Parse current cron to determine schedule type
+		if (form.cron) {
+			const parsed = parseCron(form.cron);
+			if (parsed) {
+				// Try to determine type
+				if (parsed.dayOfWeek !== '*' && parsed.dayOfMonth === '*') {
+					scheduleType = 'weekly';
+					selectedWeekday = parsed.dayOfWeek;
+				} else if (parsed.dayOfMonth !== '*' && parsed.dayOfWeek === '*') {
+					scheduleType = 'monthly';
+					selectedDayOfMonth = parsed.dayOfMonth;
+				} else if (parsed.dayOfMonth === '*' && parsed.dayOfWeek === '*') {
+					scheduleType = 'preset';
+				} else {
+					scheduleType = 'custom';
+				}
+				selectedHour = parseInt(parsed.hour) || 8;
+				selectedMinute = parseInt(parsed.minute) || 0;
+			}
+		}
+	}
+
+	function applyPreset(preset: ReturnType<typeof getCronPresets>[0]) {
+		onFieldChange('cron', preset.cron);
+		onFieldChange('frequency', preset.frequency);
+		scheduleType = 'preset';
+	}
+
+	function applyWeeklySchedule() {
+		const cron = weeklyCron(parseInt(selectedWeekday), selectedHour, selectedMinute);
+		onFieldChange('cron', cron);
+		onFieldChange('frequency', 'weekly');
+		scheduleType = 'weekly';
+	}
+
+	function applyMonthlySchedule() {
+		const day = parseInt(selectedDayOfMonth) || 1;
+		const cron = monthlyCron(day, selectedHour, selectedMinute);
+		onFieldChange('cron', cron);
+		onFieldChange('frequency', 'monthly');
+		scheduleType = 'monthly';
+	}
+
+	function applyCustomCron() {
+		scheduleType = 'custom';
+	}
+
+	$: presets = getCronPresets(selectedHour, selectedMinute);
 </script>
 
 {#if open}
