@@ -84,3 +84,12 @@ export const useCreateLinkMutation = () =>
 		mutationFn: (input: CreateLinkInput) => ideasApi.createLink(input)
 	});
 
+export const useIdeasReferenceQuery = (enabled = true) =>
+	createQuery<Idea[]>({
+		queryKey: ['ideas', 'reference'],
+		queryFn: () => ideasApi.fetchIdeas(),
+		enabled,
+		staleTime: Infinity,
+		placeholderData: (previous) => previous ?? []
+	});
+
