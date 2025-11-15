@@ -163,6 +163,15 @@ export function createIdeasLogic() {
 		applySelectedIdea(refreshed);
 	};
 
+const sanitizeSlug = (value: string) =>
+	value
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'idea';
+
+const buildIdeaSlug = (title: string, id: string) => `${sanitizeSlug(title)}--${id}`;
+
 const normalizeIdea = (raw: Idea | Record<string, any>): Idea | null => {
 	const id = raw.id ?? raw.ID;
 	if (!id) return null;
@@ -172,11 +181,14 @@ const normalizeIdea = (raw: Idea | Record<string, any>): Idea | null => {
 	const posY = raw.pos_y ?? raw.posY ?? 0;
 	const createdAt = raw.created_at ?? raw.createdAt ?? new Date().toISOString();
 	const updatedAt = raw.updated_at ?? raw.updatedAt ?? createdAt;
+	const title = raw.title ?? raw.Title ?? '';
+	const slug = raw.slug ?? raw.Slug ?? buildIdeaSlug(title, String(id));
 
 	return {
 		...(raw as Idea),
 		id: String(id),
 		user_id: userId ? String(userId) : undefined,
+		slug,
 		pos_x: Number.isFinite(posX) ? Number(posX) : 0,
 		pos_y: Number.isFinite(posY) ? Number(posY) : 0,
 		color: raw.color ?? '#2563eb',

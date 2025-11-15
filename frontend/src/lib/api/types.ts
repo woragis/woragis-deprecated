@@ -160,6 +160,7 @@ export interface Idea {
 	user_id: UUID;
 	title: string;
 	description?: string;
+	slug: string;
 	pos_x: number;
 	pos_y: number;
 	color: string;

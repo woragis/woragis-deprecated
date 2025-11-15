@@ -76,6 +76,15 @@ const pick = <T, K extends keyof T, F extends string>(
 	return undefined;
 };
 
+const sanitizeSlug = (value: string) =>
+	value
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'idea';
+
+const buildIdeaSlug = (title: string, id: string) => `${sanitizeSlug(title)}--${id}`;
+
 const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
 	const id = pick(dto, ['ID', 'id', 'Id']);
 	const userId = pick(dto, ['UserID', 'userId', 'UserId']);
@@ -83,12 +92,15 @@ const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
 	const posY = pick(dto, ['PosY', 'posY']);
 	const createdAt = pick(dto, ['CreatedAt', 'createdAt']);
 	const updatedAt = pick(dto, ['UpdatedAt', 'updatedAt']) ?? createdAt;
+	const title = dto.Title ?? dto.title ?? '';
+	const ideaId = id ?? crypto.randomUUID();
 
 	return {
-		id: id ?? crypto.randomUUID(),
+		id: ideaId,
 		user_id: userId ?? null,
-		title: dto.Title ?? dto.title ?? '',
+		title,
 		description: dto.Description ?? dto.description,
+		slug: dto.Slug ?? dto.slug ?? buildIdeaSlug(title, ideaId),
 		pos_x: Number(posX ?? 0),
 		pos_y: Number(posY ?? 0),
 		color: (dto.Color ?? dto.color ?? DEFAULT_COLOR) || DEFAULT_COLOR,
@@ -184,6 +196,11 @@ export async function fetchIdeas(params: ListIdeasParams = {}): Promise<Idea[]> 
 		}
 	});
 	return (response.data.data ?? []).map(mapIdea);
+}
+
+export async function fetchIdeaBySlug(slug: string): Promise<Idea> {
+	const response = await apiClient.get<ApiResponse<IdeaDTO>>(`/ideas/slug/${slug}`);
+	return mapIdea(response.data.data);
 }
 
 export async function createIdea(input: CreateIdeaInput): Promise<Idea> {
@@ -327,6 +344,7 @@ export async function removeCollaborator(ownerId: UUID | undefined, collaborator
 }
 
 export const ideasApi = {
+	fetchIdeaBySlug,
 	fetchIdeas,
 	createIdea,
 	updateIdea,

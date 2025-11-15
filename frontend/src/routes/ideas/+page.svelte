@@ -156,6 +156,14 @@ $: chatsForIdea = $ideaChats;
 						<span class="rounded-full border border-slate-700/70 px-2 py-0.5 text-xs text-slate-400"
 							>Version {$selectedIdea.version}</span
 						>
+						{#if $selectedIdea.slug}
+							<a
+								class="rounded-lg border border-slate-700/70 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-primary hover:text-primary"
+								href={`/ideas/${$selectedIdea.slug}`}
+							>
+								View details
+							</a>
+						{/if}
 						<button
 							class="rounded-lg border border-slate-700/70 px-2.5 py-1 text-xs font-medium text-primary transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
 							type="button"
