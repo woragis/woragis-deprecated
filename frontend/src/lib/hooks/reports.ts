@@ -1,4 +1,5 @@
 import { createMutation, createQuery } from '@tanstack/svelte-query';
+import { derived, type Readable } from 'svelte/store';
 
 import { reportsApi } from '$lib/api/reports';
 import type { ReportDefinition, ReportDefinitionDetail, ReportRun, UUID } from '$lib/api/types';
@@ -29,57 +30,100 @@ export interface ReportDefinitionsOptions {
 	enabled?: boolean;
 }
 
-export const useReportDefinitionsQuery = (options: ReportDefinitionsOptions = {}) => {
-	const filters = {
-		search: options.search ?? '',
-		includeArchived: options.includeArchived ?? false,
-		favoritesOnly: options.favoritesOnly ?? false,
-		channel: options.channel ?? '',
-		limit: options.limit ?? 25,
-		offset: options.offset ?? 0
-	};
+type MaybeReadable<T> = T | Readable<T>;
 
-	return createQuery<ReportDefinition[]>({
-		queryKey: ['reports', 'definitions', filters],
-		queryFn: () =>
-			reportsApi.listReportDefinitions({
-				search: filters.search,
-				includeArchived: filters.includeArchived,
-				favorites: filters.favoritesOnly,
-				channel: filters.channel || undefined,
-				limit: filters.limit,
-				offset: filters.offset
-			}),
-		enabled: options.enabled ?? true,
-		placeholderData: () => []
-	});
+const isReadable = <T>(value: MaybeReadable<T>): value is Readable<T> =>
+	typeof value === 'object' && value !== null && typeof (value as Readable<T>).subscribe === 'function';
+
+interface NormalizedDefinitionsOptions {
+	search: string;
+	includeArchived: boolean;
+	favoritesOnly: boolean;
+	channel: string;
+	limit: number;
+	offset: number;
+	enabled: boolean;
+}
+
+const normalizeDefinitionOptions = (options: ReportDefinitionsOptions = {}): NormalizedDefinitionsOptions => ({
+	search: options.search ?? '',
+	includeArchived: options.includeArchived ?? false,
+	favoritesOnly: options.favoritesOnly ?? false,
+	channel: options.channel ?? '',
+	limit: options.limit ?? 25,
+	offset: options.offset ?? 0,
+	enabled: options.enabled ?? true
+});
+
+const createDefinitionsQueryOptions = (options: NormalizedDefinitionsOptions) => ({
+	queryKey: [
+		'reports',
+		'definitions',
+		options.search,
+		options.includeArchived,
+		options.favoritesOnly,
+		options.channel,
+		options.limit,
+		options.offset
+	],
+	queryFn: () =>
+		reportsApi.listReportDefinitions({
+			search: options.search,
+			includeArchived: options.includeArchived,
+			favorites: options.favoritesOnly,
+			channel: options.channel || undefined,
+			limit: options.limit,
+			offset: options.offset
+		}),
+	enabled: options.enabled,
+	placeholderData: () => []
+});
+
+export const useReportDefinitionsQuery = (source: MaybeReadable<ReportDefinitionsOptions> = {}) => {
+	if (isReadable(source)) {
+		const optionsStore = derived(source, ($options) =>
+			createDefinitionsQueryOptions(normalizeDefinitionOptions($options))
+		);
+		return createQuery<ReportDefinition[]>(optionsStore);
+	}
+
+	return createQuery<ReportDefinition[]>(createDefinitionsQueryOptions(normalizeDefinitionOptions(source)));
 };
 
-export const useReportDetailQuery = (
-	definitionId: string | null,
-	options: { enabled?: boolean } = {}
-) =>
-	createQuery<{
-		detail: ReportDefinitionDetail;
-		runs: ReportRun[];
-	}>({
-		queryKey: ['reports', definitionId, 'detail'],
-		queryFn: async () => {
-			const [detailResponse, runsResponse] = await Promise.all([
-				reportsApi.getReportDefinition(definitionId!),
-				reportsApi.listReportRuns(definitionId!)
-			]);
-			return {
-				detail: detailResponse,
-				runs: runsResponse
-			};
-		},
-		enabled: Boolean(definitionId) && (options.enabled ?? true),
-		placeholderData: () => ({
-			detail: createEmptyReportDetail(),
-			runs: []
-		})
-	});
+interface ReportDetailOptions {
+	definitionId: string | null;
+	enabled?: boolean;
+}
+
+const createDetailQueryOptions = (options: ReportDetailOptions) => ({
+	queryKey: ['reports', options.definitionId ?? 'none', 'detail'],
+	queryFn: async () => {
+		const [detailResponse, runsResponse] = await Promise.all([
+			reportsApi.getReportDefinition(options.definitionId!),
+			reportsApi.listReportRuns(options.definitionId!)
+		]);
+		return {
+			detail: detailResponse,
+			runs: runsResponse
+		};
+	},
+	enabled: Boolean(options.definitionId) && (options.enabled ?? true),
+	placeholderData: () => ({
+		detail: createEmptyReportDetail(),
+		runs: []
+	})
+});
+
+export const useReportDetailQuery = (source: MaybeReadable<ReportDetailOptions>) => {
+	if (isReadable(source)) {
+		const optionsStore = derived(source, ($options) => createDetailQueryOptions($options));
+		return createQuery<{ detail: ReportDefinitionDetail; runs: ReportRun[] }>(optionsStore);
+	}
+
+	return createQuery<{ detail: ReportDefinitionDetail; runs: ReportRun[] }>(
+		createDetailQueryOptions(source)
+	);
+};
 
 export const useCreateReportDefinitionMutation = () =>
 	createMutation({
