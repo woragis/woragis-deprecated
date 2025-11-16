@@ -1,0 +1,152 @@
+import os
+from typing import Literal, Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.runnables import Runnable
+
+from app.agents import get_agent_names, get_agent, build_agent_with_model, build_system_message
+from app.providers import make_model, CipherClient
+from app.config import settings
+
+
+load_dotenv()
+
+app = FastAPI(title="Woragis AI Service", version="0.1.0")
+
+if settings.CORS_ENABLED:
+    origins = settings.CORS_ALLOWED_ORIGINS.split(",")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in origins if o.strip()],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+class ChatRequest(BaseModel):
+    agent: Literal["economist", "strategist", "entrepreneur", "startup"] = Field(..., description="Agent persona")
+    input: str = Field(..., description="User input or question")
+    system: Optional[str] = Field(None, description="Optional additional system instruction")
+    temperature: Optional[float] = Field(None, description="Optional temperature override")
+    model: Optional[str] = Field(None, description="Optional model override")
+    provider: Optional[Literal["openai", "anthropic", "xai", "manus", "cipher"]] = Field("openai", description="LLM provider")
+
+
+class ChatResponse(BaseModel):
+    agent: str
+    output: str
+
+
+class ImageRequest(BaseModel):
+    provider: Literal["cipher"] = Field("cipher", description="Image provider")
+    prompt: str = Field(..., description="Image generation prompt")
+    n: Optional[int] = Field(None, description="Number of images to generate")
+    size: Optional[str] = Field(None, description="Image size, e.g., 1024x1024")
+
+
+class ImageData(BaseModel):
+    url: Optional[str] = None
+    b64_json: Optional[str] = None
+
+
+class ImageResponse(BaseModel):
+    data: list[ImageData]
+
+@app.get("/v1/agents", response_model=list[str])
+def list_agents():
+    return get_agent_names()
+
+
+def _apply_overrides(chain: Runnable, model_name: Optional[str], temperature: Optional[float]) -> Runnable:
+    # For simple chains, we rebuild only if overrides provided
+    if model_name or temperature is not None:
+        from langchain_openai import ChatOpenAI
+        new_model = ChatOpenAI(
+            model=model_name or os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=temperature if temperature is not None else float(os.getenv("OPENAI_TEMPERATURE", "0.3")),
+            timeout=60,
+        )
+        # We cannot introspect the prompt here reliably; rebuild via agents registry is clearer
+        # For now, just return a simple prompt rebuild using the same agent name via query param usage.
+        # In practice, callers should set env vars if they need global overrides.
+        return new_model
+    return chain
+
+
+@app.post("/v1/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    provider = (req.provider or "openai").lower()
+
+    # Cipher provider: call external API directly (query string API key, OpenAI-like JSON)
+    if provider == "cipher":
+        system_text = build_system_message(req.agent)
+        if not system_text:
+            raise HTTPException(status_code=404, detail=f"Unknown agent '{req.agent}'. Available: {', '.join(get_agent_names())}")
+
+        messages = [{"role": "system", "content": system_text}]
+        if req.system:
+            messages.append({"role": "system", "content": req.system})
+        messages.append({"role": "user", "content": req.input})
+
+        client = CipherClient.from_env()
+        text = await client.chat(
+            messages=messages,
+            temperature=req.temperature if req.temperature is not None else settings.DEFAULT_TEMPERATURE,
+            max_tokens=settings.CIPHER_MAX_TOKENS,
+            top_p=settings.CIPHER_TOP_P,
+        )
+        return ChatResponse(agent=req.agent, output=text)
+
+    # Default: build model via LangChain
+    try:
+        model = make_model(provider, req.model, req.temperature)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    chain = build_agent_with_model(req.agent, model)
+    if not chain:
+        raise HTTPException(status_code=404, detail=f"Unknown agent '{req.agent}'. Available: {', '.join(get_agent_names())}")
+
+    # Optionally augment with extra system instruction by prepending a SystemMessage
+    inputs = req.input
+    if req.system:
+        # Simple concatenation to include system guidance
+        inputs = f"{req.system}\n\nUser: {req.input}"
+
+    result = await chain.ainvoke({"input": inputs})
+    if hasattr(result, "content"):
+        output_text = result.content  # AIMessage
+    else:
+        output_text = str(result)
+
+    return ChatResponse(agent=req.agent, output=output_text)
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+
+@app.post("/v1/images", response_model=ImageResponse)
+async def generate_images(req: ImageRequest):
+    provider = (req.provider or "cipher").lower()
+    if provider != "cipher":
+        raise HTTPException(status_code=400, detail="Only provider 'cipher' is supported for images currently")
+
+    prompt = req.prompt
+    n = req.n if req.n is not None else settings.CIPHER_IMAGE_N
+    size = req.size if req.size else settings.CIPHER_IMAGE_SIZE
+
+    client = CipherClient.from_env()
+    items = await client.generate_images(prompt=prompt, n=n, size=size)
+    # Normalize to ImageData
+    normalized = []
+    for item in items:
+        normalized.append(ImageData(url=item.get("url"), b64_json=item.get("b64_json")))
+    return ImageResponse(data=normalized)
+
+
