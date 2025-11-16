@@ -68,9 +68,44 @@ services:
       CORS_MAX_AGE: ${CORS_MAX_AGE:-86400}
       WHATSAPP_SESSION_PATH: ${WHATSAPP_SESSION_PATH:-./whatsapp-session}
       WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-false}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
     ports:
       - "8080:8080"
     restart: on-failure
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    container_name: woragis-ai-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.3}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-3-5-sonnet-latest}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      XAI_BASE_URL: ${XAI_BASE_URL:-https://api.x.ai/v1}
+      XAI_MODEL: ${XAI_MODEL:-grok-beta}
+      MANUS_API_KEY: ${MANUS_API_KEY:-}
+      MANUS_BASE_URL: ${MANUS_BASE_URL:-}
+      MANUS_MODEL: ${MANUS_MODEL:-manus-chat}
+      CIPHER_API_KEY: ${CIPHER_API_KEY:-}
+      CIPHER_BASE_URL: ${CIPHER_BASE_URL:-https://api.nofiltergpt.com/v1/chat/completions}
+      CIPHER_MAX_TOKENS: ${CIPHER_MAX_TOKENS:-800}
+      CIPHER_TOP_P: ${CIPHER_TOP_P:-1.0}
+      CIPHER_IMAGE_URL: ${CIPHER_IMAGE_URL:-https://api.nofiltergpt.com/v1/images/generations}
+      CIPHER_IMAGE_SIZE: ${CIPHER_IMAGE_SIZE:-1024x1024}
+      CIPHER_IMAGE_N: ${CIPHER_IMAGE_N:-1}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+    ports:
+      - "8000:8000"
+    restart: on-failure
+  # Ensure the main app knows where to reach ai-service
+  # (defined here for visibility; env actually belongs to app service)
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: woragis-prometheus
