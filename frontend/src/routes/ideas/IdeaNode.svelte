@@ -1,42 +1,51 @@
 <script lang="ts">
-	import type { Idea } from '$lib/api/types';
+	import type { IdeaNode } from '$lib/api/types';
 	import { Handle, Position } from '@xyflow/svelte';
 
 	export let data: {
-		idea: Idea;
-		onSelect?: (idea: Idea) => void;
+		node: IdeaNode;
 	};
 	export let selected = false;
 
-	const idea = data.idea;
+	const node = data.node;
 
-	const borderColor = idea.color ?? '#2563eb';
-	const ownerLabel = idea.user_id ? `${idea.user_id.slice(0, 6)}…` : 'Unknown';
+	const borderColor = node.color ?? '#2563eb';
 </script>
 
 <div
-	class="idea-node group relative flex min-w-[160px] max-w-[280px] cursor-grab flex-col rounded-xl border-2 bg-slate-900/90 p-3 shadow-lg transition-shadow hover:shadow-primary/30"
+	class="idea-node group relative flex cursor-grab flex-col rounded-xl border-2 bg-slate-900/90 p-3 shadow-lg transition-shadow hover:shadow-primary/30"
 	class:selected={selected}
 	style={`--border-color:${borderColor}; border-color:${borderColor};`}
 >
-	<Handle class="handle handle--left" position={Position.Left} type="target" />
-	<Handle class="handle handle--right" position={Position.Right} type="source" />
+	<!-- 4-directional connection handles -->
+	<Handle class="handle handle--top" position={Position.Top} type="source" id="top" />
+	<Handle class="handle handle--bottom" position={Position.Bottom} type="source" id="bottom" />
+	<Handle class="handle handle--left" position={Position.Left} type="source" id="left" />
+	<Handle class="handle handle--right" position={Position.Right} type="source" id="right" />
+	
+	<Handle class="handle handle--top" position={Position.Top} type="target" id="top-target" />
+	<Handle class="handle handle--bottom" position={Position.Bottom} type="target" id="bottom-target" />
+	<Handle class="handle handle--left" position={Position.Left} type="target" id="left-target" />
+	<Handle class="handle handle--right" position={Position.Right} type="target" id="right-target" />
+
 	<div class="idea-node__header flex items-center justify-between gap-2">
 		<h3 class="text-sm font-semibold leading-tight text-slate-100">
-			{idea.title}
+			{node.title}
 		</h3>
 		<span class="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-slate-200">
-			v{idea.version}
+			{node.type || 'default'}
 		</span>
 	</div>
-	{#if idea.description}
-		<p class="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-300">{idea.description}</p>
+	{#if node.description}
+		<p class="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-300">{node.description}</p>
 	{:else}
 		<p class="mt-2 text-xs italic text-slate-500">Click to add details…</p>
 	{/if}
 	<div class="mt-3 flex items-center justify-between text-[10px] uppercase tracking-wide text-slate-500">
-		<span>{new Date(idea.updated_at ?? idea.created_at).toLocaleDateString()}</span>
-		<span>{ownerLabel}</span>
+		<span>{new Date(node.updated_at ?? node.created_at).toLocaleDateString()}</span>
+		<span class="rounded px-1.5 py-0.5 bg-slate-800/50" style={`background-color: ${borderColor}20; color: ${borderColor}`}>
+			v{node.version}
+		</span>
 	</div>
 </div>
 
@@ -57,14 +66,36 @@
 		border-radius: 9999px;
 		background-color: rgba(255, 255, 255, 0.8);
 		border: 1px solid rgba(15, 118, 255, 0.5);
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+
+	.idea-node:hover :global(.handle),
+	.idea-node.selected :global(.handle) {
+		opacity: 1;
+	}
+
+	.idea-node :global(.handle--top) {
+		top: -5px;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+
+	.idea-node :global(.handle--bottom) {
+		bottom: -5px;
+		left: 50%;
+		transform: translateX(-50%);
 	}
 
 	.idea-node :global(.handle--left) {
 		left: -5px;
+		top: 50%;
+		transform: translateY(-50%);
 	}
 
 	.idea-node :global(.handle--right) {
 		right: -5px;
+		top: 50%;
+		transform: translateY(-50%);
 	}
 </style>
-

@@ -4,11 +4,18 @@ import { createMutation, createQuery } from '@tanstack/svelte-query';
 import { ideasApi } from '$lib/api/ideas';
 import type {
 	CreateIdeaInput,
+	CreateIdeaDocumentInput,
+	CreateIdeaNodeInput,
+	CreateIdeaNodeConnectionInput,
 	CreateLinkInput,
 	MoveIdeaInput,
-	UpdateIdeaInput
+	MoveIdeaNodeInput,
+	ResizeIdeaNodeInput,
+	UpdateIdeaInput,
+	UpdateIdeaDocumentInput,
+	UpdateIdeaNodeInput
 } from '$lib/api/ideas';
-import type { Idea, IdeaLink, IdeaVersion, UUID } from '$lib/api/types';
+import type { Idea, IdeaDocument, IdeaLink, IdeaNode, IdeaNodeConnection, IdeaVersion, ConnectionDirection, UUID } from '$lib/api/types';
 
 type MaybeReadable<T> = T | Readable<T>;
 
@@ -125,5 +132,143 @@ export const useIdeasReferenceQuery = (enabled = true) =>
 		enabled,
 		staleTime: Infinity,
 		placeholderData: (previous) => previous ?? []
+	});
+
+// IdeaNode hooks
+
+export const useIdeaNodesQuery = (ideaId: MaybeReadable<string | null>, enabled = true) => {
+	const ideaIdStore = toReadable(ideaId);
+	const enabledStore = readable(enabled);
+
+	return createQuery<IdeaNode[]>(
+		derived([ideaIdStore, enabledStore], ([$ideaId, $enabled]) => ({
+			queryKey: ['ideas', $ideaId, 'nodes'],
+			queryFn: () => {
+				if (!$ideaId) {
+					throw new Error('Idea ID is required to load nodes');
+				}
+				return ideasApi.fetchIdeaNodes($ideaId);
+			},
+			enabled: Boolean($ideaId) && $enabled,
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useIdeaNodeConnectionsQuery = (ideaId: MaybeReadable<string | null>, enabled = true) => {
+	const ideaIdStore = toReadable(ideaId);
+	const enabledStore = readable(enabled);
+
+	return createQuery<IdeaNodeConnection[]>(
+		derived([ideaIdStore, enabledStore], ([$ideaId, $enabled]) => ({
+			queryKey: ['ideas', $ideaId, 'node-connections'],
+			queryFn: () => {
+				if (!$ideaId) {
+					throw new Error('Idea ID is required to load node connections');
+				}
+				return ideasApi.fetchIdeaNodeConnections($ideaId);
+			},
+			enabled: Boolean($ideaId) && $enabled,
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useCreateIdeaNodeMutation = () =>
+	createMutation({
+		mutationFn: (input: CreateIdeaNodeInput) => ideasApi.createIdeaNode(input)
+	});
+
+interface UpdateIdeaNodeVariables {
+	nodeId: UUID;
+	input: UpdateIdeaNodeInput;
+}
+
+export const useUpdateIdeaNodeMutation = () =>
+	createMutation({
+		mutationFn: ({ nodeId, input }: UpdateIdeaNodeVariables) => ideasApi.updateIdeaNode(nodeId, input)
+	});
+
+interface MoveIdeaNodeVariables {
+	nodeId: UUID;
+	input: MoveIdeaNodeInput;
+}
+
+export const useMoveIdeaNodeMutation = () =>
+	createMutation({
+		mutationFn: ({ nodeId, input }: MoveIdeaNodeVariables) => ideasApi.moveIdeaNode(nodeId, input)
+	});
+
+interface ResizeIdeaNodeVariables {
+	nodeId: UUID;
+	input: ResizeIdeaNodeInput;
+}
+
+export const useResizeIdeaNodeMutation = () =>
+	createMutation({
+		mutationFn: ({ nodeId, input }: ResizeIdeaNodeVariables) => ideasApi.resizeIdeaNode(nodeId, input)
+	});
+
+export const useDeleteIdeaNodeMutation = () =>
+	createMutation({
+		mutationFn: (nodeId: UUID) => ideasApi.deleteIdeaNode(nodeId)
+	});
+
+export const useCreateIdeaNodeConnectionMutation = () =>
+	createMutation({
+		mutationFn: (input: CreateIdeaNodeConnectionInput) => ideasApi.createIdeaNodeConnection(input)
+	});
+
+export const useDeleteIdeaNodeConnectionMutation = () =>
+	createMutation({
+		mutationFn: (connId: UUID) => ideasApi.deleteIdeaNodeConnection(connId)
+	});
+
+// Document hooks
+
+export const useIdeaDocumentsQuery = (
+	ideaId: MaybeReadable<string | null>,
+	nodeId?: MaybeReadable<string | null>,
+	enabled = true
+) => {
+	const ideaIdStore = toReadable(ideaId);
+	const nodeIdStore = nodeId ? toReadable(nodeId) : readable(null);
+	const enabledStore = readable(enabled);
+
+	return createQuery<IdeaDocument[]>(
+		derived([ideaIdStore, nodeIdStore, enabledStore], ([$ideaId, $nodeId, $enabled]) => ({
+			queryKey: ['ideas', $ideaId, 'documents', $nodeId],
+			queryFn: () => {
+				if (!$ideaId) {
+					throw new Error('Idea ID is required to load documents');
+				}
+				return ideasApi.fetchIdeaDocuments($ideaId, {
+					node_id: $nodeId ? $nodeId : undefined
+				});
+			},
+			enabled: Boolean($ideaId) && $enabled,
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useCreateIdeaDocumentMutation = () =>
+	createMutation({
+		mutationFn: (input: CreateIdeaDocumentInput) => ideasApi.createIdeaDocument(input)
+	});
+
+interface UpdateIdeaDocumentVariables {
+	docId: UUID;
+	input: UpdateIdeaDocumentInput;
+}
+
+export const useUpdateIdeaDocumentMutation = () =>
+	createMutation({
+		mutationFn: ({ docId, input }: UpdateIdeaDocumentVariables) => ideasApi.updateIdeaDocument(docId, input)
+	});
+
+export const useDeleteIdeaDocumentMutation = () =>
+	createMutation({
+		mutationFn: (docId: UUID) => ideasApi.deleteIdeaDocument(docId)
 	});
 

@@ -2,8 +2,12 @@ import { apiClient } from '@clients/apiClient';
 import type {
 	Idea,
 	IdeaCollaborator,
+	IdeaDocument,
 	IdeaLink,
+	IdeaNode,
+	IdeaNodeConnection,
 	IdeaVersion,
+	ConnectionDirection,
 	UUID
 } from './types';
 
@@ -343,6 +347,238 @@ export async function removeCollaborator(ownerId: UUID | undefined, collaborator
 	});
 }
 
+// IdeaNode API methods
+
+type IdeaNodeDTO = {
+	ID: UUID;
+	IdeaID: UUID;
+	Title: string;
+	Description?: string;
+	PosX: number;
+	PosY: number;
+	Width: number;
+	Height: number;
+	Color: string;
+	Type: string;
+	Version: number;
+	CreatedAt: string;
+	UpdatedAt: string;
+};
+
+type IdeaNodeConnectionDTO = {
+	ID: UUID;
+	IdeaID: UUID;
+	SourceNodeID: UUID;
+	TargetNodeID: UUID;
+	Direction: ConnectionDirection;
+	Label?: string;
+	CreatedAt: string;
+};
+
+const mapIdeaNode = (dto: IdeaNodeDTO & Record<string, any>): IdeaNode => ({
+	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
+	idea_id: pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? '',
+	title: dto.Title ?? dto.title ?? '',
+	description: dto.Description ?? dto.description,
+	pos_x: Number(pick(dto, ['PosX', 'posX', 'pos_x']) ?? 0),
+	pos_y: Number(pick(dto, ['PosY', 'posY', 'pos_y']) ?? 0),
+	width: Number(pick(dto, ['Width', 'width']) ?? 200),
+	height: Number(pick(dto, ['Height', 'height']) ?? 100),
+	color: dto.Color ?? dto.color ?? DEFAULT_COLOR,
+	type: dto.Type ?? dto.type ?? 'default',
+	version: dto.Version ?? dto.version ?? 1,
+	created_at: (pick(dto, ['CreatedAt', 'createdAt']) as string) ?? new Date().toISOString(),
+	updated_at: (pick(dto, ['UpdatedAt', 'updatedAt']) as string) ?? new Date().toISOString()
+});
+
+const mapIdeaNodeConnection = (dto: IdeaNodeConnectionDTO & Record<string, any>): IdeaNodeConnection => ({
+	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
+	idea_id: pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? '',
+	source_node_id: pick(dto, ['SourceNodeID', 'sourceNodeId', 'source_node_id']) ?? '',
+	target_node_id: pick(dto, ['TargetNodeID', 'targetNodeId', 'target_node_id']) ?? '',
+	direction: (dto.Direction ?? dto.direction) as ConnectionDirection,
+	label: dto.Label ?? dto.label,
+	created_at: (pick(dto, ['CreatedAt', 'createdAt']) as string) ?? new Date().toISOString()
+});
+
+export interface CreateIdeaNodeInput {
+	idea_id: UUID;
+	title: string;
+	description?: string;
+	pos_x?: number;
+	pos_y?: number;
+	width?: number;
+	height?: number;
+	color?: string;
+	type?: string;
+}
+
+export interface UpdateIdeaNodeInput {
+	title?: string;
+	description?: string;
+	color?: string;
+	type?: string;
+}
+
+export interface MoveIdeaNodeInput {
+	pos_x: number;
+	pos_y: number;
+}
+
+export interface ResizeIdeaNodeInput {
+	width: number;
+	height: number;
+}
+
+export interface CreateIdeaNodeConnectionInput {
+	idea_id: UUID;
+	source_node_id: UUID;
+	target_node_id: UUID;
+	direction: ConnectionDirection;
+	label?: string;
+}
+
+export async function fetchIdeaNodes(ideaId: UUID): Promise<IdeaNode[]> {
+	const response = await apiClient.get<ApiResponse<IdeaNodeDTO[]>>(`/ideas/${ideaId}/nodes`);
+	return (response.data.data ?? []).map(mapIdeaNode);
+}
+
+export async function createIdeaNode(input: CreateIdeaNodeInput): Promise<IdeaNode> {
+	const response = await apiClient.post<ApiResponse<IdeaNodeDTO>>('/ideas/nodes', {
+		idea_id: input.idea_id,
+		title: input.title,
+		description: input.description,
+		pos_x: input.pos_x ?? 0,
+		pos_y: input.pos_y ?? 0,
+		width: input.width ?? 200,
+		height: input.height ?? 100,
+		color: input.color ?? DEFAULT_COLOR,
+		type: input.type ?? 'default'
+	});
+	return mapIdeaNode(response.data.data);
+}
+
+export async function updateIdeaNode(nodeId: UUID, input: UpdateIdeaNodeInput): Promise<IdeaNode> {
+	const response = await apiClient.patch<ApiResponse<IdeaNodeDTO>>(`/ideas/nodes/${nodeId}`, {
+		title: input.title,
+		description: input.description,
+		color: input.color,
+		type: input.type
+	});
+	return mapIdeaNode(response.data.data);
+}
+
+export async function moveIdeaNode(nodeId: UUID, input: MoveIdeaNodeInput): Promise<IdeaNode> {
+	const response = await apiClient.patch<ApiResponse<IdeaNodeDTO>>(`/ideas/nodes/${nodeId}/position`, {
+		pos_x: input.pos_x,
+		pos_y: input.pos_y
+	});
+	return mapIdeaNode(response.data.data);
+}
+
+export async function resizeIdeaNode(nodeId: UUID, input: ResizeIdeaNodeInput): Promise<IdeaNode> {
+	const response = await apiClient.patch<ApiResponse<IdeaNodeDTO>>(`/ideas/nodes/${nodeId}/resize`, {
+		width: input.width,
+		height: input.height
+	});
+	return mapIdeaNode(response.data.data);
+}
+
+export async function deleteIdeaNode(nodeId: UUID): Promise<void> {
+	await apiClient.delete(`/ideas/nodes/${nodeId}`);
+}
+
+export async function fetchIdeaNodeConnections(ideaId: UUID): Promise<IdeaNodeConnection[]> {
+	const response = await apiClient.get<ApiResponse<IdeaNodeConnectionDTO[]>>(`/ideas/${ideaId}/node-connections`);
+	return (response.data.data ?? []).map(mapIdeaNodeConnection);
+}
+
+export async function createIdeaNodeConnection(input: CreateIdeaNodeConnectionInput): Promise<IdeaNodeConnection> {
+	const response = await apiClient.post<ApiResponse<IdeaNodeConnectionDTO>>('/ideas/node-connections', {
+		idea_id: input.idea_id,
+		source_node_id: input.source_node_id,
+		target_node_id: input.target_node_id,
+		direction: input.direction,
+		label: input.label
+	});
+	return mapIdeaNodeConnection(response.data.data);
+}
+
+export async function deleteIdeaNodeConnection(connId: UUID): Promise<void> {
+	await apiClient.delete(`/ideas/node-connections/${connId}`);
+}
+
+// Document API methods
+
+type IdeaDocumentDTO = {
+	ID: UUID;
+	IdeaID: UUID;
+	NodeID?: UUID | null;
+	Title: string;
+	Content: string;
+	Version: number;
+	CreatedAt: string;
+	UpdatedAt: string;
+};
+
+const mapIdeaDocument = (dto: IdeaDocumentDTO & Record<string, any>): IdeaDocument => ({
+	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
+	idea_id: pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? '',
+	node_id: pick(dto, ['NodeID', 'nodeId', 'node_id']) ?? null,
+	title: dto.Title ?? dto.title ?? '',
+	content: dto.Content ?? dto.content ?? '',
+	version: dto.Version ?? dto.version ?? 1,
+	created_at: (pick(dto, ['CreatedAt', 'createdAt']) as string) ?? new Date().toISOString(),
+	updated_at: (pick(dto, ['UpdatedAt', 'updatedAt']) as string) ?? new Date().toISOString()
+});
+
+export interface CreateIdeaDocumentInput {
+	idea_id: UUID;
+	node_id?: UUID | null;
+	title: string;
+	content: string;
+}
+
+export interface UpdateIdeaDocumentInput {
+	title?: string;
+	content?: string;
+}
+
+export interface ListDocumentsParams {
+	node_id?: UUID | null;
+}
+
+export async function fetchIdeaDocuments(ideaId: UUID, params?: ListDocumentsParams): Promise<IdeaDocument[]> {
+	const response = await apiClient.get<ApiResponse<IdeaDocumentDTO[]>>(`/ideas/${ideaId}/documents`, {
+		params: {
+			node_id: params?.node_id
+		}
+	});
+	return (response.data.data ?? []).map(mapIdeaDocument);
+}
+
+export async function createIdeaDocument(input: CreateIdeaDocumentInput): Promise<IdeaDocument> {
+	const response = await apiClient.post<ApiResponse<IdeaDocumentDTO>>('/ideas/documents', {
+		idea_id: input.idea_id,
+		node_id: input.node_id ?? null,
+		title: input.title,
+		content: input.content
+	});
+	return mapIdeaDocument(response.data.data);
+}
+
+export async function updateIdeaDocument(docId: UUID, input: UpdateIdeaDocumentInput): Promise<IdeaDocument> {
+	const response = await apiClient.patch<ApiResponse<IdeaDocumentDTO>>(`/ideas/documents/${docId}`, {
+		title: input.title,
+		content: input.content
+	});
+	return mapIdeaDocument(response.data.data);
+}
+
+export async function deleteIdeaDocument(docId: UUID): Promise<void> {
+	await apiClient.delete(`/ideas/documents/${docId}`);
+}
+
 export const ideasApi = {
 	fetchIdeaBySlug,
 	fetchIdeas,
@@ -358,6 +594,19 @@ export const ideasApi = {
 	fetchVersions,
 	addCollaborator,
 	listCollaborators,
-	removeCollaborator
+	removeCollaborator,
+	fetchIdeaNodes,
+	createIdeaNode,
+	updateIdeaNode,
+	moveIdeaNode,
+	resizeIdeaNode,
+	deleteIdeaNode,
+	fetchIdeaNodeConnections,
+	createIdeaNodeConnection,
+	deleteIdeaNodeConnection,
+	fetchIdeaDocuments,
+	createIdeaDocument,
+	updateIdeaDocument,
+	deleteIdeaDocument
 };
 

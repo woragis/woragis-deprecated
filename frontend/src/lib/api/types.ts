@@ -205,6 +205,45 @@ export interface IdeaCollaborator {
 	updated_at: string;
 }
 
+export type ConnectionDirection = 'north' | 'south' | 'east' | 'west';
+
+export interface IdeaNode {
+	id: UUID;
+	idea_id: UUID;
+	title: string;
+	description?: string;
+	pos_x: number;
+	pos_y: number;
+	width: number;
+	height: number;
+	color: string;
+	type: string;
+	version: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IdeaNodeConnection {
+	id: UUID;
+	idea_id: UUID;
+	source_node_id: UUID;
+	target_node_id: UUID;
+	direction: ConnectionDirection;
+	label?: string;
+	created_at: string;
+}
+
+export interface IdeaDocument {
+	id: UUID;
+	idea_id: UUID;
+	node_id?: UUID | null;
+	title: string;
+	content: string;
+	version: number;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface ChatConversation {
 	id: UUID;
 	user_id: UUID;
