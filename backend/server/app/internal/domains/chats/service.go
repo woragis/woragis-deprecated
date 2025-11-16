@@ -153,17 +153,75 @@ func (s *Service) AppendMessage(ctx context.Context, req AppendMessageRequest) (
 	}
 
 	if req.GenerateReply {
-		reply, replyErr := s.generateReply(ctx, req)
-		if replyErr != nil {
-			if s.logger != nil {
-				s.logger.Error("chats: failed to generate reply", slog.Any("error", replyErr))
+		if s.stream != nil && s.llmClient != nil {
+			// Stream token deltas to clients, then persist final message
+			go s.streamReply(context.Background(), conv.ID, req)
+		} else {
+			reply, replyErr := s.generateReply(ctx, req)
+			if replyErr != nil {
+				if s.logger != nil {
+					s.logger.Error("chats: failed to generate reply", slog.Any("error", replyErr))
+				}
+			} else if reply != nil {
+				s.broadcastMessage(conv.ID, reply)
 			}
-		} else if reply != nil {
-			s.broadcastMessage(conv.ID, reply)
 		}
 	}
 
 	return s.repo.ListMessages(ctx, req.ConversationID, req.UserID)
+}
+
+type streamDeltaEvent struct {
+	Type           string `json:"type"`
+	ConversationID string `json:"conversationId"`
+	Delta          string `json:"delta"`
+}
+
+func (s *Service) streamReply(ctx context.Context, conversationID uuid.UUID, req AppendMessageRequest) {
+	// Load full message history to build proper prompt
+	messages, err := s.repo.ListMessages(ctx, req.ConversationID, req.UserID)
+	if err != nil {
+		return
+	}
+	lcMessages := make([]langchain.ChatMessage, 0, len(messages))
+	for _, msg := range messages {
+		lcMessages = append(lcMessages, langchain.ChatMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+
+	resp, err := s.llmClient.GenerateCompletionStream(ctx, langchain.ChatCompletionRequest{
+		Provider:    req.Provider,
+		Model:       req.Model,
+		Messages:    lcMessages,
+		MaxTokens:   req.MaxTokens,
+		Temperature: req.Temperature,
+	}, func(delta string) {
+		if s.stream != nil && delta != "" {
+			s.stream.Broadcast(conversationID, streamDeltaEvent{
+				Type:           "delta",
+				ConversationID: conversationID.String(),
+				Delta:          delta,
+			})
+		}
+	})
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Error("chats: stream reply failed", slog.Any("error", err))
+		}
+		return
+	}
+
+	// Persist final assistant message
+	reply, err := NewMessage(conversationID, "assistant", resp.Message.Content)
+	if err != nil {
+		return
+	}
+	if err := s.repo.CreateMessage(ctx, reply); err != nil {
+		return
+	}
+	s.broadcastMessage(conversationID, reply)
 }
 
 func (s *Service) generateReply(ctx context.Context, req AppendMessageRequest) (*Message, error) {

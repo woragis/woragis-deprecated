@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.runnables import Runnable
+from fastapi.responses import StreamingResponse
+import json
 
 from app.agents import get_agent_names, get_agent, build_agent_with_model, build_system_message
 from app.providers import make_model, CipherClient
@@ -41,6 +43,9 @@ class ChatResponse(BaseModel):
     agent: str
     output: str
 
+
+class ChatStreamRequest(ChatRequest):
+    pass
 
 class ImageRequest(BaseModel):
     provider: Literal["cipher"] = Field("cipher", description="Image provider")
@@ -150,3 +155,62 @@ async def generate_images(req: ImageRequest):
     return ImageResponse(data=normalized)
 
 
+@app.post("/v1/chat/stream")
+async def chat_stream(req: ChatStreamRequest):
+    provider = (req.provider or "openai").lower()
+
+    # Prepare input
+    inputs = req.input
+    if req.system:
+        inputs = f"{req.system}\n\nUser: {req.input}"
+
+    # Cipher has no documented streaming: return one full chunk then done
+    if provider == "cipher":
+        system_text = build_system_message(req.agent) or ""
+        messages = [{"role": "system", "content": system_text}]
+        if req.system:
+            messages.append({"role": "system", "content": req.system})
+        messages.append({"role": "user", "content": req.input})
+
+        client = CipherClient.from_env()
+        text = await client.chat(
+            messages=messages,
+            temperature=req.temperature if req.temperature is not None else settings.DEFAULT_TEMPERATURE,
+            max_tokens=settings.CIPHER_MAX_TOKENS,
+            top_p=settings.CIPHER_TOP_P,
+        )
+
+        async def _gen_once():
+            yield json.dumps({"delta": text}) + "\n"
+            yield json.dumps({"done": True}) + "\n"
+
+        return StreamingResponse(_gen_once(), media_type="application/x-ndjson")
+
+    # LangChain-supported streaming
+    try:
+        model = make_model(provider, req.model, req.temperature)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    chain = build_agent_with_model(req.agent, model)
+    if not chain:
+        raise HTTPException(status_code=404, detail=f"Unknown agent '{req.agent}'. Available: {', '.join(get_agent_names())}")
+
+    async def event_gen():
+        full_parts = []
+        try:
+            async for event in chain.astream_events({"input": inputs}, version="v1"):
+                if event.get("event") in ("on_chat_model_stream", "on_llm_new_token"):
+                    data = event.get("data", {})
+                    chunk = None
+                    if "chunk" in data and hasattr(data["chunk"], "content"):
+                        chunk = data["chunk"].content
+                    elif "token" in data:
+                        chunk = data["token"]
+                    if chunk:
+                        full_parts.append(chunk)
+                        yield json.dumps({"delta": chunk}) + "\n"
+        except Exception as e:
+            yield json.dumps({"error": str(e)}) + "\n"
+        yield json.dumps({"done": True, "output": "".join(full_parts)}) + "\n"
+
+    return StreamingResponse(event_gen(), media_type="application/x-ndjson")

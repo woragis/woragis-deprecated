@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"bytes"
+	"encoding/json"
+	"bufio"
 	"os"
 	"strings"
 	"time"
@@ -117,12 +121,207 @@ func NewClient(logger *slog.Logger) *Client {
 
 // GenerateCompletion executes a chat completion call using the requested provider.
 func (c *Client) GenerateCompletion(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
-	switch req.Provider {
-	case ProviderOpenAI:
-		return c.callOpenAI(ctx, req)
-	default:
-		return ChatCompletionResponse{}, fmt.Errorf("provider %q not implemented", req.Provider)
+	// Route all providers through the dedicated AI service to standardize behavior,
+	// falling back to direct OpenAI if AI service URL is not configured.
+	aiURL := os.Getenv("AI_SERVICE_URL")
+	if aiURL == "" {
+		switch req.Provider {
+		case ProviderOpenAI:
+			return c.callOpenAI(ctx, req)
+		default:
+			return ChatCompletionResponse{}, fmt.Errorf("AI_SERVICE_URL not set and provider %q not supported directly", req.Provider)
+		}
 	}
+	return c.callAIService(ctx, aiURL, req)
+}
+
+type aiServiceChatRequest struct {
+	Agent      string  `json:"agent"`
+	Input      string  `json:"input"`
+	System     string  `json:"system,omitempty"`
+	Temperature *float64 `json:"temperature,omitempty"`
+	Model      string  `json:"model,omitempty"`
+	Provider   string  `json:"provider,omitempty"`
+}
+
+type aiServiceChatResponse struct {
+	Agent  string `json:"agent"`
+	Output string `json:"output"`
+}
+
+func (c *Client) callAIService(ctx context.Context, baseURL string, req ChatCompletionRequest) (ChatCompletionResponse, error) {
+	// Concatenate messages into a single input preserving roles.
+	var b strings.Builder
+	for _, m := range req.Messages {
+		role := strings.ToLower(m.Role)
+		switch role {
+		case "system":
+			// Prepend as system guidance
+			// We'll include it in the input as a labeled line to give model context.
+			b.WriteString("System: ")
+			b.WriteString(m.Content)
+			b.WriteString("\n\n")
+		case "assistant", "ai":
+			b.WriteString("Assistant: ")
+			b.WriteString(m.Content)
+			b.WriteString("\n\n")
+		default:
+			b.WriteString("User: ")
+			b.WriteString(m.Content)
+			b.WriteString("\n\n")
+		}
+	}
+	input := strings.TrimSpace(b.String())
+
+	var tempPtr *float64
+	if req.Temperature != 0 {
+		t := req.Temperature
+		tempPtr = &t
+	}
+
+	payload := aiServiceChatRequest{
+		Agent:       "startup", // default agent persona
+		Input:       input,
+		Temperature: tempPtr,
+		Model:       req.Model,
+		Provider:    string(req.Provider),
+	}
+
+	buf, err := json.Marshal(&payload)
+	if err != nil {
+		return ChatCompletionResponse{}, err
+	}
+
+	httpClient := &http.Client{Timeout: 75 * time.Second}
+	url := strings.TrimRight(baseURL, "/") + "/v1/chat"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(buf))
+	if err != nil {
+		return ChatCompletionResponse{}, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	res, err := httpClient.Do(httpReq)
+	if err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service request failed: %w", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 400 {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service error: %s", res.Status)
+	}
+
+	var data aiServiceChatResponse
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service decode: %w", err)
+	}
+
+	msg := ChatMessage{
+		Role:      "assistant",
+		Content:   data.Output,
+		Timestamp: time.Now().UTC(),
+	}
+	return ChatCompletionResponse{Message: msg, Raw: data}, nil
+}
+
+// GenerateCompletionStream streams deltas from the AI service and invokes onDelta for each.
+func (c *Client) GenerateCompletionStream(ctx context.Context, req ChatCompletionRequest, onDelta func(delta string)) (ChatCompletionResponse, error) {
+	aiURL := os.Getenv("AI_SERVICE_URL")
+	if aiURL == "" {
+		// Fallback: no streaming support directly; do a normal call
+		return c.GenerateCompletion(ctx, req)
+	}
+
+	// Build input text same as non-streaming path
+	var b strings.Builder
+	for _, m := range req.Messages {
+		role := strings.ToLower(m.Role)
+		switch role {
+		case "system":
+			b.WriteString("System: ")
+			b.WriteString(m.Content)
+			b.WriteString("\n\n")
+		case "assistant", "ai":
+			b.WriteString("Assistant: ")
+			b.WriteString(m.Content)
+			b.WriteString("\n\n")
+		default:
+			b.WriteString("User: ")
+			b.WriteString(m.Content)
+			b.WriteString("\n\n")
+		}
+	}
+	input := strings.TrimSpace(b.String())
+
+	var tempPtr *float64
+	if req.Temperature != 0 {
+		t := req.Temperature
+		tempPtr = &t
+	}
+	payload := aiServiceChatRequest{
+		Agent:       "startup",
+		Input:       input,
+		Temperature: tempPtr,
+		Model:       req.Model,
+		Provider:    string(req.Provider),
+	}
+	buf, err := json.Marshal(&payload)
+	if err != nil {
+		return ChatCompletionResponse{}, err
+	}
+
+	httpClient := &http.Client{Timeout: 0} // stream until server closes
+	url := strings.TrimRight(aiURL, "/") + "/v1/chat/stream"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(buf))
+	if err != nil {
+		return ChatCompletionResponse{}, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	res, err := httpClient.Do(httpReq)
+	if err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service stream request failed: %w", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 400 {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service stream error: %s", res.Status)
+	}
+
+	scanner := bufio.NewScanner(res.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var full strings.Builder
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		var evt map[string]any
+		if err := json.Unmarshal([]byte(line), &evt); err != nil {
+			continue
+		}
+		if delta, ok := evt["delta"].(string); ok {
+			full.WriteString(delta)
+			if onDelta != nil {
+				onDelta(delta)
+			}
+			continue
+		}
+		if done, ok := evt["done"].(bool); ok && done {
+			if out, ok := evt["output"].(string); ok && out != "" {
+				full.Reset()
+				full.WriteString(out)
+			}
+			break
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service stream read: %w", err)
+	}
+
+	msg := ChatMessage{
+		Role:      "assistant",
+		Content:   full.String(),
+		Timestamp: time.Now().UTC(),
+	}
+	return ChatCompletionResponse{Message: msg, Raw: nil}, nil
 }
 
 func (c *Client) callOpenAI(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
