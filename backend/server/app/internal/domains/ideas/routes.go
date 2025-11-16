@@ -21,4 +21,23 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 	group.Get("/collaborators", handler.ListCollaborators)
 	group.Post("/collaborators", handler.PostCollaborator)
 	group.Delete("/collaborators/:collaborator_id", handler.DeleteCollaborator)
+
+	// IdeaNode routes
+	group.Post("/nodes", handler.PostIdeaNode)
+	group.Get("/:id/nodes", handler.GetIdeaNodes)
+	group.Patch("/nodes/:id", handler.PatchIdeaNode)
+	group.Patch("/nodes/:id/position", handler.PatchIdeaNodePosition)
+	group.Patch("/nodes/:id/resize", handler.PatchIdeaNodeResize)
+	group.Delete("/nodes/:id", handler.DeleteIdeaNode)
+
+	// IdeaNodeConnection routes
+	group.Post("/node-connections", handler.PostIdeaNodeConnection)
+	group.Get("/:id/node-connections", handler.GetIdeaNodeConnections)
+	group.Delete("/node-connections/:id", handler.DeleteIdeaNodeConnection)
+
+	// Document routes
+	group.Post("/documents", handler.PostDocument)
+	group.Get("/:id/documents", handler.GetDocuments)
+	group.Patch("/documents/:id", handler.PatchDocument)
+	group.Delete("/documents/:id", handler.DeleteDocument)
 }

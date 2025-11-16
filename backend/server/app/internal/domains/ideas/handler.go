@@ -642,3 +642,422 @@ func parseUUIDs(values []string) ([]uuid.UUID, error) {
 	}
 	return result, nil
 }
+
+// IdeaNode handlers
+
+type createIdeaNodePayload struct {
+	IdeaID      string  `json:"idea_id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	PosX        float64 `json:"pos_x"`
+	PosY        float64 `json:"pos_y"`
+	Width       float64 `json:"width"`
+	Height      float64 `json:"height"`
+	Color       string  `json:"color"`
+	Type        string  `json:"type"`
+}
+
+type updateIdeaNodePayload struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Color       string `json:"color"`
+	Type        string `json:"type"`
+}
+
+type moveIdeaNodePayload struct {
+	PosX float64 `json:"pos_x"`
+	PosY float64 `json:"pos_y"`
+}
+
+type resizeIdeaNodePayload struct {
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+type createIdeaNodeConnectionPayload struct {
+	IdeaID       string `json:"idea_id"`
+	SourceNodeID string `json:"source_node_id"`
+	TargetNodeID string `json:"target_node_id"`
+	Direction    string `json:"direction"`
+	Label        string `json:"label"`
+}
+
+// PostIdeaNode handles node creation within an idea canvas.
+func (h *Handler) PostIdeaNode(c *fiber.Ctx) error {
+	var payload createIdeaNodePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	ideaID, err := uuid.Parse(payload.IdeaID)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	node, err := h.service.CreateIdeaNode(c.Context(), CreateIdeaNodeRequest{
+		ActorID:     actorID,
+		IdeaID:      ideaID,
+		Title:       payload.Title,
+		Description: payload.Description,
+		PosX:        payload.PosX,
+		PosY:        payload.PosY,
+		Width:       payload.Width,
+		Height:      payload.Height,
+		Color:       payload.Color,
+		Type:        payload.Type,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, node)
+}
+
+// GetIdeaNodes returns all nodes for an idea.
+func (h *Handler) GetIdeaNodes(c *fiber.Ctx) error {
+	ideaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	nodes, err := h.service.ListIdeaNodes(c.Context(), actorID, ideaID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, nodes)
+}
+
+// PatchIdeaNode handles node metadata updates.
+func (h *Handler) PatchIdeaNode(c *fiber.Ctx) error {
+	nodeID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateIdeaNodePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	node, err := h.service.UpdateIdeaNode(c.Context(), UpdateIdeaNodeRequest{
+		ActorID:     actorID,
+		NodeID:      nodeID,
+		Title:       payload.Title,
+		Description: payload.Description,
+		Color:       payload.Color,
+		Type:        payload.Type,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, node)
+}
+
+// PatchIdeaNodePosition handles node position updates.
+func (h *Handler) PatchIdeaNodePosition(c *fiber.Ctx) error {
+	nodeID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload moveIdeaNodePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	node, err := h.service.MoveIdeaNode(c.Context(), MoveIdeaNodeRequest{
+		ActorID: actorID,
+		NodeID:  nodeID,
+		PosX:    payload.PosX,
+		PosY:    payload.PosY,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, node)
+}
+
+// PatchIdeaNodeResize handles node dimension updates.
+func (h *Handler) PatchIdeaNodeResize(c *fiber.Ctx) error {
+	nodeID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload resizeIdeaNodePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	node, err := h.service.ResizeIdeaNode(c.Context(), ResizeIdeaNodeRequest{
+		ActorID: actorID,
+		NodeID:  nodeID,
+		Width:   payload.Width,
+		Height:  payload.Height,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, node)
+}
+
+// DeleteIdeaNode handles node deletion.
+func (h *Handler) DeleteIdeaNode(c *fiber.Ctx) error {
+	nodeID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	if err := h.service.DeleteIdeaNode(c.Context(), actorID, nodeID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "deleted"})
+}
+
+// PostIdeaNodeConnection handles connection creation between nodes.
+func (h *Handler) PostIdeaNodeConnection(c *fiber.Ctx) error {
+	var payload createIdeaNodeConnectionPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	ideaID, err := uuid.Parse(payload.IdeaID)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	sourceNodeID, err := uuid.Parse(payload.SourceNodeID)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	targetNodeID, err := uuid.Parse(payload.TargetNodeID)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	conn, err := h.service.CreateIdeaNodeConnection(c.Context(), CreateIdeaNodeConnectionRequest{
+		ActorID:      actorID,
+		IdeaID:       ideaID,
+		SourceNodeID: sourceNodeID,
+		TargetNodeID: targetNodeID,
+		Direction:    ConnectionDirection(payload.Direction),
+		Label:        payload.Label,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, conn)
+}
+
+// GetIdeaNodeConnections returns all connections for an idea's canvas.
+func (h *Handler) GetIdeaNodeConnections(c *fiber.Ctx) error {
+	ideaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	connections, err := h.service.ListIdeaNodeConnections(c.Context(), actorID, ideaID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, connections)
+}
+
+// DeleteIdeaNodeConnection handles connection deletion.
+func (h *Handler) DeleteIdeaNodeConnection(c *fiber.Ctx) error {
+	connID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	if err := h.service.DeleteIdeaNodeConnection(c.Context(), actorID, connID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "deleted"})
+}
+
+// Document handlers
+
+type createDocumentPayload struct {
+	IdeaID  string `json:"idea_id"`
+	NodeID  string `json:"node_id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type updateDocumentPayload struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+// PostDocument handles document creation.
+func (h *Handler) PostDocument(c *fiber.Ctx) error {
+	var payload createDocumentPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	ideaID, err := uuid.Parse(payload.IdeaID)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var nodeID *uuid.UUID
+	if payload.NodeID != "" {
+		id, err := uuid.Parse(payload.NodeID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		nodeID = &id
+	}
+
+	doc, err := h.service.CreateDocument(c.Context(), CreateDocumentRequest{
+		ActorID: actorID,
+		IdeaID:  ideaID,
+		NodeID:  nodeID,
+		Title:   payload.Title,
+		Content: payload.Content,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, doc)
+}
+
+// GetDocuments returns all documents for an idea, optionally filtered by node.
+func (h *Handler) GetDocuments(c *fiber.Ctx) error {
+	ideaID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	var nodeID *uuid.UUID
+	if nodeIDParam := c.Query("node_id"); nodeIDParam != "" {
+		id, err := uuid.Parse(nodeIDParam)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		nodeID = &id
+	}
+
+	docs, err := h.service.ListDocuments(c.Context(), actorID, ideaID, nodeID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, docs)
+}
+
+// PatchDocument handles document updates.
+func (h *Handler) PatchDocument(c *fiber.Ctx) error {
+	docID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateDocumentPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	doc, err := h.service.UpdateDocument(c.Context(), UpdateDocumentRequest{
+		ActorID:   actorID,
+		DocumentID: docID,
+		Title:     payload.Title,
+		Content:   payload.Content,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, doc)
+}
+
+// DeleteDocument handles document deletion.
+func (h *Handler) DeleteDocument(c *fiber.Ctx) error {
+	docID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	actorID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	if err := h.service.DeleteDocument(c.Context(), actorID, docID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "deleted"})
+}

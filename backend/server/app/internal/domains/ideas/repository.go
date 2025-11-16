@@ -31,6 +31,26 @@ type Repository interface {
 	RemoveCollaborator(ctx context.Context, ownerID, collaboratorID uuid.UUID) error
 	ListCollaborators(ctx context.Context, ownerID uuid.UUID) ([]IdeaCollaborator, error)
 	HasCollaborator(ctx context.Context, ownerID, collaboratorID uuid.UUID) (bool, error)
+
+	// IdeaNode operations
+	CreateIdeaNode(ctx context.Context, node *IdeaNode) error
+	UpdateIdeaNode(ctx context.Context, node *IdeaNode) error
+	GetIdeaNode(ctx context.Context, nodeID uuid.UUID) (*IdeaNode, error)
+	ListIdeaNodes(ctx context.Context, ideaID uuid.UUID) ([]IdeaNode, error)
+	DeleteIdeaNode(ctx context.Context, nodeID uuid.UUID) error
+
+	// IdeaNodeConnection operations
+	CreateIdeaNodeConnection(ctx context.Context, conn *IdeaNodeConnection) error
+	GetIdeaNodeConnection(ctx context.Context, connID uuid.UUID) (*IdeaNodeConnection, error)
+	ListIdeaNodeConnections(ctx context.Context, ideaID uuid.UUID) ([]IdeaNodeConnection, error)
+	DeleteIdeaNodeConnection(ctx context.Context, connID uuid.UUID) error
+
+	// Document operations
+	CreateDocument(ctx context.Context, doc *Document) error
+	UpdateDocument(ctx context.Context, doc *Document) error
+	GetDocument(ctx context.Context, docID uuid.UUID) (*Document, error)
+	ListDocuments(ctx context.Context, ideaID uuid.UUID, nodeID *uuid.UUID) ([]Document, error)
+	DeleteDocument(ctx context.Context, docID uuid.UUID) error
 }
 
 type gormRepository struct {
@@ -361,4 +381,175 @@ func (r *gormRepository) HasCollaborator(ctx context.Context, ownerID, collabora
 		return false, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return count > 0, nil
+}
+
+// IdeaNode repository methods
+
+func (r *gormRepository) CreateIdeaNode(ctx context.Context, node *IdeaNode) error {
+	if err := node.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Create(node).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) UpdateIdeaNode(ctx context.Context, node *IdeaNode) error {
+	if err := node.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Save(node).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) GetIdeaNode(ctx context.Context, nodeID uuid.UUID) (*IdeaNode, error) {
+	var node IdeaNode
+	err := r.db.WithContext(ctx).Where("id = ?", nodeID).First(&node).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, "ideas: node not found")
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return &node, nil
+}
+
+func (r *gormRepository) ListIdeaNodes(ctx context.Context, ideaID uuid.UUID) ([]IdeaNode, error) {
+	var nodes []IdeaNode
+	if err := r.db.WithContext(ctx).
+		Where("idea_id = ?", ideaID).
+		Order("created_at asc").
+		Find(&nodes).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return nodes, nil
+}
+
+func (r *gormRepository) DeleteIdeaNode(ctx context.Context, nodeID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).
+		Where("id = ?", nodeID).
+		Delete(&IdeaNode{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+// IdeaNodeConnection repository methods
+
+func (r *gormRepository) CreateIdeaNodeConnection(ctx context.Context, conn *IdeaNodeConnection) error {
+	if err := conn.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Create(conn).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) GetIdeaNodeConnection(ctx context.Context, connID uuid.UUID) (*IdeaNodeConnection, error) {
+	var conn IdeaNodeConnection
+	err := r.db.WithContext(ctx).Where("id = ?", connID).First(&conn).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, "ideas: connection not found")
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return &conn, nil
+}
+
+func (r *gormRepository) ListIdeaNodeConnections(ctx context.Context, ideaID uuid.UUID) ([]IdeaNodeConnection, error) {
+	var connections []IdeaNodeConnection
+	if err := r.db.WithContext(ctx).
+		Where("idea_id = ?", ideaID).
+		Order("created_at asc").
+		Find(&connections).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return connections, nil
+}
+
+func (r *gormRepository) DeleteIdeaNodeConnection(ctx context.Context, connID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).
+		Where("id = ?", connID).
+		Delete(&IdeaNodeConnection{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+// Document repository methods
+
+func (r *gormRepository) CreateDocument(ctx context.Context, doc *Document) error {
+	if err := doc.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Create(doc).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) UpdateDocument(ctx context.Context, doc *Document) error {
+	if err := doc.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Save(doc).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) GetDocument(ctx context.Context, docID uuid.UUID) (*Document, error) {
+	var doc Document
+	err := r.db.WithContext(ctx).Where("id = ?", docID).First(&doc).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, "ideas: document not found")
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return &doc, nil
+}
+
+func (r *gormRepository) ListDocuments(ctx context.Context, ideaID uuid.UUID, nodeID *uuid.UUID) ([]Document, error) {
+	var docs []Document
+	query := r.db.WithContext(ctx).Where("idea_id = ?", ideaID)
+	
+	if nodeID != nil {
+		query = query.Where("node_id = ?", *nodeID)
+	}
+
+	if err := query.Order("updated_at desc").Find(&docs).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return docs, nil
+}
+
+func (r *gormRepository) DeleteDocument(ctx context.Context, docID uuid.UUID) error {
+	if err := r.db.WithContext(ctx).
+		Where("id = ?", docID).
+		Delete(&Document{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
 }

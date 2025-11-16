@@ -252,3 +252,257 @@ func (c *IdeaCollaborator) Validate() error {
 	}
 	return nil
 }
+
+// ConnectionDirection represents the direction of a connection between nodes.
+type ConnectionDirection string
+
+const (
+	DirectionNorth ConnectionDirection = "north"
+	DirectionSouth ConnectionDirection = "south"
+	DirectionEast  ConnectionDirection = "east"
+	DirectionWest  ConnectionDirection = "west"
+)
+
+// IdeaNode represents a node within an idea's canvas.
+type IdeaNode struct {
+	ID          uuid.UUID      `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	IdeaID      uuid.UUID      `gorm:"column:idea_id;type:uuid;index;not null" json:"ideaId"`
+	Title       string         `gorm:"column:title;size:160;not null" json:"title"`
+	Description string         `gorm:"column:description;type:text" json:"description"`
+	PosX        float64        `gorm:"column:pos_x;not null" json:"posX"`
+	PosY        float64        `gorm:"column:pos_y;not null" json:"posY"`
+	Width       float64        `gorm:"column:width;default:200" json:"width"`
+	Height      float64        `gorm:"column:height;default:100" json:"height"`
+	Color       string         `gorm:"column:color;size:16" json:"color"`
+	Type        string         `gorm:"column:type;size:64;default:default" json:"type"`
+	Version     int            `gorm:"column:version;not null;default:1" json:"version"`
+	CreatedAt   time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time      `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
+}
+
+// NewIdeaNode constructs a new node within an idea canvas.
+func NewIdeaNode(ideaID uuid.UUID, title, description string, posX, posY, width, height float64, color, nodeType string) (*IdeaNode, error) {
+	node := &IdeaNode{
+		ID:          uuid.New(),
+		IdeaID:      ideaID,
+		Title:       strings.TrimSpace(title),
+		Description: strings.TrimSpace(description),
+		PosX:        posX,
+		PosY:        posY,
+		Width:       width,
+		Height:      height,
+		Color:       strings.TrimSpace(color),
+		Type:        strings.TrimSpace(nodeType),
+		Version:     1,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+	if node.Type == "" {
+		node.Type = "default"
+	}
+	if node.Width <= 0 {
+		node.Width = 200
+	}
+	if node.Height <= 0 {
+		node.Height = 100
+	}
+
+	return node, node.Validate()
+}
+
+// Validate ensures IdeaNode invariants.
+func (n *IdeaNode) Validate() error {
+	if n == nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: node entity is nil")
+	}
+
+	if n.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: node id cannot be empty")
+	}
+
+	if n.IdeaID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: idea id cannot be empty")
+	}
+
+	if strings.TrimSpace(n.Title) == "" {
+		return NewDomainError(ErrCodeInvalidTitle, ErrEmptyTitle)
+	}
+
+	return nil
+}
+
+// Touch updates the updated at timestamp.
+func (n *IdeaNode) Touch() {
+	n.UpdatedAt = time.Now().UTC()
+}
+
+// Move updates canvas coordinates.
+func (n *IdeaNode) Move(posX, posY float64) {
+	n.PosX = posX
+	n.PosY = posY
+	n.Version++
+	n.Touch()
+}
+
+// UpdateDetails updates textual metadata.
+func (n *IdeaNode) UpdateDetails(title, description, color, nodeType string) error {
+	if title != "" {
+		n.Title = strings.TrimSpace(title)
+	}
+	if description != "" {
+		n.Description = strings.TrimSpace(description)
+	}
+	if color != "" {
+		n.Color = strings.TrimSpace(color)
+	}
+	if nodeType != "" {
+		n.Type = strings.TrimSpace(nodeType)
+	}
+	n.Version++
+	return n.Validate()
+}
+
+// Resize updates node dimensions.
+func (n *IdeaNode) Resize(width, height float64) {
+	if width > 0 {
+		n.Width = width
+	}
+	if height > 0 {
+		n.Height = height
+	}
+	n.Version++
+	n.Touch()
+}
+
+// IdeaNodeConnection represents a directional connection between two nodes within an idea's canvas.
+type IdeaNodeConnection struct {
+	ID           uuid.UUID          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	IdeaID       uuid.UUID          `gorm:"column:idea_id;type:uuid;index;not null" json:"ideaId"`
+	SourceNodeID uuid.UUID          `gorm:"column:source_node_id;type:uuid;index;not null" json:"sourceNodeId"`
+	TargetNodeID uuid.UUID          `gorm:"column:target_node_id;type:uuid;index;not null" json:"targetNodeId"`
+	Direction    ConnectionDirection `gorm:"column:direction;size:16;not null" json:"direction"`
+	Label        string             `gorm:"column:label;size:128" json:"label"`
+	CreatedAt    time.Time          `gorm:"column:created_at" json:"createdAt"`
+}
+
+// NewIdeaNodeConnection creates a connection between two nodes.
+func NewIdeaNodeConnection(ideaID, sourceNodeID, targetNodeID uuid.UUID, direction ConnectionDirection, label string) (*IdeaNodeConnection, error) {
+	conn := &IdeaNodeConnection{
+		ID:           uuid.New(),
+		IdeaID:       ideaID,
+		SourceNodeID: sourceNodeID,
+		TargetNodeID: targetNodeID,
+		Direction:    direction,
+		Label:        strings.TrimSpace(label),
+		CreatedAt:    time.Now().UTC(),
+	}
+
+	return conn, conn.Validate()
+}
+
+// Validate ensures IdeaNodeConnection invariants.
+func (c *IdeaNodeConnection) Validate() error {
+	if c == nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: connection entity is nil")
+	}
+
+	if c.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: connection id cannot be empty")
+	}
+
+	if c.IdeaID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: idea id cannot be empty")
+	}
+
+	if c.SourceNodeID == uuid.Nil || c.TargetNodeID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidRelation, "ideas: connection requires source and target nodes")
+	}
+
+	if c.SourceNodeID == c.TargetNodeID {
+		return NewDomainError(ErrCodeInvalidRelation, ErrSelfRelation)
+	}
+
+	switch c.Direction {
+	case DirectionNorth, DirectionSouth, DirectionEast, DirectionWest:
+		// Valid direction
+	default:
+		return NewDomainError(ErrCodeInvalidRelation, "ideas: invalid connection direction, must be north, south, east, or west")
+	}
+
+	return nil
+}
+
+// Document represents a text document related to an idea, optionally linked to a node.
+type Document struct {
+	ID          uuid.UUID      `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	IdeaID      uuid.UUID      `gorm:"column:idea_id;type:uuid;index;not null" json:"ideaId"`
+	NodeID      *uuid.UUID     `gorm:"column:node_id;type:uuid;index" json:"nodeId,omitempty"`
+	Title       string         `gorm:"column:title;size:200;not null" json:"title"`
+	Content     string         `gorm:"column:content;type:text" json:"content"`
+	Version     int            `gorm:"column:version;not null;default:1" json:"version"`
+	CreatedAt   time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time      `gorm:"column:updated_at" json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
+}
+
+// NewDocument constructs a new document for an idea.
+func NewDocument(ideaID uuid.UUID, nodeID *uuid.UUID, title, content string) (*Document, error) {
+	doc := &Document{
+		ID:        uuid.New(),
+		IdeaID:    ideaID,
+		NodeID:    nodeID,
+		Title:     strings.TrimSpace(title),
+		Content:   strings.TrimSpace(content),
+		Version:   1,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	return doc, doc.Validate()
+}
+
+// Validate ensures Document invariants.
+func (d *Document) Validate() error {
+	if d == nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: document entity is nil")
+	}
+
+	if d.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: document id cannot be empty")
+	}
+
+	if d.IdeaID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, "ideas: idea id cannot be empty")
+	}
+
+	if strings.TrimSpace(d.Title) == "" {
+		return NewDomainError(ErrCodeInvalidTitle, ErrEmptyTitle)
+	}
+
+	return nil
+}
+
+// Touch updates the updated at timestamp.
+func (d *Document) Touch() {
+	d.UpdatedAt = time.Now().UTC()
+}
+
+// UpdateContent updates the document content.
+func (d *Document) UpdateContent(content string) {
+	d.Content = strings.TrimSpace(content)
+	d.Version++
+	d.Touch()
+}
+
+// UpdateDetails updates document title and content.
+func (d *Document) UpdateDetails(title, content string) error {
+	if title != "" {
+		d.Title = strings.TrimSpace(title)
+	}
+	if content != "" {
+		d.Content = strings.TrimSpace(content)
+	}
+	d.Version++
+	return d.Validate()
+}
