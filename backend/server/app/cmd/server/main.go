@@ -37,6 +37,7 @@ import (
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
+	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -263,6 +264,18 @@ func main() {
 	authHandler := authdomain.NewHandler(authService, slogLogger)
 	authdomain.SetupRoutes(api, authHandler)
 
+	// API Key service for public GET requests
+	apiKeyRepo := apikeysdomain.NewGormRepository(db)
+	apiKeyService := apikeysdomain.NewService(apiKeyRepo, slogLogger)
+
+	// Public API group - supports API keys for GET requests, JWT for all methods
+	publicAPI := api.Group("", apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+
+	// Protected API group - requires JWT for all operations
 	protectedAPI := api.Group("", authdomain.NewAuthMiddleware(jwtManager, slogLogger))
 	authdomain.SetupProtectedRoutes(protectedAPI, authHandler)
 
@@ -284,12 +297,18 @@ func main() {
 	projectRepo := projectsdomain.NewGormRepository(db)
 	projectService := projectsdomain.NewService(projectRepo, slogLogger)
 	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
-	projectsdomain.SetupRoutes(protectedAPI, projectHandler)
+	// Projects: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	projectsdomain.SetupRoutes(publicAPI, projectHandler)
 
 	skillRepo := skillsdomain.NewGormRepository(db)
 	skillService := skillsdomain.NewService(skillRepo, slogLogger)
 	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
-	skillsdomain.SetupRoutes(protectedAPI, skillHandler)
+	// Skills: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	skillsdomain.SetupRoutes(publicAPI, skillHandler)
+
+	apiKeyHandler := apikeysdomain.NewHandler(apiKeyService, slogLogger)
+	// API key management requires JWT (admin only)
+	apikeysdomain.SetupRoutes(protectedAPI, apiKeyHandler)
 
 	ideaRepo := ideasdomain.NewGormRepository(db)
 	ideaService := ideasdomain.NewService(ideaRepo, slogLogger)
@@ -476,6 +495,7 @@ func migrate(db *gorm.DB) error {
 		&clientsdomain.Client{},
 		&skillsdomain.Skill{},
 		&skillsdomain.ProjectSkill{},
+		&apikeysdomain.APIKey{},
 	)
 }
 
