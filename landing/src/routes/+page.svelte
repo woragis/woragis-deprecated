@@ -9,7 +9,7 @@
 		if (!contact.whatsapp) return '#';
 		// Remove all non-digit characters from phone number
 		const phoneNumber = contact.whatsapp.replace(/\D/g, '');
-		const message = encodeURIComponent('Hello! I came across your website and would like to get in touch.');
+		const message = encodeURIComponent('Hello! I came across your website (www.woragis.me) and would like to get in touch.');
 		return `https://wa.me/${phoneNumber}?text=${message}`;
 	}
 </script>
@@ -36,8 +36,14 @@
 			</p>
 			<div class="flex flex-wrap gap-4 justify-center">
 				<a
-					href="#skills"
+					href="/projects"
 					class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-blue-500/50"
+				>
+					View Projects
+				</a>
+				<a
+					href="#skills"
+					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
 					View Skills
 				</a>
@@ -295,6 +301,24 @@
 							</div>
 						</a>
 					{/if}
+
+					<!-- WhatsApp -->
+					{#if contact.whatsapp}
+						<a
+							href={getWhatsAppUrl()}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="flex items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg border border-gray-600 hover:border-green-500 transition-all duration-200 group"
+						>
+							<div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mr-4 group-hover:bg-green-500 transition-colors">
+								<Icon src={SiWhatsapp} size="1.5rem" color="white" />
+							</div>
+							<div>
+								<p class="text-sm text-gray-400 mb-1">WhatsApp</p>
+								<p class="text-white font-medium">Message me</p>
+							</div>
+						</a>
+					{/if}
 				</div>
 
 				<!-- Social Links -->
@@ -328,6 +352,17 @@
 								aria-label="LinkedIn"
 							>
 								<Icon src={SiLinkedin} size="2rem" />
+							</a>
+						{/if}
+						{#if contact.whatsapp}
+							<a
+								href={getWhatsAppUrl()}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-gray-400 hover:text-white transition-colors duration-200"
+								aria-label="WhatsApp"
+							>
+								<Icon src={SiWhatsapp} size="2rem" />
 							</a>
 						{/if}
 					</div>
