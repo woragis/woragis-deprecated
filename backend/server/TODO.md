@@ -24,6 +24,66 @@
   - [x] Build dependency graphs.
   - [x] Bulk milestone updates.
   - [x] Templated project duplication.
+  - [ ] **Project Documentation/Architecture Module**
+    - [ ] **1. Documentation Storage & Management**
+      - [ ] Create `ProjectDocumentation` entity (main container with visibility, versioning metadata).
+      - [ ] Create `DocumentationSection` entity (individual sections: Overview/Motivation, Architecture, Tech Stack, File Structure, API Documentation, Deployment Guide, Contributing Guidelines).
+      - [ ] Implement versioning system for documentation (track changes over time, similar to ideas domain).
+      - [ ] Add CRUD operations for ProjectDocumentation (Create, Read, Update, Delete, List).
+      - [ ] Add CRUD operations for DocumentationSection (Create, Read, Update, Delete, Reorder).
+      - [ ] Implement section content storage (markdown/text with metadata).
+      - [ ] Add validation rules for documentation entities.
+      - [ ] Create repository interfaces and implementations for documentation entities.
+      - [ ] Create service layer for documentation workflows.
+      - [ ] Create HTTP handlers and routes for documentation endpoints.
+    - [ ] **2. Architecture Visualization**
+      - [ ] Create `ProjectArchitectureDiagram` entity (store diagram metadata, type, content).
+      - [ ] Support diagram types: dependency graphs, component diagrams, data flow diagrams, infrastructure diagrams.
+      - [ ] Store diagram content (Mermaid, PlantUML syntax, or JSON for custom diagrams).
+      - [ ] Add diagram versioning and metadata (title, description, created/updated timestamps).
+      - [ ] Implement CRUD operations for architecture diagrams.
+      - [ ] Extend existing dependency system to support architecture layer visualization (frontend → backend → database, microservices).
+      - [ ] Add repository, service, and handler layers for architecture diagrams.
+    - [ ] **3. File Structure Explorer**
+      - [ ] Create `ProjectFileStructure` entity (hierarchical file tree storage).
+      - [ ] Design tree structure storage (JSON or hierarchical parent-child relationships).
+      - [ ] Store file metadata (file purposes, line counts, languages used per file, file paths).
+      - [ ] Implement CRUD operations for file structure (Create, Update, Delete tree nodes).
+      - [ ] Add bulk import/update operations for file structure.
+      - [ ] Create repository, service, and handler layers for file structure.
+      - [ ] Add validation for file tree structure integrity.
+    - [ ] **4. Technology Stack Tracking**
+      - [ ] Create `ProjectTechnology` entity (store technologies with categories, versions, purpose).
+      - [ ] Define technology categories (Backend, Database, Frontend, Infrastructure, Monitoring, etc.).
+      - [ ] Store technology metadata (name, version, category, purpose/justification, optional link).
+      - [ ] Implement CRUD operations for technology stack items.
+      - [ ] Add bulk operations for technology stack (add multiple, update, remove).
+      - [ ] Create repository, service, and handler layers for technology tracking.
+      - [ ] Add validation for technology entries.
+    - [ ] **5. Public/Private Visibility**
+      - [ ] Add visibility flags to `ProjectDocumentation` (public, authenticated, collaborators only).
+      - [ ] Implement access control logic in service layer (check permissions based on visibility).
+      - [ ] Create public access endpoints (slug-based URLs like `/projects/{slug}/docs`).
+      - [ ] Add middleware or service checks for public documentation access.
+      - [ ] Ensure private documentation requires authentication and ownership/collaboration.
+      - [ ] Update handlers to respect visibility settings.
+    - [ ] **6. Rich Content Support**
+      - [ ] Ensure markdown rendering support in DocumentationSection content.
+      - [ ] Add support for code snippets with syntax highlighting metadata (language, code block).
+      - [ ] Support image/diagram storage or linking (URLs or file references).
+      - [ ] Add embedded content support (link to external docs: GitHub README, Notion, etc.).
+      - [ ] Create content validation and sanitization for markdown/html content.
+    - [ ] **7. Auto-Generated Documentation (Future)**
+      - [ ] API endpoint discovery: Automatically document Fiber routes (future enhancement).
+      - [ ] Database schema visualization: Generate ER diagrams from GORM models (future enhancement).
+      - [ ] Dependency analysis: Show Go module dependencies, Docker image dependencies (future enhancement).
+    - [ ] **8. Integration & Testing**
+      - [ ] Add error handling and domain errors for documentation module.
+      - [ ] Write unit tests for documentation entities and validation.
+      - [ ] Write service layer tests for documentation workflows.
+      - [ ] Write integration tests for documentation endpoints.
+      - [ ] Update project domain routes to include documentation endpoints.
+      - [ ] Ensure proper authentication/authorization on all endpoints.
 - **Chats**
   - [x] Ship conversation search endpoint with message body filtering.
   - [x] Implement bulk archive/delete/restore workflows with soft-delete metadata.
