@@ -13,3 +13,6 @@ export const api = {
 	timeout: 10000
 } as const;
 
+export { skills } from './constants/skills';
+export { interests } from './constants/interests';
+
