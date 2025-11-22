@@ -13,14 +13,16 @@ class ApiClient {
 			}
 		});
 
-		// Request interceptor for adding auth token if needed
+		// Request interceptor for adding API key for GET requests
 		this.client.interceptors.request.use(
 			(config) => {
-				// You can add auth token here when implementing authentication
-				// const token = getAuthToken();
-				// if (token) {
-				//   config.headers.Authorization = `Bearer ${token}`;
-				// }
+				// Add API key for GET requests (read-only access)
+				if (config.method?.toLowerCase() === 'get') {
+					const apiKey = this.getAPIKey();
+					if (apiKey) {
+						config.headers['X-API-Key'] = apiKey;
+					}
+				}
 				return config;
 			},
 			(error) => {
@@ -66,6 +68,31 @@ class ApiClient {
 	async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
 		const response = await this.client.delete<T>(url, config);
 		return response.data;
+	}
+
+	// API Key management
+	private getAPIKey(): string | null {
+		if (typeof window === 'undefined') {
+			return null;
+		}
+		// Try to get from localStorage first
+		const stored = localStorage.getItem('woragis_api_key');
+		if (stored) {
+			return stored;
+		}
+		// Fallback to environment variable
+		return import.meta.env.PUBLIC_API_KEY || null;
+	}
+
+	setAPIKey(apiKey: string | null): void {
+		if (typeof window === 'undefined') {
+			return;
+		}
+		if (apiKey) {
+			localStorage.setItem('woragis_api_key', apiKey);
+		} else {
+			localStorage.removeItem('woragis_api_key');
+		}
 	}
 }
 

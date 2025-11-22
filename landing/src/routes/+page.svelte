@@ -12,9 +12,10 @@
 		SiWhatsapp,
 		SiPython
 	} from 'svelte-icons-pack/si';
-	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch } from 'lucide-svelte';
+	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch, Tag } from 'lucide-svelte';
 	import { contact, skills, interests } from '$lib/constants';
 	import { listProjects } from '$lib/api/projects';
+	import { listSkillsWithCounts, type SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
 
 	// Generate WhatsApp URL with pre-filled message
@@ -31,8 +32,12 @@
 	let featuredProjects: Project[] = $state([]);
 	let loadingProjects = $state(false);
 
+	// Skills
+	let popularSkills: SkillWithCount[] = $state([]);
+	let loadingSkills = $state(false);
+
 	onMount(async () => {
-		await fetchFeaturedProjects();
+		await Promise.all([fetchFeaturedProjects(), fetchPopularSkills()]);
 	});
 
 	async function fetchFeaturedProjects() {
@@ -44,6 +49,22 @@
 			console.error('Error fetching featured projects:', error);
 		} finally {
 			loadingProjects = false;
+		}
+	}
+
+	async function fetchPopularSkills() {
+		loadingSkills = true;
+		try {
+			const allSkills = await listSkillsWithCounts();
+			// Get top 6 skills by project count
+			popularSkills = allSkills
+				.filter((skill) => skill.projectCount > 0)
+				.sort((a, b) => b.projectCount - a.projectCount)
+				.slice(0, 6);
+		} catch (error) {
+			console.error('Error fetching skills:', error);
+		} finally {
+			loadingSkills = false;
 		}
 	}
 
@@ -102,7 +123,7 @@
 					View Projects
 				</a>
 				<a
-					href="#skills"
+					href="/skills"
 					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
 					View Skills
@@ -199,6 +220,31 @@
 								<p class="text-gray-300 text-sm mb-4 line-clamp-2">{project.description}</p>
 							{/if}
 
+							<!-- Skills -->
+							{#if project.skills && project.skills.length > 0}
+								<div class="mb-4">
+									<div class="flex flex-wrap gap-2">
+										{#each project.skills.slice(0, 4) as skill}
+											<div
+												class="flex items-center gap-1 px-2 py-1 bg-blue-600/20 rounded text-xs text-blue-300 border border-blue-600/30"
+												title={skill.name}
+											>
+												{#if skill.icon}
+													<span class="text-xs">{skill.icon}</span>
+												{/if}
+												<span>{skill.name}</span>
+											</div>
+										{/each}
+										{#if project.skills.length > 4}
+											<span class="px-2 py-1 text-xs text-gray-400"
+												>+{project.skills.length - 4}</span
+											>
+										{/if}
+									</div>
+								</div>
+							{/if}
+
+							<!-- Technologies -->
 							{#if project.technologies && project.technologies.length > 0}
 								<div class="mb-4">
 									<div class="flex flex-wrap gap-2">
@@ -238,73 +284,69 @@
 	<!-- Skills Section -->
 	<section id="skills" class="container mx-auto px-6 py-20">
 		<div class="max-w-6xl mx-auto">
-			<h2 class="text-4xl font-bold mb-12 text-center">Core Skills & Focus Areas</h2>
-			<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-				<!-- Golang -->
-				<div
-					class="bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 rounded-xl p-6 border border-cyan-700/30 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20"
+			<div class="flex items-center justify-between mb-12">
+				<h2 class="text-4xl font-bold text-center flex-1">Popular Skills</h2>
+				<a
+					href="/skills"
+					class="text-blue-400 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
 				>
-					<div class="flex items-center mb-4">
-						<div class="w-12 h-12 bg-cyan-600 rounded-lg flex items-center justify-center mr-4">
-							<Icon src={SiGo} size="1.75rem" color="white" />
-						</div>
-						<h3 class="text-2xl font-bold text-cyan-400">{skills[0].name}</h3>
-					</div>
-					<p class="text-gray-300">{skills[0].description}</p>
-				</div>
-
-				<!-- Python -->
-				<div
-					class="bg-gradient-to-br from-yellow-900/30 to-yellow-800/20 rounded-xl p-6 border border-yellow-700/30 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20"
-				>
-					<div class="flex items-center mb-4">
-						<div class="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center mr-4">
-							<Icon src={SiPython} size="1.75rem" color="white" />
-						</div>
-						<h3 class="text-2xl font-bold text-yellow-400">{skills[1].name}</h3>
-					</div>
-					<p class="text-gray-300">{skills[1].description}</p>
-				</div>
-
-				<!-- Docker -->
-				<div
-					class="bg-gradient-to-br from-blue-900/30 to-blue-800/20 rounded-xl p-6 border border-blue-700/30 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
-				>
-					<div class="flex items-center mb-4">
-						<div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
-							<Icon src={SiDocker} size="1.75rem" color="white" />
-						</div>
-						<h3 class="text-2xl font-bold text-blue-400">{skills[2].name}</h3>
-					</div>
-					<p class="text-gray-300">{skills[2].description}</p>
-				</div>
-
-				<!-- Kubernetes -->
-				<div
-					class="bg-gradient-to-br from-indigo-900/30 to-indigo-800/20 rounded-xl p-6 border border-indigo-700/30 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20"
-				>
-					<div class="flex items-center mb-4">
-						<div class="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mr-4">
-							<Icon src={SiKubernetes} size="1.75rem" color="white" />
-						</div>
-						<h3 class="text-2xl font-bold text-indigo-400">{skills[3].name}</h3>
-					</div>
-					<p class="text-gray-300">{skills[3].description}</p>
-				</div>
-
-				<!-- DevOps -->
-				<div
-					class="bg-gradient-to-br from-purple-900/30 to-purple-800/20 rounded-xl p-6 border border-purple-700/30 hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
-				>
-					<div class="flex items-center mb-4">
-						<div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
-							<Settings class="w-7 h-7" stroke="white" />
-						</div>
-						<h3 class="text-2xl font-bold text-purple-400">{skills[4].name}</h3>
-					</div>
-					<p class="text-gray-300">{skills[4].description}</p>
-				</div>
+					View All Skills
+					<ExternalLink class="w-5 h-5" />
+				</a>
 			</div>
+
+			{#if loadingSkills}
+				<div class="flex items-center justify-center py-20">
+					<div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+				</div>
+			{:else if popularSkills.length === 0}
+				<div class="text-center py-20">
+					<Tag class="w-16 h-16 mx-auto mb-4 text-gray-600" />
+					<p class="text-gray-400 text-lg mb-2">No skills found</p>
+					<p class="text-gray-500 text-sm">Skills will appear here once they're added to projects</p>
+				</div>
+			{:else}
+				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+					{#each popularSkills as skill}
+						<a
+							href="/skills"
+							class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 group"
+						>
+							<div class="flex items-start justify-between mb-4">
+								<div class="flex-1">
+									<h3
+										class="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors"
+									>
+										{skill.name}
+									</h3>
+									<span
+										class="inline-block px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 capitalize"
+									>
+										{skill.category}
+									</span>
+								</div>
+								{#if skill.icon}
+									<div class="w-10 h-10 bg-gray-700 rounded flex items-center justify-center">
+										<span class="text-lg">{skill.icon}</span>
+									</div>
+								{/if}
+							</div>
+
+							{#if skill.description}
+								<p class="text-gray-300 text-sm mb-4 line-clamp-2">{skill.description}</p>
+							{/if}
+
+							<div class="flex items-center justify-between pt-4 border-t border-gray-700">
+								<div class="flex items-center gap-2">
+									<Tag class="w-4 h-4 text-gray-400" />
+									<span class="text-sm text-gray-400">Projects</span>
+								</div>
+								<span class="text-lg font-bold text-blue-400">{skill.projectCount}</span>
+							</div>
+						</a>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	</section>
 

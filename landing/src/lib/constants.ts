@@ -10,7 +10,8 @@ export const contact = {
 
 export const api = {
 	baseURL: import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:8080/api',
-	timeout: 10000
+	timeout: 10000,
+	apiKey: import.meta.env.PUBLIC_API_KEY || null
 } as const;
 
 export { skills } from './constants/skills';
