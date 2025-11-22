@@ -40,6 +40,43 @@ type Handler interface {
 	DeleteDependency(c *fiber.Ctx) error
 
 	DuplicateProject(c *fiber.Ctx) error
+
+	// Documentation handlers
+	CreateDocumentation(c *fiber.Ctx) error
+	UpdateDocumentationVisibility(c *fiber.Ctx) error
+	GetDocumentation(c *fiber.Ctx) error
+	GetPublicDocumentation(c *fiber.Ctx) error
+	DeleteDocumentation(c *fiber.Ctx) error
+
+	// Documentation Section handlers
+	CreateDocumentationSection(c *fiber.Ctx) error
+	UpdateDocumentationSection(c *fiber.Ctx) error
+	DeleteDocumentationSection(c *fiber.Ctx) error
+	ListDocumentationSections(c *fiber.Ctx) error
+	ReorderDocumentationSections(c *fiber.Ctx) error
+
+	// Technology handlers
+	CreateTechnology(c *fiber.Ctx) error
+	UpdateTechnology(c *fiber.Ctx) error
+	DeleteTechnology(c *fiber.Ctx) error
+	ListTechnologies(c *fiber.Ctx) error
+	BulkCreateTechnologies(c *fiber.Ctx) error
+	BulkUpdateTechnologies(c *fiber.Ctx) error
+
+	// File Structure handlers
+	CreateFileStructure(c *fiber.Ctx) error
+	UpdateFileStructure(c *fiber.Ctx) error
+	DeleteFileStructure(c *fiber.Ctx) error
+	ListFileStructures(c *fiber.Ctx) error
+	BulkCreateFileStructures(c *fiber.Ctx) error
+	BulkUpdateFileStructures(c *fiber.Ctx) error
+
+	// Architecture Diagram handlers
+	CreateArchitectureDiagram(c *fiber.Ctx) error
+	UpdateArchitectureDiagram(c *fiber.Ctx) error
+	DeleteArchitectureDiagram(c *fiber.Ctx) error
+	ListArchitectureDiagrams(c *fiber.Ctx) error
+	GetArchitectureDiagram(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -1040,7 +1077,7 @@ func unauthorizedResponse(c *fiber.Ctx) error {
 
 func statusFromErrorCode(code int) int {
 	switch code {
-	case ErrCodeInvalidPayload, ErrCodeInvalidName, ErrCodeInvalidStatus, ErrCodeInvalidHealthScore, ErrCodeInvalidMetrics, ErrCodeInvalidDependency:
+	case ErrCodeInvalidPayload, ErrCodeInvalidName, ErrCodeInvalidStatus, ErrCodeInvalidHealthScore, ErrCodeInvalidMetrics, ErrCodeInvalidDependency, ErrCodeInvalidVisibility, ErrCodeInvalidSectionType, ErrCodeInvalidTechCategory, ErrCodeInvalidDiagramType:
 		return fiber.StatusBadRequest
 	case ErrCodeNotFound:
 		return fiber.StatusNotFound
@@ -1157,5 +1194,1113 @@ func toDependencyResponse(dep *ProjectDependency) dependencyResponse {
 		Type:               dep.Type,
 		CreatedAt:          dep.CreatedAt,
 		UpdatedAt:          dep.UpdatedAt,
+	}
+}
+
+// Documentation payloads
+
+type createDocumentationPayload struct {
+	Visibility string `json:"visibility"`
+}
+
+type updateDocumentationVisibilityPayload struct {
+	Visibility string `json:"visibility"`
+}
+
+type createDocumentationSectionPayload struct {
+	Type     string `json:"type"`
+	Title    string `json:"title"`
+	Content  string `json:"content"`
+	Position *int   `json:"position"`
+}
+
+type updateDocumentationSectionPayload struct {
+	Title    *string `json:"title"`
+	Content  *string `json:"content"`
+	Position *int    `json:"position"`
+}
+
+type reorderDocumentationSectionsPayload struct {
+	SectionOrder []string `json:"section_order"`
+}
+
+// Technology payloads
+
+type createTechnologyPayload struct {
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	Category string `json:"category"`
+	Purpose  string `json:"purpose"`
+	Link     string `json:"link"`
+}
+
+type updateTechnologyPayload struct {
+	Name     *string `json:"name"`
+	Version  *string `json:"version"`
+	Category *string `json:"category"`
+	Purpose  *string `json:"purpose"`
+	Link     *string `json:"link"`
+}
+
+type bulkCreateTechnologiesPayload struct {
+	Technologies []createTechnologyPayload `json:"technologies"`
+}
+
+type bulkUpdateTechnologiesPayload struct {
+	Technologies []struct {
+		TechID   string  `json:"tech_id"`
+		Name     *string `json:"name"`
+		Version  *string `json:"version"`
+		Category *string `json:"category"`
+		Purpose  *string `json:"purpose"`
+		Link     *string `json:"link"`
+	} `json:"technologies"`
+}
+
+// File Structure payloads
+
+type createFileStructurePayload struct {
+	Path        string  `json:"path"`
+	Name        string  `json:"name"`
+	IsDirectory bool    `json:"is_directory"`
+	ParentID    *string `json:"parent_id"`
+	Language    string  `json:"language"`
+	LineCount   int     `json:"line_count"`
+	Purpose     string  `json:"purpose"`
+	Position    *int    `json:"position"`
+}
+
+type updateFileStructurePayload struct {
+	Purpose   *string `json:"purpose"`
+	LineCount *int    `json:"line_count"`
+	Language  *string `json:"language"`
+	Position  *int    `json:"position"`
+}
+
+type bulkCreateFileStructuresPayload struct {
+	Structures []createFileStructurePayload `json:"structures"`
+}
+
+type bulkUpdateFileStructuresPayload struct {
+	Structures []struct {
+		FileStructureID string  `json:"file_structure_id"`
+		Purpose         *string `json:"purpose"`
+		LineCount       *int    `json:"line_count"`
+		Language        *string `json:"language"`
+		Position        *int    `json:"position"`
+	} `json:"structures"`
+}
+
+// Architecture Diagram payloads
+
+type createArchitectureDiagramPayload struct {
+	Type        string `json:"type"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Content     string `json:"content"`
+	Format      string `json:"format"`
+	ImageURL    string `json:"image_url"`
+}
+
+type updateArchitectureDiagramPayload struct {
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+	Content     *string `json:"content"`
+	ImageURL    *string `json:"image_url"`
+}
+
+// Documentation responses
+
+type documentationResponse struct {
+	ID         string                 `json:"id"`
+	ProjectID string                 `json:"project_id"`
+	Visibility DocumentationVisibility `json:"visibility"`
+	Version    int                    `json:"version"`
+	CreatedAt  time.Time              `json:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at"`
+}
+
+type documentationSectionResponse struct {
+	ID             string                 `json:"id"`
+	DocumentationID string                 `json:"documentation_id"`
+	Type           DocumentationSectionType `json:"type"`
+	Title          string                 `json:"title"`
+	Content        string                 `json:"content"`
+	Position       int                    `json:"position"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+type technologyResponse struct {
+	ID        string             `json:"id"`
+	ProjectID string             `json:"project_id"`
+	Name      string             `json:"name"`
+	Version   string             `json:"version"`
+	Category  TechnologyCategory `json:"category"`
+	Purpose   string             `json:"purpose"`
+	Link      string             `json:"link"`
+	CreatedAt time.Time          `json:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at"`
+}
+
+type fileStructureResponse struct {
+	ID          string     `json:"id"`
+	ProjectID   string     `json:"project_id"`
+	ParentID    *string    `json:"parent_id"`
+	Path        string     `json:"path"`
+	Name        string     `json:"name"`
+	IsDirectory bool       `json:"is_directory"`
+	Language    string     `json:"language"`
+	LineCount   int        `json:"line_count"`
+	Purpose     string     `json:"purpose"`
+	Position    int        `json:"position"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type architectureDiagramResponse struct {
+	ID          string                 `json:"id"`
+	ProjectID   string                 `json:"project_id"`
+	Type        ArchitectureDiagramType `json:"type"`
+	Title       string                 `json:"title"`
+	Description string                 `json:"description"`
+	Content     string                 `json:"content"`
+	Format      string                 `json:"format"`
+	ImageURL    string                 `json:"image_url"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+}
+
+// Documentation handlers
+
+func (h *handler) CreateDocumentation(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload createDocumentationPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	visibility := DocumentationVisibility(payload.Visibility)
+	if visibility == "" {
+		visibility = VisibilityCollaborators
+	}
+
+	doc, err := h.service.CreateDocumentation(c.Context(), CreateDocumentationRequest{
+		ProjectID:  projectID,
+		UserID:     userID,
+		Visibility: visibility,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, toDocumentationResponse(doc))
+}
+
+func (h *handler) UpdateDocumentationVisibility(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateDocumentationVisibilityPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	doc, err := h.service.UpdateDocumentationVisibility(c.Context(), UpdateDocumentationVisibilityRequest{
+		ProjectID:  projectID,
+		UserID:     userID,
+		Visibility: DocumentationVisibility(payload.Visibility),
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toDocumentationResponse(doc))
+}
+
+func (h *handler) GetDocumentation(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	doc, err := h.service.GetDocumentation(c.Context(), projectID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toDocumentationResponse(doc))
+}
+
+func (h *handler) GetPublicDocumentation(c *fiber.Ctx) error {
+	slug := strings.TrimSpace(c.Params("slug"))
+	if slug == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	doc, err := h.service.GetPublicDocumentation(c.Context(), slug)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toDocumentationResponse(doc))
+}
+
+func (h *handler) DeleteDocumentation(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if err := h.service.DeleteDocumentation(c.Context(), DeleteDocumentationRequest{
+		ProjectID: projectID,
+		UserID:    userID,
+	}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"id": projectID.String()})
+}
+
+// Documentation Section handlers
+
+func (h *handler) CreateDocumentationSection(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload createDocumentationSectionPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	section, err := h.service.CreateDocumentationSection(c.Context(), CreateDocumentationSectionRequest{
+		ProjectID: projectID,
+		UserID:    userID,
+		Type:      DocumentationSectionType(payload.Type),
+		Title:     payload.Title,
+		Content:   payload.Content,
+		Position:  payload.Position,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, toDocumentationSectionResponse(section))
+}
+
+func (h *handler) UpdateDocumentationSection(c *fiber.Ctx) error {
+	sectionID, err := uuid.Parse(c.Params("sectionID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateDocumentationSectionPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	section, err := h.service.UpdateDocumentationSection(c.Context(), UpdateDocumentationSectionRequest{
+		SectionID: sectionID,
+		UserID:    userID,
+		Title:     payload.Title,
+		Content:   payload.Content,
+		Position:  payload.Position,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toDocumentationSectionResponse(section))
+}
+
+func (h *handler) DeleteDocumentationSection(c *fiber.Ctx) error {
+	sectionID, err := uuid.Parse(c.Params("sectionID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if err := h.service.DeleteDocumentationSection(c.Context(), DeleteDocumentationSectionRequest{
+		SectionID: sectionID,
+		UserID:    userID,
+	}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"id": sectionID.String()})
+}
+
+func (h *handler) ListDocumentationSections(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	sections, err := h.service.ListDocumentationSections(c.Context(), projectID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]documentationSectionResponse, 0, len(sections))
+	for _, section := range sections {
+		s := section
+		resp = append(resp, toDocumentationSectionResponse(&s))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+func (h *handler) ReorderDocumentationSections(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload reorderDocumentationSectionsPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	sectionOrder := make([]uuid.UUID, 0, len(payload.SectionOrder))
+	for _, raw := range payload.SectionOrder {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		sectionOrder = append(sectionOrder, id)
+	}
+
+	sections, err := h.service.ReorderDocumentationSections(c.Context(), ReorderDocumentationSectionsRequest{
+		ProjectID:    projectID,
+		UserID:       userID,
+		SectionOrder: sectionOrder,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]documentationSectionResponse, 0, len(sections))
+	for _, section := range sections {
+		s := section
+		resp = append(resp, toDocumentationSectionResponse(&s))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+// Technology handlers
+
+func (h *handler) CreateTechnology(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload createTechnologyPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	tech, err := h.service.CreateTechnology(c.Context(), CreateTechnologyRequest{
+		ProjectID: projectID,
+		UserID:    userID,
+		Name:      payload.Name,
+		Version:   payload.Version,
+		Category:  TechnologyCategory(payload.Category),
+		Purpose:   payload.Purpose,
+		Link:      payload.Link,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, toTechnologyResponse(tech))
+}
+
+func (h *handler) UpdateTechnology(c *fiber.Ctx) error {
+	techID, err := uuid.Parse(c.Params("techID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateTechnologyPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	var category *TechnologyCategory
+	if payload.Category != nil {
+		c := TechnologyCategory(*payload.Category)
+		category = &c
+	}
+
+	tech, err := h.service.UpdateTechnology(c.Context(), UpdateTechnologyRequest{
+		TechID:   techID,
+		UserID:   userID,
+		Name:     payload.Name,
+		Version:  payload.Version,
+		Category: category,
+		Purpose:  payload.Purpose,
+		Link:     payload.Link,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toTechnologyResponse(tech))
+}
+
+func (h *handler) DeleteTechnology(c *fiber.Ctx) error {
+	techID, err := uuid.Parse(c.Params("techID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if err := h.service.DeleteTechnology(c.Context(), DeleteTechnologyRequest{
+		TechID: techID,
+		UserID: userID,
+	}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"id": techID.String()})
+}
+
+func (h *handler) ListTechnologies(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	technologies, err := h.service.ListTechnologies(c.Context(), projectID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]technologyResponse, 0, len(technologies))
+	for _, tech := range technologies {
+		t := tech
+		resp = append(resp, toTechnologyResponse(&t))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+func (h *handler) BulkCreateTechnologies(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload bulkCreateTechnologiesPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	techReqs := make([]CreateTechnologyRequest, 0, len(payload.Technologies))
+	for _, tech := range payload.Technologies {
+		techReqs = append(techReqs, CreateTechnologyRequest{
+			ProjectID: projectID,
+			UserID:    userID,
+			Name:      tech.Name,
+			Version:   tech.Version,
+			Category:  TechnologyCategory(tech.Category),
+			Purpose:   tech.Purpose,
+			Link:      tech.Link,
+		})
+	}
+
+	technologies, err := h.service.BulkCreateTechnologies(c.Context(), BulkCreateTechnologiesRequest{
+		ProjectID:    projectID,
+		UserID:       userID,
+		Technologies: techReqs,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]technologyResponse, 0, len(technologies))
+	for _, tech := range technologies {
+		t := tech
+		resp = append(resp, toTechnologyResponse(&t))
+	}
+
+	return response.Success(c, fiber.StatusCreated, resp)
+}
+
+func (h *handler) BulkUpdateTechnologies(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload bulkUpdateTechnologiesPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	techReqs := make([]UpdateTechnologyRequest, 0, len(payload.Technologies))
+	for _, tech := range payload.Technologies {
+		techID, err := uuid.Parse(tech.TechID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+
+		var category *TechnologyCategory
+		if tech.Category != nil {
+			c := TechnologyCategory(*tech.Category)
+			category = &c
+		}
+
+		techReqs = append(techReqs, UpdateTechnologyRequest{
+			TechID:   techID,
+			UserID:   userID,
+			Name:     tech.Name,
+			Version:  tech.Version,
+			Category: category,
+			Purpose:  tech.Purpose,
+			Link:     tech.Link,
+		})
+	}
+
+	technologies, err := h.service.BulkUpdateTechnologies(c.Context(), BulkUpdateTechnologiesRequest{
+		ProjectID:    projectID,
+		UserID:       userID,
+		Technologies: techReqs,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]technologyResponse, 0, len(technologies))
+	for _, tech := range technologies {
+		t := tech
+		resp = append(resp, toTechnologyResponse(&t))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+// File Structure handlers
+
+func (h *handler) CreateFileStructure(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload createFileStructurePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	var parentID *uuid.UUID
+	if payload.ParentID != nil && *payload.ParentID != "" {
+		id, err := uuid.Parse(*payload.ParentID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		parentID = &id
+	}
+
+	fs, err := h.service.CreateFileStructure(c.Context(), CreateFileStructureRequest{
+		ProjectID:   projectID,
+		UserID:     userID,
+		Path:       payload.Path,
+		Name:       payload.Name,
+		IsDirectory: payload.IsDirectory,
+		ParentID:   parentID,
+		Language:   payload.Language,
+		LineCount:  payload.LineCount,
+		Purpose:    payload.Purpose,
+		Position:   payload.Position,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, toFileStructureResponse(fs))
+}
+
+func (h *handler) UpdateFileStructure(c *fiber.Ctx) error {
+	fsID, err := uuid.Parse(c.Params("fileStructureID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateFileStructurePayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	fs, err := h.service.UpdateFileStructure(c.Context(), UpdateFileStructureRequest{
+		FileStructureID: fsID,
+		UserID:          userID,
+		Purpose:         payload.Purpose,
+		LineCount:       payload.LineCount,
+		Language:        payload.Language,
+		Position:        payload.Position,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toFileStructureResponse(fs))
+}
+
+func (h *handler) DeleteFileStructure(c *fiber.Ctx) error {
+	fsID, err := uuid.Parse(c.Params("fileStructureID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if err := h.service.DeleteFileStructure(c.Context(), DeleteFileStructureRequest{
+		FileStructureID: fsID,
+		UserID:          userID,
+	}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"id": fsID.String()})
+}
+
+func (h *handler) ListFileStructures(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	structures, err := h.service.ListFileStructures(c.Context(), projectID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]fileStructureResponse, 0, len(structures))
+	for _, fs := range structures {
+		f := fs
+		resp = append(resp, toFileStructureResponse(&f))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+func (h *handler) BulkCreateFileStructures(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload bulkCreateFileStructuresPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	fsReqs := make([]CreateFileStructureRequest, 0, len(payload.Structures))
+	for _, fs := range payload.Structures {
+		var parentID *uuid.UUID
+		if fs.ParentID != nil && *fs.ParentID != "" {
+			id, err := uuid.Parse(*fs.ParentID)
+			if err != nil {
+				return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+			}
+			parentID = &id
+		}
+
+		fsReqs = append(fsReqs, CreateFileStructureRequest{
+			ProjectID:   projectID,
+			UserID:      userID,
+			Path:        fs.Path,
+			Name:        fs.Name,
+			IsDirectory: fs.IsDirectory,
+			ParentID:    parentID,
+			Language:    fs.Language,
+			LineCount:   fs.LineCount,
+			Purpose:     fs.Purpose,
+			Position:    fs.Position,
+		})
+	}
+
+	structures, err := h.service.BulkCreateFileStructures(c.Context(), BulkCreateFileStructuresRequest{
+		ProjectID: projectID,
+		UserID:    userID,
+		Structures: fsReqs,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]fileStructureResponse, 0, len(structures))
+	for _, fs := range structures {
+		f := fs
+		resp = append(resp, toFileStructureResponse(&f))
+	}
+
+	return response.Success(c, fiber.StatusCreated, resp)
+}
+
+func (h *handler) BulkUpdateFileStructures(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload bulkUpdateFileStructuresPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	fsReqs := make([]UpdateFileStructureRequest, 0, len(payload.Structures))
+	for _, fs := range payload.Structures {
+		fsID, err := uuid.Parse(fs.FileStructureID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+
+		fsReqs = append(fsReqs, UpdateFileStructureRequest{
+			FileStructureID: fsID,
+			UserID:          userID,
+			Purpose:         fs.Purpose,
+			LineCount:       fs.LineCount,
+			Language:        fs.Language,
+			Position:        fs.Position,
+		})
+	}
+
+	structures, err := h.service.BulkUpdateFileStructures(c.Context(), BulkUpdateFileStructuresRequest{
+		ProjectID: projectID,
+		UserID:    userID,
+		Structures: fsReqs,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]fileStructureResponse, 0, len(structures))
+	for _, fs := range structures {
+		f := fs
+		resp = append(resp, toFileStructureResponse(&f))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+// Architecture Diagram handlers
+
+func (h *handler) CreateArchitectureDiagram(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload createArchitectureDiagramPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	diagram, err := h.service.CreateArchitectureDiagram(c.Context(), CreateArchitectureDiagramRequest{
+		ProjectID:   projectID,
+		UserID:      userID,
+		Type:        ArchitectureDiagramType(payload.Type),
+		Title:       payload.Title,
+		Description: payload.Description,
+		Content:     payload.Content,
+		Format:      payload.Format,
+		ImageURL:    payload.ImageURL,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusCreated, toArchitectureDiagramResponse(diagram))
+}
+
+func (h *handler) UpdateArchitectureDiagram(c *fiber.Ctx) error {
+	diagramID, err := uuid.Parse(c.Params("diagramID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload updateArchitectureDiagramPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	diagram, err := h.service.UpdateArchitectureDiagram(c.Context(), UpdateArchitectureDiagramRequest{
+		DiagramID:   diagramID,
+		UserID:      userID,
+		Title:       payload.Title,
+		Description: payload.Description,
+		Content:     payload.Content,
+		ImageURL:    payload.ImageURL,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toArchitectureDiagramResponse(diagram))
+}
+
+func (h *handler) DeleteArchitectureDiagram(c *fiber.Ctx) error {
+	diagramID, err := uuid.Parse(c.Params("diagramID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if err := h.service.DeleteArchitectureDiagram(c.Context(), DeleteArchitectureDiagramRequest{
+		DiagramID: diagramID,
+		UserID:    userID,
+	}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"id": diagramID.String()})
+}
+
+func (h *handler) ListArchitectureDiagrams(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	diagrams, err := h.service.ListArchitectureDiagrams(c.Context(), projectID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	resp := make([]architectureDiagramResponse, 0, len(diagrams))
+	for _, diagram := range diagrams {
+		d := diagram
+		resp = append(resp, toArchitectureDiagramResponse(&d))
+	}
+
+	return response.Success(c, fiber.StatusOK, resp)
+}
+
+func (h *handler) GetArchitectureDiagram(c *fiber.Ctx) error {
+	diagramID, err := uuid.Parse(c.Params("diagramID"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	diagram, err := h.service.GetArchitectureDiagram(c.Context(), diagramID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toArchitectureDiagramResponse(diagram))
+}
+
+// Response converters
+
+func toDocumentationResponse(doc *ProjectDocumentation) documentationResponse {
+	return documentationResponse{
+		ID:         doc.ID.String(),
+		ProjectID:  doc.ProjectID.String(),
+		Visibility: doc.Visibility,
+		Version:    doc.Version,
+		CreatedAt:  doc.CreatedAt,
+		UpdatedAt:  doc.UpdatedAt,
+	}
+}
+
+func toDocumentationSectionResponse(section *DocumentationSection) documentationSectionResponse {
+	return documentationSectionResponse{
+		ID:             section.ID.String(),
+		DocumentationID: section.DocumentationID.String(),
+		Type:           section.Type,
+		Title:          section.Title,
+		Content:        section.Content,
+		Position:       section.Position,
+		CreatedAt:      section.CreatedAt,
+		UpdatedAt:      section.UpdatedAt,
+	}
+}
+
+func toTechnologyResponse(tech *ProjectTechnology) technologyResponse {
+	return technologyResponse{
+		ID:        tech.ID.String(),
+		ProjectID: tech.ProjectID.String(),
+		Name:      tech.Name,
+		Version:   tech.Version,
+		Category:  tech.Category,
+		Purpose:   tech.Purpose,
+		Link:      tech.Link,
+		CreatedAt: tech.CreatedAt,
+		UpdatedAt: tech.UpdatedAt,
+	}
+}
+
+func toFileStructureResponse(fs *ProjectFileStructure) fileStructureResponse {
+	var parentID *string
+	if fs.ParentID != nil {
+		id := fs.ParentID.String()
+		parentID = &id
+	}
+
+	return fileStructureResponse{
+		ID:          fs.ID.String(),
+		ProjectID:   fs.ProjectID.String(),
+		ParentID:    parentID,
+		Path:        fs.Path,
+		Name:        fs.Name,
+		IsDirectory: fs.IsDirectory,
+		Language:    fs.Language,
+		LineCount:   fs.LineCount,
+		Purpose:     fs.Purpose,
+		Position:    fs.Position,
+		CreatedAt:   fs.CreatedAt,
+		UpdatedAt:   fs.UpdatedAt,
+	}
+}
+
+func toArchitectureDiagramResponse(diagram *ProjectArchitectureDiagram) architectureDiagramResponse {
+	return architectureDiagramResponse{
+		ID:          diagram.ID.String(),
+		ProjectID:   diagram.ProjectID.String(),
+		Type:        diagram.Type,
+		Title:       diagram.Title,
+		Description: diagram.Description,
+		Content:     diagram.Content,
+		Format:      diagram.Format,
+		ImageURL:    diagram.ImageURL,
+		CreatedAt:   diagram.CreatedAt,
+		UpdatedAt:   diagram.UpdatedAt,
 	}
 }

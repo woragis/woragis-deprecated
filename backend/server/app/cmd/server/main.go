@@ -36,6 +36,7 @@ import (
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
+	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
 	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -285,6 +286,11 @@ func main() {
 	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
 	projectsdomain.SetupRoutes(protectedAPI, projectHandler)
 
+	skillRepo := skillsdomain.NewGormRepository(db)
+	skillService := skillsdomain.NewService(skillRepo, slogLogger)
+	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
+	skillsdomain.SetupRoutes(protectedAPI, skillHandler)
+
 	ideaRepo := ideasdomain.NewGormRepository(db)
 	ideaService := ideasdomain.NewService(ideaRepo, slogLogger)
 	ideaHandler := ideasdomain.NewHandler(ideaService, slogLogger)
@@ -468,6 +474,8 @@ func migrate(db *gorm.DB) error {
 		&schedulerdomain.Schedule{},
 		&schedulerdomain.ExecutionRun{},
 		&clientsdomain.Client{},
+		&skillsdomain.Skill{},
+		&skillsdomain.ProjectSkill{},
 	)
 }
 

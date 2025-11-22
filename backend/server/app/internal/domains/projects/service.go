@@ -41,6 +41,43 @@ type Service interface {
 	ListDependencies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectDependency, error)
 
 	DuplicateProject(ctx context.Context, req DuplicateProjectRequest) (*Project, error)
+
+	// Documentation operations
+	CreateDocumentation(ctx context.Context, req CreateDocumentationRequest) (*ProjectDocumentation, error)
+	UpdateDocumentationVisibility(ctx context.Context, req UpdateDocumentationVisibilityRequest) (*ProjectDocumentation, error)
+	GetDocumentation(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*ProjectDocumentation, error)
+	GetPublicDocumentation(ctx context.Context, projectSlug string) (*ProjectDocumentation, error)
+	DeleteDocumentation(ctx context.Context, req DeleteDocumentationRequest) error
+
+	// Documentation Section operations
+	CreateDocumentationSection(ctx context.Context, req CreateDocumentationSectionRequest) (*DocumentationSection, error)
+	UpdateDocumentationSection(ctx context.Context, req UpdateDocumentationSectionRequest) (*DocumentationSection, error)
+	DeleteDocumentationSection(ctx context.Context, req DeleteDocumentationSectionRequest) error
+	ListDocumentationSections(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]DocumentationSection, error)
+	ReorderDocumentationSections(ctx context.Context, req ReorderDocumentationSectionsRequest) ([]DocumentationSection, error)
+
+	// Technology operations
+	CreateTechnology(ctx context.Context, req CreateTechnologyRequest) (*ProjectTechnology, error)
+	UpdateTechnology(ctx context.Context, req UpdateTechnologyRequest) (*ProjectTechnology, error)
+	DeleteTechnology(ctx context.Context, req DeleteTechnologyRequest) error
+	ListTechnologies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectTechnology, error)
+	BulkCreateTechnologies(ctx context.Context, req BulkCreateTechnologiesRequest) ([]ProjectTechnology, error)
+	BulkUpdateTechnologies(ctx context.Context, req BulkUpdateTechnologiesRequest) ([]ProjectTechnology, error)
+
+	// File Structure operations
+	CreateFileStructure(ctx context.Context, req CreateFileStructureRequest) (*ProjectFileStructure, error)
+	UpdateFileStructure(ctx context.Context, req UpdateFileStructureRequest) (*ProjectFileStructure, error)
+	DeleteFileStructure(ctx context.Context, req DeleteFileStructureRequest) error
+	ListFileStructures(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectFileStructure, error)
+	BulkCreateFileStructures(ctx context.Context, req BulkCreateFileStructuresRequest) ([]ProjectFileStructure, error)
+	BulkUpdateFileStructures(ctx context.Context, req BulkUpdateFileStructuresRequest) ([]ProjectFileStructure, error)
+
+	// Architecture Diagram operations
+	CreateArchitectureDiagram(ctx context.Context, req CreateArchitectureDiagramRequest) (*ProjectArchitectureDiagram, error)
+	UpdateArchitectureDiagram(ctx context.Context, req UpdateArchitectureDiagramRequest) (*ProjectArchitectureDiagram, error)
+	DeleteArchitectureDiagram(ctx context.Context, req DeleteArchitectureDiagramRequest) error
+	ListArchitectureDiagrams(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectArchitectureDiagram, error)
+	GetArchitectureDiagram(ctx context.Context, diagramID uuid.UUID, userID uuid.UUID) (*ProjectArchitectureDiagram, error)
 }
 
 type service struct {
@@ -205,6 +242,160 @@ type DuplicateProjectRequest struct {
 	CopyBoard         bool
 	CopyMilestones    bool
 	CopyDependencies  bool
+}
+
+// Documentation request types
+
+type CreateDocumentationRequest struct {
+	ProjectID  uuid.UUID
+	UserID     uuid.UUID
+	Visibility DocumentationVisibility
+}
+
+type UpdateDocumentationVisibilityRequest struct {
+	ProjectID  uuid.UUID
+	UserID     uuid.UUID
+	Visibility DocumentationVisibility
+}
+
+type DeleteDocumentationRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+}
+
+type CreateDocumentationSectionRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Type      DocumentationSectionType
+	Title     string
+	Content   string
+	Position  *int
+}
+
+type UpdateDocumentationSectionRequest struct {
+	SectionID uuid.UUID
+	UserID    uuid.UUID
+	Title     *string
+	Content   *string
+	Position  *int
+}
+
+type DeleteDocumentationSectionRequest struct {
+	SectionID uuid.UUID
+	UserID    uuid.UUID
+}
+
+type ReorderDocumentationSectionsRequest struct {
+	ProjectID    uuid.UUID
+	UserID       uuid.UUID
+	SectionOrder []uuid.UUID
+}
+
+// Technology request types
+
+type CreateTechnologyRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Name      string
+	Version   string
+	Category  TechnologyCategory
+	Purpose   string
+	Link      string
+}
+
+type UpdateTechnologyRequest struct {
+	TechID   uuid.UUID
+	UserID   uuid.UUID
+	Name     *string
+	Version  *string
+	Category *TechnologyCategory
+	Purpose  *string
+	Link     *string
+}
+
+type DeleteTechnologyRequest struct {
+	TechID uuid.UUID
+	UserID uuid.UUID
+}
+
+type BulkCreateTechnologiesRequest struct {
+	ProjectID    uuid.UUID
+	UserID       uuid.UUID
+	Technologies []CreateTechnologyRequest
+}
+
+type BulkUpdateTechnologiesRequest struct {
+	ProjectID    uuid.UUID
+	UserID       uuid.UUID
+	Technologies []UpdateTechnologyRequest
+}
+
+// File Structure request types
+
+type CreateFileStructureRequest struct {
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	Path        string
+	Name        string
+	IsDirectory bool
+	ParentID    *uuid.UUID
+	Language    string
+	LineCount   int
+	Purpose     string
+	Position    *int
+}
+
+type UpdateFileStructureRequest struct {
+	FileStructureID uuid.UUID
+	UserID          uuid.UUID
+	Purpose         *string
+	LineCount       *int
+	Language        *string
+	Position        *int
+}
+
+type DeleteFileStructureRequest struct {
+	FileStructureID uuid.UUID
+	UserID          uuid.UUID
+}
+
+type BulkCreateFileStructuresRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Structures []CreateFileStructureRequest
+}
+
+type BulkUpdateFileStructuresRequest struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+	Structures []UpdateFileStructureRequest
+}
+
+// Architecture Diagram request types
+
+type CreateArchitectureDiagramRequest struct {
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	Type        ArchitectureDiagramType
+	Title       string
+	Description string
+	Content     string
+	Format      string
+	ImageURL    string
+}
+
+type UpdateArchitectureDiagramRequest struct {
+	DiagramID   uuid.UUID
+	UserID      uuid.UUID
+	Title       *string
+	Description *string
+	Content     *string
+	ImageURL    *string
+}
+
+type DeleteArchitectureDiagramRequest struct {
+	DiagramID uuid.UUID
+	UserID   uuid.UUID
 }
 
 type KanbanColumnWithCards struct {
@@ -1101,4 +1292,584 @@ func (b KanbanBoard) findColumnIndex(columnID uuid.UUID) int {
 		}
 	}
 	return -1
+}
+
+// Documentation operations
+
+func (s *service) CreateDocumentation(ctx context.Context, req CreateDocumentationRequest) (*ProjectDocumentation, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	visibility := req.Visibility
+	if visibility == "" {
+		visibility = VisibilityCollaborators
+	}
+
+	doc, err := NewProjectDocumentation(req.ProjectID, visibility)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateDocumentation(ctx, doc); err != nil {
+		return nil, err
+	}
+
+	return doc, nil
+}
+
+func (s *service) UpdateDocumentationVisibility(ctx context.Context, req UpdateDocumentationVisibilityRequest) (*ProjectDocumentation, error) {
+	doc, err := s.repo.GetDocumentation(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := doc.UpdateVisibility(req.Visibility); err != nil {
+		return nil, err
+	}
+
+	doc.IncrementVersion()
+
+	if err := s.repo.UpdateDocumentation(ctx, doc); err != nil {
+		return nil, err
+	}
+
+	return doc, nil
+}
+
+func (s *service) GetDocumentation(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*ProjectDocumentation, error) {
+	return s.repo.GetDocumentation(ctx, projectID, userID)
+}
+
+func (s *service) GetPublicDocumentation(ctx context.Context, projectSlug string) (*ProjectDocumentation, error) {
+	project, err := s.repo.GetProjectBySlugPublic(ctx, projectSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := s.repo.GetDocumentationByProjectID(ctx, project.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if doc.Visibility != VisibilityPublic {
+		return nil, NewDomainError(ErrCodeNotFound, ErrDocumentationNotFound)
+	}
+
+	return doc, nil
+}
+
+func (s *service) DeleteDocumentation(ctx context.Context, req DeleteDocumentationRequest) error {
+	doc, err := s.repo.GetDocumentation(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.DeleteDocumentation(ctx, doc.ID, req.UserID)
+}
+
+// Documentation Section operations
+
+func (s *service) CreateDocumentationSection(ctx context.Context, req CreateDocumentationSectionRequest) (*DocumentationSection, error) {
+	doc, err := s.repo.GetDocumentation(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	sections, err := s.repo.ListDocumentationSections(ctx, doc.ID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	position := len(sections)
+	if req.Position != nil {
+		position = *req.Position
+		if position < 0 {
+			position = 0
+		}
+		if position > len(sections) {
+			position = len(sections)
+		}
+	}
+
+	section, err := NewDocumentationSection(doc.ID, req.Type, req.Title, req.Content, position)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateDocumentationSection(ctx, section); err != nil {
+		return nil, err
+	}
+
+	doc.IncrementVersion()
+	if err := s.repo.UpdateDocumentation(ctx, doc); err != nil {
+		return nil, err
+	}
+
+	return section, nil
+}
+
+func (s *service) UpdateDocumentationSection(ctx context.Context, req UpdateDocumentationSectionRequest) (*DocumentationSection, error) {
+	section, err := s.repo.GetDocumentationSection(ctx, req.SectionID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Title != nil {
+		if err := section.UpdateTitle(*req.Title); err != nil {
+			return nil, err
+		}
+	}
+
+	if req.Content != nil {
+		section.UpdateContent(*req.Content)
+	}
+
+	if req.Position != nil {
+		section.SetPosition(*req.Position)
+	}
+
+	if err := s.repo.UpdateDocumentationSection(ctx, section); err != nil {
+		return nil, err
+	}
+
+	doc, err := s.repo.GetDocumentationByProjectID(ctx, section.DocumentationID)
+	if err == nil {
+		doc.IncrementVersion()
+		s.repo.UpdateDocumentation(ctx, doc)
+	}
+
+	return section, nil
+}
+
+func (s *service) DeleteDocumentationSection(ctx context.Context, req DeleteDocumentationSectionRequest) error {
+	section, err := s.repo.GetDocumentationSection(ctx, req.SectionID, req.UserID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.DeleteDocumentationSection(ctx, req.SectionID, req.UserID); err != nil {
+		return err
+	}
+
+	doc, err := s.repo.GetDocumentationByProjectID(ctx, section.DocumentationID)
+	if err == nil {
+		doc.IncrementVersion()
+		s.repo.UpdateDocumentation(ctx, doc)
+	}
+
+	return nil
+}
+
+func (s *service) ListDocumentationSections(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]DocumentationSection, error) {
+	doc, err := s.repo.GetDocumentation(ctx, projectID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repo.ListDocumentationSections(ctx, doc.ID, userID)
+}
+
+func (s *service) ReorderDocumentationSections(ctx context.Context, req ReorderDocumentationSectionsRequest) ([]DocumentationSection, error) {
+	doc, err := s.repo.GetDocumentation(ctx, req.ProjectID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	sections, err := s.repo.ListDocumentationSections(ctx, doc.ID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(sections) != len(req.SectionOrder) {
+		return nil, NewDomainError(ErrCodeInvalidPayload, "projects: section order must include all sections")
+	}
+
+	lookup := make(map[uuid.UUID]DocumentationSection, len(sections))
+	for _, section := range sections {
+		lookup[section.ID] = section
+	}
+
+	ordered := make([]*DocumentationSection, 0, len(sections))
+	for idx, id := range req.SectionOrder {
+		section, ok := lookup[id]
+		if !ok {
+			return nil, NewDomainError(ErrCodeInvalidPayload, "projects: invalid section id in order")
+		}
+		section.SetPosition(idx)
+		ordered = append(ordered, &section)
+	}
+
+	if err := s.repo.BulkUpdateDocumentationSections(ctx, ordered); err != nil {
+		return nil, err
+	}
+
+	doc.IncrementVersion()
+	if err := s.repo.UpdateDocumentation(ctx, doc); err != nil {
+		return nil, err
+	}
+
+	result := make([]DocumentationSection, len(ordered))
+	for i, s := range ordered {
+		result[i] = *s
+	}
+
+	return result, nil
+}
+
+// Technology operations
+
+func (s *service) CreateTechnology(ctx context.Context, req CreateTechnologyRequest) (*ProjectTechnology, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	tech, err := NewProjectTechnology(req.ProjectID, req.Name, req.Version, req.Category, req.Purpose, req.Link)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateTechnology(ctx, tech); err != nil {
+		return nil, err
+	}
+
+	return tech, nil
+}
+
+func (s *service) UpdateTechnology(ctx context.Context, req UpdateTechnologyRequest) (*ProjectTechnology, error) {
+	tech, err := s.repo.GetTechnology(ctx, req.TechID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	name := tech.Name
+	if req.Name != nil {
+		name = *req.Name
+	}
+
+	version := tech.Version
+	if req.Version != nil {
+		version = *req.Version
+	}
+
+	category := tech.Category
+	if req.Category != nil {
+		category = *req.Category
+	}
+
+	purpose := tech.Purpose
+	if req.Purpose != nil {
+		purpose = *req.Purpose
+	}
+
+	link := tech.Link
+	if req.Link != nil {
+		link = *req.Link
+	}
+
+	if err := tech.UpdateDetails(name, version, purpose, link); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.UpdateTechnology(ctx, tech); err != nil {
+		return nil, err
+	}
+
+	return tech, nil
+}
+
+func (s *service) DeleteTechnology(ctx context.Context, req DeleteTechnologyRequest) error {
+	return s.repo.DeleteTechnology(ctx, req.TechID, req.UserID)
+}
+
+func (s *service) ListTechnologies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectTechnology, error) {
+	return s.repo.ListTechnologies(ctx, projectID, userID)
+}
+
+func (s *service) BulkCreateTechnologies(ctx context.Context, req BulkCreateTechnologiesRequest) ([]ProjectTechnology, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	technologies := make([]*ProjectTechnology, 0, len(req.Technologies))
+	for _, techReq := range req.Technologies {
+		tech, err := NewProjectTechnology(req.ProjectID, techReq.Name, techReq.Version, techReq.Category, techReq.Purpose, techReq.Link)
+		if err != nil {
+			return nil, err
+		}
+		technologies = append(technologies, tech)
+	}
+
+	if err := s.repo.BulkCreateTechnologies(ctx, technologies); err != nil {
+		return nil, err
+	}
+
+	result := make([]ProjectTechnology, len(technologies))
+	for i, t := range technologies {
+		result[i] = *t
+	}
+
+	return result, nil
+}
+
+func (s *service) BulkUpdateTechnologies(ctx context.Context, req BulkUpdateTechnologiesRequest) ([]ProjectTechnology, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	technologies := make([]*ProjectTechnology, 0, len(req.Technologies))
+	for _, techReq := range req.Technologies {
+		tech, err := s.repo.GetTechnology(ctx, techReq.TechID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		if techReq.Name != nil {
+			tech.Name = *techReq.Name
+		}
+		if techReq.Version != nil {
+			tech.Version = *techReq.Version
+		}
+		if techReq.Category != nil {
+			tech.Category = *techReq.Category
+		}
+		if techReq.Purpose != nil {
+			tech.Purpose = *techReq.Purpose
+		}
+		if techReq.Link != nil {
+			tech.Link = *techReq.Link
+		}
+
+		if err := tech.Validate(); err != nil {
+			return nil, err
+		}
+
+		technologies = append(technologies, tech)
+	}
+
+	if err := s.repo.BulkUpdateTechnologies(ctx, technologies); err != nil {
+		return nil, err
+	}
+
+	result := make([]ProjectTechnology, len(technologies))
+	for i, t := range technologies {
+		result[i] = *t
+	}
+
+	return result, nil
+}
+
+// File Structure operations
+
+func (s *service) CreateFileStructure(ctx context.Context, req CreateFileStructureRequest) (*ProjectFileStructure, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	position := 0
+	if req.Position != nil {
+		position = *req.Position
+	}
+
+	fs, err := NewProjectFileStructure(req.ProjectID, req.Path, req.Name, req.IsDirectory, req.ParentID, req.Language, req.LineCount, req.Purpose, position)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateFileStructure(ctx, fs); err != nil {
+		return nil, err
+	}
+
+	return fs, nil
+}
+
+func (s *service) UpdateFileStructure(ctx context.Context, req UpdateFileStructureRequest) (*ProjectFileStructure, error) {
+	fs, err := s.repo.GetFileStructure(ctx, req.FileStructureID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	purpose := fs.Purpose
+	if req.Purpose != nil {
+		purpose = *req.Purpose
+	}
+
+	lineCount := fs.LineCount
+	if req.LineCount != nil {
+		lineCount = *req.LineCount
+	}
+
+	language := fs.Language
+	if req.Language != nil {
+		language = *req.Language
+	}
+
+	if err := fs.UpdateDetails(purpose, lineCount, language); err != nil {
+		return nil, err
+	}
+
+	if req.Position != nil {
+		fs.SetPosition(*req.Position)
+	}
+
+	if err := s.repo.UpdateFileStructure(ctx, fs); err != nil {
+		return nil, err
+	}
+
+	return fs, nil
+}
+
+func (s *service) DeleteFileStructure(ctx context.Context, req DeleteFileStructureRequest) error {
+	return s.repo.DeleteFileStructure(ctx, req.FileStructureID, req.UserID)
+}
+
+func (s *service) ListFileStructures(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectFileStructure, error) {
+	return s.repo.ListFileStructures(ctx, projectID, userID)
+}
+
+func (s *service) BulkCreateFileStructures(ctx context.Context, req BulkCreateFileStructuresRequest) ([]ProjectFileStructure, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	structures := make([]*ProjectFileStructure, 0, len(req.Structures))
+	for _, fsReq := range req.Structures {
+		position := 0
+		if fsReq.Position != nil {
+			position = *fsReq.Position
+		}
+
+		fs, err := NewProjectFileStructure(req.ProjectID, fsReq.Path, fsReq.Name, fsReq.IsDirectory, fsReq.ParentID, fsReq.Language, fsReq.LineCount, fsReq.Purpose, position)
+		if err != nil {
+			return nil, err
+		}
+		structures = append(structures, fs)
+	}
+
+	if err := s.repo.BulkCreateFileStructures(ctx, structures); err != nil {
+		return nil, err
+	}
+
+	result := make([]ProjectFileStructure, len(structures))
+	for i, s := range structures {
+		result[i] = *s
+	}
+
+	return result, nil
+}
+
+func (s *service) BulkUpdateFileStructures(ctx context.Context, req BulkUpdateFileStructuresRequest) ([]ProjectFileStructure, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	structures := make([]*ProjectFileStructure, 0, len(req.Structures))
+	for _, fsReq := range req.Structures {
+		fs, err := s.repo.GetFileStructure(ctx, fsReq.FileStructureID, req.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		if fsReq.Purpose != nil {
+			fs.Purpose = *fsReq.Purpose
+		}
+		if fsReq.LineCount != nil {
+			fs.LineCount = *fsReq.LineCount
+		}
+		if fsReq.Language != nil {
+			fs.Language = *fsReq.Language
+		}
+		if fsReq.Position != nil {
+			fs.SetPosition(*fsReq.Position)
+		}
+
+		if err := fs.Validate(); err != nil {
+			return nil, err
+		}
+
+		structures = append(structures, fs)
+	}
+
+	if err := s.repo.BulkUpdateFileStructures(ctx, structures); err != nil {
+		return nil, err
+	}
+
+	result := make([]ProjectFileStructure, len(structures))
+	for i, s := range structures {
+		result[i] = *s
+	}
+
+	return result, nil
+}
+
+// Architecture Diagram operations
+
+func (s *service) CreateArchitectureDiagram(ctx context.Context, req CreateArchitectureDiagramRequest) (*ProjectArchitectureDiagram, error) {
+	if _, err := s.repo.GetProject(ctx, req.ProjectID, req.UserID); err != nil {
+		return nil, err
+	}
+
+	format := req.Format
+	if format == "" {
+		format = "mermaid"
+	}
+
+	diagram, err := NewProjectArchitectureDiagram(req.ProjectID, req.Type, req.Title, req.Description, req.Content, format, req.ImageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.CreateArchitectureDiagram(ctx, diagram); err != nil {
+		return nil, err
+	}
+
+	return diagram, nil
+}
+
+func (s *service) UpdateArchitectureDiagram(ctx context.Context, req UpdateArchitectureDiagramRequest) (*ProjectArchitectureDiagram, error) {
+	diagram, err := s.repo.GetArchitectureDiagram(ctx, req.DiagramID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	title := diagram.Title
+	if req.Title != nil {
+		title = *req.Title
+	}
+
+	description := diagram.Description
+	if req.Description != nil {
+		description = *req.Description
+	}
+
+	imageURL := diagram.ImageURL
+	if req.ImageURL != nil {
+		imageURL = *req.ImageURL
+	}
+
+	if err := diagram.UpdateDetails(title, description, imageURL); err != nil {
+		return nil, err
+	}
+
+	if req.Content != nil {
+		diagram.UpdateContent(*req.Content)
+	}
+
+	if err := s.repo.UpdateArchitectureDiagram(ctx, diagram); err != nil {
+		return nil, err
+	}
+
+	return diagram, nil
+}
+
+func (s *service) DeleteArchitectureDiagram(ctx context.Context, req DeleteArchitectureDiagramRequest) error {
+	return s.repo.DeleteArchitectureDiagram(ctx, req.DiagramID, req.UserID)
+}
+
+func (s *service) ListArchitectureDiagrams(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectArchitectureDiagram, error) {
+	return s.repo.ListArchitectureDiagrams(ctx, projectID, userID)
+}
+
+func (s *service) GetArchitectureDiagram(ctx context.Context, diagramID uuid.UUID, userID uuid.UUID) (*ProjectArchitectureDiagram, error) {
+	return s.repo.GetArchitectureDiagram(ctx, diagramID, userID)
 }

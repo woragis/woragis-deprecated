@@ -12,6 +12,10 @@ const (
 	ErrCodeNotFound           = 4006
 	ErrCodeConflict           = 4007
 	ErrCodeInvalidDependency  = 4008
+	ErrCodeInvalidVisibility  = 4009
+	ErrCodeInvalidSectionType = 4010
+	ErrCodeInvalidTechCategory = 4011
+	ErrCodeInvalidDiagramType = 4012
 )
 
 const (
@@ -49,6 +53,29 @@ const (
 	ErrDependencyNotFound        = "projects: dependency not found"
 	ErrInvalidColumnOrder        = "projects: column order payload must include all columns"
 	ErrWIPLimitExceeded          = "projects: kanban column WIP limit reached"
+	ErrNilDocumentation          = "projects: documentation entity is nil"
+	ErrEmptyDocumentationID      = "projects: documentation id cannot be empty"
+	ErrDocumentationNotFound     = "projects: documentation not found"
+	ErrNilDocumentationSection   = "projects: documentation section entity is nil"
+	ErrEmptySectionID            = "projects: section id cannot be empty"
+	ErrEmptySectionTitle         = "projects: section title cannot be empty"
+	ErrSectionNotFound           = "projects: documentation section not found"
+	ErrUnsupportedVisibility     = "projects: unsupported visibility setting"
+	ErrUnsupportedSectionType    = "projects: unsupported section type"
+	ErrNilTechnology             = "projects: technology entity is nil"
+	ErrEmptyTechnologyID         = "projects: technology id cannot be empty"
+	ErrEmptyTechnologyName       = "projects: technology name cannot be empty"
+	ErrTechnologyNotFound        = "projects: technology not found"
+	ErrUnsupportedTechCategory   = "projects: unsupported technology category"
+	ErrNilFileStructure          = "projects: file structure entity is nil"
+	ErrEmptyFileStructureID      = "projects: file structure id cannot be empty"
+	ErrEmptyFilePath             = "projects: file path cannot be empty"
+	ErrFileStructureNotFound     = "projects: file structure not found"
+	ErrNilArchitectureDiagram    = "projects: architecture diagram entity is nil"
+	ErrEmptyDiagramID            = "projects: diagram id cannot be empty"
+	ErrEmptyDiagramTitle         = "projects: diagram title cannot be empty"
+	ErrDiagramNotFound           = "projects: architecture diagram not found"
+	ErrUnsupportedDiagramType   = "projects: unsupported diagram type"
 )
 
 type DomainError struct {

@@ -14,6 +14,7 @@ type Repository interface {
 	UpdateProject(ctx context.Context, project *Project) error
 	GetProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*Project, error)
 	GetProjectBySlug(ctx context.Context, slug string, userID uuid.UUID) (*Project, error)
+	GetProjectBySlugPublic(ctx context.Context, slug string) (*Project, error)
 	SearchProjectsBySlug(ctx context.Context, slug string, userID uuid.UUID) ([]Project, error)
 	IsProjectSlugTaken(ctx context.Context, userID uuid.UUID, slug string, excludeID uuid.UUID) (bool, error)
 	ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error)
@@ -44,6 +45,47 @@ type Repository interface {
 	DependencyExists(ctx context.Context, projectID, dependsOn uuid.UUID) (bool, error)
 
 	CreateProjectWithRelated(ctx context.Context, project *Project, columns []*KanbanColumn, cards []*KanbanCard, milestones []*Milestone) error
+
+	// Documentation operations
+	CreateDocumentation(ctx context.Context, doc *ProjectDocumentation) error
+	UpdateDocumentation(ctx context.Context, doc *ProjectDocumentation) error
+	GetDocumentation(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*ProjectDocumentation, error)
+	GetDocumentationByProjectID(ctx context.Context, projectID uuid.UUID) (*ProjectDocumentation, error)
+	DeleteDocumentation(ctx context.Context, documentationID uuid.UUID, userID uuid.UUID) error
+
+	// Documentation Section operations
+	CreateDocumentationSection(ctx context.Context, section *DocumentationSection) error
+	UpdateDocumentationSection(ctx context.Context, section *DocumentationSection) error
+	DeleteDocumentationSection(ctx context.Context, sectionID uuid.UUID, userID uuid.UUID) error
+	ListDocumentationSections(ctx context.Context, documentationID uuid.UUID, userID uuid.UUID) ([]DocumentationSection, error)
+	GetDocumentationSection(ctx context.Context, sectionID uuid.UUID, userID uuid.UUID) (*DocumentationSection, error)
+	BulkUpdateDocumentationSections(ctx context.Context, sections []*DocumentationSection) error
+
+	// Technology operations
+	CreateTechnology(ctx context.Context, tech *ProjectTechnology) error
+	UpdateTechnology(ctx context.Context, tech *ProjectTechnology) error
+	DeleteTechnology(ctx context.Context, techID uuid.UUID, userID uuid.UUID) error
+	ListTechnologies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectTechnology, error)
+	GetTechnology(ctx context.Context, techID uuid.UUID, userID uuid.UUID) (*ProjectTechnology, error)
+	BulkCreateTechnologies(ctx context.Context, technologies []*ProjectTechnology) error
+	BulkUpdateTechnologies(ctx context.Context, technologies []*ProjectTechnology) error
+
+	// File Structure operations
+	CreateFileStructure(ctx context.Context, fs *ProjectFileStructure) error
+	UpdateFileStructure(ctx context.Context, fs *ProjectFileStructure) error
+	DeleteFileStructure(ctx context.Context, fsID uuid.UUID, userID uuid.UUID) error
+	ListFileStructures(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectFileStructure, error)
+	GetFileStructure(ctx context.Context, fsID uuid.UUID, userID uuid.UUID) (*ProjectFileStructure, error)
+	BulkCreateFileStructures(ctx context.Context, structures []*ProjectFileStructure) error
+	BulkUpdateFileStructures(ctx context.Context, structures []*ProjectFileStructure) error
+	DeleteFileStructuresByProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) error
+
+	// Architecture Diagram operations
+	CreateArchitectureDiagram(ctx context.Context, diagram *ProjectArchitectureDiagram) error
+	UpdateArchitectureDiagram(ctx context.Context, diagram *ProjectArchitectureDiagram) error
+	DeleteArchitectureDiagram(ctx context.Context, diagramID uuid.UUID, userID uuid.UUID) error
+	ListArchitectureDiagrams(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectArchitectureDiagram, error)
+	GetArchitectureDiagram(ctx context.Context, diagramID uuid.UUID, userID uuid.UUID) (*ProjectArchitectureDiagram, error)
 }
 
 type gormRepository struct {
@@ -93,6 +135,20 @@ func (r *gormRepository) GetProjectBySlug(ctx context.Context, slug string, user
 	var project Project
 	err := r.db.WithContext(ctx).
 		Where("slug = ? AND user_id = ?", slug, userID).
+		First(&project).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrProjectNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &project, nil
+}
+
+func (r *gormRepository) GetProjectBySlugPublic(ctx context.Context, slug string) (*Project, error) {
+	var project Project
+	err := r.db.WithContext(ctx).
+		Where("slug = ?", slug).
 		First(&project).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -492,11 +548,456 @@ func (r *gormRepository) CreateProjectWithRelated(ctx context.Context, project *
 					return err
 				}
 			}
-			if err := tx.Create(&milestones).Error; err != nil {
-				return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+		if err := tx.Create(&milestones).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+		}
+	}
+
+	return nil
+	})
+}
+
+// Documentation operations
+
+func (r *gormRepository) CreateDocumentation(ctx context.Context, doc *ProjectDocumentation) error {
+	if err := doc.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Create(doc).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) UpdateDocumentation(ctx context.Context, doc *ProjectDocumentation) error {
+	if err := doc.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Save(doc).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) GetDocumentation(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) (*ProjectDocumentation, error) {
+	var doc ProjectDocumentation
+	err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_documentations.project_id").
+		Where("project_documentations.project_id = ? AND projects.user_id = ?", projectID, userID).
+		First(&doc).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrDocumentationNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &doc, nil
+}
+
+func (r *gormRepository) GetDocumentationByProjectID(ctx context.Context, projectID uuid.UUID) (*ProjectDocumentation, error) {
+	var doc ProjectDocumentation
+	err := r.db.WithContext(ctx).
+		Where("project_id = ?", projectID).
+		First(&doc).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrDocumentationNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &doc, nil
+}
+
+func (r *gormRepository) DeleteDocumentation(ctx context.Context, documentationID uuid.UUID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var doc ProjectDocumentation
+		if err := tx.Joins("JOIN projects ON projects.id = project_documentations.project_id").
+			Where("project_documentations.id = ? AND projects.user_id = ?", documentationID, userID).
+			First(&doc).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return NewDomainError(ErrCodeNotFound, ErrDocumentationNotFound)
 			}
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 		}
 
+		if err := tx.Where("documentation_id = ?", documentationID).Delete(&DocumentationSection{}).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+
+		if err := tx.Delete(&doc).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
 		return nil
 	})
+}
+
+// Documentation Section operations
+
+func (r *gormRepository) CreateDocumentationSection(ctx context.Context, section *DocumentationSection) error {
+	if err := section.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Create(section).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) UpdateDocumentationSection(ctx context.Context, section *DocumentationSection) error {
+	if err := section.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Save(section).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) DeleteDocumentationSection(ctx context.Context, sectionID uuid.UUID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var section DocumentationSection
+		if err := tx.Joins("JOIN project_documentations ON project_documentations.id = documentation_sections.documentation_id").
+			Joins("JOIN projects ON projects.id = project_documentations.project_id").
+			Where("documentation_sections.id = ? AND projects.user_id = ?", sectionID, userID).
+			First(&section).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return NewDomainError(ErrCodeNotFound, ErrSectionNotFound)
+			}
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+		}
+
+		if err := tx.Delete(&section).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) ListDocumentationSections(ctx context.Context, documentationID uuid.UUID, userID uuid.UUID) ([]DocumentationSection, error) {
+	var sections []DocumentationSection
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN project_documentations ON project_documentations.id = documentation_sections.documentation_id").
+		Joins("JOIN projects ON projects.id = project_documentations.project_id").
+		Where("documentation_sections.documentation_id = ? AND projects.user_id = ?", documentationID, userID).
+		Order("documentation_sections.position asc, documentation_sections.created_at asc").
+		Find(&sections).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return sections, nil
+}
+
+func (r *gormRepository) GetDocumentationSection(ctx context.Context, sectionID uuid.UUID, userID uuid.UUID) (*DocumentationSection, error) {
+	var section DocumentationSection
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN project_documentations ON project_documentations.id = documentation_sections.documentation_id").
+		Joins("JOIN projects ON projects.id = project_documentations.project_id").
+		Where("documentation_sections.id = ? AND projects.user_id = ?", sectionID, userID).
+		First(&section).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrSectionNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &section, nil
+}
+
+func (r *gormRepository) BulkUpdateDocumentationSections(ctx context.Context, sections []*DocumentationSection) error {
+	if len(sections) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, section := range sections {
+			if err := section.Validate(); err != nil {
+				return err
+			}
+			if err := tx.Save(section).Error; err != nil {
+				return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+			}
+		}
+		return nil
+	})
+}
+
+// Technology operations
+
+func (r *gormRepository) CreateTechnology(ctx context.Context, tech *ProjectTechnology) error {
+	if err := tech.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Create(tech).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) UpdateTechnology(ctx context.Context, tech *ProjectTechnology) error {
+	if err := tech.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Save(tech).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) DeleteTechnology(ctx context.Context, techID uuid.UUID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var tech ProjectTechnology
+		if err := tx.Joins("JOIN projects ON projects.id = project_technologies.project_id").
+			Where("project_technologies.id = ? AND projects.user_id = ?", techID, userID).
+			First(&tech).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return NewDomainError(ErrCodeNotFound, ErrTechnologyNotFound)
+			}
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+		}
+
+		if err := tx.Delete(&tech).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) ListTechnologies(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectTechnology, error) {
+	var technologies []ProjectTechnology
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_technologies.project_id").
+		Where("project_technologies.project_id = ? AND projects.user_id = ?", projectID, userID).
+		Order("project_technologies.category asc, project_technologies.name asc").
+		Find(&technologies).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return technologies, nil
+}
+
+func (r *gormRepository) GetTechnology(ctx context.Context, techID uuid.UUID, userID uuid.UUID) (*ProjectTechnology, error) {
+	var tech ProjectTechnology
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_technologies.project_id").
+		Where("project_technologies.id = ? AND projects.user_id = ?", techID, userID).
+		First(&tech).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrTechnologyNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &tech, nil
+}
+
+func (r *gormRepository) BulkCreateTechnologies(ctx context.Context, technologies []*ProjectTechnology) error {
+	if len(technologies) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, tech := range technologies {
+			if err := tech.Validate(); err != nil {
+				return err
+			}
+		}
+		if err := tx.Create(&technologies).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) BulkUpdateTechnologies(ctx context.Context, technologies []*ProjectTechnology) error {
+	if len(technologies) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, tech := range technologies {
+			if err := tech.Validate(); err != nil {
+				return err
+			}
+			if err := tx.Save(tech).Error; err != nil {
+				return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+			}
+		}
+		return nil
+	})
+}
+
+// File Structure operations
+
+func (r *gormRepository) CreateFileStructure(ctx context.Context, fs *ProjectFileStructure) error {
+	if err := fs.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Create(fs).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) UpdateFileStructure(ctx context.Context, fs *ProjectFileStructure) error {
+	if err := fs.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Save(fs).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) DeleteFileStructure(ctx context.Context, fsID uuid.UUID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var fs ProjectFileStructure
+		if err := tx.Joins("JOIN projects ON projects.id = project_file_structures.project_id").
+			Where("project_file_structures.id = ? AND projects.user_id = ?", fsID, userID).
+			First(&fs).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return NewDomainError(ErrCodeNotFound, ErrFileStructureNotFound)
+			}
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+		}
+
+		if err := tx.Where("parent_id = ?", fsID).Delete(&ProjectFileStructure{}).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+
+		if err := tx.Delete(&fs).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) ListFileStructures(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectFileStructure, error) {
+	var structures []ProjectFileStructure
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_file_structures.project_id").
+		Where("project_file_structures.project_id = ? AND projects.user_id = ?", projectID, userID).
+		Order("project_file_structures.position asc, project_file_structures.path asc").
+		Find(&structures).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return structures, nil
+}
+
+func (r *gormRepository) GetFileStructure(ctx context.Context, fsID uuid.UUID, userID uuid.UUID) (*ProjectFileStructure, error) {
+	var fs ProjectFileStructure
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_file_structures.project_id").
+		Where("project_file_structures.id = ? AND projects.user_id = ?", fsID, userID).
+		First(&fs).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrFileStructureNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &fs, nil
+}
+
+func (r *gormRepository) BulkCreateFileStructures(ctx context.Context, structures []*ProjectFileStructure) error {
+	if len(structures) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, fs := range structures {
+			if err := fs.Validate(); err != nil {
+				return err
+			}
+		}
+		if err := tx.Create(&structures).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) BulkUpdateFileStructures(ctx context.Context, structures []*ProjectFileStructure) error {
+	if len(structures) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, fs := range structures {
+			if err := fs.Validate(); err != nil {
+				return err
+			}
+			if err := tx.Save(fs).Error; err != nil {
+				return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+			}
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) DeleteFileStructuresByProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Joins("JOIN projects ON projects.id = project_file_structures.project_id").
+			Where("project_file_structures.project_id = ? AND projects.user_id = ?", projectID, userID).
+			Delete(&ProjectFileStructure{}).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+		return nil
+	})
+}
+
+// Architecture Diagram operations
+
+func (r *gormRepository) CreateArchitectureDiagram(ctx context.Context, diagram *ProjectArchitectureDiagram) error {
+	if err := diagram.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Create(diagram).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
+}
+
+func (r *gormRepository) UpdateArchitectureDiagram(ctx context.Context, diagram *ProjectArchitectureDiagram) error {
+	if err := diagram.Validate(); err != nil {
+		return err
+	}
+	if err := r.db.WithContext(ctx).Save(diagram).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) DeleteArchitectureDiagram(ctx context.Context, diagramID uuid.UUID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var diagram ProjectArchitectureDiagram
+		if err := tx.Joins("JOIN projects ON projects.id = project_architecture_diagrams.project_id").
+			Where("project_architecture_diagrams.id = ? AND projects.user_id = ?", diagramID, userID).
+			First(&diagram).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return NewDomainError(ErrCodeNotFound, ErrDiagramNotFound)
+			}
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+		}
+
+		if err := tx.Delete(&diagram).Error; err != nil {
+			return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		}
+		return nil
+	})
+}
+
+func (r *gormRepository) ListArchitectureDiagrams(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) ([]ProjectArchitectureDiagram, error) {
+	var diagrams []ProjectArchitectureDiagram
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_architecture_diagrams.project_id").
+		Where("project_architecture_diagrams.project_id = ? AND projects.user_id = ?", projectID, userID).
+		Order("project_architecture_diagrams.created_at desc").
+		Find(&diagrams).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return diagrams, nil
+}
+
+func (r *gormRepository) GetArchitectureDiagram(ctx context.Context, diagramID uuid.UUID, userID uuid.UUID) (*ProjectArchitectureDiagram, error) {
+	var diagram ProjectArchitectureDiagram
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN projects ON projects.id = project_architecture_diagrams.project_id").
+		Where("project_architecture_diagrams.id = ? AND projects.user_id = ?", diagramID, userID).
+		First(&diagram).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, NewDomainError(ErrCodeNotFound, ErrDiagramNotFound)
+		}
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return &diagram, nil
 }

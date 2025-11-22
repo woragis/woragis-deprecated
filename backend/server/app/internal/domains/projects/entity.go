@@ -438,3 +438,412 @@ func (d *ProjectDependency) UpdateType(depType DependencyType) error {
 	d.UpdatedAt = time.Now().UTC()
 	return d.Validate()
 }
+
+// Documentation Visibility Types
+type DocumentationVisibility string
+
+const (
+	VisibilityPublic        DocumentationVisibility = "public"
+	VisibilityAuthenticated DocumentationVisibility = "authenticated"
+	VisibilityCollaborators DocumentationVisibility = "collaborators"
+)
+
+// Documentation Section Types
+type DocumentationSectionType string
+
+const (
+	SectionTypeOverview      DocumentationSectionType = "overview"
+	SectionTypeArchitecture  DocumentationSectionType = "architecture"
+	SectionTypeTechStack     DocumentationSectionType = "tech_stack"
+	SectionTypeFileStructure DocumentationSectionType = "file_structure"
+	SectionTypeAPIDocs       DocumentationSectionType = "api_documentation"
+	SectionTypeDeployment    DocumentationSectionType = "deployment"
+	SectionTypeContributing  DocumentationSectionType = "contributing"
+	SectionTypeCustom        DocumentationSectionType = "custom"
+)
+
+// ProjectDocumentation is the main container for project documentation.
+type ProjectDocumentation struct {
+	ID          uuid.UUID              `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID   uuid.UUID              `gorm:"column:project_id;type:uuid;index;not null;uniqueIndex:idx_project_documentation" json:"projectId"`
+	Visibility  DocumentationVisibility `gorm:"column:visibility;type:varchar(32);not null;default:'collaborators'" json:"visibility"`
+	Version     int                    `gorm:"column:version;not null;default:1" json:"version"`
+	CreatedAt   time.Time              `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time              `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// NewProjectDocumentation creates a new documentation container.
+func NewProjectDocumentation(projectID uuid.UUID, visibility DocumentationVisibility) (*ProjectDocumentation, error) {
+	doc := &ProjectDocumentation{
+		ID:         uuid.New(),
+		ProjectID:  projectID,
+		Visibility: visibility,
+		Version:    1,
+		CreatedAt:  time.Now().UTC(),
+		UpdatedAt:  time.Now().UTC(),
+	}
+	return doc, doc.Validate()
+}
+
+// Validate ensures documentation invariants hold.
+func (d *ProjectDocumentation) Validate() error {
+	if d == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilDocumentation)
+	}
+	if d.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyDocumentationID)
+	}
+	if d.ProjectID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+	switch d.Visibility {
+	case VisibilityPublic, VisibilityAuthenticated, VisibilityCollaborators:
+	default:
+		return NewDomainError(ErrCodeInvalidVisibility, ErrUnsupportedVisibility)
+	}
+	return nil
+}
+
+// UpdateVisibility updates the documentation visibility setting.
+func (d *ProjectDocumentation) UpdateVisibility(visibility DocumentationVisibility) error {
+	switch visibility {
+	case VisibilityPublic, VisibilityAuthenticated, VisibilityCollaborators:
+	default:
+		return NewDomainError(ErrCodeInvalidVisibility, ErrUnsupportedVisibility)
+	}
+	d.Visibility = visibility
+	d.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// IncrementVersion increments the documentation version.
+func (d *ProjectDocumentation) IncrementVersion() {
+	d.Version++
+	d.UpdatedAt = time.Now().UTC()
+}
+
+// DocumentationSection represents an individual section within project documentation.
+type DocumentationSection struct {
+	ID          uuid.UUID              `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	DocumentationID uuid.UUID          `gorm:"column:documentation_id;type:uuid;index;not null" json:"documentationId"`
+	Type        DocumentationSectionType `gorm:"column:type;type:varchar(32);not null" json:"type"`
+	Title       string                 `gorm:"column:title;size:160;not null" json:"title"`
+	Content     string                 `gorm:"column:content;type:text" json:"content"`
+	Position    int                    `gorm:"column:position;not null;default:0;index:idx_section_position" json:"position"`
+	CreatedAt   time.Time              `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time              `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// NewDocumentationSection creates a new documentation section.
+func NewDocumentationSection(documentationID uuid.UUID, sectionType DocumentationSectionType, title, content string, position int) (*DocumentationSection, error) {
+	section := &DocumentationSection{
+		ID:            uuid.New(),
+		DocumentationID: documentationID,
+		Type:          sectionType,
+		Title:         strings.TrimSpace(title),
+		Content:       content,
+		Position:      position,
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+	}
+	return section, section.Validate()
+}
+
+// Validate ensures section invariants hold.
+func (s *DocumentationSection) Validate() error {
+	if s == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilDocumentationSection)
+	}
+	if s.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptySectionID)
+	}
+	if s.DocumentationID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyDocumentationID)
+	}
+	if s.Title == "" {
+		return NewDomainError(ErrCodeInvalidName, ErrEmptySectionTitle)
+	}
+	switch s.Type {
+	case SectionTypeOverview, SectionTypeArchitecture, SectionTypeTechStack, SectionTypeFileStructure,
+		SectionTypeAPIDocs, SectionTypeDeployment, SectionTypeContributing, SectionTypeCustom:
+	default:
+		return NewDomainError(ErrCodeInvalidSectionType, ErrUnsupportedSectionType)
+	}
+	return nil
+}
+
+// UpdateContent updates the section content.
+func (s *DocumentationSection) UpdateContent(content string) {
+	s.Content = content
+	s.UpdatedAt = time.Now().UTC()
+}
+
+// UpdateTitle updates the section title.
+func (s *DocumentationSection) UpdateTitle(title string) error {
+	s.Title = strings.TrimSpace(title)
+	s.UpdatedAt = time.Now().UTC()
+	return s.Validate()
+}
+
+// SetPosition updates the section position.
+func (s *DocumentationSection) SetPosition(position int) {
+	s.Position = position
+	s.UpdatedAt = time.Now().UTC()
+}
+
+// Technology Category Types
+type TechnologyCategory string
+
+const (
+	TechCategoryBackend       TechnologyCategory = "backend"
+	TechCategoryDatabase      TechnologyCategory = "database"
+	TechCategoryFrontend      TechnologyCategory = "frontend"
+	TechCategoryInfrastructure TechnologyCategory = "infrastructure"
+	TechCategoryMonitoring    TechnologyCategory = "monitoring"
+	TechCategoryDevOps        TechnologyCategory = "devops"
+	TechCategoryTesting       TechnologyCategory = "testing"
+	TechCategoryOther         TechnologyCategory = "other"
+)
+
+// ProjectTechnology represents a technology used in a project.
+type ProjectTechnology struct {
+	ID          uuid.UUID          `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID   uuid.UUID          `gorm:"column:project_id;type:uuid;index;not null" json:"projectId"`
+	Name        string             `gorm:"column:name;size:120;not null" json:"name"`
+	Version     string             `gorm:"column:version;size:80" json:"version"`
+	Category    TechnologyCategory `gorm:"column:category;type:varchar(32);not null" json:"category"`
+	Purpose     string             `gorm:"column:purpose;size:512" json:"purpose"`
+	Link        string             `gorm:"column:link;size:512" json:"link,omitempty"`
+	CreatedAt   time.Time          `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time          `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// NewProjectTechnology creates a new technology entry.
+func NewProjectTechnology(projectID uuid.UUID, name, version string, category TechnologyCategory, purpose, link string) (*ProjectTechnology, error) {
+	tech := &ProjectTechnology{
+		ID:        uuid.New(),
+		ProjectID: projectID,
+		Name:      strings.TrimSpace(name),
+		Version:   strings.TrimSpace(version),
+		Category:  category,
+		Purpose:   strings.TrimSpace(purpose),
+		Link:      strings.TrimSpace(link),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+	return tech, tech.Validate()
+}
+
+// Validate ensures technology invariants hold.
+func (t *ProjectTechnology) Validate() error {
+	if t == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilTechnology)
+	}
+	if t.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyTechnologyID)
+	}
+	if t.ProjectID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+	if t.Name == "" {
+		return NewDomainError(ErrCodeInvalidName, ErrEmptyTechnologyName)
+	}
+	switch t.Category {
+	case TechCategoryBackend, TechCategoryDatabase, TechCategoryFrontend, TechCategoryInfrastructure,
+		TechCategoryMonitoring, TechCategoryDevOps, TechCategoryTesting, TechCategoryOther:
+	default:
+		return NewDomainError(ErrCodeInvalidTechCategory, ErrUnsupportedTechCategory)
+	}
+	return nil
+}
+
+// UpdateDetails updates technology details.
+func (t *ProjectTechnology) UpdateDetails(name, version, purpose, link string) error {
+	if name != "" {
+		t.Name = strings.TrimSpace(name)
+	}
+	if version != "" {
+		t.Version = strings.TrimSpace(version)
+	}
+	if purpose != "" {
+		t.Purpose = strings.TrimSpace(purpose)
+	}
+	if link != "" {
+		t.Link = strings.TrimSpace(link)
+	}
+	t.UpdatedAt = time.Now().UTC()
+	return t.Validate()
+}
+
+// ProjectFileStructure represents a file or directory in the project structure.
+type ProjectFileStructure struct {
+	ID          uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID   uuid.UUID  `gorm:"column:project_id;type:uuid;index;not null" json:"projectId"`
+	ParentID    *uuid.UUID `gorm:"column:parent_id;type:uuid;index" json:"parentId,omitempty"`
+	Path        string     `gorm:"column:path;size:512;not null" json:"path"`
+	Name        string     `gorm:"column:name;size:255;not null" json:"name"`
+	IsDirectory bool       `gorm:"column:is_directory;not null;default:false" json:"isDirectory"`
+	Language    string     `gorm:"column:language;size:32" json:"language,omitempty"`
+	LineCount   int        `gorm:"column:line_count;default:0" json:"lineCount"`
+	Purpose     string     `gorm:"column:purpose;size:512" json:"purpose,omitempty"`
+	Position    int        `gorm:"column:position;not null;default:0;index:idx_file_structure_position" json:"position"`
+	CreatedAt   time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// NewProjectFileStructure creates a new file structure entry.
+func NewProjectFileStructure(projectID uuid.UUID, path, name string, isDirectory bool, parentID *uuid.UUID, language string, lineCount int, purpose string, position int) (*ProjectFileStructure, error) {
+	fs := &ProjectFileStructure{
+		ID:          uuid.New(),
+		ProjectID:   projectID,
+		ParentID:    parentID,
+		Path:        strings.TrimSpace(path),
+		Name:        strings.TrimSpace(name),
+		IsDirectory: isDirectory,
+		Language:    strings.TrimSpace(language),
+		LineCount:   lineCount,
+		Purpose:     strings.TrimSpace(purpose),
+		Position:    position,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+	return fs, fs.Validate()
+}
+
+// Validate ensures file structure invariants hold.
+func (f *ProjectFileStructure) Validate() error {
+	if f == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilFileStructure)
+	}
+	if f.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyFileStructureID)
+	}
+	if f.ProjectID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+	if f.Path == "" {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyFilePath)
+	}
+	if f.Name == "" {
+		return NewDomainError(ErrCodeInvalidName, "projects: file name cannot be empty")
+	}
+	if f.LineCount < 0 {
+		return NewDomainError(ErrCodeInvalidPayload, "projects: line count cannot be negative")
+	}
+	return nil
+}
+
+// UpdateDetails updates file structure details.
+func (f *ProjectFileStructure) UpdateDetails(purpose string, lineCount int, language string) error {
+	if purpose != "" {
+		f.Purpose = strings.TrimSpace(purpose)
+	}
+	if lineCount >= 0 {
+		f.LineCount = lineCount
+	}
+	if language != "" {
+		f.Language = strings.TrimSpace(language)
+	}
+	f.UpdatedAt = time.Now().UTC()
+	return f.Validate()
+}
+
+// SetPosition updates the file position within its parent.
+func (f *ProjectFileStructure) SetPosition(position int) {
+	f.Position = position
+	f.UpdatedAt = time.Now().UTC()
+}
+
+// MoveToParent updates the parent directory.
+func (f *ProjectFileStructure) MoveToParent(parentID *uuid.UUID) {
+	f.ParentID = parentID
+	f.UpdatedAt = time.Now().UTC()
+}
+
+// Architecture Diagram Types
+type ArchitectureDiagramType string
+
+const (
+	DiagramTypeDependency   ArchitectureDiagramType = "dependency"
+	DiagramTypeComponent   ArchitectureDiagramType = "component"
+	DiagramTypeDataFlow    ArchitectureDiagramType = "data_flow"
+	DiagramTypeInfrastructure ArchitectureDiagramType = "infrastructure"
+	DiagramTypeCustom       ArchitectureDiagramType = "custom"
+)
+
+// ProjectArchitectureDiagram represents an architecture diagram for a project.
+type ProjectArchitectureDiagram struct {
+	ID          uuid.UUID              `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	ProjectID   uuid.UUID              `gorm:"column:project_id;type:uuid;index;not null" json:"projectId"`
+	Type        ArchitectureDiagramType `gorm:"column:type;type:varchar(32);not null" json:"type"`
+	Title       string                 `gorm:"column:title;size:160;not null" json:"title"`
+	Description string                 `gorm:"column:description;size:512" json:"description"`
+	Content     string                 `gorm:"column:content;type:text" json:"content"`
+	Format      string                 `gorm:"column:format;size:32;default:'mermaid'" json:"format"`
+	ImageURL    string                 `gorm:"column:image_url;size:512" json:"imageUrl,omitempty"`
+	CreatedAt   time.Time              `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt   time.Time              `gorm:"column:updated_at" json:"updatedAt"`
+}
+
+// NewProjectArchitectureDiagram creates a new architecture diagram.
+func NewProjectArchitectureDiagram(projectID uuid.UUID, diagramType ArchitectureDiagramType, title, description, content, format, imageURL string) (*ProjectArchitectureDiagram, error) {
+	diagram := &ProjectArchitectureDiagram{
+		ID:          uuid.New(),
+		ProjectID:   projectID,
+		Type:        diagramType,
+		Title:       strings.TrimSpace(title),
+		Description: strings.TrimSpace(description),
+		Content:     content,
+		Format:      strings.TrimSpace(format),
+		ImageURL:    strings.TrimSpace(imageURL),
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
+	if diagram.Format == "" {
+		diagram.Format = "mermaid"
+	}
+	return diagram, diagram.Validate()
+}
+
+// Validate ensures diagram invariants hold.
+func (d *ProjectArchitectureDiagram) Validate() error {
+	if d == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilArchitectureDiagram)
+	}
+	if d.ID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyDiagramID)
+	}
+	if d.ProjectID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyProjectID)
+	}
+	if d.Title == "" {
+		return NewDomainError(ErrCodeInvalidName, ErrEmptyDiagramTitle)
+	}
+	switch d.Type {
+	case DiagramTypeDependency, DiagramTypeComponent, DiagramTypeDataFlow, DiagramTypeInfrastructure, DiagramTypeCustom:
+	default:
+		return NewDomainError(ErrCodeInvalidDiagramType, ErrUnsupportedDiagramType)
+	}
+	return nil
+}
+
+// UpdateContent updates the diagram content.
+func (d *ProjectArchitectureDiagram) UpdateContent(content string) {
+	d.Content = content
+	d.UpdatedAt = time.Now().UTC()
+}
+
+// UpdateDetails updates diagram metadata.
+func (d *ProjectArchitectureDiagram) UpdateDetails(title, description, imageURL string) error {
+	if title != "" {
+		d.Title = strings.TrimSpace(title)
+	}
+	if description != "" {
+		d.Description = strings.TrimSpace(description)
+	}
+	if imageURL != "" {
+		d.ImageURL = strings.TrimSpace(imageURL)
+	}
+	d.UpdatedAt = time.Now().UTC()
+	return d.Validate()
+}
