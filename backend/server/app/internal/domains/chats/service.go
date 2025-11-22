@@ -67,6 +67,7 @@ type AppendMessageRequest struct {
 	Role           string
 	Content        string
 	GenerateReply  bool
+	Agent          string
 	Provider       langchain.ModelProvider
 	Model          string
 	MaxTokens      int
@@ -197,6 +198,7 @@ func (s *Service) streamReply(ctx context.Context, conversationID uuid.UUID, req
 		Messages:    lcMessages,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
+		Agent:       req.Agent,
 	}, func(delta string) {
 		if s.stream != nil && delta != "" {
 			s.stream.Broadcast(conversationID, streamDeltaEvent{
@@ -269,6 +271,7 @@ func (s *Service) generateReply(ctx context.Context, req AppendMessageRequest) (
 		Messages:    lcMessages,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
+		Agent:       req.Agent,
 	})
 	if err != nil {
 		return nil, NewDomainError(ErrCodeLLMFailure, ErrUnableToInvokeLLM)

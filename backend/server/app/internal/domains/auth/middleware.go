@@ -31,6 +31,11 @@ func NewAuthMiddleware(manager *JWTManager, logger *slog.Logger) fiber.Handler {
 			}
 		}
 
+		// Fallback for websocket/query-string auth (e.g., ws://.../stream?token=...)
+		if rawToken == "" {
+			rawToken = strings.TrimSpace(c.Query("token", ""))
+		}
+
 		if rawToken == "" {
 			return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidToken, fiber.Map{
 				"message": "missing credentials",

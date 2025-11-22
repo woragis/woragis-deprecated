@@ -20,6 +20,11 @@ const {
 		composeContent,
 		composeRole,
 		generateReply,
+		provider,
+		model,
+		agent,
+		autoAgent,
+		isSending,
 		transcriptStatus,
 		showCreateModal,
 		createError,
@@ -55,6 +60,10 @@ const {
 		setComposeContent,
 		setComposeRole,
 		setGenerateReply,
+		setProvider,
+		setModel,
+		setAgent,
+		setAutoAgent,
 		createConversationMutation,
 		appendMessageMutation,
 		shareTranscriptMutation
@@ -134,12 +143,20 @@ $: if (pendingDeepLinkId && conversationList.length > 0) {
 			composeContent={$composeContent}
 			composeRole={$composeRole}
 			generateReply={$generateReply}
+			provider={$provider}
+			model={$model}
+			agent={$agent}
+			autoAgent={$autoAgent}
 			onComposeContentChange={setComposeContent}
 			onComposeRoleChange={setComposeRole}
 			onGenerateReplyChange={setGenerateReply}
+			onProviderChange={setProvider}
+			onModelChange={setModel}
+			onAgentChange={setAgent}
+			onAutoAgentChange={setAutoAgent}
 			onSendMessage={handleSendMessage}
 			onShareTranscript={handleShareTranscript}
-			isSending={$appendMessageMutation.isPending}
+			isSending={$isSending}
 			isSharing={$shareTranscriptMutation.isPending}
 		/>
 	</div>

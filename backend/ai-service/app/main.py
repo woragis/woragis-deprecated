@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -19,6 +20,11 @@ load_dotenv()
 
 app = FastAPI(title="Woragis AI Service", version="0.1.0")
 
+# Configure basic logging for container visibility
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("woragis.ai-service")
+logger.info("AI service initialized")
+
 if settings.CORS_ENABLED:
     origins = settings.CORS_ALLOWED_ORIGINS.split(",")
     app.add_middleware(
@@ -31,7 +37,7 @@ if settings.CORS_ENABLED:
 
 
 class ChatRequest(BaseModel):
-    agent: Literal["economist", "strategist", "entrepreneur", "startup"] = Field(..., description="Agent persona")
+    agent: Literal["economist", "strategist", "entrepreneur", "startup", "auto"] = Field(..., description="Agent persona or 'auto'")
     input: str = Field(..., description="User input or question")
     system: Optional[str] = Field(None, description="Optional additional system instruction")
     temperature: Optional[float] = Field(None, description="Optional temperature override")
@@ -85,13 +91,36 @@ def _apply_overrides(chain: Runnable, model_name: Optional[str], temperature: Op
 
 @app.post("/v1/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
+    logger.info(
+        "chat request",
+        extra={
+            "agent": req.agent,
+            "provider": (req.provider or "openai").lower(),
+            "model": req.model or "",
+            "has_system": bool(req.system),
+            "temperature": req.temperature,
+        },
+    )
     provider = (req.provider or "openai").lower()
+
+    # Simple heuristic for auto agent selection
+    def pick_agent_auto(text: str) -> str:
+        lowered = (text or "").lower()
+        if any(k in lowered for k in ["market", "inflation", "macro", "econom", "unit economics", "pricing"]):
+            return "economist"
+        if any(k in lowered for k in ["strategy", "positioning", "go-to-market", "gtm", "competitor", "moat"]):
+            return "strategist"
+        if any(k in lowered for k in ["mvp", "launch", "prototype", "hack", "validate", "scrappy"]):
+            return "entrepreneur"
+        return "startup"
+
+    agent_name = req.agent if req.agent != "auto" else pick_agent_auto(req.input)
 
     # Cipher provider: call external API directly (query string API key, OpenAI-like JSON)
     if provider == "cipher":
-        system_text = build_system_message(req.agent)
+        system_text = build_system_message(agent_name)
         if not system_text:
-            raise HTTPException(status_code=404, detail=f"Unknown agent '{req.agent}'. Available: {', '.join(get_agent_names())}")
+            raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_name}'. Available: {', '.join(get_agent_names())}")
 
         messages = [{"role": "system", "content": system_text}]
         if req.system:
@@ -105,16 +134,16 @@ async def chat(req: ChatRequest):
             max_tokens=settings.CIPHER_MAX_TOKENS,
             top_p=settings.CIPHER_TOP_P,
         )
-        return ChatResponse(agent=req.agent, output=text)
+        return ChatResponse(agent=agent_name, output=text)
 
     # Default: build model via LangChain
     try:
         model = make_model(provider, req.model, req.temperature)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    chain = build_agent_with_model(req.agent, model)
+    chain = build_agent_with_model(agent_name, model)
     if not chain:
-        raise HTTPException(status_code=404, detail=f"Unknown agent '{req.agent}'. Available: {', '.join(get_agent_names())}")
+        raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_name}'. Available: {', '.join(get_agent_names())}")
 
     # Optionally augment with extra system instruction by prepending a SystemMessage
     inputs = req.input
@@ -122,13 +151,15 @@ async def chat(req: ChatRequest):
         # Simple concatenation to include system guidance
         inputs = f"{req.system}\n\nUser: {req.input}"
 
+    logger.info("invoking chat chain", extra={"agent": agent_name, "provider": provider})
     result = await chain.ainvoke({"input": inputs})
     if hasattr(result, "content"):
         output_text = result.content  # AIMessage
     else:
         output_text = str(result)
 
-    return ChatResponse(agent=req.agent, output=output_text)
+    logger.info("chat completed", extra={"agent": agent_name, "output_len": len(output_text)})
+    return ChatResponse(agent=agent_name, output=output_text)
 
 
 @app.get("/healthz")
@@ -157,7 +188,29 @@ async def generate_images(req: ImageRequest):
 
 @app.post("/v1/chat/stream")
 async def chat_stream(req: ChatStreamRequest):
+    logger.info(
+        "chat stream request",
+        extra={
+            "agent": req.agent,
+            "provider": (req.provider or "openai").lower(),
+            "model": req.model or "",
+            "has_system": bool(req.system),
+            "temperature": req.temperature,
+        },
+    )
     provider = (req.provider or "openai").lower()
+
+    def pick_agent_auto(text: str) -> str:
+        lowered = (text or "").lower()
+        if any(k in lowered for k in ["market", "inflation", "macro", "econom", "unit economics", "pricing"]):
+            return "economist"
+        if any(k in lowered for k in ["strategy", "positioning", "go-to-market", "gtm", "competitor", "moat"]):
+            return "strategist"
+        if any(k in lowered for k in ["mvp", "launch", "prototype", "hack", "validate", "scrappy"]):
+            return "entrepreneur"
+        return "startup"
+
+    agent_name = req.agent if req.agent != "auto" else pick_agent_auto(req.input)
 
     # Prepare input
     inputs = req.input
@@ -166,7 +219,7 @@ async def chat_stream(req: ChatStreamRequest):
 
     # Cipher has no documented streaming: return one full chunk then done
     if provider == "cipher":
-        system_text = build_system_message(req.agent) or ""
+        system_text = build_system_message(agent_name) or ""
         messages = [{"role": "system", "content": system_text}]
         if req.system:
             messages.append({"role": "system", "content": req.system})
@@ -191,11 +244,12 @@ async def chat_stream(req: ChatStreamRequest):
         model = make_model(provider, req.model, req.temperature)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    chain = build_agent_with_model(req.agent, model)
+    chain = build_agent_with_model(agent_name, model)
     if not chain:
-        raise HTTPException(status_code=404, detail=f"Unknown agent '{req.agent}'. Available: {', '.join(get_agent_names())}")
+        raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_name}'. Available: {', '.join(get_agent_names())}")
 
     async def event_gen():
+        logger.info("stream started", extra={"agent": agent_name, "provider": provider})
         full_parts = []
         try:
             async for event in chain.astream_events({"input": inputs}, version="v1"):
@@ -210,7 +264,10 @@ async def chat_stream(req: ChatStreamRequest):
                         full_parts.append(chunk)
                         yield json.dumps({"delta": chunk}) + "\n"
         except Exception as e:
+            logger.exception("stream error")
             yield json.dumps({"error": str(e)}) + "\n"
-        yield json.dumps({"done": True, "output": "".join(full_parts)}) + "\n"
+        final_text = "".join(full_parts)
+        logger.info("stream completed", extra={"agent": agent_name, "output_len": len(final_text)})
+        yield json.dumps({"done": True, "output": final_text}) + "\n"
 
     return StreamingResponse(event_gen(), media_type="application/x-ndjson")

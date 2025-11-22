@@ -41,6 +41,7 @@ type appendMessagePayload struct {
 	Role          string  `json:"role"`
 	Content       string  `json:"content"`
 	GenerateReply bool    `json:"generate_reply"`
+	Agent         string  `json:"agent"`
 	Provider      string  `json:"provider"`
 	Model         string  `json:"model"`
 	MaxTokens     int     `json:"max_tokens"`
@@ -229,6 +230,7 @@ func (h *Handler) AppendMessage(c *fiber.Ctx) error {
 		Role:           payload.Role,
 		Content:        payload.Content,
 		GenerateReply:  payload.GenerateReply,
+		Agent:         strings.ToLower(strings.TrimSpace(payload.Agent)),
 		Provider:       langchainservice.ModelProvider(strings.ToLower(payload.Provider)),
 		Model:          payload.Model,
 		MaxTokens:      payload.MaxTokens,

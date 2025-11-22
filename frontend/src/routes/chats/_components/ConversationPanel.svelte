@@ -18,9 +18,17 @@ import type { SubmitEvent } from 'svelte/elements';
 	export let composeContent = '';
 	export let composeRole: 'user' | 'assistant' = 'user';
 	export let generateReply = false;
+	export let provider: string = 'openai';
+	export let model: string = '';
+	export let agent: string = 'startup';
+	export let autoAgent: boolean = false;
 	export let onComposeContentChange: (value: string) => void;
 	export let onComposeRoleChange: (value: 'user' | 'assistant') => void;
 	export let onGenerateReplyChange: (value: boolean) => void;
+	export let onProviderChange: (value: string) => void;
+	export let onModelChange: (value: string) => void;
+	export let onAgentChange: (value: string) => void;
+	export let onAutoAgentChange: (value: boolean) => void;
 	export let onSendMessage: (event: SubmitEvent) => void;
 	export let onShareTranscript: () => void;
 	export let isSending = false;
@@ -90,7 +98,7 @@ import type { SubmitEvent } from 'svelte/elements';
 						{/each}
 					{/if}
 				</div>
-				<form class="border-t border-slate-800/80 p-4" on:submit={onSendMessage}>
+				<form class="border-t border-slate-800/80 p-4" on:submit|preventDefault={onSendMessage}>
 					<div class="flex flex-col gap-3">
 						<textarea
 							class="h-24 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -111,6 +119,51 @@ import type { SubmitEvent } from 'svelte/elements';
 									<option value="user">User</option>
 									<option value="assistant">Assistant</option>
 								</select>
+							</label>
+							<label class="flex items-center gap-2">
+								<span>Provider</span>
+								<select
+									class="rounded border border-slate-700 bg-slate-900 px-2 py-1"
+									value={provider}
+									on:change={(event) => onProviderChange((event.target as HTMLSelectElement).value)}
+								>
+									<option value="openai">OpenAI</option>
+									<option value="anthropic">Claude</option>
+									<option value="xai">Grok</option>
+									<option value="manus">Manus</option>
+									<option value="cipher">Cipher</option>
+								</select>
+							</label>
+							<label class="flex items-center gap-2">
+								<span>Model</span>
+								<input
+									class="w-44 rounded border border-slate-700 bg-slate-900 px-2 py-1"
+									placeholder="e.g. gpt-4o-mini"
+									value={model}
+									on:input={(e) => onModelChange((e.target as HTMLInputElement).value)}
+								/>
+							</label>
+							<label class="flex items-center gap-2">
+								<span>Agent</span>
+								<select
+									class="rounded border border-slate-700 bg-slate-900 px-2 py-1"
+									value={agent}
+									on:change={(event) => onAgentChange((event.target as HTMLSelectElement).value)}
+									disabled={autoAgent}
+								>
+									<option value="economist">Economist</option>
+									<option value="strategist">Strategist</option>
+									<option value="entrepreneur">Entrepreneur</option>
+									<option value="startup">Startup</option>
+								</select>
+							</label>
+							<label class="flex items-center gap-2">
+								<input
+									type="checkbox"
+									checked={autoAgent}
+									on:change={(e) => onAutoAgentChange((e.target as HTMLInputElement).checked)}
+								/>
+								Auto agent
 							</label>
 							<label class="flex items-center gap-2">
 								<input

@@ -5,8 +5,10 @@ import { useQueryClient } from '@tanstack/svelte-query';
 
 import type { AppendMessageInput } from '$lib/api/chats';
 import { CHATS_STREAM_BASE } from '$lib/api/chats';
+import { apiClient } from '@clients/apiClient';
 import type { ChatConversation, Idea, Project, UUID } from '$lib/api/types';
 import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
+import { authStore } from '$lib';
 import {
 	useAppendMessageMutation,
 	useArchiveConversationsMutation,
@@ -48,7 +50,7 @@ export function createChatsLogic() {
 	const conversationsFilters = writable<ConversationsQueryOptions>({
 		search: '',
 		includeArchived: false,
-		enabled: true
+		enabled: browser
 	});
 
 	const conversationsQuery = useConversationsQuery(conversationsFilters);
@@ -60,8 +62,8 @@ export function createChatsLogic() {
 	const transcriptsQuery = useConversationTranscriptsQuery(selectedConversationId);
 	const assignmentsQuery = useConversationAssignmentsQuery(selectedConversationId);
 
-	const projectsQuery = useProjectsListQuery({ enabled: true });
-	const ideasQuery = useIdeasReferenceQuery(true);
+	const projectsQuery = useProjectsListQuery({ enabled: browser });
+	const ideasQuery = useIdeasReferenceQuery(browser);
 
 	const createConversationMutation = useCreateConversationMutation();
 	const archiveMutation = useArchiveConversationsMutation();
@@ -93,7 +95,15 @@ export function createChatsLogic() {
 	const transcriptStatus = writable('');
 	const showCreateModal = writable(false);
 
-	let websocket: WebSocket | null = null;
+	// Streaming disabled: fallback to polling for assistant replies
+	let replyPoll: ReturnType<typeof setInterval> | null = null;
+
+	// Per-message AI controls
+	const provider = writable<string>('openai');
+	const model = writable<string>('');
+	const agent = writable<string>('startup');
+	const autoAgent = writable<boolean>(false);
+	const isSending = writable<boolean>(false);
 
 	const conversationsUnsubscribe = conversationsQuery.subscribe((result) => {
 		const data = result.data ?? [];
@@ -112,47 +122,32 @@ export function createChatsLogic() {
 		);
 	});
 
-	const connectToStream = (conversationId: UUID) => {
-		if (!browser) return;
-		disconnectStream();
-		const base = CHATS_STREAM_BASE.replace(/\/+$/, '');
-		const url = `${base}/chats/conversations/${conversationId}/stream`;
-		try {
-			websocket = new WebSocket(url);
-			websocket.onmessage = (event) => {
-				try {
-					const payload = JSON.parse(event.data);
-					queryClient.setQueryData(
-						['conversation', conversationId, 'messages'],
-						(previous: any) => {
-							if (!payload?.conversation_id || payload.conversation_id !== conversationId) {
-								return previous ?? [];
-							}
-							const baseMessages = previous ?? [];
-							const nextMessages = [...baseMessages, payload];
-							return nextMessages.sort(
-								(a: any, b: any) =>
-									new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-							);
-						}
-					);
-				} catch (error) {
-					console.warn('Unable to parse stream payload', error);
-				}
-			};
-			websocket.onclose = () => {
-				websocket = null;
-			};
-		} catch (error) {
-			console.error('Unable to open chat stream', error);
-		}
-	};
+	// No-op placeholders to keep call sites minimal
+	const connectToStream = (_conversationId: UUID) => {};
+	const disconnectStream = () => {};
 
-	const disconnectStream = () => {
-		if (websocket) {
-			websocket.close();
-			websocket = null;
+	const startPollingForAssistant = (conversationId: UUID, sinceISO: string, timeoutMs = 60000, intervalMs = 1000) => {
+		if (replyPoll) {
+			clearInterval(replyPoll);
+			replyPoll = null;
 		}
+		const deadline = Date.now() + timeoutMs;
+		replyPoll = setInterval(async () => {
+			if (Date.now() > deadline) {
+				clearInterval(replyPoll!);
+				replyPoll = null;
+				return;
+			}
+			await queryClient.invalidateQueries({ queryKey: ['chats', 'conversation', conversationId, 'messages'] });
+			const messages = queryClient.getQueryData<any[]>(['chats', 'conversation', conversationId, 'messages']) ?? [];
+			const found = messages.some(
+				(m) => m?.role === 'assistant' && new Date(m?.created_at).getTime() >= new Date(sinceISO).getTime()
+			);
+			if (found) {
+				clearInterval(replyPoll!);
+				replyPoll = null;
+			}
+		}, intervalMs);
 	};
 
 	const setSearchInput = (value: string) => searchInput.set(value);
@@ -206,29 +201,89 @@ export function createChatsLogic() {
 		const content = get(composeContent).trim();
 		const role = get(composeRole);
 		const shouldReply = get(generateReply);
+		const currentProvider = get(provider);
+		const currentModel = get(model);
+		const currentAgent = get(agent);
+		const useAutoAgent = get(autoAgent);
 		if (!conversation || !content) return;
 		const payload: AppendMessageInput = {
 			role,
 			content,
-			generate_reply: shouldReply
+			generate_reply: shouldReply,
+			provider: currentProvider,
+			model: currentModel
 		};
-		const newMessages = await get(appendMessageMutation).mutateAsync({
-			conversationId: conversation.id,
-			input: payload
-		});
+		// Direct POST without TanStack mutation to avoid caching layers
+		const body: any = {
+			...payload
+		};
+		if (!useAutoAgent) {
+			body.agent = currentAgent;
+		}
+		// Optimistically add the user message
+		const nowIso = new Date().toISOString();
+		const optimisticId = `__local_${Math.random().toString(36).slice(2)}`;
+		isSending.set(true);
 		queryClient.setQueryData(
-			['conversation', conversation.id, 'messages'],
+			['chats', 'conversation', conversation.id, 'messages'],
 			(previous: any) => {
-				const baseMessages = previous ?? [];
-				const nextMessages = [...baseMessages, ...newMessages];
+				const base: any[] = Array.isArray(previous) ? previous : [];
+				const optimistic = {
+					id: optimisticId,
+					conversation_id: conversation.id,
+					role,
+					content,
+					created_at: nowIso
+				};
+				return [...base, optimistic];
+			}
+		);
+
+		let newMessages: any[] = [];
+		try {
+			const response = await apiClient.post<{ success: boolean; data: any[] }>(
+				`/chats/conversations/${conversation.id}/messages`,
+				body
+			);
+			if (response.data?.success === false) {
+				throw new Error('Request failed');
+			}
+			newMessages = (response.data?.data as any[]) ?? [];
+		} catch (err) {
+			toastError('Failed to send message.');
+			// Rollback optimistic user message
+			queryClient.setQueryData(
+				['chats', 'conversation', conversation.id, 'messages'],
+				(previous: any) => {
+					const base: any[] = Array.isArray(previous) ? previous : [];
+					return base.filter((m) => m?.id !== optimisticId);
+				}
+			);
+			isSending.set(false);
+			return;
+		}
+		queryClient.setQueryData(
+			['chats', 'conversation', conversation.id, 'messages'],
+			(previous: any) => {
+				const baseMessages: any[] = Array.isArray(previous) ? previous : [];
+				// Remove optimistic user message if backend returned it
+				const withoutOptimistic = baseMessages.filter((m) => m?.id !== optimisticId);
+				const nextMessages = [...withoutOptimistic, ...newMessages];
 				return nextMessages.sort(
 					(a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
 				);
 			}
 		);
-		queryClient.invalidateQueries({ queryKey: ['conversations'] });
+		// Refresh conversations list using the correct key
+		queryClient.invalidateQueries({ queryKey: ['chats', 'conversations'] });
 		composeContent.set('');
 		generateReply.set(false);
+		isSending.set(false);
+
+		// If an AI reply was requested, poll until it appears or timeout
+		if (shouldReply) {
+			startPollingForAssistant(conversation.id, nowIso);
+		}
 	};
 
 	const handleShareTranscript = async () => {
@@ -379,10 +434,18 @@ export function createChatsLogic() {
 
 	onDestroy(() => {
 		conversationsUnsubscribe();
-		disconnectStream();
+		if (replyPoll) {
+			clearInterval(replyPoll);
+			replyPoll = null;
+		}
 	});
 
 	return {
+		isSending,
+		provider,
+		model,
+		agent,
+		autoAgent,
 		conversationsQuery,
 		messagesQuery,
 		transcriptsQuery,
@@ -432,6 +495,10 @@ export function createChatsLogic() {
 		setComposeContent: (value: string) => composeContent.set(value),
 		setComposeRole: (value: 'user' | 'assistant') => composeRole.set(value),
 		setGenerateReply: (value: boolean) => generateReply.set(value),
+		setProvider: (v: string) => provider.set(v),
+		setModel: (v: string) => model.set(v),
+		setAgent: (v: string) => agent.set(v),
+		setAutoAgent: (v: boolean) => autoAgent.set(v),
 		createConversationMutation,
 		appendMessageMutation,
 		shareTranscriptMutation

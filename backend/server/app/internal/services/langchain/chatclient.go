@@ -99,6 +99,7 @@ type ChatCompletionRequest struct {
 	Messages    []ChatMessage
 	MaxTokens   int
 	Temperature float64
+	Agent       string
 }
 
 // ChatCompletionResponse wraps the AI response.
@@ -179,8 +180,12 @@ func (c *Client) callAIService(ctx context.Context, baseURL string, req ChatComp
 		tempPtr = &t
 	}
 
+	agent := strings.ToLower(strings.TrimSpace(req.Agent))
+	if agent == "" {
+		agent = "startup"
+	}
 	payload := aiServiceChatRequest{
-		Agent:       "startup", // default agent persona
+		Agent:       agent,
 		Input:       input,
 		Temperature: tempPtr,
 		Model:       req.Model,
@@ -256,8 +261,12 @@ func (c *Client) GenerateCompletionStream(ctx context.Context, req ChatCompletio
 		t := req.Temperature
 		tempPtr = &t
 	}
+	agent := strings.ToLower(strings.TrimSpace(req.Agent))
+	if agent == "" {
+		agent = "startup"
+	}
 	payload := aiServiceChatRequest{
-		Agent:       "startup",
+		Agent:       agent,
 		Input:       input,
 		Temperature: tempPtr,
 		Model:       req.Model,
