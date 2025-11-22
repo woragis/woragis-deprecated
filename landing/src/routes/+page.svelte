@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { Code2, Box, Network, Settings, Brain, Radio, GitBranch } from 'lucide-svelte';
+	import { Icon } from 'svelte-icons-pack';
+	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiGithub, SiInstagram } from 'svelte-icons-pack/si';
+	import { Settings, Brain, GitBranch } from 'lucide-svelte';
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -71,7 +73,7 @@
 				>
 					<div class="flex items-center mb-4">
 						<div class="w-12 h-12 bg-cyan-600 rounded-lg flex items-center justify-center mr-4">
-							<Code2 class="w-7 h-7" stroke="white" />
+							<Icon src={SiGo} size="1.75rem" color="white" />
 						</div>
 						<h3 class="text-2xl font-bold text-cyan-400">Golang</h3>
 					</div>
@@ -87,7 +89,7 @@
 				>
 					<div class="flex items-center mb-4">
 						<div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
-							<Box class="w-7 h-7" stroke="white" />
+							<Icon src={SiDocker} size="1.75rem" color="white" />
 						</div>
 						<h3 class="text-2xl font-bold text-blue-400">Docker</h3>
 					</div>
@@ -103,7 +105,7 @@
 				>
 					<div class="flex items-center mb-4">
 						<div class="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mr-4">
-							<Network class="w-7 h-7" stroke="white" />
+							<Icon src={SiKubernetes} size="1.75rem" color="white" />
 						</div>
 						<h3 class="text-2xl font-bold text-indigo-400">Kubernetes</h3>
 					</div>
@@ -166,7 +168,7 @@
 				>
 					<div class="flex items-center mb-6">
 						<div class="w-14 h-14 bg-gradient-to-br from-red-600 to-orange-600 rounded-lg flex items-center justify-center mr-4">
-							<Radio class="w-8 h-8" stroke="white" />
+							<Icon src={SiRedis} size="2rem" color="white" />
 						</div>
 						<h3 class="text-2xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
 							Redis & Pub/Sub
@@ -214,6 +216,26 @@
 	<!-- Footer -->
 	<footer class="container mx-auto px-6 py-12 border-t border-gray-700">
 		<div class="max-w-4xl mx-auto text-center text-gray-400">
+			<div class="flex justify-center gap-6 mb-6">
+				<a
+					href="https://github.com/woragis"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-gray-400 hover:text-white transition-colors duration-200"
+					aria-label="GitHub"
+				>
+					<Icon src={SiGithub} size="1.5rem" />
+				</a>
+				<a
+					href="https://instagram.com/y.jezreel.andrade"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-gray-400 hover:text-white transition-colors duration-200"
+					aria-label="Instagram"
+				>
+					<Icon src={SiInstagram} size="1.5rem" />
+				</a>
+			</div>
 			<p class="mb-4">
 				Building the future, one service at a time.
 				<span class="text-gray-500">|</span> Backend Developer
