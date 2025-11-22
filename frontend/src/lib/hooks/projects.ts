@@ -3,7 +3,23 @@ import { createMutation, createQuery } from '@tanstack/svelte-query';
 
 import { projectsApi } from '$lib/api/projects';
 import type { CreateProjectInput } from '$lib/api/projects';
-import type { KanbanBoard, Milestone, Project, ProjectDependency, ProjectStatus, UUID } from '$lib/api/types';
+import type {
+	ArchitectureDiagramType,
+	DocumentationSection,
+	DocumentationSectionType,
+	DocumentationVisibility,
+	KanbanBoard,
+	Milestone,
+	Project,
+	ProjectArchitectureDiagram,
+	ProjectDependency,
+	ProjectDocumentation,
+	ProjectFileStructure,
+	ProjectStatus,
+	ProjectTechnology,
+	TechnologyCategory,
+	UUID
+} from '$lib/api/types';
 
 type MaybeReadable<T> = T | Readable<T>;
 
@@ -276,5 +292,305 @@ export const useDuplicateProjectMutation = () =>
 			templateProjectId: UUID;
 			payload: Parameters<typeof projectsApi.duplicateProject>[1];
 		}) => projectsApi.duplicateProject(templateProjectId, payload)
+	});
+
+// Documentation hooks
+
+export const useProjectDocumentationQuery = (
+	projectId: MaybeReadable<UUID | null>,
+	options?: MaybeReadable<{ enabled?: boolean }>
+) => {
+	const projectIdStore = toReadable(projectId);
+	const optionsStore = toOptionsReadable(options, {});
+
+	return createQuery<ProjectDocumentation>(
+		derived([projectIdStore, optionsStore], ([$projectId, $options]) => ({
+			queryKey: ['projects', 'documentation', $projectId],
+			queryFn: () => {
+				if (!$projectId) {
+					throw new Error('Project id is required to load documentation');
+				}
+				return projectsApi.getDocumentation($projectId);
+			},
+			enabled: Boolean($projectId) && ($options.enabled ?? true),
+			retry: false
+		}))
+	);
+};
+
+export const useProjectDocumentationSectionsQuery = (
+	projectId: MaybeReadable<UUID | null>,
+	options?: MaybeReadable<{ enabled?: boolean }>
+) => {
+	const projectIdStore = toReadable(projectId);
+	const optionsStore = toOptionsReadable(options, {});
+
+	return createQuery<DocumentationSection[]>(
+		derived([projectIdStore, optionsStore], ([$projectId, $options]) => ({
+			queryKey: ['projects', 'documentation-sections', $projectId],
+			queryFn: () => {
+				if (!$projectId) {
+					throw new Error('Project id is required to load documentation sections');
+				}
+				return projectsApi.listDocumentationSections($projectId);
+			},
+			enabled: Boolean($projectId) && ($options.enabled ?? true),
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useProjectTechnologiesQuery = (
+	projectId: MaybeReadable<UUID | null>,
+	options?: MaybeReadable<{ enabled?: boolean }>
+) => {
+	const projectIdStore = toReadable(projectId);
+	const optionsStore = toOptionsReadable(options, {});
+
+	return createQuery<ProjectTechnology[]>(
+		derived([projectIdStore, optionsStore], ([$projectId, $options]) => ({
+			queryKey: ['projects', 'technologies', $projectId],
+			queryFn: () => {
+				if (!$projectId) {
+					throw new Error('Project id is required to load technologies');
+				}
+				return projectsApi.listTechnologies($projectId);
+			},
+			enabled: Boolean($projectId) && ($options.enabled ?? true),
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useProjectFileStructuresQuery = (
+	projectId: MaybeReadable<UUID | null>,
+	options?: MaybeReadable<{ enabled?: boolean }>
+) => {
+	const projectIdStore = toReadable(projectId);
+	const optionsStore = toOptionsReadable(options, {});
+
+	return createQuery<ProjectFileStructure[]>(
+		derived([projectIdStore, optionsStore], ([$projectId, $options]) => ({
+			queryKey: ['projects', 'file-structures', $projectId],
+			queryFn: () => {
+				if (!$projectId) {
+					throw new Error('Project id is required to load file structures');
+				}
+				return projectsApi.listFileStructures($projectId);
+			},
+			enabled: Boolean($projectId) && ($options.enabled ?? true),
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useProjectArchitectureDiagramsQuery = (
+	projectId: MaybeReadable<UUID | null>,
+	options?: MaybeReadable<{ enabled?: boolean }>
+) => {
+	const projectIdStore = toReadable(projectId);
+	const optionsStore = toOptionsReadable(options, {});
+
+	return createQuery<ProjectArchitectureDiagram[]>(
+		derived([projectIdStore, optionsStore], ([$projectId, $options]) => ({
+			queryKey: ['projects', 'architecture-diagrams', $projectId],
+			queryFn: () => {
+				if (!$projectId) {
+					throw new Error('Project id is required to load architecture diagrams');
+				}
+				return projectsApi.listArchitectureDiagrams($projectId);
+			},
+			enabled: Boolean($projectId) && ($options.enabled ?? true),
+			placeholderData: () => []
+		}))
+	);
+};
+
+export const useCreateDocumentationMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			payload
+		}: {
+			projectId: UUID;
+			payload: Parameters<typeof projectsApi.createDocumentation>[1];
+		}) => projectsApi.createDocumentation(projectId, payload)
+	});
+
+export const useUpdateDocumentationVisibilityMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			visibility
+		}: {
+			projectId: UUID;
+			visibility: DocumentationVisibility;
+		}) => projectsApi.updateDocumentationVisibility(projectId, visibility)
+	});
+
+export const useCreateDocumentationSectionMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			payload
+		}: {
+			projectId: UUID;
+			payload: Parameters<typeof projectsApi.createDocumentationSection>[1];
+		}) => projectsApi.createDocumentationSection(projectId, payload)
+	});
+
+export const useUpdateDocumentationSectionMutation = () =>
+	createMutation({
+		mutationFn: ({
+			sectionId,
+			payload
+		}: {
+			sectionId: UUID;
+			payload: Parameters<typeof projectsApi.updateDocumentationSection>[1];
+		}) => projectsApi.updateDocumentationSection(sectionId, payload)
+	});
+
+export const useDeleteDocumentationSectionMutation = () =>
+	createMutation({
+		mutationFn: ({ sectionId }: { sectionId: UUID }) =>
+			projectsApi.deleteDocumentationSection(sectionId)
+	});
+
+export const useReorderDocumentationSectionsMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			sectionOrder
+		}: {
+			projectId: UUID;
+			sectionOrder: UUID[];
+		}) => projectsApi.reorderDocumentationSections(projectId, sectionOrder)
+	});
+
+export const useCreateTechnologyMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			payload
+		}: {
+			projectId: UUID;
+			payload: Parameters<typeof projectsApi.createTechnology>[1];
+		}) => projectsApi.createTechnology(projectId, payload)
+	});
+
+export const useUpdateTechnologyMutation = () =>
+	createMutation({
+		mutationFn: ({
+			techId,
+			payload
+		}: {
+			techId: UUID;
+			payload: Parameters<typeof projectsApi.updateTechnology>[1];
+		}) => projectsApi.updateTechnology(techId, payload)
+	});
+
+export const useDeleteTechnologyMutation = () =>
+	createMutation({
+		mutationFn: ({ techId }: { techId: UUID }) => projectsApi.deleteTechnology(techId)
+	});
+
+export const useBulkCreateTechnologiesMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			technologies
+		}: {
+			projectId: UUID;
+			technologies: Parameters<typeof projectsApi.bulkCreateTechnologies>[1];
+		}) => projectsApi.bulkCreateTechnologies(projectId, technologies)
+	});
+
+export const useBulkUpdateTechnologiesMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			technologies
+		}: {
+			projectId: UUID;
+			technologies: Parameters<typeof projectsApi.bulkUpdateTechnologies>[1];
+		}) => projectsApi.bulkUpdateTechnologies(projectId, technologies)
+	});
+
+export const useCreateFileStructureMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			payload
+		}: {
+			projectId: UUID;
+			payload: Parameters<typeof projectsApi.createFileStructure>[1];
+		}) => projectsApi.createFileStructure(projectId, payload)
+	});
+
+export const useUpdateFileStructureMutation = () =>
+	createMutation({
+		mutationFn: ({
+			fileStructureId,
+			payload
+		}: {
+			fileStructureId: UUID;
+			payload: Parameters<typeof projectsApi.updateFileStructure>[1];
+		}) => projectsApi.updateFileStructure(fileStructureId, payload)
+	});
+
+export const useDeleteFileStructureMutation = () =>
+	createMutation({
+		mutationFn: ({ fileStructureId }: { fileStructureId: UUID }) =>
+			projectsApi.deleteFileStructure(fileStructureId)
+	});
+
+export const useBulkCreateFileStructuresMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			structures
+		}: {
+			projectId: UUID;
+			structures: Parameters<typeof projectsApi.bulkCreateFileStructures>[1];
+		}) => projectsApi.bulkCreateFileStructures(projectId, structures)
+	});
+
+export const useBulkUpdateFileStructuresMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			structures
+		}: {
+			projectId: UUID;
+			structures: Parameters<typeof projectsApi.bulkUpdateFileStructures>[1];
+		}) => projectsApi.bulkUpdateFileStructures(projectId, structures)
+	});
+
+export const useCreateArchitectureDiagramMutation = () =>
+	createMutation({
+		mutationFn: ({
+			projectId,
+			payload
+		}: {
+			projectId: UUID;
+			payload: Parameters<typeof projectsApi.createArchitectureDiagram>[1];
+		}) => projectsApi.createArchitectureDiagram(projectId, payload)
+	});
+
+export const useUpdateArchitectureDiagramMutation = () =>
+	createMutation({
+		mutationFn: ({
+			diagramId,
+			payload
+		}: {
+			diagramId: UUID;
+			payload: Parameters<typeof projectsApi.updateArchitectureDiagram>[1];
+		}) => projectsApi.updateArchitectureDiagram(diagramId, payload)
+	});
+
+export const useDeleteArchitectureDiagramMutation = () =>
+	createMutation({
+		mutationFn: ({ diagramId }: { diagramId: UUID }) =>
+			projectsApi.deleteArchitectureDiagram(diagramId)
 	});
 

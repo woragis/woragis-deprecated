@@ -283,3 +283,94 @@ export interface ChatAssignment {
 	unassigned_at?: string | null;
 	notes?: string;
 }
+
+// Documentation types
+
+export type DocumentationVisibility = 'public' | 'authenticated' | 'collaborators';
+
+export type DocumentationSectionType =
+	| 'overview'
+	| 'architecture'
+	| 'tech_stack'
+	| 'file_structure'
+	| 'api_documentation'
+	| 'deployment'
+	| 'contributing'
+	| 'custom';
+
+export interface ProjectDocumentation {
+	id: UUID;
+	project_id: UUID;
+	visibility: DocumentationVisibility;
+	version: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DocumentationSection {
+	id: UUID;
+	documentation_id: UUID;
+	type: DocumentationSectionType;
+	title: string;
+	content: string;
+	position: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export type TechnologyCategory =
+	| 'backend'
+	| 'database'
+	| 'frontend'
+	| 'infrastructure'
+	| 'monitoring'
+	| 'devops'
+	| 'testing'
+	| 'other';
+
+export interface ProjectTechnology {
+	id: UUID;
+	project_id: UUID;
+	name: string;
+	version: string;
+	category: TechnologyCategory;
+	purpose: string;
+	link?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ProjectFileStructure {
+	id: UUID;
+	project_id: UUID;
+	parent_id?: UUID | null;
+	path: string;
+	name: string;
+	is_directory: boolean;
+	language?: string;
+	line_count: number;
+	purpose?: string;
+	position: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export type ArchitectureDiagramType =
+	| 'dependency'
+	| 'component'
+	| 'data_flow'
+	| 'infrastructure'
+	| 'custom';
+
+export interface ProjectArchitectureDiagram {
+	id: UUID;
+	project_id: UUID;
+	type: ArchitectureDiagramType;
+	title: string;
+	description: string;
+	content: string;
+	format: string;
+	image_url?: string;
+	created_at: string;
+	updated_at: string;
+}

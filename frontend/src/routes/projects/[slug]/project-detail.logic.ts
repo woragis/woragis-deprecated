@@ -4,31 +4,55 @@ import { useQueryClient } from '@tanstack/svelte-query';
 
 import { authStore } from '$lib';
 import type {
+	ArchitectureDiagramType,
+	DocumentationSection,
+	DocumentationSectionType,
+	DocumentationVisibility,
 	KanbanBoard,
 	KanbanCard,
 	Milestone,
 	Project,
+	ProjectArchitectureDiagram,
 	ProjectDependency,
+	ProjectDocumentation,
+	ProjectFileStructure,
 	ProjectStatus,
+	ProjectTechnology,
+	TechnologyCategory,
 	UUID
 } from '$lib/api/types';
 import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
 import {
 	useAddMilestoneMutation,
 	useBulkUpdateMilestonesMutation,
+	useCreateArchitectureDiagramMutation,
 	useCreateDependencyMutation,
+	useCreateDocumentationMutation,
+	useCreateDocumentationSectionMutation,
+	useCreateFileStructureMutation,
 	useCreateKanbanCardMutation,
 	useCreateKanbanColumnMutation,
+	useCreateTechnologyMutation,
+	useDeleteArchitectureDiagramMutation,
 	useDeleteDependencyMutation,
+	useDeleteDocumentationSectionMutation,
+	useDeleteFileStructureMutation,
 	useDeleteKanbanCardMutation,
 	useDeleteKanbanColumnMutation,
+	useDeleteTechnologyMutation,
 	useDuplicateProjectMutation,
 	useMoveKanbanCardMutation,
+	useProjectArchitectureDiagramsQuery,
 	useProjectBoardQuery,
 	useProjectBySlugQuery,
 	useProjectDependenciesQuery,
+	useProjectDocumentationQuery,
+	useProjectDocumentationSectionsQuery,
+	useProjectFileStructuresQuery,
 	useProjectMilestonesQuery,
+	useProjectTechnologiesQuery,
 	useProjectsListQuery,
+	useUpdateDocumentationVisibilityMutation,
 	useUpdateProjectMetricsMutation,
 	useUpdateProjectStatusMutation
 } from '@hooks/projects';
@@ -123,6 +147,11 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 	const board = writable<KanbanBoard | null>(null);
 	const milestones = writable<Milestone[]>([]);
 	const dependencies = writable<ProjectDependency[]>([]);
+	const documentation = writable<ProjectDocumentation | null>(null);
+	const documentationSections = writable<DocumentationSection[]>([]);
+	const technologies = writable<ProjectTechnology[]>([]);
+	const fileStructures = writable<ProjectFileStructure[]>([]);
+	const architectureDiagrams = writable<ProjectArchitectureDiagram[]>([]);
 
 	const columnForm = writable<ColumnFormState>(defaultColumnForm());
 	const cardForm = writable<CardFormState>(defaultCardForm());
@@ -139,6 +168,17 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 	const boardQuery = useProjectBoardQuery(activeProjectId, detailQueryOptions);
 	const milestonesQuery = useProjectMilestonesQuery(activeProjectId, detailQueryOptions);
 	const dependenciesQuery = useProjectDependenciesQuery(activeProjectId, detailQueryOptions);
+	const documentationQuery = useProjectDocumentationQuery(activeProjectId, detailQueryOptions);
+	const documentationSectionsQuery = useProjectDocumentationSectionsQuery(
+		activeProjectId,
+		detailQueryOptions
+	);
+	const technologiesQuery = useProjectTechnologiesQuery(activeProjectId, detailQueryOptions);
+	const fileStructuresQuery = useProjectFileStructuresQuery(activeProjectId, detailQueryOptions);
+	const architectureDiagramsQuery = useProjectArchitectureDiagramsQuery(
+		activeProjectId,
+		detailQueryOptions
+	);
 
 	const invalidateProjectsList = () => queryClient.invalidateQueries({ queryKey: ['projects', 'list'] });
 	const invalidateProjectBySlug = () => {
@@ -161,6 +201,35 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		if (!targetId) return Promise.resolve();
 		return queryClient.invalidateQueries({ queryKey: ['projects', 'dependencies', targetId] });
 	};
+	const invalidateDocumentation = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProjectId);
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'documentation', targetId] });
+	};
+	const invalidateDocumentationSections = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProjectId);
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({
+			queryKey: ['projects', 'documentation-sections', targetId]
+		});
+	};
+	const invalidateTechnologies = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProjectId);
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'technologies', targetId] });
+	};
+	const invalidateFileStructures = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProjectId);
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({ queryKey: ['projects', 'file-structures', targetId] });
+	};
+	const invalidateArchitectureDiagrams = (projectId?: UUID | null) => {
+		const targetId = projectId ?? get(activeProjectId);
+		if (!targetId) return Promise.resolve();
+		return queryClient.invalidateQueries({
+			queryKey: ['projects', 'architecture-diagrams', targetId]
+		});
+	};
 
 	const createColumnMutation = useCreateKanbanColumnMutation();
 	const createCardMutation = useCreateKanbanCardMutation();
@@ -174,6 +243,16 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 	const duplicateProjectMutation = useDuplicateProjectMutation();
 	const updateStatusMutation = useUpdateProjectStatusMutation();
 	const updateMetricsMutation = useUpdateProjectMetricsMutation();
+	const createDocumentationMutation = useCreateDocumentationMutation();
+	const updateDocumentationVisibilityMutation = useUpdateDocumentationVisibilityMutation();
+	const createDocumentationSectionMutation = useCreateDocumentationSectionMutation();
+	const deleteDocumentationSectionMutation = useDeleteDocumentationSectionMutation();
+	const createTechnologyMutation = useCreateTechnologyMutation();
+	const deleteTechnologyMutation = useDeleteTechnologyMutation();
+	const createFileStructureMutation = useCreateFileStructureMutation();
+	const deleteFileStructureMutation = useDeleteFileStructureMutation();
+	const createArchitectureDiagramMutation = useCreateArchitectureDiagramMutation();
+	const deleteArchitectureDiagramMutation = useDeleteArchitectureDiagramMutation();
 
 	const resetStateForUnauthenticated = () => {
 		projects.set([]);
@@ -181,6 +260,11 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		board.set(null);
 		milestones.set([]);
 		dependencies.set([]);
+		documentation.set(null);
+		documentationSections.set([]);
+		technologies.set([]);
+		fileStructures.set([]);
+		architectureDiagrams.set([]);
 		columnForm.set(defaultColumnForm());
 		cardForm.set(defaultCardForm());
 		milestoneForm.set(defaultMilestoneForm());
@@ -197,7 +281,12 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		await Promise.all([
 			invalidateBoard(currentProject.id),
 			invalidateMilestones(currentProject.id),
-			invalidateDependencies(currentProject.id)
+			invalidateDependencies(currentProject.id),
+			invalidateDocumentation(currentProject.id),
+			invalidateDocumentationSections(currentProject.id),
+			invalidateTechnologies(currentProject.id),
+			invalidateFileStructures(currentProject.id),
+			invalidateArchitectureDiagrams(currentProject.id)
 		]);
 	};
 
@@ -256,6 +345,52 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		}
 	});
 
+	const documentationQueryUnsubscribe = documentationQuery.subscribe((result) => {
+		if (result.data) {
+			documentation.set(result.data);
+		}
+		if (result.error && result.error.message?.includes('not found') === false) {
+			// Documentation might not exist yet, so only show error if it's not a 404
+			error.set(result.error.message ?? 'Unable to load documentation.');
+		}
+	});
+
+	const documentationSectionsQueryUnsubscribe = documentationSectionsQuery.subscribe((result) => {
+		if (result.data) {
+			documentationSections.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load documentation sections.');
+		}
+	});
+
+	const technologiesQueryUnsubscribe = technologiesQuery.subscribe((result) => {
+		if (result.data) {
+			technologies.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load technologies.');
+		}
+	});
+
+	const fileStructuresQueryUnsubscribe = fileStructuresQuery.subscribe((result) => {
+		if (result.data) {
+			fileStructures.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load file structures.');
+		}
+	});
+
+	const architectureDiagramsQueryUnsubscribe = architectureDiagramsQuery.subscribe((result) => {
+		if (result.data) {
+			architectureDiagrams.set(result.data);
+		}
+		if (result.error) {
+			error.set(result.error.message ?? 'Unable to load architecture diagrams.');
+		}
+	});
+
 	const loadProjects = async () => {
 		const auth = get(authStateStore);
 		if (!auth.isAuthenticated) {
@@ -301,6 +436,11 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		boardQueryUnsubscribe();
 		milestonesQueryUnsubscribe();
 		dependenciesQueryUnsubscribe();
+		documentationQueryUnsubscribe();
+		documentationSectionsQueryUnsubscribe();
+		technologiesQueryUnsubscribe();
+		fileStructuresQueryUnsubscribe();
+		architectureDiagramsQueryUnsubscribe();
 	});
 
 	const updateColumnFormField: FormUpdater<ColumnFormState> = (field, value) => {
@@ -642,6 +782,209 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 
 	const getOtherProjects = (projectId?: UUID | null) => get(projects).filter((project) => project.id !== projectId);
 
+	// Documentation handlers
+
+	const handleCreateDocumentation = async () => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before creating documentation.');
+			return;
+		}
+
+		try {
+			await get(createDocumentationMutation).mutateAsync({
+				projectId: project.id,
+				payload: { visibility: 'collaborators' }
+			});
+			await invalidateDocumentation();
+			toastSuccess('Documentation created.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to create documentation.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleUpdateDocumentationVisibility = async (visibility: DocumentationVisibility) => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before updating documentation visibility.');
+			return;
+		}
+
+		try {
+			await get(updateDocumentationVisibilityMutation).mutateAsync({
+				projectId: project.id,
+				visibility
+			});
+			await invalidateDocumentation();
+			toastSuccess('Visibility updated.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to update visibility.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleCreateDocumentationSection = async (payload: {
+		type: DocumentationSectionType;
+		title: string;
+		content: string;
+		position?: number;
+	}) => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before adding sections.');
+			return;
+		}
+
+		try {
+			await get(createDocumentationSectionMutation).mutateAsync({
+				projectId: project.id,
+				payload
+			});
+			await invalidateDocumentationSections();
+			toastSuccess('Section created.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to create section.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleDeleteDocumentationSection = async (sectionId: UUID) => {
+		try {
+			await get(deleteDocumentationSectionMutation).mutateAsync({ sectionId });
+			await invalidateDocumentationSections();
+			toastInfo('Section deleted.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to delete section.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleCreateTechnology = async (payload: {
+		name: string;
+		version: string;
+		category: TechnologyCategory;
+		purpose: string;
+		link?: string;
+	}) => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before adding technologies.');
+			return;
+		}
+
+		try {
+			await get(createTechnologyMutation).mutateAsync({
+				projectId: project.id,
+				payload
+			});
+			await invalidateTechnologies();
+			toastSuccess('Technology added.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to add technology.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleDeleteTechnology = async (techId: UUID) => {
+		try {
+			await get(deleteTechnologyMutation).mutateAsync({ techId });
+			await invalidateTechnologies();
+			toastInfo('Technology deleted.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to delete technology.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleCreateFileStructure = async (payload: {
+		path: string;
+		name: string;
+		is_directory: boolean;
+		parent_id?: UUID;
+		language?: string;
+		line_count?: number;
+		purpose?: string;
+		position?: number;
+	}) => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before adding file structures.');
+			return;
+		}
+
+		try {
+			await get(createFileStructureMutation).mutateAsync({
+				projectId: project.id,
+				payload
+			});
+			await invalidateFileStructures();
+			toastSuccess('File structure added.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to add file structure.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleDeleteFileStructure = async (fileStructureId: UUID) => {
+		try {
+			await get(deleteFileStructureMutation).mutateAsync({ fileStructureId });
+			await invalidateFileStructures();
+			toastInfo('File structure deleted.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to delete file structure.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleCreateArchitectureDiagram = async (payload: {
+		type: ArchitectureDiagramType;
+		title: string;
+		description: string;
+		content: string;
+		format?: string;
+		image_url?: string;
+	}) => {
+		const project = get(activeProject);
+		if (!project) {
+			toastError('Select a project before adding diagrams.');
+			return;
+		}
+
+		try {
+			await get(createArchitectureDiagramMutation).mutateAsync({
+				projectId: project.id,
+				payload
+			});
+			await invalidateArchitectureDiagrams();
+			toastSuccess('Diagram created.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to create diagram.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
+	const handleDeleteArchitectureDiagram = async (diagramId: UUID) => {
+		try {
+			await get(deleteArchitectureDiagramMutation).mutateAsync({ diagramId });
+			await invalidateArchitectureDiagrams();
+			toastInfo('Diagram deleted.');
+		} catch (err) {
+			const message = getApiErrorMessage(err, 'Unable to delete diagram.');
+			error.set(message);
+			toastError(message);
+		}
+	};
+
 	return {
 		isAuthenticated,
 		error,
@@ -650,6 +993,11 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		board,
 		milestones,
 		dependencies,
+		documentation,
+		documentationSections,
+		technologies,
+		fileStructures,
+		architectureDiagrams,
 		columnForm,
 		cardForm,
 		milestoneForm,
@@ -675,7 +1023,17 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		saveProjectMetrics,
 		updateActiveProjectField,
 		getOtherProjects,
-		statusOptions
+		statusOptions,
+		handleCreateDocumentation,
+		handleUpdateDocumentationVisibility,
+		handleCreateDocumentationSection,
+		handleDeleteDocumentationSection,
+		handleCreateTechnology,
+		handleDeleteTechnology,
+		handleCreateFileStructure,
+		handleDeleteFileStructure,
+		handleCreateArchitectureDiagram,
+		handleDeleteArchitectureDiagram
 	};
 }
 

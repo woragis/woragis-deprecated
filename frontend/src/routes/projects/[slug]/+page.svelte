@@ -11,6 +11,7 @@
 	import KanbanBoardSection from '../_components/KanbanBoardSection.svelte';
 	import MilestonesSection from '../_components/MilestonesSection.svelte';
 	import DependenciesSection from '../_components/DependenciesSection.svelte';
+	import DocumentationSection from '../_components/DocumentationSection.svelte';
 	import type { UUID } from '$lib/api/types';
 
 	import { createProjectDetailLogic } from './project-detail.logic';
@@ -25,6 +26,11 @@
 		board,
 		milestones,
 		dependencies,
+		documentation,
+		documentationSections,
+		technologies,
+		fileStructures,
+		architectureDiagrams,
 		columnForm,
 		cardForm,
 		milestoneForm,
@@ -50,7 +56,17 @@
 		saveProjectMetrics,
 		updateActiveProjectField,
 		getOtherProjects,
-		statusOptions
+		statusOptions,
+		handleCreateDocumentation,
+		handleUpdateDocumentationVisibility,
+		handleCreateDocumentationSection,
+		handleDeleteDocumentationSection,
+		handleCreateTechnology,
+		handleDeleteTechnology,
+		handleCreateFileStructure,
+		handleDeleteFileStructure,
+		handleCreateArchitectureDiagram,
+		handleDeleteArchitectureDiagram
 	} = createProjectDetailLogic(slugStore);
 
 	const handleDuplicateAndNavigate = async () => {
@@ -136,6 +152,28 @@
 					onDelete={handleDeleteDependency}
 				/>
 			</section>
+
+			{#if $activeProject}
+				<DocumentationSection
+					projectId={$activeProject.id}
+					documentation={$documentation}
+					sections={$documentationSections}
+					technologies={$technologies}
+					fileStructures={$fileStructures}
+					diagrams={$architectureDiagrams}
+					isLoading={$projectQuery.isLoading}
+					onCreateDocumentation={handleCreateDocumentation}
+					onUpdateVisibility={handleUpdateDocumentationVisibility}
+					onCreateSection={handleCreateDocumentationSection}
+					onDeleteSection={handleDeleteDocumentationSection}
+					onCreateTechnology={handleCreateTechnology}
+					onDeleteTechnology={handleDeleteTechnology}
+					onCreateFileStructure={handleCreateFileStructure}
+					onDeleteFileStructure={handleDeleteFileStructure}
+					onCreateDiagram={handleCreateArchitectureDiagram}
+					onDeleteDiagram={handleDeleteArchitectureDiagram}
+				/>
+			{/if}
 		</div>
 	{/if}
 </section>

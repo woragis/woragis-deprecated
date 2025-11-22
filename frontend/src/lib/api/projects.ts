@@ -1,10 +1,18 @@
 import { apiClient } from '@clients/apiClient';
 import type {
+	ArchitectureDiagramType,
+	DocumentationSection,
+	DocumentationSectionType,
+	DocumentationVisibility,
 	KanbanBoard,
 	Milestone,
 	Project,
+	ProjectArchitectureDiagram,
 	ProjectDependency,
+	ProjectFileStructure,
 	ProjectStatus,
+	ProjectTechnology,
+	TechnologyCategory,
 	UUID
 } from './types';
 
@@ -330,6 +338,388 @@ export async function duplicateProject(
 	return response.data.data;
 }
 
+// Documentation API
+
+export async function createDocumentation(
+	projectId: UUID,
+	payload: { visibility?: DocumentationVisibility }
+): Promise<ProjectDocumentation> {
+	const response = await apiClient.post<ApiResponse<ProjectDocumentation>>(
+		`/projects/${projectId}/documentation`,
+		{
+			visibility: payload.visibility ?? 'collaborators'
+		}
+	);
+	return response.data.data;
+}
+
+export async function getDocumentation(projectId: UUID): Promise<ProjectDocumentation> {
+	const response = await apiClient.get<ApiResponse<ProjectDocumentation>>(
+		`/projects/${projectId}/documentation`
+	);
+	return response.data.data;
+}
+
+export async function getPublicDocumentation(slug: string): Promise<ProjectDocumentation> {
+	const response = await apiClient.get<ApiResponse<ProjectDocumentation>>(
+		`/projects/slug/${slug}/documentation`
+	);
+	return response.data.data;
+}
+
+export async function updateDocumentationVisibility(
+	projectId: UUID,
+	visibility: DocumentationVisibility
+): Promise<ProjectDocumentation> {
+	const response = await apiClient.patch<ApiResponse<ProjectDocumentation>>(
+		`/projects/${projectId}/documentation/visibility`,
+		{
+			visibility
+		}
+	);
+	return response.data.data;
+}
+
+export async function deleteDocumentation(projectId: UUID): Promise<void> {
+	await apiClient.delete(`/projects/${projectId}/documentation`, { data: {} });
+}
+
+export async function createDocumentationSection(
+	projectId: UUID,
+	payload: {
+		type: DocumentationSectionType;
+		title: string;
+		content: string;
+		position?: number;
+	}
+): Promise<DocumentationSection> {
+	const response = await apiClient.post<ApiResponse<DocumentationSection>>(
+		`/projects/${projectId}/documentation/sections`,
+		{
+			type: payload.type,
+			title: payload.title,
+			content: payload.content,
+			position: payload.position
+		}
+	);
+	return response.data.data;
+}
+
+export async function listDocumentationSections(projectId: UUID): Promise<DocumentationSection[]> {
+	const response = await apiClient.get<ApiResponse<DocumentationSection[]>>(
+		`/projects/${projectId}/documentation/sections`
+	);
+	return response.data.data ?? [];
+}
+
+export async function updateDocumentationSection(
+	sectionId: UUID,
+	payload: {
+		title?: string;
+		content?: string;
+		position?: number;
+	}
+): Promise<DocumentationSection> {
+	const response = await apiClient.patch<ApiResponse<DocumentationSection>>(
+		`/projects/documentation/sections/${sectionId}`,
+		{
+			title: payload.title,
+			content: payload.content,
+			position: payload.position
+		}
+	);
+	return response.data.data;
+}
+
+export async function deleteDocumentationSection(sectionId: UUID): Promise<void> {
+	await apiClient.delete(`/projects/documentation/sections/${sectionId}`, { data: {} });
+}
+
+export async function reorderDocumentationSections(
+	projectId: UUID,
+	sectionOrder: UUID[]
+): Promise<DocumentationSection[]> {
+	const response = await apiClient.patch<ApiResponse<DocumentationSection[]>>(
+		`/projects/${projectId}/documentation/sections/reorder`,
+		{
+			section_order: sectionOrder
+		}
+	);
+	return response.data.data ?? [];
+}
+
+// Technology API
+
+export async function createTechnology(
+	projectId: UUID,
+	payload: {
+		name: string;
+		version: string;
+		category: TechnologyCategory;
+		purpose: string;
+		link?: string;
+	}
+): Promise<ProjectTechnology> {
+	const response = await apiClient.post<ApiResponse<ProjectTechnology>>(
+		`/projects/${projectId}/technologies`,
+		{
+			name: payload.name,
+			version: payload.version,
+			category: payload.category,
+			purpose: payload.purpose,
+			link: payload.link
+		}
+	);
+	return response.data.data;
+}
+
+export async function listTechnologies(projectId: UUID): Promise<ProjectTechnology[]> {
+	const response = await apiClient.get<ApiResponse<ProjectTechnology[]>>(
+		`/projects/${projectId}/technologies`
+	);
+	return response.data.data ?? [];
+}
+
+export async function updateTechnology(
+	techId: UUID,
+	payload: {
+		name?: string;
+		version?: string;
+		category?: TechnologyCategory;
+		purpose?: string;
+		link?: string;
+	}
+): Promise<ProjectTechnology> {
+	const response = await apiClient.patch<ApiResponse<ProjectTechnology>>(
+		`/projects/technologies/${techId}`,
+		{
+			name: payload.name,
+			version: payload.version,
+			category: payload.category,
+			purpose: payload.purpose,
+			link: payload.link
+		}
+	);
+	return response.data.data;
+}
+
+export async function deleteTechnology(techId: UUID): Promise<void> {
+	await apiClient.delete(`/projects/technologies/${techId}`, { data: {} });
+}
+
+export async function bulkCreateTechnologies(
+	projectId: UUID,
+	technologies: Array<{
+		name: string;
+		version: string;
+		category: TechnologyCategory;
+		purpose: string;
+		link?: string;
+	}>
+): Promise<ProjectTechnology[]> {
+	const response = await apiClient.post<ApiResponse<ProjectTechnology[]>>(
+		`/projects/${projectId}/technologies/bulk`,
+		{
+			technologies
+		}
+	);
+	return response.data.data ?? [];
+}
+
+export async function bulkUpdateTechnologies(
+	projectId: UUID,
+	technologies: Array<{
+		tech_id: UUID;
+		name?: string;
+		version?: string;
+		category?: TechnologyCategory;
+		purpose?: string;
+		link?: string;
+	}>
+): Promise<ProjectTechnology[]> {
+	const response = await apiClient.patch<ApiResponse<ProjectTechnology[]>>(
+		`/projects/${projectId}/technologies/bulk`,
+		{
+			technologies
+		}
+	);
+	return response.data.data ?? [];
+}
+
+// File Structure API
+
+export async function createFileStructure(
+	projectId: UUID,
+	payload: {
+		path: string;
+		name: string;
+		is_directory: boolean;
+		parent_id?: UUID;
+		language?: string;
+		line_count?: number;
+		purpose?: string;
+		position?: number;
+	}
+): Promise<ProjectFileStructure> {
+	const response = await apiClient.post<ApiResponse<ProjectFileStructure>>(
+		`/projects/${projectId}/file-structures`,
+		{
+			path: payload.path,
+			name: payload.name,
+			is_directory: payload.is_directory,
+			parent_id: payload.parent_id,
+			language: payload.language,
+			line_count: payload.line_count ?? 0,
+			purpose: payload.purpose,
+			position: payload.position
+		}
+	);
+	return response.data.data;
+}
+
+export async function listFileStructures(projectId: UUID): Promise<ProjectFileStructure[]> {
+	const response = await apiClient.get<ApiResponse<ProjectFileStructure[]>>(
+		`/projects/${projectId}/file-structures`
+	);
+	return response.data.data ?? [];
+}
+
+export async function updateFileStructure(
+	fileStructureId: UUID,
+	payload: {
+		purpose?: string;
+		line_count?: number;
+		language?: string;
+		position?: number;
+	}
+): Promise<ProjectFileStructure> {
+	const response = await apiClient.patch<ApiResponse<ProjectFileStructure>>(
+		`/projects/file-structures/${fileStructureId}`,
+		{
+			purpose: payload.purpose,
+			line_count: payload.line_count,
+			language: payload.language,
+			position: payload.position
+		}
+	);
+	return response.data.data;
+}
+
+export async function deleteFileStructure(fileStructureId: UUID): Promise<void> {
+	await apiClient.delete(`/projects/file-structures/${fileStructureId}`, { data: {} });
+}
+
+export async function bulkCreateFileStructures(
+	projectId: UUID,
+	structures: Array<{
+		path: string;
+		name: string;
+		is_directory: boolean;
+		parent_id?: UUID;
+		language?: string;
+		line_count?: number;
+		purpose?: string;
+		position?: number;
+	}>
+): Promise<ProjectFileStructure[]> {
+	const response = await apiClient.post<ApiResponse<ProjectFileStructure[]>>(
+		`/projects/${projectId}/file-structures/bulk`,
+		{
+			structures
+		}
+	);
+	return response.data.data ?? [];
+}
+
+export async function bulkUpdateFileStructures(
+	projectId: UUID,
+	structures: Array<{
+		file_structure_id: UUID;
+		purpose?: string;
+		line_count?: number;
+		language?: string;
+		position?: number;
+	}>
+): Promise<ProjectFileStructure[]> {
+	const response = await apiClient.patch<ApiResponse<ProjectFileStructure[]>>(
+		`/projects/${projectId}/file-structures/bulk`,
+		{
+			structures
+		}
+	);
+	return response.data.data ?? [];
+}
+
+// Architecture Diagram API
+
+export async function createArchitectureDiagram(
+	projectId: UUID,
+	payload: {
+		type: ArchitectureDiagramType;
+		title: string;
+		description: string;
+		content: string;
+		format?: string;
+		image_url?: string;
+	}
+): Promise<ProjectArchitectureDiagram> {
+	const response = await apiClient.post<ApiResponse<ProjectArchitectureDiagram>>(
+		`/projects/${projectId}/architecture-diagrams`,
+		{
+			type: payload.type,
+			title: payload.title,
+			description: payload.description,
+			content: payload.content,
+			format: payload.format ?? 'mermaid',
+			image_url: payload.image_url
+		}
+	);
+	return response.data.data;
+}
+
+export async function listArchitectureDiagrams(
+	projectId: UUID
+): Promise<ProjectArchitectureDiagram[]> {
+	const response = await apiClient.get<ApiResponse<ProjectArchitectureDiagram[]>>(
+		`/projects/${projectId}/architecture-diagrams`
+	);
+	return response.data.data ?? [];
+}
+
+export async function getArchitectureDiagram(
+	diagramId: UUID
+): Promise<ProjectArchitectureDiagram> {
+	const response = await apiClient.get<ApiResponse<ProjectArchitectureDiagram>>(
+		`/projects/architecture-diagrams/${diagramId}`
+	);
+	return response.data.data;
+}
+
+export async function updateArchitectureDiagram(
+	diagramId: UUID,
+	payload: {
+		title?: string;
+		description?: string;
+		content?: string;
+		image_url?: string;
+	}
+): Promise<ProjectArchitectureDiagram> {
+	const response = await apiClient.patch<ApiResponse<ProjectArchitectureDiagram>>(
+		`/projects/architecture-diagrams/${diagramId}`,
+		{
+			title: payload.title,
+			description: payload.description,
+			content: payload.content,
+			image_url: payload.image_url
+		}
+	);
+	return response.data.data;
+}
+
+export async function deleteArchitectureDiagram(diagramId: UUID): Promise<void> {
+	await apiClient.delete(`/projects/architecture-diagrams/${diagramId}`, { data: {} });
+}
+
 export const projectsApi = {
 	listProjects,
 	createProject,
@@ -351,5 +741,36 @@ export const projectsApi = {
 	createDependency,
 	listDependencies,
 	deleteDependency,
-	duplicateProject
+	duplicateProject,
+	// Documentation
+	createDocumentation,
+	getDocumentation,
+	getPublicDocumentation,
+	updateDocumentationVisibility,
+	deleteDocumentation,
+	createDocumentationSection,
+	listDocumentationSections,
+	updateDocumentationSection,
+	deleteDocumentationSection,
+	reorderDocumentationSections,
+	// Technology
+	createTechnology,
+	listTechnologies,
+	updateTechnology,
+	deleteTechnology,
+	bulkCreateTechnologies,
+	bulkUpdateTechnologies,
+	// File Structure
+	createFileStructure,
+	listFileStructures,
+	updateFileStructure,
+	deleteFileStructure,
+	bulkCreateFileStructures,
+	bulkUpdateFileStructures,
+	// Architecture Diagrams
+	createArchitectureDiagram,
+	listArchitectureDiagrams,
+	getArchitectureDiagram,
+	updateArchitectureDiagram,
+	deleteArchitectureDiagram
 };
