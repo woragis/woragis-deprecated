@@ -95,6 +95,26 @@
 							</dl>
 						</div>
 
+						{#if project.skills && project.skills.length > 0}
+							<div>
+								<h2 class="text-2xl font-bold mb-4">Skills</h2>
+								<div class="flex flex-wrap gap-2">
+									{#each project.skills as skill}
+										<a
+											href="/skills"
+											class="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg text-blue-300 border border-blue-600/30 transition-colors"
+										>
+											{#if skill.icon}
+												<span class="text-lg">{skill.icon}</span>
+											{/if}
+											<span class="font-medium">{skill.name}</span>
+											<span class="text-xs text-blue-400/70 capitalize">({skill.category})</span>
+										</a>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
 						{#if project.technologies && project.technologies.length > 0}
 							<div>
 								<h2 class="text-2xl font-bold mb-4">Technologies</h2>

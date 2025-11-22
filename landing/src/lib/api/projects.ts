@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { getProjectSkills } from './skills';
 import type { Project, ProjectFilters, ProjectTechnology } from '$lib/types/project';
 
 export interface ListProjectsParams extends ProjectFilters {
@@ -43,7 +44,22 @@ export async function listProjects(
 		const url = queryString ? `/projects?${queryString}` : '/projects';
 
 		const response = await apiClient.get<{ success: boolean; data: ProjectWithTechnologies[] }>(url);
-		return response.data || [];
+		const projects = response.data || [];
+
+		// Fetch skills for each project
+		const projectsWithSkills = await Promise.all(
+			projects.map(async (project) => {
+				try {
+					const skills = await getProjectSkills(project.id);
+					return { ...project, skills };
+				} catch (error) {
+					console.error(`Error fetching skills for project ${project.id}:`, error);
+					return { ...project, skills: [] };
+				}
+			})
+		);
+
+		return projectsWithSkills;
 	} catch (error) {
 		console.error('Error fetching projects:', error);
 		throw error;
@@ -56,7 +72,19 @@ export async function getProjectBySlug(slug: string): Promise<ProjectWithTechnol
 		const response = await apiClient.get<{ success: boolean; data: ProjectWithTechnologies }>(
 			`/projects/slug/${slug}`
 		);
-		return response.data || null;
+		const project = response.data;
+		if (!project) {
+			return null;
+		}
+
+		// Fetch skills for the project
+		try {
+			const skills = await getProjectSkills(project.id);
+			return { ...project, skills };
+		} catch (error) {
+			console.error(`Error fetching skills for project ${project.id}:`, error);
+			return { ...project, skills: [] };
+		}
 	} catch (error) {
 		console.error('Error fetching project by slug:', error);
 		return null;

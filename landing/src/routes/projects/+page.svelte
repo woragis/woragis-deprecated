@@ -380,6 +380,32 @@
 								<p class="text-gray-300 text-sm mb-4 line-clamp-2">{project.description}</p>
 							{/if}
 
+							<!-- Skills -->
+							{#if project.skills && project.skills.length > 0}
+								<div class="mb-4">
+									<p class="text-xs text-gray-400 mb-2">Skills</p>
+									<div class="flex flex-wrap gap-2">
+										{#each project.skills.slice(0, 6) as skill}
+											<a
+												href="/skills"
+												class="flex items-center gap-1 px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 rounded text-xs text-blue-300 border border-blue-600/30 transition-colors"
+												title={skill.name}
+											>
+												{#if skill.icon}
+													<span class="text-xs">{skill.icon}</span>
+												{/if}
+												<span>{skill.name}</span>
+											</a>
+										{/each}
+										{#if project.skills.length > 6}
+											<span class="px-2 py-1 text-xs text-gray-400"
+												>+{project.skills.length - 6} more</span
+											>
+										{/if}
+									</div>
+								</div>
+							{/if}
+
 							<!-- Technologies -->
 							{#if project.technologies && project.technologies.length > 0}
 								<div class="mb-4">

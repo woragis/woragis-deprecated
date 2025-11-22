@@ -24,6 +24,7 @@ export interface Project {
 	createdAt: string;
 	updatedAt: string;
 	technologies?: ProjectTechnology[];
+	skills?: import('../api/skills').Skill[];
 }
 
 export interface ProjectTechnology {
