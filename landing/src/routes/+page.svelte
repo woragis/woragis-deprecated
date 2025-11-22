@@ -1,7 +1,17 @@
 <script lang="ts">
 	import { Icon } from 'svelte-icons-pack';
-	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiGithub, SiInstagram } from 'svelte-icons-pack/si';
-	import { Settings, Brain, GitBranch } from 'lucide-svelte';
+	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiGithub, SiInstagram, SiLinkedin, SiWhatsapp } from 'svelte-icons-pack/si';
+	import { Settings, Brain, GitBranch, Mail, Phone, MapPin } from 'lucide-svelte';
+	import { contact } from '$lib/constants';
+
+	// Generate WhatsApp URL with pre-filled message
+	function getWhatsAppUrl(): string {
+		if (!contact.whatsapp) return '#';
+		// Remove all non-digit characters from phone number
+		const phoneNumber = contact.whatsapp.replace(/\D/g, '');
+		const message = encodeURIComponent('Hello! I came across your website and would like to get in touch.');
+		return `https://wa.me/${phoneNumber}?text=${message}`;
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -32,10 +42,10 @@
 					View Skills
 				</a>
 				<a
-					href="#interests"
+					href="#contact"
 					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
-					My Interests
+					Contact Me
 				</a>
 			</div>
 		</div>
@@ -213,12 +223,125 @@
 		</div>
 	</section>
 
+	<!-- Contact Section -->
+	<section id="contact" class="container mx-auto px-6 py-20">
+		<div class="max-w-4xl mx-auto">
+			<h2 class="text-4xl font-bold mb-12 text-center">Get In Touch</h2>
+			<div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 shadow-xl">
+				<p class="text-lg text-gray-300 text-center mb-8 leading-relaxed">
+					I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.
+					Feel free to reach out!
+				</p>
+				<div class="grid md:grid-cols-2 gap-6">
+					<!-- Email -->
+					<a
+						href="mailto:{contact.email}"
+						class="flex items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg border border-gray-600 hover:border-blue-500 transition-all duration-200 group"
+					>
+						<div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4 group-hover:bg-blue-500 transition-colors">
+							<Mail class="w-6 h-6 text-white" />
+						</div>
+						<div>
+							<p class="text-sm text-gray-400 mb-1">Email</p>
+							<p class="text-white font-medium">{contact.email}</p>
+						</div>
+					</a>
+
+					<!-- Phone -->
+					{#if contact.phone}
+						<a
+							href="tel:{contact.phone}"
+							class="flex items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg border border-gray-600 hover:border-green-500 transition-all duration-200 group"
+						>
+							<div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mr-4 group-hover:bg-green-500 transition-colors">
+								<Phone class="w-6 h-6 text-white" />
+							</div>
+							<div>
+								<p class="text-sm text-gray-400 mb-1">Phone</p>
+								<p class="text-white font-medium">{contact.phone}</p>
+							</div>
+						</a>
+					{/if}
+
+					<!-- Location -->
+					{#if contact.location}
+						<div
+							class="flex items-center p-4 bg-gray-700/50 rounded-lg border border-gray-600"
+						>
+							<div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
+								<MapPin class="w-6 h-6 text-white" />
+							</div>
+							<div>
+								<p class="text-sm text-gray-400 mb-1">Location</p>
+								<p class="text-white font-medium">{contact.location}</p>
+							</div>
+						</div>
+					{/if}
+
+					<!-- LinkedIn -->
+					{#if contact.linkedin}
+						<a
+							href={contact.linkedin}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="flex items-center p-4 bg-gray-700/50 hover:bg-gray-700 rounded-lg border border-gray-600 hover:border-blue-400 transition-all duration-200 group"
+						>
+							<div class="w-12 h-12 bg-blue-700 rounded-lg flex items-center justify-center mr-4 group-hover:bg-blue-600 transition-colors">
+								<Icon src={SiLinkedin} size="1.5rem" color="white" />
+							</div>
+							<div>
+								<p class="text-sm text-gray-400 mb-1">LinkedIn</p>
+								<p class="text-white font-medium">Connect with me</p>
+							</div>
+						</a>
+					{/if}
+				</div>
+
+				<!-- Social Links -->
+				<div class="mt-8 pt-8 border-t border-gray-700">
+					<p class="text-center text-gray-400 mb-4">Or find me on</p>
+					<div class="flex justify-center gap-6">
+						<a
+							href={contact.github}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-gray-400 hover:text-white transition-colors duration-200"
+							aria-label="GitHub"
+						>
+							<Icon src={SiGithub} size="2rem" />
+						</a>
+						<a
+							href={contact.instagram}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-gray-400 hover:text-white transition-colors duration-200"
+							aria-label="Instagram"
+						>
+							<Icon src={SiInstagram} size="2rem" />
+						</a>
+						{#if contact.linkedin}
+							<a
+								href={contact.linkedin}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-gray-400 hover:text-white transition-colors duration-200"
+								aria-label="LinkedIn"
+							>
+								<Icon src={SiLinkedin} size="2rem" />
+							</a>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
 	<!-- Footer -->
 	<footer class="container mx-auto px-6 py-12 border-t border-gray-700">
 		<div class="max-w-4xl mx-auto text-center text-gray-400">
 			<div class="flex justify-center gap-6 mb-6">
 				<a
-					href="https://github.com/woragis"
+					href={contact.github}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="text-gray-400 hover:text-white transition-colors duration-200"
@@ -227,7 +350,7 @@
 					<Icon src={SiGithub} size="1.5rem" />
 				</a>
 				<a
-					href="https://instagram.com/y.jezreel.andrade"
+					href={contact.instagram}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="text-gray-400 hover:text-white transition-colors duration-200"
@@ -235,6 +358,17 @@
 				>
 					<Icon src={SiInstagram} size="1.5rem" />
 				</a>
+				{#if contact.linkedin}
+					<a
+						href={contact.linkedin}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-gray-400 hover:text-white transition-colors duration-200"
+						aria-label="LinkedIn"
+					>
+						<Icon src={SiLinkedin} size="1.5rem" />
+					</a>
+				{/if}
 			</div>
 			<p class="mb-4">
 				Building the future, one service at a time.
@@ -262,7 +396,7 @@
 		animation: fadeIn 0.6s ease-out;
 	}
 
-	html {
+	:global(html) {
 		scroll-behavior: smooth;
 	}
 </style>
