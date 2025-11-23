@@ -31,6 +31,7 @@ export const authNav: NavItem[] = [
 	{ href: '/auth/profile', label: 'Profile', match: matchStartsWith('/auth/profile') },
 	{ href: '/auth/mfa', label: 'MFA settings', match: matchStartsWith('/auth/mfa') },
 	{ href: '/auth/sessions', label: 'Active sessions', match: matchStartsWith('/auth/sessions') },
-	{ href: '/auth/connections', label: 'OAuth connections', match: matchStartsWith('/auth/connections') }
+	{ href: '/auth/connections', label: 'OAuth connections', match: matchStartsWith('/auth/connections') },
+	{ href: '/api-keys', label: 'API Keys', match: matchStartsWith('/api-keys') }
 ];
 
