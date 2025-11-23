@@ -285,7 +285,7 @@
 <!-- Create Modal -->
 {#if showCreateModal}
 	<div class="modal-overlay" onclick={() => (showCreateModal = false)}>
-		<div class="modal" onclick|stopPropagation>
+		<div class="modal" onclick={(e) => e.stopPropagation()}>
 			<h2 class="modal-title">Create API Key</h2>
 			<div class="modal-content">
 				<div class="form-group">
@@ -327,7 +327,7 @@
 			newToken = null;
 		}}
 	>
-		<div class="modal modal-large" onclick|stopPropagation>
+		<div class="modal modal-large" onclick={(e) => e.stopPropagation()}>
 			<h2 class="modal-title">API Key Created</h2>
 			<div class="modal-content">
 				<div class="alert alert-warning">
