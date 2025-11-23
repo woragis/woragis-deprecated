@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 )
 
@@ -24,16 +26,17 @@ type service struct {
 	queue     Queue
 	aiClient  *langchainservice.Client
 	logger    *slog.Logger
-	db        interface{} // GORM DB for fetching entities (temporary solution)
+	db        *gorm.DB // GORM DB for fetching entities
 }
 
 // NewService constructs a Service.
-func NewService(repo Repository, queue Queue, aiClient *langchainservice.Client, logger *slog.Logger) Service {
+func NewService(repo Repository, queue Queue, aiClient *langchainservice.Client, db *gorm.DB, logger *slog.Logger) Service {
 	return &service{
 		repo:     repo,
 		queue:    queue,
 		aiClient: aiClient,
 		logger:   logger,
+		db:       db,
 	}
 }
 
@@ -219,5 +222,113 @@ func (s *service) getLanguageName(lang Language) string {
 		return name
 	}
 	return string(lang)
+}
+
+// fetchSourceTextFromEntity fetches source text from the entity when not provided
+func (s *service) fetchSourceTextFromEntity(ctx context.Context, entityType EntityType, entityID uuid.UUID, fields []string) (map[string]string, error) {
+	sourceText := make(map[string]string)
+
+	switch entityType {
+	case EntityTypeTestimonial:
+		// Use a generic struct to avoid import cycle
+		type Testimonial struct {
+			Content        string `gorm:"column:content"`
+			AuthorRole     string `gorm:"column:author_role"`
+			AuthorCompany  string `gorm:"column:author_company"`
+		}
+		var testimonial Testimonial
+		if err := s.db.WithContext(ctx).Table("testimonials").Where("id = ?", entityID).First(&testimonial).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "content":
+				sourceText["content"] = testimonial.Content
+			case "authorRole":
+				sourceText["authorRole"] = testimonial.AuthorRole
+			case "authorCompany":
+				sourceText["authorCompany"] = testimonial.AuthorCompany
+			}
+		}
+	case EntityTypePost:
+		// Use a generic struct to avoid import cycle
+		type Post struct {
+			Title          string `gorm:"column:title"`
+			Content        string `gorm:"column:content"`
+			Excerpt        string `gorm:"column:excerpt"`
+			MetaTitle      string `gorm:"column:meta_title"`
+			MetaDescription string `gorm:"column:meta_description"`
+			OGTitle        string `gorm:"column:og_title"`
+			OGDescription  string `gorm:"column:og_description"`
+		}
+		var post Post
+		if err := s.db.WithContext(ctx).Table("posts").Where("id = ?", entityID).First(&post).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = post.Title
+			case "content":
+				sourceText["content"] = post.Content
+			case "excerpt":
+				sourceText["excerpt"] = post.Excerpt
+			case "metaTitle":
+				sourceText["metaTitle"] = post.MetaTitle
+			case "metaDescription":
+				sourceText["metaDescription"] = post.MetaDescription
+			case "ogTitle":
+				sourceText["ogTitle"] = post.OGTitle
+			case "ogDescription":
+				sourceText["ogDescription"] = post.OGDescription
+			}
+		}
+	case EntityTypeProject:
+		// Use a generic struct to avoid import cycle
+		type Project struct {
+			Name        string `gorm:"column:name"`
+			Description string `gorm:"column:description"`
+		}
+		var project Project
+		if err := s.db.WithContext(ctx).Table("projects").Where("id = ?", entityID).First(&project).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "name":
+				sourceText["name"] = project.Name
+			case "description":
+				sourceText["description"] = project.Description
+			}
+		}
+	case EntityTypeCaseStudy:
+		// Use a generic struct to avoid import cycle
+		type CaseStudy struct {
+			Title    string `gorm:"column:title"`
+			Problem  string `gorm:"column:problem"`
+			Context  string `gorm:"column:context"`
+			Solution string `gorm:"column:solution"`
+		}
+		var caseStudy CaseStudy
+		if err := s.db.WithContext(ctx).Table("case_studies").Where("id = ?", entityID).First(&caseStudy).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = caseStudy.Title
+			case "problem":
+				sourceText["problem"] = caseStudy.Problem
+			case "context":
+				sourceText["context"] = caseStudy.Context
+			case "solution":
+				sourceText["solution"] = caseStudy.Solution
+			}
+		}
+	default:
+		return nil, fiber.NewError(fiber.StatusBadRequest, "unsupported entity type for auto-fetch")
+	}
+
+	return sourceText, nil
 }
 

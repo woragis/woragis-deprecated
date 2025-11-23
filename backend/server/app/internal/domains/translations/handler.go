@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
-	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -90,8 +89,14 @@ func (h *handler) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 
 	switch entityType {
 	case EntityTypeTestimonial:
-		var testimonial testimonialsdomain.Testimonial
-		if err := h.db.WithContext(ctx).Where("id = ?", entityID).First(&testimonial).Error; err != nil {
+		// Use a generic struct to avoid import cycle
+		type Testimonial struct {
+			Content        string `gorm:"column:content"`
+			AuthorRole     string `gorm:"column:author_role"`
+			AuthorCompany  string `gorm:"column:author_company"`
+		}
+		var testimonial Testimonial
+		if err := h.db.WithContext(ctx).Table("testimonials").Where("id = ?", entityID).First(&testimonial).Error; err != nil {
 			return nil, err
 		}
 		for _, field := range fields {
@@ -102,6 +107,81 @@ func (h *handler) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 				sourceText["authorRole"] = testimonial.AuthorRole
 			case "authorCompany":
 				sourceText["authorCompany"] = testimonial.AuthorCompany
+			}
+		}
+	case EntityTypePost:
+		// Use a generic struct to avoid import cycle
+		type Post struct {
+			Title          string `gorm:"column:title"`
+			Content        string `gorm:"column:content"`
+			Excerpt        string `gorm:"column:excerpt"`
+			MetaTitle      string `gorm:"column:meta_title"`
+			MetaDescription string `gorm:"column:meta_description"`
+			OGTitle        string `gorm:"column:og_title"`
+			OGDescription  string `gorm:"column:og_description"`
+		}
+		var post Post
+		if err := h.db.WithContext(ctx).Table("posts").Where("id = ?", entityID).First(&post).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = post.Title
+			case "content":
+				sourceText["content"] = post.Content
+			case "excerpt":
+				sourceText["excerpt"] = post.Excerpt
+			case "metaTitle":
+				sourceText["metaTitle"] = post.MetaTitle
+			case "metaDescription":
+				sourceText["metaDescription"] = post.MetaDescription
+			case "ogTitle":
+				sourceText["ogTitle"] = post.OGTitle
+			case "ogDescription":
+				sourceText["ogDescription"] = post.OGDescription
+			}
+		}
+	case EntityTypeProject:
+		// Use a generic struct to avoid import cycle
+		type Project struct {
+			Name        string `gorm:"column:name"`
+			Description string `gorm:"column:description"`
+		}
+		var project Project
+		if err := h.db.WithContext(ctx).Table("projects").Where("id = ?", entityID).First(&project).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "name":
+				sourceText["name"] = project.Name
+			case "description":
+				sourceText["description"] = project.Description
+			}
+		}
+	case EntityTypeCaseStudy:
+		// Use a generic struct to avoid import cycle
+		type CaseStudy struct {
+			Title    string `gorm:"column:title"`
+			Problem  string `gorm:"column:problem"`
+			Context  string `gorm:"column:context"`
+			Solution string `gorm:"column:solution"`
+		}
+		var caseStudy CaseStudy
+		if err := h.db.WithContext(ctx).Table("case_studies").Where("id = ?", entityID).First(&caseStudy).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = caseStudy.Title
+			case "problem":
+				sourceText["problem"] = caseStudy.Problem
+			case "context":
+				sourceText["context"] = caseStudy.Context
+			case "solution":
+				sourceText["solution"] = caseStudy.Solution
 			}
 		}
 	default:

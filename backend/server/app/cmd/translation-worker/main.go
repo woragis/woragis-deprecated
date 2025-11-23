@@ -65,7 +65,7 @@ func main() {
 	translationRepo := translationsdomain.NewGormRepository(db)
 	translationQueue := translationsdomain.NewRedisQueue(redisClient)
 	aiClient := langchainservice.NewClient(logger)
-	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, logger)
+	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, db, logger)
 
 	// Create worker
 	worker := translationworker.NewWorker(translationQueue, translationService, logger)

@@ -124,37 +124,37 @@ services:
     restart: on-failure
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: woragis-prometheus
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-    depends_on:
-      app:
-        condition: service_started
-    ports:
-      - "9090:9090"
-    restart: unless-stopped
-  grafana:
-    image: grafana/grafana:11.1.0
-    container_name: woragis-grafana
-    depends_on:
-      prometheus:
-        condition: service_started
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-    restart: unless-stopped
+  # prometheus:
+  #   image: prom/prometheus:v2.54.1
+  #   container_name: woragis-prometheus
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #   command:
+  #     - "--config.file=/etc/prometheus/prometheus.yml"
+  #   depends_on:
+  #     app:
+  #       condition: service_started
+  #   ports:
+  #     - "9090:9090"
+  #   restart: unless-stopped
+  # grafana:
+  #   image: grafana/grafana:11.1.0
+  #   container_name: woragis-grafana
+  #   depends_on:
+  #     prometheus:
+  #       condition: service_started
+  #   environment:
+  #     GF_SECURITY_ADMIN_USER: admin
+  #     GF_SECURITY_ADMIN_PASSWORD: admin
+  #     GF_USERS_ALLOW_SIGN_UP: "false"
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   restart: unless-stopped
 
 volumes:
   postgres-data:
   redis-data:
-  grafana-data:
+  # grafana-data:
 

@@ -282,7 +282,7 @@ func main() {
 	translationRepo := translationsdomain.NewGormRepository(db)
 	translationQueue := translationsdomain.NewRedisQueue(redisClient)
 	aiClient := langchainservice.NewClient(slogLogger)
-	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, slogLogger)
+	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, db, slogLogger)
 	translationEnricher := translationenricher.NewEnricher(translationRepo, slogLogger)
 
 	projectHandler := projectsdomain.NewHandler(projectService, translationEnricher, translationService, slogLogger)
