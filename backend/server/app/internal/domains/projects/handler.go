@@ -386,6 +386,18 @@ func (h *handler) ListProjects(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range projects {
+			fieldMap := map[string]*string{
+				"name":        &projects[i].Name,
+				"description": &projects[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeProject, projects[i].ID, language, fieldMap)
+		}
+	}
+
 	resp := make([]projectResponse, 0, len(projects))
 	for _, project := range projects {
 		p := project
@@ -459,6 +471,18 @@ func (h *handler) SearchProjectsBySlug(c *fiber.Ctx) error {
 	projects, err := h.service.SearchProjectsBySlug(c.Context(), userID, slug)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range projects {
+			fieldMap := map[string]*string{
+				"name":        &projects[i].Name,
+				"description": &projects[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeProject, projects[i].ID, language, fieldMap)
+		}
 	}
 
 	resp := make([]projectResponse, 0, len(projects))
