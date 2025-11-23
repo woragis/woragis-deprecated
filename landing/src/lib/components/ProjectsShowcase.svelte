@@ -2,13 +2,23 @@
 	import { Search, Filter, X, ExternalLink, Calendar, TrendingUp, Code2, Globe, Github } from 'lucide-svelte';
 	import { Icon } from 'svelte-icons-pack';
 	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiPython } from 'svelte-icons-pack/si';
-	import { getCaseStudyByProjectSlug } from '$lib/api/case-studies';
+	import { listCaseStudies } from '$lib/api/case-studies';
 	import type { Project, ProjectStatus, ProjectTechnology } from '$lib/types/project';
 	import { useProjectsQuery } from '$lib/queries/projects';
+	import { language } from '$lib/i18n';
+	import { queryClient } from '$lib/query-client';
+	import { projectKeys } from '$lib/queries/projects';
 	import { onMount } from 'svelte';
 
 	// Fetch projects using TanStack Query
 	const projectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
+
+	// Invalidate query when language changes to trigger refetch with new language
+	$effect(() => {
+		const currentLang = $language;
+		// Invalidate all project list queries when language changes
+		queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+	});
 
 	let projects = $derived(projectsQuery.data || []);
 	let filteredProjects: Project[] = $state([]);
@@ -34,32 +44,28 @@
 	$effect(() => {
 		if (projects.length > 0) {
 			applyFilters();
-			fetchCaseStudies(projects);
+			fetchAllCaseStudies();
 		}
 	});
 
-	async function fetchCaseStudies(projectsToCheck: Project[]) {
-		const caseStudyPromises = projectsToCheck.map(async (project) => {
-			try {
-				const caseStudy = await getCaseStudyByProjectSlug(project.slug);
-				if (caseStudy) {
-					return { slug: project.slug, caseStudy };
+	async function fetchAllCaseStudies() {
+		try {
+			// Fetch all case studies at once instead of one per project
+			// This avoids 404 errors for projects without case studies
+			const caseStudies = await listCaseStudies();
+			
+			// Map case studies by project slug
+			const newMap = new Map();
+			caseStudies.forEach((caseStudy) => {
+				if (caseStudy.projectSlug) {
+					newMap.set(caseStudy.projectSlug, caseStudy);
 				}
-				return null;
-			} catch (error) {
-				// Silently fail for individual case studies
-				return null;
-			}
-		});
-
-		const results = await Promise.all(caseStudyPromises);
-		const newMap = new Map();
-		results.forEach((result) => {
-			if (result) {
-				newMap.set(result.slug, result.caseStudy);
-			}
-		});
-		caseStudyMap = newMap;
+			});
+			caseStudyMap = newMap;
+		} catch (error) {
+			// Silently fail - case studies are optional
+			console.error('Error fetching case studies:', error);
+		}
 	}
 
 	function applyFilters() {

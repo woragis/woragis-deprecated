@@ -23,6 +23,8 @@
 	import { language, translationsStore } from '$lib/i18n';
 	import { useProjectsQuery } from '$lib/queries/projects';
 	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
+	import { queryClient } from '$lib/query-client';
+	import { projectKeys } from '$lib/queries/projects';
 
 	// Reactive translation helper
 	let t = $derived($translationsStore);
@@ -43,6 +45,13 @@
 
 	// Featured projects - using TanStack Query
 	const featuredProjectsQuery = useProjectsQuery({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' });
+
+	// Invalidate query when language changes to trigger refetch with new language
+	$effect(() => {
+		const currentLang = $language;
+		// Invalidate all project list queries when language changes
+		queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+	});
 	
 	let featuredProjects = $derived(featuredProjectsQuery.data?.slice(0, 6) || []);
 	let loadingProjects = $derived(featuredProjectsQuery.isPending);
