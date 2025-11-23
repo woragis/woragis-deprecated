@@ -1,0 +1,97 @@
+{
+	"common": {
+		"loading": "로딩 중...",
+		"error": "오류",
+		"back": "뒤로",
+		"readMore": "더 읽기",
+		"viewAll": "모두 보기",
+		"contact": "연락처",
+		"learnMore": "자세히 알아보기"
+	},
+	"hero": {
+		"badge": "백엔드 개발자",
+		"title": "안녕하세요, 저는 개발자입니다",
+		"subtitle": "Golang으로 견고한 백엔드 시스템 구축, Docker 및 Kubernetes로 오케스트레이션, AI 및 RAG의 최전선 탐구에 열정을 가지고 있습니다.",
+		"viewProjects": "프로젝트 보기",
+		"technicalDepth": "기술적 깊이",
+		"viewSkills": "기술 보기",
+		"contactMe": "연락하기"
+	},
+	"about": {
+		"title": "소개",
+		"description": "저는 확장 가능하고 유지보수 가능한 시스템 구축에 열정을 가진 백엔드 개발자입니다. 제 전문 분야는 Go, 마이크로서비스 아키텍처, 클라우드 인프라, 특히 Docker를 사용한 컨테이너화 및 Kubernetes를 사용한 오케스트레이션입니다. 인프라와 배포를 이해하는 것이 현대적인 클라우드 네이티브 애플리케이션을 구축하는 데 중요하다고 믿습니다."
+	},
+	"projects": {
+		"title": "프로젝트 쇼케이스",
+		"showcase": "추천 프로젝트",
+		"viewAll": "모든 프로젝트 보기",
+		"noProjects": "프로젝트를 찾을 수 없습니다",
+		"checkBack": "나중에 추천 프로젝트를 확인하세요",
+		"updated": "업데이트됨",
+		"viewLive": "라이브 보기",
+		"viewCode": "코드 보기",
+		"caseStudy": "사례 연구",
+		"searchPlaceholder": "이름, 설명, 기술 스택으로 프로젝트 검색...",
+		"filters": "필터",
+		"status": "상태",
+		"technology": "기술",
+		"allStatuses": "모든 상태",
+		"allTechnologies": "모든 기술",
+		"clear": "지우기",
+		"activeFilters": "활성 필터:"
+	},
+	"blog": {
+		"title": "최신 블로그 게시물",
+		"subtitle": "백엔드 개발, 시스템 설계 및 기술에 대한 인사이트, 튜토리얼 및 생각",
+		"featured": "추천 게시물",
+		"latest": "최신 게시물",
+		"noPosts": "블로그 게시물이 없습니다",
+		"checkBack": "나중에 새로운 게시물을 확인하세요",
+		"minRead": "분 읽기"
+	},
+	"skills": {
+		"title": "기술 및 전문성",
+		"subtitle": "제가 작업하는 기술 및 도구",
+		"noSkills": "기술을 찾을 수 없습니다"
+	},
+	"testimonials": {
+		"title": "사람들의 말",
+		"subtitle": "저와 함께 일한 동료, 클라이언트 및 멘토의 추천서",
+		"noTestimonials": "추천서가 없습니다",
+		"checkBack": "나중에 확인하세요"
+	},
+	"interests": {
+		"title": "관심 분야 및 전문성"
+	},
+	"contact": {
+		"title": "연락하기",
+		"subtitle": "연락하여 함께 작업할 수 있는 방법을 논의해 봅시다",
+		"email": "이메일",
+		"phone": "전화",
+		"location": "위치",
+		"whatsapp": "WhatsApp",
+		"linkedin": "LinkedIn",
+		"github": "GitHub",
+		"instagram": "Instagram",
+		"clickToCall": "클릭하여 전화하기 →",
+		"clickToEmail": "클릭하여 이메일 보내기 →"
+	},
+	"footer": {
+		"tagline": "미래를 구축합니다, 한 번에 하나의 서비스씩.",
+		"backendDeveloper": "백엔드 개발자",
+		"devopsEnthusiast": "DevOps 애호가"
+	},
+	"technical": {
+		"technicalDepth": "기술적 깊이",
+		"problemSolving": "문제 해결 및 커뮤니케이션",
+		"systemThinking": "시스템 사고"
+	},
+	"status": {
+		"idea": "아이디어",
+		"planning": "계획",
+		"executing": "실행 중",
+		"monitoring": "모니터링",
+		"completed": "완료"
+	}
+}
+

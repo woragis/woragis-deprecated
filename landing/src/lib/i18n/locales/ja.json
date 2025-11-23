@@ -1,0 +1,97 @@
+{
+	"common": {
+		"loading": "読み込み中...",
+		"error": "エラー",
+		"back": "戻る",
+		"readMore": "続きを読む",
+		"viewAll": "すべて表示",
+		"contact": "連絡先",
+		"learnMore": "詳細を見る"
+	},
+	"hero": {
+		"badge": "バックエンド開発者",
+		"title": "こんにちは、私は開発者です",
+		"subtitle": "Golangを使用した堅牢なバックエンドシステムの構築、DockerとKubernetesによるオーケストレーション、AIとRAGのフロンティアの探索に情熱を注いでいます。",
+		"viewProjects": "プロジェクトを見る",
+		"technicalDepth": "技術的深さ",
+		"viewSkills": "スキルを見る",
+		"contactMe": "お問い合わせ"
+	},
+	"about": {
+		"title": "私について",
+		"description": "私は、スケーラブルで保守可能なシステムの構築に情熱を注ぐバックエンド開発者です。私の専門知識は、Go、マイクロサービスアーキテクチャ、クラウドインフラストラクチャ、特にDockerによるコンテナ化とKubernetesによるオーケストレーションにあります。インフラストラクチャとデプロイメントを理解することは、モダンなクラウドネイティブアプリケーションを構築するために重要であると信じています。"
+	},
+	"projects": {
+		"title": "プロジェクトショーケース",
+		"showcase": "注目のプロジェクト",
+		"viewAll": "すべてのプロジェクトを見る",
+		"noProjects": "プロジェクトが見つかりません",
+		"checkBack": "後で注目のプロジェクトを確認してください",
+		"updated": "更新",
+		"viewLive": "ライブで見る",
+		"viewCode": "コードを見る",
+		"caseStudy": "ケーススタディ",
+		"searchPlaceholder": "名前、説明、技術スタックでプロジェクトを検索...",
+		"filters": "フィルター",
+		"status": "ステータス",
+		"technology": "テクノロジー",
+		"allStatuses": "すべてのステータス",
+		"allTechnologies": "すべてのテクノロジー",
+		"clear": "クリア",
+		"activeFilters": "アクティブなフィルター:"
+	},
+	"blog": {
+		"title": "最新のブログ投稿",
+		"subtitle": "バックエンド開発、システム設計、テクノロジーに関する洞察、チュートリアル、思考",
+		"featured": "注目の投稿",
+		"latest": "最新の投稿",
+		"noPosts": "ブログ投稿がありません",
+		"checkBack": "後で新しい投稿を確認してください",
+		"minRead": "分の読書"
+	},
+	"skills": {
+		"title": "スキルと専門知識",
+		"subtitle": "私が使用しているテクノロジーとツール",
+		"noSkills": "スキルが見つかりません"
+	},
+	"testimonials": {
+		"title": "人々の声",
+		"subtitle": "私と一緒に働いた同僚、クライアント、メンターからの推薦状",
+		"noTestimonials": "推薦状がありません",
+		"checkBack": "後で確認してください"
+	},
+	"interests": {
+		"title": "興味と専門知識の分野"
+	},
+	"contact": {
+		"title": "お問い合わせ",
+		"subtitle": "連絡を取り、どのように協力できるか話し合いましょう",
+		"email": "メール",
+		"phone": "電話",
+		"location": "場所",
+		"whatsapp": "WhatsApp",
+		"linkedin": "LinkedIn",
+		"github": "GitHub",
+		"instagram": "Instagram",
+		"clickToCall": "クリックして電話をかける →",
+		"clickToEmail": "クリックしてメールを送信 →"
+	},
+	"footer": {
+		"tagline": "未来を築く、一度に一つのサービス。",
+		"backendDeveloper": "バックエンド開発者",
+		"devopsEnthusiast": "DevOps愛好家"
+	},
+	"technical": {
+		"technicalDepth": "技術的深さ",
+		"problemSolving": "問題解決とコミュニケーション",
+		"systemThinking": "システム思考"
+	},
+	"status": {
+		"idea": "アイデア",
+		"planning": "計画",
+		"executing": "実行中",
+		"monitoring": "監視中",
+		"completed": "完了"
+	}
+}
+

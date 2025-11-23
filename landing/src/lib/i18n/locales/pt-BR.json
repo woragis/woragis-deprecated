@@ -1,0 +1,97 @@
+{
+	"common": {
+		"loading": "Carregando...",
+		"error": "Erro",
+		"back": "Voltar",
+		"readMore": "Ler Mais",
+		"viewAll": "Ver Todos",
+		"contact": "Contato",
+		"learnMore": "Saiba Mais"
+	},
+	"hero": {
+		"badge": "Desenvolvedor Backend",
+		"title": "Olá, eu sou um Desenvolvedor",
+		"subtitle": "Apaixonado por construir sistemas backend robustos com Golang, orquestrar com Docker e Kubernetes, e explorar as fronteiras de IA e RAG.",
+		"viewProjects": "Ver Projetos",
+		"technicalDepth": "Profundidade Técnica",
+		"viewSkills": "Ver Habilidades",
+		"contactMe": "Entre em Contato"
+	},
+	"about": {
+		"title": "Sobre Mim",
+		"description": "Sou um desenvolvedor backend apaixonado por construir sistemas escaláveis e manuteníveis. Minha expertise está em Go, arquitetura de microsserviços e infraestrutura em nuvem, especificamente containerização com Docker e orquestração com Kubernetes. Acredito que entender infraestrutura e implantação é crucial para construir aplicações modernas e nativas da nuvem."
+	},
+	"projects": {
+		"title": "Vitrine de Projetos",
+		"showcase": "Projetos em Destaque",
+		"viewAll": "Ver Todos os Projetos",
+		"noProjects": "Nenhum projeto encontrado",
+		"checkBack": "Volte mais tarde para ver projetos em destaque",
+		"updated": "Atualizado",
+		"viewLive": "Ver ao Vivo",
+		"viewCode": "Ver Código",
+		"caseStudy": "Estudo de Caso",
+		"searchPlaceholder": "Buscar projetos por nome, descrição, stack tecnológica...",
+		"filters": "Filtros",
+		"status": "Status",
+		"technology": "Tecnologia",
+		"allStatuses": "Todos os Status",
+		"allTechnologies": "Todas as Tecnologias",
+		"clear": "Limpar",
+		"activeFilters": "Filtros ativos:"
+	},
+	"blog": {
+		"title": "Últimas Postagens do Blog",
+		"subtitle": "Insights, tutoriais e pensamentos sobre desenvolvimento backend, design de sistemas e tecnologia",
+		"featured": "Postagens em Destaque",
+		"latest": "Últimas Postagens",
+		"noPosts": "Nenhuma postagem disponível",
+		"checkBack": "Volte mais tarde para novas postagens",
+		"minRead": "min de leitura"
+	},
+	"skills": {
+		"title": "Habilidades e Expertise",
+		"subtitle": "Tecnologias e ferramentas com as quais trabalho",
+		"noSkills": "Nenhuma habilidade encontrada"
+	},
+	"testimonials": {
+		"title": "O Que as Pessoas Dizem",
+		"subtitle": "Depoimentos de colegas, clientes e mentores que trabalharam comigo",
+		"noTestimonials": "Nenhum depoimento disponível",
+		"checkBack": "Volte mais tarde"
+	},
+	"interests": {
+		"title": "Áreas de Interesse e Expertise"
+	},
+	"contact": {
+		"title": "Entre em Contato",
+		"subtitle": "Vamos nos conectar e discutir como podemos trabalhar juntos",
+		"email": "E-mail",
+		"phone": "Telefone",
+		"location": "Localização",
+		"whatsapp": "WhatsApp",
+		"linkedin": "LinkedIn",
+		"github": "GitHub",
+		"instagram": "Instagram",
+		"clickToCall": "Clique para ligar →",
+		"clickToEmail": "Clique para enviar e-mail →"
+	},
+	"footer": {
+		"tagline": "Construindo o futuro, um serviço de cada vez.",
+		"backendDeveloper": "Desenvolvedor Backend",
+		"devopsEnthusiast": "Entusiasta de DevOps"
+	},
+	"technical": {
+		"technicalDepth": "Profundidade Técnica",
+		"problemSolving": "Resolução de Problemas e Comunicação",
+		"systemThinking": "Pensamento Sistêmico"
+	},
+	"status": {
+		"idea": "Ideia",
+		"planning": "Planejamento",
+		"executing": "Executando",
+		"monitoring": "Monitorando",
+		"completed": "Concluído"
+	}
+}
+

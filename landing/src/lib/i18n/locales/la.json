@@ -1,0 +1,97 @@
+{
+	"common": {
+		"loading": "Loading...",
+		"error": "Error",
+		"back": "Retro",
+		"readMore": "Legere Plus",
+		"viewAll": "Omnia Videre",
+		"contact": "Contactus",
+		"learnMore": "Discere Plus"
+	},
+	"hero": {
+		"badge": "Backend Programmator",
+		"title": "Salve, Ego Sum Programmator",
+		"subtitle": "Studiosus aedificandi robusta systemata backend cum Golang, orches trare cum Docker et Kubernetes, et explorare fines AI et RAG.",
+		"viewProjects": "Videre Proiecta",
+		"technicalDepth": "Profunditas Technica",
+		"viewSkills": "Videre Artes",
+		"contactMe": "Contacta Me"
+	},
+	"about": {
+		"title": "De Me",
+		"description": "Ego sum backend programmator studiosus aedificandi systemata scalabilia et manutenibilia. Mea peritia est in Go, architectura microservitiorum, et infrastructura nubis, praesertim containerizatio cum Docker et orchestratio cum Kubernetes. Credo quod comprehensio infrastructurae et deploymenti crucialis est ad aedificandum applicationes modernas cloud-native."
+	},
+	"projects": {
+		"title": "Proiectorum Showcase",
+		"showcase": "Proiecta Selecta",
+		"viewAll": "Videre Omnia Proiecta",
+		"noProjects": "Nulla proiecta inventa",
+		"checkBack": "Revisere postea pro proiectis selectis",
+		"updated": "Renovatum",
+		"viewLive": "Videre Vivum",
+		"viewCode": "Videre Codum",
+		"caseStudy": "Studium Casus",
+		"searchPlaceholder": "Quaerere proiecta per nomen, descriptionem, tech stack...",
+		"filters": "Filtra",
+		"status": "Status",
+		"technology": "Technologia",
+		"allStatuses": "Omnes Status",
+		"allTechnologies": "Omnes Technologiae",
+		"clear": "Clarare",
+		"activeFilters": "Filtra activa:"
+	},
+	"blog": {
+		"title": "Posteriores Blog Postes",
+		"subtitle": "Intuitiones, tutorials et cogitationes de backend development, system design, et technologia",
+		"featured": "Postes Selectae",
+		"latest": "Posteriores Postes",
+		"noPosts": "Nullae blog postes disponibiles",
+		"checkBack": "Revisere postea pro novis postibus",
+		"minRead": "min lectionis"
+	},
+	"skills": {
+		"title": "Artes et Peritia",
+		"subtitle": "Technologiae et instrumenta quibus operor",
+		"noSkills": "Nullae artes inventae"
+	},
+	"testimonials": {
+		"title": "Quid Dicunt Homines",
+		"subtitle": "Testimonia a collegis, clientibus, et mentoribus qui mecum operati sunt",
+		"noTestimonials": "Nulla testimonia disponibilia",
+		"checkBack": "Revisere postea"
+	},
+	"interests": {
+		"title": "Areae Interest et Peritiae"
+	},
+	"contact": {
+		"title": "Contactare",
+		"subtitle": "Coniungamus et disputemus quomodo simul operari possumus",
+		"email": "Email",
+		"phone": "Telephonum",
+		"location": "Locus",
+		"whatsapp": "WhatsApp",
+		"linkedin": "LinkedIn",
+		"github": "GitHub",
+		"instagram": "Instagram",
+		"clickToCall": "Click ad vocare →",
+		"clickToEmail": "Click ad mittere email →"
+	},
+	"footer": {
+		"tagline": "Aedificare futurum, unum servitium tempore.",
+		"backendDeveloper": "Backend Programmator",
+		"devopsEnthusiast": "DevOps Studiosus"
+	},
+	"technical": {
+		"technicalDepth": "Profunditas Technica",
+		"problemSolving": "Solutio Problematum et Communicatio",
+		"systemThinking": "Cogitatio Systematica"
+	},
+	"status": {
+		"idea": "Idea",
+		"planning": "Plannificatio",
+		"executing": "Exsecutio",
+		"monitoring": "Monitio",
+		"completed": "Completum"
+	}
+}
+

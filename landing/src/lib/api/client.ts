@@ -20,7 +20,7 @@ class ApiClient {
 			}
 		});
 
-		// Request interceptor for adding API key for GET requests
+		// Request interceptor for adding API key for GET requests and language preference
 		this.client.interceptors.request.use(
 			(config) => {
 				// Add API key for GET requests (read-only access)
@@ -35,6 +35,21 @@ class ApiClient {
 						console.warn('API Key not found in environment variables. Make sure PUBLIC_API_KEY is set in .env and restart the dev server.');
 					}
 				}
+
+				// Add language preference from localStorage or browser
+				const language = this.getLanguage();
+				if (language && language !== 'en') {
+					// Add as query parameter (preferred)
+					if (!config.params) {
+						config.params = {};
+					}
+					config.params.lang = language;
+					// Also set Accept-Language header for compatibility
+					if (config.headers) {
+						config.headers['Accept-Language'] = language;
+					}
+				}
+
 				return config;
 			},
 			(error) => {
@@ -86,6 +101,33 @@ class ApiClient {
 	private getAPIKey(): string | null {
 		// Use the API key from constants (which reads from import.meta.env.PUBLIC_API_KEY)
 		return api.apiKey;
+	}
+
+	// Get language preference from localStorage or browser
+	private getLanguage(): string | null {
+		// Get language from localStorage (set by language switcher)
+		if (typeof window !== 'undefined') {
+			const stored = localStorage.getItem('language');
+			if (stored) {
+				return stored;
+			}
+		}
+		// Fallback to browser language
+		if (typeof navigator !== 'undefined') {
+			const browserLang = navigator.language.toLowerCase();
+			// Map to our supported languages
+			if (browserLang.startsWith('pt')) return 'pt-BR';
+			if (browserLang.startsWith('fr')) return 'fr';
+			if (browserLang.startsWith('es')) return 'es';
+			if (browserLang.startsWith('de')) return 'de';
+			if (browserLang.startsWith('ru')) return 'ru';
+			if (browserLang.startsWith('ja')) return 'ja';
+			if (browserLang.startsWith('ko')) return 'ko';
+			if (browserLang.startsWith('zh')) return 'zh-CN';
+			if (browserLang.startsWith('el')) return 'el';
+			if (browserLang.startsWith('la')) return 'la';
+		}
+		return null; // Default to English (no language param)
 	}
 }
 

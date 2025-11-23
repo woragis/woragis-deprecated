@@ -1,0 +1,97 @@
+{
+	"common": {
+		"loading": "加载中...",
+		"error": "错误",
+		"back": "返回",
+		"readMore": "阅读更多",
+		"viewAll": "查看全部",
+		"contact": "联系",
+		"learnMore": "了解更多"
+	},
+	"hero": {
+		"badge": "后端开发人员",
+		"title": "你好，我是一名开发人员",
+		"subtitle": "热衷于使用 Golang 构建强大的后端系统，使用 Docker 和 Kubernetes 进行编排，并探索 AI 和 RAG 的前沿。",
+		"viewProjects": "查看项目",
+		"technicalDepth": "技术深度",
+		"viewSkills": "查看技能",
+		"contactMe": "联系我"
+	},
+	"about": {
+		"title": "关于我",
+		"description": "我是一名后端开发人员，热衷于构建可扩展和可维护的系统。我的专长在于 Go、微服务架构和云基础设施，特别是使用 Docker 进行容器化和使用 Kubernetes 进行编排。我相信理解基础设施和部署对于构建现代云原生应用程序至关重要。"
+	},
+	"projects": {
+		"title": "项目展示",
+		"showcase": "精选项目",
+		"viewAll": "查看所有项目",
+		"noProjects": "未找到项目",
+		"checkBack": "稍后查看精选项目",
+		"updated": "已更新",
+		"viewLive": "查看实时",
+		"viewCode": "查看代码",
+		"caseStudy": "案例研究",
+		"searchPlaceholder": "按名称、描述、技术栈搜索项目...",
+		"filters": "筛选器",
+		"status": "状态",
+		"technology": "技术",
+		"allStatuses": "所有状态",
+		"allTechnologies": "所有技术",
+		"clear": "清除",
+		"activeFilters": "活动筛选器:"
+	},
+	"blog": {
+		"title": "最新博客文章",
+		"subtitle": "关于后端开发、系统设计和技术的见解、教程和思考",
+		"featured": "精选文章",
+		"latest": "最新文章",
+		"noPosts": "没有可用的博客文章",
+		"checkBack": "稍后查看新文章",
+		"minRead": "分钟阅读"
+	},
+	"skills": {
+		"title": "技能与专长",
+		"subtitle": "我使用的技术和工具",
+		"noSkills": "未找到技能"
+	},
+	"testimonials": {
+		"title": "人们的评价",
+		"subtitle": "与我共事的同事、客户和导师的推荐",
+		"noTestimonials": "没有可用的推荐",
+		"checkBack": "稍后查看"
+	},
+	"interests": {
+		"title": "兴趣与专长领域"
+	},
+	"contact": {
+		"title": "取得联系",
+		"subtitle": "让我们联系并讨论如何合作",
+		"email": "电子邮件",
+		"phone": "电话",
+		"location": "位置",
+		"whatsapp": "WhatsApp",
+		"linkedin": "LinkedIn",
+		"github": "GitHub",
+		"instagram": "Instagram",
+		"clickToCall": "点击拨打电话 →",
+		"clickToEmail": "点击发送电子邮件 →"
+	},
+	"footer": {
+		"tagline": "构建未来，一次一个服务。",
+		"backendDeveloper": "后端开发人员",
+		"devopsEnthusiast": "DevOps 爱好者"
+	},
+	"technical": {
+		"technicalDepth": "技术深度",
+		"problemSolving": "问题解决与沟通",
+		"systemThinking": "系统思维"
+	},
+	"status": {
+		"idea": "想法",
+		"planning": "规划",
+		"executing": "执行中",
+		"monitoring": "监控",
+		"completed": "已完成"
+	}
+}
+

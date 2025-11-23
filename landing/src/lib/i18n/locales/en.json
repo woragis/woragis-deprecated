@@ -1,0 +1,97 @@
+{
+	"common": {
+		"loading": "Loading...",
+		"error": "Error",
+		"back": "Back",
+		"readMore": "Read More",
+		"viewAll": "View All",
+		"contact": "Contact",
+		"learnMore": "Learn More"
+	},
+	"hero": {
+		"badge": "Backend Developer",
+		"title": "Hello, I'm a Developer",
+		"subtitle": "Passionate about building robust backend systems with Golang, orchestrating with Docker & Kubernetes, and exploring the frontiers of AI & RAG.",
+		"viewProjects": "View Projects",
+		"technicalDepth": "Technical Depth",
+		"viewSkills": "View Skills",
+		"contactMe": "Contact Me"
+	},
+	"about": {
+		"title": "About Me",
+		"description": "I'm a backend developer passionate about building scalable, maintainable systems. My expertise lies in Go, microservices architecture, and cloud infrastructure, specifically containerization with Docker and orchestration with Kubernetes. I believe that understanding infrastructure and deployment is crucial for building modern, cloud-native applications."
+	},
+	"projects": {
+		"title": "Projects Showcase",
+		"showcase": "Featured Projects",
+		"viewAll": "View All Projects",
+		"noProjects": "No projects found",
+		"checkBack": "Check back later for featured projects",
+		"updated": "Updated",
+		"viewLive": "View Live",
+		"viewCode": "View Code",
+		"caseStudy": "Case Study",
+		"searchPlaceholder": "Search projects by name, description, tech stack...",
+		"filters": "Filters",
+		"status": "Status",
+		"technology": "Technology",
+		"allStatuses": "All Statuses",
+		"allTechnologies": "All Technologies",
+		"clear": "Clear",
+		"activeFilters": "Active filters:"
+	},
+	"blog": {
+		"title": "Latest Blog Posts",
+		"subtitle": "Insights, tutorials, and thoughts on backend development, system design, and technology",
+		"featured": "Featured Posts",
+		"latest": "Latest Posts",
+		"noPosts": "No blog posts available",
+		"checkBack": "Check back later for new posts",
+		"minRead": "min read"
+	},
+	"skills": {
+		"title": "Skills & Expertise",
+		"subtitle": "Technologies and tools I work with",
+		"noSkills": "No skills found"
+	},
+	"testimonials": {
+		"title": "What People Say",
+		"subtitle": "Testimonials from colleagues, clients, and mentors who have worked with me",
+		"noTestimonials": "No testimonials available",
+		"checkBack": "Check back later"
+	},
+	"interests": {
+		"title": "Areas of Interest & Expertise"
+	},
+	"contact": {
+		"title": "Get In Touch",
+		"subtitle": "Let's connect and discuss how we can work together",
+		"email": "Email",
+		"phone": "Phone",
+		"location": "Location",
+		"whatsapp": "WhatsApp",
+		"linkedin": "LinkedIn",
+		"github": "GitHub",
+		"instagram": "Instagram",
+		"clickToCall": "Click to call →",
+		"clickToEmail": "Click to email →"
+	},
+	"footer": {
+		"tagline": "Building the future, one service at a time.",
+		"backendDeveloper": "Backend Developer",
+		"devopsEnthusiast": "DevOps Enthusiast"
+	},
+	"technical": {
+		"technicalDepth": "Technical Depth",
+		"problemSolving": "Problem Solving & Communication",
+		"systemThinking": "System Thinking"
+	},
+	"status": {
+		"idea": "Idea",
+		"planning": "Planning",
+		"executing": "Executing",
+		"monitoring": "Monitoring",
+		"completed": "Completed"
+	}
+}
+
