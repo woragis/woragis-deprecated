@@ -32,7 +32,7 @@ func LoadCORSConfig() CORSConfig {
 		Enabled:          enabled != "false" && enabled != "0",
 		AllowedOrigins:   sanitizeCSV(getEnv("CORS_ALLOWED_ORIGINS", defaultOrigins)),
 		AllowedMethods:   sanitizeCSV(getEnv("CORS_ALLOWED_METHODS", "GET,POST,PUT,PATCH,DELETE,OPTIONS")),
-		AllowedHeaders:   sanitizeCSV(getEnv("CORS_ALLOWED_HEADERS", "Authorization,Content-Type,X-Requested-With,X-API-Key")),
+		AllowedHeaders:   sanitizeCSV(getEnv("CORS_ALLOWED_HEADERS", "Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key")),
 		ExposedHeaders:   sanitizeCSV(getEnv("CORS_EXPOSED_HEADERS", "")),
 		AllowCredentials: allowCredentials == "true" || allowCredentials == "1" || allowCredentials == "yes",
 		MaxAge:           maxAge,

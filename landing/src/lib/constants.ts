@@ -1,3 +1,5 @@
+import { PUBLIC_API_BASE_URL, PUBLIC_API_KEY } from '$env/static/public';
+
 export const contact = {
 	email: 'jezreel.veloso@gmail.com',
 	github: 'https://github.com/woragis',
@@ -9,9 +11,9 @@ export const contact = {
 } as const;
 
 export const api = {
-	baseURL: import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:8080/api',
+	baseURL: PUBLIC_API_BASE_URL || 'http://localhost:8080/api',
 	timeout: 10000,
-	apiKey: import.meta.env.PUBLIC_API_KEY || null
+	apiKey: PUBLIC_API_KEY || null
 } as const;
 
 export { skills } from './constants/skills';

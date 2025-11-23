@@ -5,6 +5,13 @@ class ApiClient {
 	private client: AxiosInstance;
 
 	constructor() {
+		// Debug: Log environment variables in development
+		if (import.meta.env.DEV) {
+			console.log('API Client initialized');
+			console.log('api.apiKey from constants:', api.apiKey ? `${api.apiKey.substring(0, 8)}...` : 'NOT FOUND');
+			console.log('api.baseURL from constants:', api.baseURL || 'NOT FOUND');
+		}
+		
 		this.client = axios.create({
 			baseURL: api.baseURL,
 			timeout: api.timeout,
@@ -20,7 +27,12 @@ class ApiClient {
 				if (config.method?.toLowerCase() === 'get') {
 					const apiKey = this.getAPIKey();
 					if (apiKey) {
-						config.headers['X-API-Key'] = apiKey;
+						// Use uppercase X-API-Key header
+						if (config.headers) {
+							config.headers['X-API-Key'] = apiKey;
+						}
+					} else {
+						console.warn('API Key not found in environment variables. Make sure PUBLIC_API_KEY is set in .env and restart the dev server.');
 					}
 				}
 				return config;
@@ -70,29 +82,10 @@ class ApiClient {
 		return response.data;
 	}
 
-	// API Key management
+	// API Key management - only from environment variable
 	private getAPIKey(): string | null {
-		if (typeof window === 'undefined') {
-			return null;
-		}
-		// Try to get from localStorage first
-		const stored = localStorage.getItem('woragis_api_key');
-		if (stored) {
-			return stored;
-		}
-		// Fallback to environment variable
-		return import.meta.env.PUBLIC_API_KEY || null;
-	}
-
-	setAPIKey(apiKey: string | null): void {
-		if (typeof window === 'undefined') {
-			return;
-		}
-		if (apiKey) {
-			localStorage.setItem('woragis_api_key', apiKey);
-		} else {
-			localStorage.removeItem('woragis_api_key');
-		}
+		// Use the API key from constants (which reads from import.meta.env.PUBLIC_API_KEY)
+		return api.apiKey;
 	}
 }
 
