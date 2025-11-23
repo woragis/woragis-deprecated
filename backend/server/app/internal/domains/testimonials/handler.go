@@ -1,6 +1,7 @@
 package testimonials
 
 import (
+	"context"
 	"log/slog"
 	"strconv"
 
@@ -140,10 +141,12 @@ func (h *handler) CreateTestimonial(c *fiber.Ctx) error {
 		}
 
 		// Trigger translations asynchronously (don't block the response)
+		// Use background context to avoid cancellation when request completes
 		go func() {
+			ctx := context.Background()
 			for _, lang := range supportedLanguages {
 				if err := h.translationService.RequestTranslation(
-					c.Context(),
+					ctx,
 					translationsdomain.EntityTypeTestimonial,
 					testimonial.ID,
 					lang,
