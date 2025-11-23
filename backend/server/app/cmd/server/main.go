@@ -268,6 +268,32 @@ func main() {
 	apiKeyRepo := apikeysdomain.NewGormRepository(db)
 	apiKeyService := apikeysdomain.NewService(apiKeyRepo, slogLogger)
 
+	// IMPORTANT: Register projects and skills groups BEFORE protectedAPI
+	// to ensure their middleware runs first for matching routes
+	projectRepo := projectsdomain.NewGormRepository(db)
+	projectService := projectsdomain.NewService(projectRepo, slogLogger)
+	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
+	// Projects: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	projectsGroup := api.Group("/projects")
+	projectsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	projectsdomain.SetupRoutes(projectsGroup, projectHandler)
+
+	skillRepo := skillsdomain.NewGormRepository(db)
+	skillService := skillsdomain.NewService(skillRepo, slogLogger)
+	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
+	// Skills: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	skillsGroup := api.Group("/skills")
+	skillsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	skillsdomain.SetupRoutes(skillsGroup, skillHandler)
+
 	// Protected API group - requires JWT for all operations
 	// Create protected routes group and apply JWT middleware
 	protectedAPI := api.Group("")
@@ -288,31 +314,6 @@ func main() {
 	languageService := languagesdomain.NewService(languageRepo, slogLogger)
 	languageHandler := languagesdomain.NewHandler(languageService, slogLogger)
 	languagesdomain.SetupRoutes(protectedAPI, languageHandler)
-
-	projectRepo := projectsdomain.NewGormRepository(db)
-	projectService := projectsdomain.NewService(projectRepo, slogLogger)
-	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
-	// Projects: GET endpoints support API keys, POST/PATCH/DELETE require JWT
-	// Register routes first, then apply middleware to the group
-	projectsdomain.SetupRoutes(api, projectHandler)
-	// Apply middleware to /api/projects group
-	api.Group("/projects").Use(apikeysdomain.RequireAPIKeyOrAuth(
-		apiKeyService,
-		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
-		slogLogger,
-	))
-
-	skillRepo := skillsdomain.NewGormRepository(db)
-	skillService := skillsdomain.NewService(skillRepo, slogLogger)
-	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
-	// Skills: GET endpoints support API keys, POST/PATCH/DELETE require JWT
-	skillsdomain.SetupRoutes(api, skillHandler)
-	// Apply middleware to /api/skills group
-	api.Group("/skills").Use(apikeysdomain.RequireAPIKeyOrAuth(
-		apiKeyService,
-		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
-		slogLogger,
-	))
 
 	apiKeyHandler := apikeysdomain.NewHandler(apiKeyService, slogLogger)
 	// API key management requires JWT (admin only)

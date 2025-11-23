@@ -16,6 +16,9 @@ import (
 // NewAuthMiddleware produces a Fiber middleware that enforces JWT authentication.
 func NewAuthMiddleware(manager *JWTManager, logger *slog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		if logger != nil {
+			logger.Info("JWT Auth middleware called", slog.String("method", c.Method()), slog.String("path", c.Path()))
+		}
 		if manager == nil {
 			return response.Error(c, fiber.StatusInternalServerError, ErrCodeTokenIssuanceFailure, fiber.Map{
 				"message": "authentication is not configured",

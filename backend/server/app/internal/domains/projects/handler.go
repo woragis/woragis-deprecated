@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
@@ -301,9 +302,19 @@ func (h *handler) CreateProject(c *fiber.Ctx) error {
 }
 
 func (h *handler) ListProjects(c *fiber.Ctx) error {
-	userID, err := authdomain.UserIDFromContext(c)
-	if err != nil {
-		return unauthorizedResponse(c)
+	var userID uuid.UUID
+	var err error
+	
+	// Check if request is authenticated via API key
+	if apiKey, hasAPIKey := apikeysdomain.APIKeyFromContext(c); hasAPIKey {
+		// Use the API key's user ID
+		userID = apiKey.UserID
+	} else {
+		// Fall back to JWT user ID
+		userID, err = authdomain.UserIDFromContext(c)
+		if err != nil {
+			return unauthorizedResponse(c)
+		}
 	}
 
 	projects, err := h.service.ListProjects(c.Context(), userID)
@@ -326,9 +337,19 @@ func (h *handler) GetProjectBySlug(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID, err := authdomain.UserIDFromContext(c)
-	if err != nil {
-		return unauthorizedResponse(c)
+	var userID uuid.UUID
+	var err error
+	
+	// Check if request is authenticated via API key
+	if apiKey, hasAPIKey := apikeysdomain.APIKeyFromContext(c); hasAPIKey {
+		// Use the API key's user ID
+		userID = apiKey.UserID
+	} else {
+		// Fall back to JWT user ID
+		userID, err = authdomain.UserIDFromContext(c)
+		if err != nil {
+			return unauthorizedResponse(c)
+		}
 	}
 
 	project, err := h.service.GetProjectBySlug(c.Context(), userID, slug)
@@ -342,9 +363,19 @@ func (h *handler) GetProjectBySlug(c *fiber.Ctx) error {
 func (h *handler) SearchProjectsBySlug(c *fiber.Ctx) error {
 	slug := strings.TrimSpace(c.Query("slug"))
 
-	userID, err := authdomain.UserIDFromContext(c)
-	if err != nil {
-		return unauthorizedResponse(c)
+	var userID uuid.UUID
+	var err error
+	
+	// Check if request is authenticated via API key
+	if apiKey, hasAPIKey := apikeysdomain.APIKeyFromContext(c); hasAPIKey {
+		// Use the API key's user ID
+		userID = apiKey.UserID
+	} else {
+		// Fall back to JWT user ID
+		userID, err = authdomain.UserIDFromContext(c)
+		if err != nil {
+			return unauthorizedResponse(c)
+		}
 	}
 
 	if slug == "" {

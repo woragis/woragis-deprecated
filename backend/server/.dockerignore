@@ -1,0 +1,73 @@
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+build/
+server.exe
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.log
+*.tmp
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation
+*.md
+docs/
+README*
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Kubernetes
+k8s/
+
+# Test files
+*_test.go
+*.test
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+woragis.db
+
+# Temporary and cache files
+tmp/
+temp/
+.cache/
+*.cache
+
+# Monitoring config (if not needed in container)
+monitoring/
+
+# WhatsApp session data
+whatsapp-session/
+
+# Environment samples
+env.sample
+*.sample
+
+# TODO and notes
+TODO.md
+*.todo
+
