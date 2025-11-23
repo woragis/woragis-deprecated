@@ -21,7 +21,6 @@
 	import TestimonialsCarousel from '$lib/components/TestimonialsCarousel.svelte';
 	import BlogPostsSection from '$lib/components/BlogPostsSection.svelte';
 	import ProjectsShowcase from '$lib/components/ProjectsShowcase.svelte';
-	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import { language, translationsStore } from '$lib/i18n';
 
 	// Reactive translation helper
@@ -126,11 +125,6 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-	<!-- Language Switcher (Fixed Position) -->
-	<div class="fixed top-4 right-4 z-50">
-		<LanguageSwitcher />
-	</div>
-
 	<!-- Hero Section -->
 	<section class="container mx-auto px-6 py-20 md:py-32">
 		<div class="max-w-4xl mx-auto text-center">
