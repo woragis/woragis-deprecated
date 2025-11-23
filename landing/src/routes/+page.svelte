@@ -12,11 +12,15 @@
 		SiWhatsapp,
 		SiPython
 	} from 'svelte-icons-pack/si';
-	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch, Tag } from 'lucide-svelte';
+	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch, Tag, Layers, Zap, Target, CheckCircle2, XCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { contact, skills, interests } from '$lib/constants';
+	import { caseStudies, systemDesigns, problemSolutions } from '$lib/constants/technical';
 	import { listProjects } from '$lib/api/projects';
 	import { listSkillsWithCounts, type SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
+	import TestimonialsCarousel from '$lib/components/TestimonialsCarousel.svelte';
+	import BlogPostsSection from '$lib/components/BlogPostsSection.svelte';
+	import ProjectsShowcase from '$lib/components/ProjectsShowcase.svelte';
 
 	// Generate WhatsApp URL with pre-filled message
 	function getWhatsAppUrl(): string {
@@ -93,6 +97,23 @@
 		};
 		return colors[status] || 'bg-gray-600';
 	}
+
+	// Technical sections state
+	let expandedCaseStudy: string | null = $state(null);
+	let expandedSystemDesign: string | null = $state(null);
+	let expandedProblem: string | null = $state(null);
+
+	function toggleCaseStudy(id: string) {
+		expandedCaseStudy = expandedCaseStudy === id ? null : id;
+	}
+
+	function toggleSystemDesign(id: string) {
+		expandedSystemDesign = expandedSystemDesign === id ? null : id;
+	}
+
+	function toggleProblem(id: string) {
+		expandedProblem = expandedProblem === id ? null : id;
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -123,10 +144,22 @@
 					View Projects
 				</a>
 				<a
+					href="#technical-depth"
+					class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-purple-500/50"
+				>
+					Technical Depth
+				</a>
+				<a
 					href="/skills"
 					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
 					View Skills
+				</a>
+				<a
+					href="#testimonials"
+					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
+				>
+					Testimonials
 				</a>
 				<a
 					href="#contact"
@@ -163,7 +196,7 @@
 	<section id="projects" class="container mx-auto px-6 py-20">
 		<div class="max-w-7xl mx-auto">
 			<div class="flex items-center justify-between mb-12">
-				<h2 class="text-4xl font-bold">Featured Projects</h2>
+				<h2 class="text-4xl font-bold">Projects Showcase</h2>
 				<a
 					href="/projects"
 					class="text-blue-400 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
@@ -172,112 +205,22 @@
 					<ExternalLink class="w-5 h-5" />
 				</a>
 			</div>
+			<ProjectsShowcase />
+		</div>
+	</section>
 
-			{#if loadingProjects}
-				<div class="flex items-center justify-center py-20">
-					<div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-				</div>
-			{:else if featuredProjects.length === 0}
-				<div class="text-center py-20">
-					<Code2 class="w-16 h-16 mx-auto mb-4 text-gray-600" />
-					<p class="text-gray-400 text-lg mb-2">No projects found</p>
-					<p class="text-gray-500 text-sm">Check back later for featured projects</p>
-				</div>
-			{:else}
-				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{#each featuredProjects as project}
-						<a
-							href="/projects/{project.slug}"
-							class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 group"
-						>
-							<div class="flex items-start justify-between mb-4">
-								<div class="flex-1">
-									<h3
-										class="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors"
-									>
-										{project.name}
-									</h3>
-									<div class="flex items-center gap-2 flex-wrap">
-										<span
-											class="px-2 py-1 rounded text-xs font-medium capitalize {getStatusColor(project.status)}"
-										>
-											{project.status}
-										</span>
-										{#if project.healthScore >= 0}
-											<div
-												class="flex items-center gap-1 px-2 py-1 rounded text-xs bg-green-600/20 text-green-400 border border-green-600/30"
-											>
-												<TrendingUp class="w-3 h-3" />
-												{project.healthScore}%
-											</div>
-										{/if}
-									</div>
-								</div>
-								<ExternalLink class="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors" />
-							</div>
-
-							{#if project.description}
-								<p class="text-gray-300 text-sm mb-4 line-clamp-2">{project.description}</p>
-							{/if}
-
-							<!-- Skills -->
-							{#if project.skills && project.skills.length > 0}
-								<div class="mb-4">
-									<div class="flex flex-wrap gap-2">
-										{#each project.skills.slice(0, 4) as skill}
-											<div
-												class="flex items-center gap-1 px-2 py-1 bg-blue-600/20 rounded text-xs text-blue-300 border border-blue-600/30"
-												title={skill.name}
-											>
-												{#if skill.icon}
-													<span class="text-xs">{skill.icon}</span>
-												{/if}
-												<span>{skill.name}</span>
-											</div>
-										{/each}
-										{#if project.skills.length > 4}
-											<span class="px-2 py-1 text-xs text-gray-400"
-												>+{project.skills.length - 4}</span
-											>
-										{/if}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Technologies -->
-							{#if project.technologies && project.technologies.length > 0}
-								<div class="mb-4">
-									<div class="flex flex-wrap gap-2">
-									{#each project.technologies.slice(0, 4) as tech}
-										{@const TechIcon = getTechIcon(tech.name)}
-										<div
-											class="flex items-center gap-1 px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300 border border-gray-600"
-										>
-											{#if TechIcon}
-												<Icon src={TechIcon} size="0.875rem" color="currentColor" />
-											{/if}
-											<span>{tech.name}</span>
-										</div>
-									{/each}
-										{#if project.technologies.length > 4}
-											<span class="px-2 py-1 text-xs text-gray-400"
-												>+{project.technologies.length - 4}</span
-											>
-										{/if}
-									</div>
-								</div>
-							{/if}
-
-							<div class="flex items-center justify-between pt-4 border-t border-gray-700">
-								<div class="flex items-center gap-2 text-xs text-gray-400">
-									<Calendar class="w-3 h-3" />
-									<span>Updated {formatDate(project.updatedAt)}</span>
-								</div>
-							</div>
-						</a>
-					{/each}
-				</div>
-			{/if}
+	<!-- Blog Posts Section -->
+	<section id="blog" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+					Latest Blog Posts
+				</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					Insights, tutorials, and thoughts on backend development, system design, and technology
+				</p>
+			</div>
+			<BlogPostsSection />
 		</div>
 	</section>
 
@@ -350,6 +293,351 @@
 		</div>
 	</section>
 
+	<!-- Technical Depth Section -->
+	<section id="technical-depth" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4">Technical Depth</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					Deep dive into system architectures, design decisions, and technical implementations
+				</p>
+			</div>
+
+			<div class="grid md:grid-cols-2 gap-6 mb-12">
+				{#each systemDesigns as design}
+					<div
+						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300"
+					>
+						<div class="flex items-start justify-between mb-4">
+							<div class="flex items-center gap-3">
+								<div
+									class="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center"
+								>
+									<Layers class="w-6 h-6" />
+								</div>
+								<div>
+									<h3 class="text-xl font-bold text-white">{design.title}</h3>
+									<p class="text-sm text-gray-400">System Design</p>
+								</div>
+							</div>
+							<button
+								onclick={() => toggleSystemDesign(design.id)}
+								class="text-gray-400 hover:text-white transition-colors"
+							>
+								{#if expandedSystemDesign === design.id}
+									<ChevronUp class="w-5 h-5" />
+								{:else}
+									<ChevronDown class="w-5 h-5" />
+								{/if}
+							</button>
+						</div>
+
+						<p class="text-gray-300 mb-4">{design.description}</p>
+
+						{#if expandedSystemDesign === design.id}
+							<div class="mt-4 space-y-4 pt-4 border-t border-gray-700">
+								<div>
+									<h4 class="text-sm font-semibold text-blue-400 mb-2">Components</h4>
+									<div class="space-y-2">
+										{#each design.components as component}
+											<div class="bg-gray-800/50 rounded-lg p-3">
+												<div class="flex items-center justify-between mb-1">
+													<span class="font-medium text-white">{component.name}</span>
+													<span class="text-xs text-cyan-400">{component.technology}</span>
+												</div>
+												<p class="text-sm text-gray-400">{component.description}</p>
+											</div>
+										{/each}
+									</div>
+								</div>
+
+								{#if design.dataFlow}
+									<div>
+										<h4 class="text-sm font-semibold text-blue-400 mb-2">Data Flow</h4>
+										<p class="text-sm text-gray-300">{design.dataFlow}</p>
+									</div>
+								{/if}
+
+								{#if design.scalability}
+									<div>
+										<h4 class="text-sm font-semibold text-green-400 mb-2">Scalability</h4>
+										<p class="text-sm text-gray-300">{design.scalability}</p>
+									</div>
+								{/if}
+
+								{#if design.reliability}
+									<div>
+										<h4 class="text-sm font-semibold text-purple-400 mb-2">Reliability</h4>
+										<p class="text-sm text-gray-300">{design.reliability}</p>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<!-- Problem Solving Section -->
+	<section id="problem-solving" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4">Problem Solving & Communication</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					Real challenges solved with clear communication of solutions and impact
+				</p>
+			</div>
+
+			<div class="space-y-6">
+				{#each problemSolutions as solution}
+					<div
+						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300"
+					>
+						<div class="flex items-start justify-between mb-4">
+							<div class="flex-1">
+								<div class="flex items-center gap-3 mb-2">
+									<div
+										class="w-10 h-10 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-lg flex items-center justify-center"
+									>
+										<Zap class="w-5 h-5" />
+									</div>
+									<h3 class="text-xl font-bold text-white">{solution.problem}</h3>
+								</div>
+								<p class="text-sm text-gray-400 mb-3">{solution.context}</p>
+							</div>
+							<button
+								onclick={() => toggleProblem(solution.id)}
+								class="text-gray-400 hover:text-white transition-colors ml-4"
+							>
+								{#if expandedProblem === solution.id}
+									<ChevronUp class="w-5 h-5" />
+								{:else}
+									<ChevronDown class="w-5 h-5" />
+								{/if}
+							</button>
+						</div>
+
+						<div class="grid md:grid-cols-2 gap-4 mb-4">
+							<div class="bg-gray-800/30 rounded-lg p-4">
+								<h4 class="text-sm font-semibold text-red-400 mb-2">Problem</h4>
+								<p class="text-sm text-gray-300">{solution.problem}</p>
+							</div>
+							<div class="bg-gray-800/30 rounded-lg p-4">
+								<h4 class="text-sm font-semibold text-green-400 mb-2">Solution</h4>
+								<p class="text-sm text-gray-300">{solution.solution}</p>
+							</div>
+						</div>
+
+						{#if expandedProblem === solution.id}
+							<div class="mt-4 pt-4 border-t border-gray-700 space-y-4">
+								<div>
+									<h4 class="text-sm font-semibold text-blue-400 mb-2">Technologies Used</h4>
+									<div class="flex flex-wrap gap-2">
+										{#each solution.technologies as tech}
+											<span
+												class="px-3 py-1 bg-blue-600/20 text-blue-300 rounded-full text-xs border border-blue-600/30"
+											>
+												{tech}
+											</span>
+										{/each}
+									</div>
+								</div>
+
+								<div>
+									<h4 class="text-sm font-semibold text-purple-400 mb-2">Impact</h4>
+									<p class="text-sm text-gray-300">{solution.impact}</p>
+								</div>
+
+								{#if solution.metrics}
+									<div class="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg p-4">
+										<h4 class="text-sm font-semibold text-cyan-400 mb-3">Metrics</h4>
+										<div class="grid grid-cols-3 gap-4">
+											<div>
+												<p class="text-xs text-gray-400 mb-1">Before</p>
+												<p class="text-sm font-medium text-red-300">{solution.metrics.before}</p>
+											</div>
+											<div>
+												<p class="text-xs text-gray-400 mb-1">After</p>
+												<p class="text-sm font-medium text-green-300">{solution.metrics.after}</p>
+											</div>
+											<div>
+												<p class="text-xs text-gray-400 mb-1">Improvement</p>
+												<p class="text-sm font-medium text-cyan-300">
+													{solution.metrics.improvement}
+												</p>
+											</div>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<!-- System Thinking Section -->
+	<section id="system-thinking" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4">System Thinking</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					Architectural decisions, trade-offs, and lessons learned from building complex systems
+				</p>
+			</div>
+
+			<div class="space-y-8">
+				{#each caseStudies as study}
+					<div
+						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:border-purple-500/50 transition-all duration-300"
+					>
+						<div class="flex items-start justify-between mb-6">
+							<div class="flex-1">
+								<div class="flex items-center gap-3 mb-3">
+									<div
+										class="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center"
+									>
+										<Target class="w-6 h-6" />
+									</div>
+									<div>
+										<h3 class="text-2xl font-bold text-white">{study.title}</h3>
+										<p class="text-sm text-gray-400">Case Study</p>
+									</div>
+								</div>
+								<p class="text-gray-300 mb-4">{study.description}</p>
+							</div>
+							<button
+								onclick={() => toggleCaseStudy(study.id)}
+								class="text-gray-400 hover:text-white transition-colors ml-4"
+							>
+								{#if expandedCaseStudy === study.id}
+									<ChevronUp class="w-6 h-6" />
+								{:else}
+									<ChevronDown class="w-6 h-6" />
+								{/if}
+							</button>
+						</div>
+
+						<div class="grid md:grid-cols-2 gap-4 mb-6">
+							<div class="bg-red-900/20 border border-red-700/30 rounded-lg p-4">
+								<h4 class="text-sm font-semibold text-red-400 mb-2 flex items-center gap-2">
+									<XCircle class="w-4 h-4" />
+									Challenge
+								</h4>
+								<p class="text-sm text-gray-300">{study.challenge}</p>
+							</div>
+							<div class="bg-green-900/20 border border-green-700/30 rounded-lg p-4">
+								<h4 class="text-sm font-semibold text-green-400 mb-2 flex items-center gap-2">
+									<CheckCircle2 class="w-4 h-4" />
+									Solution
+								</h4>
+								<p class="text-sm text-gray-300">{study.solution}</p>
+							</div>
+						</div>
+
+						<div class="flex flex-wrap gap-2 mb-6">
+							{#each study.technologies as tech}
+								<span
+									class="px-3 py-1 bg-purple-600/20 text-purple-300 rounded-full text-xs border border-purple-600/30"
+								>
+									{tech}
+								</span>
+							{/each}
+						</div>
+
+						{#if expandedCaseStudy === study.id}
+							<div class="mt-6 pt-6 border-t border-gray-700 space-y-6">
+								{#if study.architecture}
+									<div>
+										<h4 class="text-lg font-semibold text-blue-400 mb-3 flex items-center gap-2">
+											<Layers class="w-5 h-5" />
+											Architecture
+										</h4>
+										<p class="text-gray-300 leading-relaxed">{study.architecture}</p>
+									</div>
+								{/if}
+
+								{#if study.metrics && study.metrics.length > 0}
+									<div>
+										<h4 class="text-lg font-semibold text-cyan-400 mb-3">Key Metrics</h4>
+										<div class="grid md:grid-cols-3 gap-4">
+											{#each study.metrics as metric}
+												<div
+													class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg p-4 border border-gray-700"
+												>
+													<p class="text-xs text-gray-400 mb-1">{metric.label}</p>
+													<p class="text-2xl font-bold text-cyan-400">{metric.value}</p>
+													{#if metric.improvement}
+														<p class="text-xs text-gray-500 mt-1">{metric.improvement}</p>
+													{/if}
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								{#if study.tradeoffs && study.tradeoffs.length > 0}
+									<div>
+										<h4 class="text-lg font-semibold text-yellow-400 mb-3">Trade-offs & Decisions</h4>
+										<div class="space-y-4">
+											{#each study.tradeoffs as tradeoff}
+												<div
+													class="bg-gray-800/30 rounded-lg p-4 border border-gray-700"
+												>
+													<h5 class="font-semibold text-white mb-3">{tradeoff.decision}</h5>
+													<div class="grid md:grid-cols-2 gap-4">
+														<div>
+															<p class="text-xs font-semibold text-green-400 mb-2">Pros</p>
+															<ul class="space-y-1">
+																{#each tradeoff.pros as pro}
+																	<li class="text-sm text-gray-300 flex items-start gap-2">
+																		<CheckCircle2 class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+																		<span>{pro}</span>
+																	</li>
+																{/each}
+															</ul>
+														</div>
+														<div>
+															<p class="text-xs font-semibold text-red-400 mb-2">Cons</p>
+															<ul class="space-y-1">
+																{#each tradeoff.cons as con}
+																	<li class="text-sm text-gray-300 flex items-start gap-2">
+																		<XCircle class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+																		<span>{con}</span>
+																	</li>
+																{/each}
+															</ul>
+														</div>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								{#if study.lessonsLearned && study.lessonsLearned.length > 0}
+									<div>
+										<h4 class="text-lg font-semibold text-purple-400 mb-3">Lessons Learned</h4>
+										<ul class="space-y-2">
+											{#each study.lessonsLearned as lesson}
+												<li class="text-gray-300 flex items-start gap-3">
+													<ArrowRight class="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
+													<span>{lesson}</span>
+												</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
 	<!-- Interests & Technologies Section -->
 	<section id="interests" class="container mx-auto px-6 py-20">
 		<div class="max-w-6xl mx-auto">
@@ -412,6 +700,21 @@
 					<p class="text-gray-300 leading-relaxed">{interests[2].description}</p>
 				</div>
 			</div>
+		</div>
+	</section>
+
+	<!-- Testimonials Section -->
+	<section id="testimonials" class="container mx-auto px-6 py-20">
+		<div class="max-w-6xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+					What People Say
+				</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					Testimonials from colleagues, clients, and mentors who have worked with me
+				</p>
+			</div>
+			<TestimonialsCarousel />
 		</div>
 	</section>
 
