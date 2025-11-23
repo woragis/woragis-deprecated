@@ -1552,11 +1552,6 @@ func (s *service) UpdateTechnology(ctx context.Context, req UpdateTechnologyRequ
 		version = *req.Version
 	}
 
-	category := tech.Category
-	if req.Category != nil {
-		category = *req.Category
-	}
-
 	purpose := tech.Purpose
 	if req.Purpose != nil {
 		purpose = *req.Purpose
@@ -1569,6 +1564,10 @@ func (s *service) UpdateTechnology(ctx context.Context, req UpdateTechnologyRequ
 
 	if err := tech.UpdateDetails(name, version, purpose, link); err != nil {
 		return nil, err
+	}
+
+	if req.Category != nil {
+		tech.Category = *req.Category
 	}
 
 	if err := s.repo.UpdateTechnology(ctx, tech); err != nil {

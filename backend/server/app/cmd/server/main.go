@@ -27,6 +27,7 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
+	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
 	clientsdomain "github.com/woragis/backend/server/app/internal/domains/clients"
@@ -37,7 +38,6 @@ import (
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
-	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -268,15 +268,10 @@ func main() {
 	apiKeyRepo := apikeysdomain.NewGormRepository(db)
 	apiKeyService := apikeysdomain.NewService(apiKeyRepo, slogLogger)
 
-	// Public API group - supports API keys for GET requests, JWT for all methods
-	publicAPI := api.Group("", apikeysdomain.RequireAPIKeyOrAuth(
-		apiKeyService,
-		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
-		slogLogger,
-	))
-
 	// Protected API group - requires JWT for all operations
-	protectedAPI := api.Group("", authdomain.NewAuthMiddleware(jwtManager, slogLogger))
+	// Create protected routes group and apply JWT middleware
+	protectedAPI := api.Group("")
+	protectedAPI.Use(authdomain.NewAuthMiddleware(jwtManager, slogLogger))
 	authdomain.SetupProtectedRoutes(protectedAPI, authHandler)
 
 	if monitoringRepo != nil {
@@ -298,17 +293,37 @@ func main() {
 	projectService := projectsdomain.NewService(projectRepo, slogLogger)
 	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
 	// Projects: GET endpoints support API keys, POST/PATCH/DELETE require JWT
-	projectsdomain.SetupRoutes(publicAPI, projectHandler)
+	// Register routes first, then apply middleware to the group
+	projectsdomain.SetupRoutes(api, projectHandler)
+	// Apply middleware to /api/projects group
+	api.Group("/projects").Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
 
 	skillRepo := skillsdomain.NewGormRepository(db)
 	skillService := skillsdomain.NewService(skillRepo, slogLogger)
 	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
 	// Skills: GET endpoints support API keys, POST/PATCH/DELETE require JWT
-	skillsdomain.SetupRoutes(publicAPI, skillHandler)
+	skillsdomain.SetupRoutes(api, skillHandler)
+	// Apply middleware to /api/skills group
+	api.Group("/skills").Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
 
 	apiKeyHandler := apikeysdomain.NewHandler(apiKeyService, slogLogger)
 	// API key management requires JWT (admin only)
-	apikeysdomain.SetupRoutes(protectedAPI, apiKeyHandler)
+	// Register routes directly on api group with middleware applied via Use
+	apiKeyGroup := api.Group("/api-keys")
+	apiKeyGroup.Use(authdomain.NewAuthMiddleware(jwtManager, slogLogger))
+	apiKeyGroup.Post("/", apiKeyHandler.CreateAPIKey)
+	apiKeyGroup.Get("/", apiKeyHandler.ListAPIKeys)
+	apiKeyGroup.Get("/:id", apiKeyHandler.GetAPIKey)
+	apiKeyGroup.Patch("/:id", apiKeyHandler.UpdateAPIKey)
+	apiKeyGroup.Delete("/:id", apiKeyHandler.DeleteAPIKey)
 
 	ideaRepo := ideasdomain.NewGormRepository(db)
 	ideaService := ideasdomain.NewService(ideaRepo, slogLogger)
