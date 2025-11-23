@@ -152,7 +152,11 @@ async def chat(req: ChatRequest):
         inputs = f"{req.system}\n\nUser: {req.input}"
 
     logger.info("invoking chat chain", extra={"agent": agent_name, "provider": provider})
-    result = await chain.ainvoke({"input": inputs})
+    # The prompt template expects both 'agent_name' and 'input' variables
+    result = await chain.ainvoke({
+        "agent_name": agent_name.title() + " Agent",
+        "input": inputs
+    })
     if hasattr(result, "content"):
         output_text = result.content  # AIMessage
     else:
@@ -252,7 +256,11 @@ async def chat_stream(req: ChatStreamRequest):
         logger.info("stream started", extra={"agent": agent_name, "provider": provider})
         full_parts = []
         try:
-            async for event in chain.astream_events({"input": inputs}, version="v1"):
+            # The prompt template expects both 'agent_name' and 'input' variables
+            async for event in chain.astream_events({
+                "agent_name": agent_name.title() + " Agent",
+                "input": inputs
+            }, version="v1"):
                 if event.get("event") in ("on_chat_model_stream", "on_llm_new_token"):
                     data = event.get("data", {})
                     chunk = None
