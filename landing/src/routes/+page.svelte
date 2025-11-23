@@ -22,10 +22,10 @@
 	import BlogPostsSection from '$lib/components/BlogPostsSection.svelte';
 	import ProjectsShowcase from '$lib/components/ProjectsShowcase.svelte';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
-	import { t, language, translationsStore } from '$lib/i18n';
+	import { language, translationsStore } from '$lib/i18n';
 
 	// Reactive translation helper
-	$: $t = $translationsStore;
+	let t = $derived($translationsStore);
 
 	// Generate WhatsApp URL with pre-filled message
 	function getWhatsAppUrl(): string {
@@ -137,46 +137,46 @@
 			<div
 				class="inline-block mb-6 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-full text-blue-300 text-sm font-medium"
 			>
-				{$t('hero.badge')}
+				{t('hero.badge')}
 			</div>
 			<h1
 				class="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse"
 			>
-				{$t('hero.title')}
+				{t('hero.title')}
 			</h1>
 			<p class="text-xl md:text-2xl text-gray-300 mb-8 leading-relaxed">
-				{$t('hero.subtitle')}
+				{t('hero.subtitle')}
 			</p>
 			<div class="flex flex-wrap gap-4 justify-center">
 				<a
 					href="#projects"
 					class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-blue-500/50"
 				>
-					{$t('hero.viewProjects')}
+					{t('hero.viewProjects')}
 				</a>
 				<a
 					href="#technical-depth"
 					class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-purple-500/50"
 				>
-					{$t('hero.technicalDepth')}
+					{t('hero.technicalDepth')}
 				</a>
 				<a
 					href="/skills"
 					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
-					{$t('hero.viewSkills')}
+					{t('hero.viewSkills')}
 				</a>
 				<a
 					href="#testimonials"
 					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
-					{$t('testimonials.title')}
+					{t('testimonials.title')}
 				</a>
 				<a
 					href="#contact"
 					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
 				>
-					{$t('hero.contactMe')}
+					{t('hero.contactMe')}
 				</a>
 			</div>
 		</div>
@@ -185,10 +185,10 @@
 	<!-- About Section -->
 	<section id="about" class="container mx-auto px-6 py-20">
 		<div class="max-w-4xl mx-auto">
-			<h2 class="text-4xl font-bold mb-8 text-center">{$t('about.title')}</h2>
+			<h2 class="text-4xl font-bold mb-8 text-center">{t('about.title')}</h2>
 			<div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 shadow-xl">
 				<p class="text-lg text-gray-300 leading-relaxed">
-					{$t('about.description')}
+					{t('about.description')}
 				</p>
 			</div>
 		</div>
@@ -198,12 +198,12 @@
 	<section id="projects" class="container mx-auto px-6 py-20">
 		<div class="max-w-7xl mx-auto">
 			<div class="flex items-center justify-between mb-12">
-				<h2 class="text-4xl font-bold">{$t('projects.title')}</h2>
+				<h2 class="text-4xl font-bold">{t('projects.title')}</h2>
 				<a
 					href="/projects"
 					class="text-blue-400 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
 				>
-					{$t('projects.viewAll')}
+					{t('projects.viewAll')}
 					<ExternalLink class="w-5 h-5" />
 				</a>
 			</div>
@@ -216,10 +216,10 @@
 		<div class="max-w-7xl mx-auto">
 			<div class="text-center mb-12">
 				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-					{$t('blog.title')}
+					{t('blog.title')}
 				</h2>
 				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
-					{$t('blog.subtitle')}
+					{t('blog.subtitle')}
 				</p>
 			</div>
 			<BlogPostsSection />
@@ -643,7 +643,7 @@
 	<!-- Interests & Technologies Section -->
 	<section id="interests" class="container mx-auto px-6 py-20">
 		<div class="max-w-6xl mx-auto">
-			<h2 class="text-4xl font-bold mb-12 text-center">{$t('interests.title')}</h2>
+			<h2 class="text-4xl font-bold mb-12 text-center">{t('interests.title')}</h2>
 			<div class="grid md:grid-cols-2 gap-6">
 				<!-- AI & RAG -->
 				<div
@@ -710,10 +710,10 @@
 		<div class="max-w-6xl mx-auto">
 			<div class="text-center mb-12">
 				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-					{$t('testimonials.title')}
+					{t('testimonials.title')}
 				</h2>
 				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
-					{$t('testimonials.subtitle')}
+					{t('testimonials.subtitle')}
 				</p>
 			</div>
 			<TestimonialsCarousel />
@@ -734,13 +734,13 @@
 				<div
 					class="inline-block mb-4 px-4 py-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-full text-blue-300 text-sm font-medium"
 				>
-					{$t('contact.title')}
+					{t('contact.title')}
 				</div>
 				<h2 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-					{$t('contact.title')}
+					{t('contact.title')}
 				</h2>
 				<p class="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-					{$t('contact.subtitle')}
+					{t('contact.subtitle')}
 				</p>
 			</div>
 
@@ -763,13 +763,13 @@
 							<Mail class="w-8 h-8 text-white" />
 						</div>
 						<h3 class="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
-							{$t('contact.email')}
+							{t('contact.email')}
 						</h3>
 						<p class="text-gray-300 text-sm break-all group-hover:text-white transition-colors">
 							{contact.email}
 						</p>
 						<p class="text-blue-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-							{$t('contact.clickToEmail')}
+							{t('contact.clickToEmail')}
 						</p>
 					</div>
 				</a>
@@ -791,13 +791,13 @@
 								<Phone class="w-8 h-8 text-white" />
 							</div>
 							<h3 class="text-xl font-bold text-white mb-2 group-hover:text-green-300 transition-colors">
-								{$t('contact.phone')}
+								{t('contact.phone')}
 							</h3>
 							<p class="text-gray-300 text-sm group-hover:text-white transition-colors">
 								{contact.phone}
 							</p>
 							<p class="text-green-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-								{$t('contact.clickToCall')}
+								{t('contact.clickToCall')}
 							</p>
 						</div>
 					</a>
@@ -814,7 +814,7 @@
 							>
 								<MapPin class="w-8 h-8 text-white" />
 							</div>
-							<h3 class="text-xl font-bold text-white mb-2">{$t('contact.location')}</h3>
+							<h3 class="text-xl font-bold text-white mb-2">{t('contact.location')}</h3>
 							<p class="text-gray-300 text-sm">{contact.location}</p>
 						</div>
 					</div>
@@ -839,10 +839,10 @@
 								<Icon src={SiLinkedin} size="2rem" color="white" />
 							</div>
 							<h3 class="text-xl font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors">
-								{$t('contact.linkedin')}
+								{t('contact.linkedin')}
 							</h3>
 							<p class="text-gray-300 text-sm group-hover:text-white transition-colors">
-								{$t('contact.subtitle')}
+								{t('contact.subtitle')}
 							</p>
 							<p class="text-indigo-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
 								View profile →
@@ -870,10 +870,10 @@
 								<Icon src={SiWhatsapp} size="2rem" color="white" />
 							</div>
 							<h3 class="text-xl font-bold text-white mb-2 group-hover:text-emerald-300 transition-colors">
-								{$t('contact.whatsapp')}
+								{t('contact.whatsapp')}
 							</h3>
 							<p class="text-gray-300 text-sm group-hover:text-white transition-colors">
-								{$t('contact.subtitle')}
+								{t('contact.subtitle')}
 							</p>
 							<p class="text-emerald-400 text-xs mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
 								Start conversation →
@@ -912,7 +912,7 @@
 								<Icon src={SiGithub} size="2rem" color="white" />
 							</div>
 							<span class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors"
-								>{$t('contact.github')}</span
+								>{t('contact.github')}</span
 							>
 						</a>
 
@@ -929,7 +929,7 @@
 								<Icon src={SiInstagram} size="2rem" color="white" />
 							</div>
 							<span class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors"
-								>{$t('contact.instagram')}</span
+								>{t('contact.instagram')}</span
 							>
 						</a>
 
@@ -947,7 +947,7 @@
 									<Icon src={SiLinkedin} size="2rem" color="white" />
 								</div>
 								<span class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors"
-									>{$t('contact.linkedin')}</span
+									>{t('contact.linkedin')}</span
 								>
 							</a>
 						{/if}
@@ -966,7 +966,7 @@
 									<Icon src={SiWhatsapp} size="2rem" color="white" />
 								</div>
 								<span class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors"
-									>{$t('contact.whatsapp')}</span
+									>{t('contact.whatsapp')}</span
 								>
 							</a>
 						{/if}
@@ -1011,9 +1011,9 @@
 				{/if}
 			</div>
 			<p class="mb-4">
-				{$t('footer.tagline')}
-				<span class="text-gray-500">|</span> {$t('footer.backendDeveloper')}
-				<span class="text-gray-500">|</span> {$t('footer.devopsEnthusiast')}
+				{t('footer.tagline')}
+				<span class="text-gray-500">|</span> {t('footer.backendDeveloper')}
+				<span class="text-gray-500">|</span> {t('footer.devopsEnthusiast')}
 			</p>
 			<p class="text-sm">© 2024</p>
 		</div>
