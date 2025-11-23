@@ -15,13 +15,16 @@
 	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch, Tag, Layers, Zap, Target, CheckCircle2, XCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { contact, skills, interests } from '$lib/constants';
 	import { caseStudies, systemDesigns, problemSolutions } from '$lib/constants/technical';
-	import { listProjects } from '$lib/api/projects';
+	import type { TechnicalCaseStudy, SystemDesign, ProblemSolution } from '$lib/types/technical';
 	import { listSkillsWithCounts, type SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
 	import TestimonialsCarousel from '$lib/components/TestimonialsCarousel.svelte';
 	import BlogPostsSection from '$lib/components/BlogPostsSection.svelte';
 	import ProjectsShowcase from '$lib/components/ProjectsShowcase.svelte';
 	import { language, translationsStore } from '$lib/i18n';
+	import { createQuery } from '@tanstack/svelte-query';
+	import { listProjects } from '$lib/api/projects';
+	import { projectKeys } from '$lib/queries/projects';
 
 	// Reactive translation helper
 	let t = $derived($translationsStore);
@@ -40,29 +43,23 @@
 		return `https://wa.me/${phoneNumber}?text=${message}`;
 	}
 
-	// Featured projects
-	let featuredProjects: Project[] = $state([]);
-	let loadingProjects = $state(false);
+	// Featured projects - using TanStack Query
+	// createQuery expects an accessor function that returns options
+	const featuredProjectsQuery = createQuery(() => ({
+		queryKey: projectKeys.list({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' }),
+		queryFn: () => listProjects({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' })
+	}));
+	
+	let featuredProjects = $derived(featuredProjectsQuery.data?.slice(0, 6) || []);
+	let loadingProjects = $derived(featuredProjectsQuery.isPending);
 
 	// Skills
 	let popularSkills: SkillWithCount[] = $state([]);
 	let loadingSkills = $state(false);
 
 	onMount(async () => {
-		await Promise.all([fetchFeaturedProjects(), fetchPopularSkills()]);
+		await fetchPopularSkills();
 	});
-
-	async function fetchFeaturedProjects() {
-		loadingProjects = true;
-		try {
-			const projects = await listProjects({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' });
-			featuredProjects = projects.slice(0, 6);
-		} catch (error) {
-			console.error('Error fetching featured projects:', error);
-		} finally {
-			loadingProjects = false;
-		}
-	}
 
 	async function fetchPopularSkills() {
 		loadingSkills = true;
@@ -246,7 +243,7 @@
 				</div>
 			{:else}
 				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{#each popularSkills as skill}
+					{#each popularSkills as skill (skill.id || skill.name)}
 						<a
 							href="/skills"
 							class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 group"
@@ -300,7 +297,7 @@
 			</div>
 
 			<div class="grid md:grid-cols-2 gap-6 mb-12">
-				{#each systemDesigns as design}
+				{#each systemDesigns as design (design.id)}
 					<div
 						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300"
 					>
@@ -335,7 +332,7 @@
 								<div>
 									<h4 class="text-sm font-semibold text-blue-400 mb-2">Components</h4>
 									<div class="space-y-2">
-										{#each design.components as component}
+										{#each design.components as component (component.name)}
 											<div class="bg-gray-800/50 rounded-lg p-3">
 												<div class="flex items-center justify-between mb-1">
 													<span class="font-medium text-white">{component.name}</span>
@@ -386,7 +383,7 @@
 			</div>
 
 			<div class="space-y-6">
-				{#each problemSolutions as solution}
+				{#each problemSolutions as solution (solution.id)}
 					<div
 						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300"
 					>
@@ -430,7 +427,7 @@
 								<div>
 									<h4 class="text-sm font-semibold text-blue-400 mb-2">Technologies Used</h4>
 									<div class="flex flex-wrap gap-2">
-										{#each solution.technologies as tech}
+										{#each solution.technologies as tech (tech)}
 											<span
 												class="px-3 py-1 bg-blue-600/20 text-blue-300 rounded-full text-xs border border-blue-600/30"
 											>
@@ -485,7 +482,7 @@
 			</div>
 
 			<div class="space-y-8">
-				{#each caseStudies as study}
+				{#each caseStudies as study (study.id)}
 					<div
 						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700 hover:border-purple-500/50 transition-all duration-300"
 					>
@@ -534,7 +531,7 @@
 						</div>
 
 						<div class="flex flex-wrap gap-2 mb-6">
-							{#each study.technologies as tech}
+							{#each study.technologies as tech (tech)}
 								<span
 									class="px-3 py-1 bg-purple-600/20 text-purple-300 rounded-full text-xs border border-purple-600/30"
 								>
@@ -559,7 +556,7 @@
 									<div>
 										<h4 class="text-lg font-semibold text-cyan-400 mb-3">Key Metrics</h4>
 										<div class="grid md:grid-cols-3 gap-4">
-											{#each study.metrics as metric}
+											{#each study.metrics as metric (metric.label)}
 												<div
 													class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-lg p-4 border border-gray-700"
 												>
@@ -578,7 +575,7 @@
 									<div>
 										<h4 class="text-lg font-semibold text-yellow-400 mb-3">Trade-offs & Decisions</h4>
 										<div class="space-y-4">
-											{#each study.tradeoffs as tradeoff}
+											{#each study.tradeoffs as tradeoff (tradeoff.decision)}
 												<div
 													class="bg-gray-800/30 rounded-lg p-4 border border-gray-700"
 												>
@@ -587,7 +584,7 @@
 														<div>
 															<p class="text-xs font-semibold text-green-400 mb-2">Pros</p>
 															<ul class="space-y-1">
-																{#each tradeoff.pros as pro}
+																{#each tradeoff.pros as pro (pro)}
 																	<li class="text-sm text-gray-300 flex items-start gap-2">
 																		<CheckCircle2 class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
 																		<span>{pro}</span>
@@ -598,7 +595,7 @@
 														<div>
 															<p class="text-xs font-semibold text-red-400 mb-2">Cons</p>
 															<ul class="space-y-1">
-																{#each tradeoff.cons as con}
+																{#each tradeoff.cons as con (con)}
 																	<li class="text-sm text-gray-300 flex items-start gap-2">
 																		<XCircle class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
 																		<span>{con}</span>
@@ -617,7 +614,7 @@
 									<div>
 										<h4 class="text-lg font-semibold text-purple-400 mb-3">Lessons Learned</h4>
 										<ul class="space-y-2">
-											{#each study.lessonsLearned as lesson}
+											{#each study.lessonsLearned as lesson (lesson)}
 												<li class="text-gray-300 flex items-start gap-3">
 													<ArrowRight class="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" />
 													<span>{lesson}</span>
@@ -1037,6 +1034,7 @@
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}

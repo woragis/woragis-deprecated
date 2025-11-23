@@ -1,16 +1,19 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Search, Filter, X, ExternalLink, Calendar, TrendingUp, Code2, Globe, Github } from 'lucide-svelte';
 	import { Icon } from 'svelte-icons-pack';
 	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiPython } from 'svelte-icons-pack/si';
-	import { listProjects } from '$lib/api/projects';
 	import { getCaseStudyByProjectSlug } from '$lib/api/case-studies';
 	import type { Project, ProjectStatus, ProjectTechnology } from '$lib/types/project';
+	import { useProjectsQuery } from '$lib/queries/projects';
+	import { onMount } from 'svelte';
 
-	let projects: Project[] = $state([]);
+	// Fetch projects using TanStack Query
+	const projectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
+
+	let projects = $derived(projectsQuery.data || []);
 	let filteredProjects: Project[] = $state([]);
 	let caseStudyMap: Map<string, import('$lib/types/case-study').CaseStudy> = $state(new Map());
-	let loading = $state(false);
+	let loading = $derived(projectsQuery.isPending);
 	let searchQuery = $state('');
 	let statusFilter: ProjectStatus | 'all' = $state('all');
 	let technologyFilter = $state('');
@@ -27,28 +30,13 @@
 		).sort()
 	);
 
-	onMount(async () => {
-		await fetchProjects();
-	});
-
-	async function fetchProjects() {
-		loading = true;
-		try {
-			const data = await listProjects({
-				limit: 50,
-				sortBy: 'updatedAt',
-				sortOrder: 'desc'
-			});
-			projects = data;
+	// Watch for projects data changes and fetch case studies
+	$effect(() => {
+		if (projects.length > 0) {
 			applyFilters();
-			// Fetch case studies for all projects
-			await fetchCaseStudies(data);
-		} catch (error) {
-			console.error('Error fetching projects:', error);
-		} finally {
-			loading = false;
+			fetchCaseStudies(projects);
 		}
-	}
+	});
 
 	async function fetchCaseStudies(projectsToCheck: Project[]) {
 		const caseStudyPromises = projectsToCheck.map(async (project) => {

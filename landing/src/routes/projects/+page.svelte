@@ -1,15 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Icon } from 'svelte-icons-pack';
 	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiPython, SiGithub } from 'svelte-icons-pack/si';
 	import { Search, Filter, X, ChevronDown, ExternalLink, Calendar, TrendingUp } from 'lucide-svelte';
-	import { listProjects } from '$lib/api/projects';
-	import type { Project, ProjectFilters, ProjectStatus } from '$lib/types/project';
-
-	let projects: Project[] = $state([]);
-	let filteredProjects: Project[] = $state([]);
-	let loading = $state(true);
-	let error: string | null = $state(null);
+	import type { Project, ProjectFilters, ProjectStatus, ProjectTechnology } from '$lib/types/project';
+	import { useProjectsQuery } from '$lib/queries/projects';
 
 	// Filters
 	let searchQuery = $state('');
@@ -19,11 +13,19 @@
 	let sortOrder: 'asc' | 'desc' = $state('desc');
 	let showFilters = $state(false);
 
+	// Fetch all projects using TanStack Query (we'll filter client-side)
+	const projectsQuery = useProjectsQuery();
+
+	let projects = $derived(projectsQuery.data || []);
+	let filteredProjects: Project[] = $state([]);
+	let loading = $derived(projectsQuery.isPending);
+	let error = $derived(projectsQuery.error ? (projectsQuery.error instanceof Error ? projectsQuery.error.message : 'Failed to fetch projects') : null);
+
 	// Get unique technologies from all projects for filter
 	let availableTechnologies = $derived.by(() => {
 		const techSet = new Set<string>();
-		projects.forEach((project) => {
-			project.technologies?.forEach((tech) => {
+		projects.forEach((project: Project) => {
+			project.technologies?.forEach((tech: ProjectTechnology) => {
 				techSet.add(tech.name.toLowerCase());
 			});
 		});
@@ -56,31 +58,10 @@
 		{ value: 'healthScore', label: 'Health Score' }
 	];
 
-	onMount(async () => {
-		await fetchProjects();
+	// Apply filters when projects or filter values change
+	$effect(() => {
+		applyFilters();
 	});
-
-	async function fetchProjects() {
-		loading = true;
-		error = null;
-		try {
-			const filters: ProjectFilters = {
-				status: statusFilter !== 'all' ? statusFilter : undefined,
-				search: searchQuery || undefined,
-				technology: technologyFilter || undefined,
-				sortBy,
-				sortOrder
-			};
-
-			projects = await listProjects(filters);
-			applyFilters();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to fetch projects';
-			console.error('Error fetching projects:', err);
-		} finally {
-			loading = false;
-		}
-	}
 
 	function applyFilters() {
 		let filtered = [...projects];
@@ -89,7 +70,7 @@
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
 			filtered = filtered.filter(
-				(project) =>
+				(project: Project) =>
 					project.name.toLowerCase().includes(query) ||
 					project.description?.toLowerCase().includes(query) ||
 					project.slug.toLowerCase().includes(query)
@@ -98,13 +79,13 @@
 
 		// Apply status filter
 		if (statusFilter !== 'all') {
-			filtered = filtered.filter((project) => project.status === statusFilter);
+			filtered = filtered.filter((project: Project) => project.status === statusFilter);
 		}
 
 		// Apply technology filter
 		if (technologyFilter) {
-			filtered = filtered.filter((project) =>
-				project.technologies?.some((tech) =>
+			filtered = filtered.filter((project: Project) =>
+				project.technologies?.some((tech: ProjectTechnology) =>
 					tech.name.toLowerCase().includes(technologyFilter.toLowerCase())
 				)
 			);
@@ -272,7 +253,7 @@
 					<div class="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-4">
 						<!-- Status Filter -->
 						<div>
-							<label class="block text-sm font-medium text-gray-300 mb-2">Status</label>
+							<div class="block text-sm font-medium text-gray-300 mb-2">Status</div>
 							<div class="flex flex-wrap gap-2">
 								{#each statusOptions as option}
 									<button
@@ -293,8 +274,9 @@
 						<!-- Technology Filter -->
 						{#if availableTechnologies.length > 0}
 							<div>
-								<label class="block text-sm font-medium text-gray-300 mb-2">Technology</label>
+								<label for="technology-filter" class="block text-sm font-medium text-gray-300 mb-2">Technology</label>
 								<select
+									id="technology-filter"
 									bind:value={technologyFilter}
 									onchange={applyFilters}
 									class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
@@ -324,7 +306,7 @@
 					<p class="text-red-400 mb-2">Error loading projects</p>
 					<p class="text-gray-400 text-sm">{error}</p>
 					<button
-						onclick={fetchProjects}
+						onclick={() => projectsQuery.refetch()}
 						class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
 					>
 						Retry
@@ -459,6 +441,7 @@
 	.line-clamp-2 {
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
