@@ -18,4 +18,5 @@ export const api = {
 
 export { skills } from './constants/skills';
 export { interests } from './constants/interests';
+export { caseStudies, systemDesigns, problemSolutions } from './constants/technical';
 

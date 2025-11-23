@@ -1,17 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { FileText, ExternalLink } from 'lucide-svelte';
 	import { getProjectBySlug } from '$lib/api/projects';
+	import { getCaseStudyByProjectSlug } from '$lib/api/case-studies';
 	import type { Project } from '$lib/types/project';
 
 	let project: Project | null = $state(null);
+	let caseStudy: import('$lib/types/case-study').CaseStudy | null = $state(null);
 	let loading = $state(true);
 	let error: string | null = $state(null);
 
 	onMount(async () => {
 		const slug = $page.params.slug;
 		if (slug) {
-			await fetchProject(slug);
+			await Promise.all([fetchProject(slug), fetchCaseStudy(slug)]);
 		}
 	});
 
@@ -28,6 +31,15 @@
 			console.error('Error fetching project:', err);
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function fetchCaseStudy(projectSlug: string) {
+		try {
+			caseStudy = await getCaseStudyByProjectSlug(projectSlug);
+		} catch (err) {
+			// Silently fail - case study is optional
+			console.error('Error fetching case study:', err);
 		}
 	}
 </script>
@@ -63,10 +75,23 @@
 				</a>
 
 				<article class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 shadow-xl">
-					<h1 class="text-4xl font-bold mb-4">{project.name}</h1>
-					{#if project.description}
-						<p class="text-xl text-gray-300 mb-6">{project.description}</p>
-					{/if}
+					<div class="flex items-start justify-between mb-4">
+						<div class="flex-1">
+							<h1 class="text-4xl font-bold mb-4">{project.name}</h1>
+							{#if project.description}
+								<p class="text-xl text-gray-300 mb-6">{project.description}</p>
+							{/if}
+						</div>
+						{#if caseStudy}
+							<a
+								href="/case-studies/{caseStudy.id}"
+								class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors duration-200 text-white font-medium"
+							>
+								<FileText class="w-5 h-5" />
+								Case Study
+							</a>
+						{/if}
+					</div>
 
 					<div class="grid md:grid-cols-2 gap-6 mt-8">
 						<div>
