@@ -29,12 +29,16 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	casestudiesdomain "github.com/woragis/backend/server/app/internal/domains/casestudies"
 	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
 	clientsdomain "github.com/woragis/backend/server/app/internal/domains/clients"
 	financesdomain "github.com/woragis/backend/server/app/internal/domains/finances"
 	ideasdomain "github.com/woragis/backend/server/app/internal/domains/ideas"
 	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
+	postsdomain "github.com/woragis/backend/server/app/internal/domains/posts"
+	postcommentsdomain "github.com/woragis/backend/server/app/internal/domains/posts/comments"
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
+	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
@@ -294,6 +298,63 @@ func main() {
 	))
 	skillsdomain.SetupRoutes(skillsGroup, skillHandler)
 
+	// Posts: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	postRepo := postsdomain.NewGormRepository(db)
+	postService := postsdomain.NewService(postRepo, slogLogger)
+	postHandler := postsdomain.NewHandler(postService, slogLogger)
+	postsGroup := api.Group("/posts")
+	postsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	postsdomain.SetupRoutes(postsGroup, postHandler)
+
+	// Comments: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	commentRepo := postcommentsdomain.NewGormRepository(db)
+	commentService := postcommentsdomain.NewService(commentRepo, slogLogger)
+	commentHandler := postcommentsdomain.NewHandler(commentService, slogLogger)
+	commentsGroup := postsGroup.Group("/:postId/comments")
+	commentsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	postcommentsdomain.SetupRoutes(commentsGroup, commentHandler)
+	
+	// Also add comments routes at /posts/comments for direct access (postId in query/body)
+	commentsDirectGroup := api.Group("/posts/comments")
+	commentsDirectGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	postcommentsdomain.SetupRoutes(commentsDirectGroup, commentHandler)
+
+	// Testimonials: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	testimonialRepo := testimonialsdomain.NewGormRepository(db)
+	testimonialService := testimonialsdomain.NewService(testimonialRepo, slogLogger)
+	testimonialHandler := testimonialsdomain.NewHandler(testimonialService, slogLogger)
+	testimonialsGroup := api.Group("/testimonials")
+	testimonialsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	testimonialsdomain.SetupRoutes(testimonialsGroup, testimonialHandler)
+
+	// Case Studies: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	caseStudyRepo := casestudiesdomain.NewGormRepository(db)
+	caseStudyService := casestudiesdomain.NewService(caseStudyRepo, slogLogger)
+	caseStudyHandler := casestudiesdomain.NewHandler(caseStudyService, slogLogger)
+	caseStudiesGroup := api.Group("/case-studies")
+	caseStudiesGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	casestudiesdomain.SetupRoutes(caseStudiesGroup, caseStudyHandler)
+
 	// Protected API group - requires JWT for all operations
 	// Create protected routes group and apply JWT middleware
 	protectedAPI := api.Group("")
@@ -512,6 +573,15 @@ func migrate(db *gorm.DB) error {
 		&skillsdomain.Skill{},
 		&skillsdomain.ProjectSkill{},
 		&apikeysdomain.APIKey{},
+		&postsdomain.Post{},
+		&postsdomain.PostSkill{},
+		&postsdomain.Category{},
+		&postsdomain.PostCategory{},
+		&postsdomain.Tag{},
+		&postsdomain.PostTag{},
+		&postcommentsdomain.Comment{},
+		&testimonialsdomain.Testimonial{},
+		&casestudiesdomain.CaseStudy{},
 	)
 }
 

@@ -123,6 +123,189 @@
 - **Monitoring**
   - [ ] Persist structured events in production DB, alert threshold management, Grafana dashboard provisioning.
 
+## Landing Page Enhancements (Portfolio Optimization)
+
+### High-Impact Features for Hiring
+- [x] **Blog Integration & Latest Posts Section** (Complete)
+  - [x] Display latest blog posts from backend API (using existing posts domain).
+  - [x] Show featured posts prominently in hero or dedicated section.
+  - [x] Add "Read More" links to full blog posts.
+  - [x] Display post categories/tags for easy filtering.
+  - [x] Show reading time and publish date for each post.
+  - [ ] Add AI assistant for creating/editing posts: Show an AI helper as a sidebar on CRUD pages to help turn ideas into better, more explanatory posts (the AI translates your thinking into improved content).
+
+- [x] **Interactive Project Showcase** (Complete)
+  - [x] Add project filtering by tech stack, type, status (active/completed).
+  - [x] Implement search functionality for projects.
+  - [x] Add "View Live" / "View Code" buttons with status indicators.
+  - [x] Show project metrics (health score displayed).
+  - [x] Add project preview cards with hover effects and animations.
+  - [x] Display project tech stack badges with icons.
+  - [ ] Add AI assistant for creating/editing posts: Show an AI helper as a sidebar on CRUD pages to help turn ideas into better, more explanatory posts (the AI translates your thinking into improved content).
+
+- [x] **Case Studies & Deep Dives** (Complete)
+  - [x] Create detailed case study pages for major projects.
+  - [x] Include problem statement, solution approach, architecture diagrams.
+  - [x] Show before/after metrics, impact, lessons learned.
+  - [x] Add interactive architecture diagrams (Mermaid/PlantUML rendering).
+  - [x] Link case studies from project cards.
+  - [ ] Add AI assistant for creating/editing posts: Show an AI helper as a sidebar on CRUD pages to help turn ideas into better, more explanatory posts (the AI translates your thinking into improved content).
+
+- [x] **Testimonials & Recommendations** (Complete)
+  - [x] Add testimonials section from colleagues, clients, or mentors (backend domain created).
+  - [x] Include LinkedIn recommendations integration (LinkedInURL field in entity).
+  - [x] Display recommendation cards with photos, names, roles (AuthorPhoto, AuthorName, AuthorRole, AuthorCompany fields).
+  - [x] Add rotating testimonials carousel (frontend implementation complete with autoplay, navigation, and rating display).
+  - [ ] Add AI assistant for creating/editing posts: Show an AI helper as a sidebar on CRUD pages to help turn ideas into better, more explanatory posts (the AI translates your thinking into improved content).
+
+- [ ] **Resume/CV Download & Print View**
+  - [ ] Add "Download Resume" button (PDF generation or static PDF).
+  - [ ] Create print-optimized resume view (`/resume` route).
+  - [ ] Ensure resume is ATS-friendly (text-based, structured).
+  - [ ] Include QR code linking to portfolio.
+
+- [ ] **Contact Form & Easy Outreach**
+  - [ ] Implement contact form with validation.
+  - [ ] Add email integration (send emails via backend notification service).
+  - [ ] Include social media links (LinkedIn, GitHub, Twitter/X).
+  - [ ] Add calendar booking link (Calendly integration).
+  - [ ] Display response time expectations.
+
+### Medium-Impact Features
+- [ ] **GitHub Activity Integration**
+  - [ ] Display GitHub contribution graph.
+  - [ ] Show recent commits, repositories, languages used.
+  - [ ] Add "View on GitHub" links to projects.
+  - [ ] Show GitHub stars, forks, contributions count.
+
+- [ ] **Skills Visualization**
+  - [ ] Create interactive skills radar chart or skill tree.
+  - [ ] Show proficiency levels (beginner/intermediate/advanced/expert).
+  - [ ] Add skill categories (Backend, Frontend, DevOps, etc.).
+  - [ ] Link skills to projects that use them.
+
+- [ ] **Achievement Badges & Certifications**
+  - [ ] Display certifications (AWS, Google Cloud, etc.).
+  - [ ] Show achievement badges (hackathons, open source contributions).
+  - [ ] Add certification verification links.
+  - [ ] Include completion dates and expiration dates.
+
+- [ ] **Video Introduction**
+  - [ ] Add short video introduction (30-60 seconds).
+  - [ ] Embed YouTube/Vimeo video or self-hosted.
+  - [ ] Include transcript for accessibility.
+  - [ ] Add play button overlay on hero section.
+
+- [ ] **Newsletter Signup**
+  - [ ] Add newsletter subscription form.
+  - [ ] Integrate with backend notification service.
+  - [ ] Send welcome email on subscription.
+  - [ ] Show subscriber count (if public).
+
+- [ ] **Search Functionality**
+  - [ ] Implement site-wide search (projects, blog posts, skills).
+  - [ ] Add search bar in header/navigation.
+  - [ ] Show search results with categories.
+  - [ ] Add keyboard shortcuts (Ctrl+K for search).
+
+### UX/UI Enhancements
+- [ ] **Dark Mode Toggle**
+  - [ ] Implement dark/light theme switcher.
+  - [ ] Persist theme preference in localStorage.
+  - [ ] Add smooth theme transition animations.
+  - [ ] Ensure all components support both themes.
+
+- [ ] **Accessibility Improvements**
+  - [ ] Add ARIA labels to all interactive elements.
+  - [ ] Ensure keyboard navigation works throughout.
+  - [ ] Add skip-to-content link.
+  - [ ] Test with screen readers (NVDA, JAWS).
+  - [ ] Ensure color contrast meets WCAG AA standards.
+  - [ ] Add focus indicators for keyboard users.
+
+- [ ] **Performance Optimization**
+  - [ ] Implement lazy loading for images and components.
+  - [ ] Add loading skeletons for API data.
+  - [ ] Optimize bundle size (code splitting).
+  - [ ] Add service worker for offline support.
+  - [ ] Display Lighthouse scores (performance, accessibility, SEO).
+
+- [ ] **Multi-language Support**
+  - [ ] Add language switcher (English, Portuguese, etc.).
+  - [ ] Implement i18n with SvelteKit.
+  - [ ] Translate all content (projects, blog posts, skills).
+  - [ ] Store language preference in localStorage.
+
+- [ ] **Responsive Design Enhancements**
+  - [ ] Ensure mobile-first design throughout.
+  - [ ] Test on various screen sizes (mobile, tablet, desktop).
+  - [ ] Add mobile navigation menu (hamburger menu).
+  - [ ] Optimize touch targets for mobile.
+
+- [ ] **Animations & Micro-interactions**
+  - [ ] Add smooth scroll animations (fade-in, slide-up).
+  - [ ] Implement hover effects on cards and buttons.
+  - [ ] Add loading animations for API calls.
+  - [ ] Include progress indicators for long pages.
+  - [ ] Add confetti animation on form submission success.
+
+### SEO & Discoverability
+- [ ] **SEO Optimization**
+  - [ ] Add meta tags for all pages (title, description, keywords).
+  - [ ] Implement Open Graph tags for social sharing.
+  - [ ] Add structured data (JSON-LD) for Person, Organization.
+  - [ ] Create sitemap.xml and robots.txt.
+  - [ ] Add canonical URLs to prevent duplicate content.
+
+- [ ] **Social Media Integration**
+  - [ ] Add social sharing buttons (LinkedIn, Twitter, Facebook).
+  - [ ] Implement Open Graph preview cards.
+  - [ ] Add Twitter Card meta tags.
+  - [ ] Create shareable project/blog post links.
+
+- [ ] **Analytics & Tracking**
+  - [ ] Integrate Google Analytics or Plausible Analytics.
+  - [ ] Track page views, user interactions, form submissions.
+  - [ ] Monitor bounce rate, time on page, conversion rates.
+  - [ ] Add heatmap tracking (optional, Hotjar/Clarity).
+
+### Content & Engagement
+- [ ] **About Me Section Enhancement**
+  - [ ] Add personal story, background, journey.
+  - [ ] Include professional photo.
+  - [ ] Show career timeline or journey.
+  - [ ] Add "Why I Code" or mission statement.
+
+- [ ] **Call-to-Action (CTA) Optimization**
+  - [ ] Add clear CTAs throughout page (Hire Me, View Projects, Contact).
+  - [ ] Use action-oriented button text.
+  - [ ] Place CTAs strategically (above fold, after sections).
+  - [ ] A/B test different CTA copy and placements.
+
+- [ ] **Content Freshness**
+  - [ ] Add "Last Updated" timestamps to projects.
+  - [ ] Show recent activity or "What I'm Working On" section.
+  - [ ] Display current availability status (Available for Hire, Open to Opportunities).
+  - [ ] Add blog post update notifications.
+
+### Technical Demonstrations
+- [ ] **Live Code Examples**
+  - [ ] Add interactive code playground (CodeSandbox/StackBlitz embed).
+  - [ ] Show code snippets with syntax highlighting.
+  - [ ] Display GitHub Gists for quick code examples.
+  - [ ] Add "Run Code" buttons for executable examples.
+
+- [ ] **API Documentation Integration**
+  - [ ] Link to backend API documentation (if public).
+  - [ ] Show API endpoint examples.
+  - [ ] Display API usage statistics (if public API).
+
+- [ ] **System Architecture Visualization**
+  - [ ] Add interactive architecture diagrams.
+  - [ ] Show system components and data flow.
+  - [ ] Include infrastructure diagrams (AWS, Docker, etc.).
+  - [ ] Link to detailed technical blog posts.
+
 ## Observability / Platform Enhancements
 - Add **WebSocket/Server-Sent Events** pipeline for live metrics and chat streaming.
 - Evaluate **gRPC** endpoint layer for Flutter clients; define protobuf schema and gateway.
