@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Icon } from 'svelte-icons-pack';
 	import {
 		SiGo,
@@ -16,15 +15,14 @@
 	import { contact, skills, interests } from '$lib/constants';
 	import { caseStudies, systemDesigns, problemSolutions } from '$lib/constants/technical';
 	import type { TechnicalCaseStudy, SystemDesign, ProblemSolution } from '$lib/types/technical';
-	import { listSkillsWithCounts, type SkillWithCount } from '$lib/api/skills';
+	import type { SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
 	import TestimonialsCarousel from '$lib/components/TestimonialsCarousel.svelte';
 	import BlogPostsSection from '$lib/components/BlogPostsSection.svelte';
 	import ProjectsShowcase from '$lib/components/ProjectsShowcase.svelte';
 	import { language, translationsStore } from '$lib/i18n';
-	import { createQuery } from '@tanstack/svelte-query';
-	import { listProjects } from '$lib/api/projects';
-	import { projectKeys } from '$lib/queries/projects';
+	import { useProjectsQuery } from '$lib/queries/projects';
+	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
 
 	// Reactive translation helper
 	let t = $derived($translationsStore);
@@ -44,38 +42,21 @@
 	}
 
 	// Featured projects - using TanStack Query
-	// createQuery expects an accessor function that returns options
-	const featuredProjectsQuery = createQuery(() => ({
-		queryKey: projectKeys.list({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' }),
-		queryFn: () => listProjects({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' })
-	}));
+	const featuredProjectsQuery = useProjectsQuery({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' });
 	
 	let featuredProjects = $derived(featuredProjectsQuery.data?.slice(0, 6) || []);
 	let loadingProjects = $derived(featuredProjectsQuery.isPending);
 
-	// Skills
-	let popularSkills: SkillWithCount[] = $state([]);
-	let loadingSkills = $state(false);
-
-	onMount(async () => {
-		await fetchPopularSkills();
+	// Skills - using TanStack Query
+	const skillsQuery = useSkillsWithCountsQuery();
+	let popularSkills = $derived.by(() => {
+		const allSkills = skillsQuery.data || [];
+		return allSkills
+			.filter((skill: SkillWithCount) => skill.projectCount > 0)
+			.sort((a: SkillWithCount, b: SkillWithCount) => b.projectCount - a.projectCount)
+			.slice(0, 6);
 	});
-
-	async function fetchPopularSkills() {
-		loadingSkills = true;
-		try {
-			const allSkills = await listSkillsWithCounts();
-			// Get top 6 skills by project count
-			popularSkills = allSkills
-				.filter((skill) => skill.projectCount > 0)
-				.sort((a, b) => b.projectCount - a.projectCount)
-				.slice(0, 6);
-		} catch (error) {
-			console.error('Error fetching skills:', error);
-		} finally {
-			loadingSkills = false;
-		}
-	}
+	let loadingSkills = $derived(skillsQuery.isPending);
 
 	function formatDate(dateString: string): string {
 		const date = new Date(dateString);

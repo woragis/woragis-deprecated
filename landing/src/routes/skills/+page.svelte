@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Search, Filter, X, Tag, Code, Database, Server, Wrench } from 'lucide-svelte';
-	import { listSkillsWithCounts, searchSkills, type SkillWithCount, type SkillCategory } from '$lib/api/skills';
+	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
+	import type { SkillWithCount, SkillCategory } from '$lib/api/skills';
 
-	let skills: SkillWithCount[] = $state([]);
+	// Fetch skills using TanStack Query
+	const skillsQuery = useSkillsWithCountsQuery();
+	let skills = $derived(skillsQuery.data || []);
 	let filteredSkills: SkillWithCount[] = $state([]);
-	let loading = $state(true);
-	let error: string | null = $state(null);
+	let loading = $derived(skillsQuery.isPending);
+	let error = $derived(skillsQuery.error ? (skillsQuery.error instanceof Error ? skillsQuery.error.message : 'Failed to fetch skills') : null);
 
 	// Filters
 	let searchQuery = $state('');
@@ -43,23 +45,6 @@
 		other: 'bg-gray-600'
 	};
 
-	onMount(async () => {
-		await fetchSkills();
-	});
-
-	async function fetchSkills() {
-		loading = true;
-		error = null;
-		try {
-			skills = await listSkillsWithCounts();
-			applyFilters();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to fetch skills';
-			console.error('Error fetching skills:', err);
-		} finally {
-			loading = false;
-		}
-	}
 
 	function applyFilters() {
 		let filtered = [...skills];

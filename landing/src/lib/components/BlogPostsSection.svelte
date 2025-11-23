@@ -1,48 +1,42 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Calendar, Clock, ExternalLink, Tag as TagIcon, FolderOpen, Star } from 'lucide-svelte';
-	import { listPosts, calculateReadingTime, getPostSkills, getPostCategories, getPostTags } from '$lib/api/posts';
+	import { calculateReadingTime, getPostSkills, getPostCategories, getPostTags } from '$lib/api/posts';
+	import { usePostsQuery } from '$lib/queries/posts';
 	import type { Post } from '$lib/types/post';
 
-	let posts: Post[] = $state([]);
-	let loading = $state(false);
-	let featuredPosts: Post[] = $state([]);
-	let latestPosts: Post[] = $state([]);
-
-	onMount(async () => {
-		await fetchPosts();
+	// Fetch posts using TanStack Query
+	const featuredPostsQuery = usePostsQuery({
+		status: 'published',
+		featured: true,
+		limit: 3,
+		orderBy: 'publishedAt',
+		order: 'desc'
 	});
 
-	async function fetchPosts() {
-		loading = true;
-		try {
-			// Fetch featured posts
-			const featured = await listPosts({
-				status: 'published',
-				featured: true,
-				limit: 3,
-				orderBy: 'publishedAt',
-				order: 'desc'
-			});
+	const latestPostsQuery = usePostsQuery({
+		status: 'published',
+		limit: 6,
+		orderBy: 'publishedAt',
+		order: 'desc'
+	});
 
-			// Fetch latest posts
-			const latest = await listPosts({
-				status: 'published',
-				limit: 6,
-				orderBy: 'publishedAt',
-				order: 'desc'
-			});
+	let featuredPosts: Post[] = $state([]);
+	let latestPosts: Post[] = $state([]);
+	let posts: Post[] = $derived([...featuredPosts, ...latestPosts.filter(p => !featuredPosts.some(fp => fp.id === p.id))]);
+	let loading = $derived(featuredPostsQuery.isPending || latestPostsQuery.isPending);
 
-			// Enrich posts with relationships
-			featuredPosts = await enrichPosts(featured);
-			latestPosts = await enrichPosts(latest.slice(0, 6));
-			posts = [...featuredPosts, ...latestPosts.filter(p => !featuredPosts.some(fp => fp.id === p.id))];
-		} catch (error) {
-			console.error('Error fetching posts:', error);
-		} finally {
-			loading = false;
+	// Enrich posts when data is available
+	$effect(async () => {
+		if (featuredPostsQuery.data) {
+			featuredPosts = await enrichPosts(featuredPostsQuery.data);
 		}
-	}
+	});
+
+	$effect(async () => {
+		if (latestPostsQuery.data) {
+			latestPosts = await enrichPosts(latestPostsQuery.data.slice(0, 6));
+		}
+	});
 
 	async function enrichPosts(postsToEnrich: Post[]): Promise<Post[]> {
 		return Promise.all(
