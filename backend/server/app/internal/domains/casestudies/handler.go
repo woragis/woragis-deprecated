@@ -9,6 +9,8 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -23,17 +25,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a case study handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -100,6 +106,73 @@ func (h *handler) CreateCaseStudy(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Automatically trigger translations for all supported languages
+	if h.translationService != nil {
+		// Prepare source text for translation
+		sourceText := make(map[string]string)
+		if caseStudy.Title != "" {
+			sourceText["title"] = caseStudy.Title
+		}
+		if caseStudy.Problem != "" {
+			sourceText["problem"] = caseStudy.Problem
+		}
+		if caseStudy.Context != "" {
+			sourceText["context"] = caseStudy.Context
+		}
+		if caseStudy.Solution != "" {
+			sourceText["solution"] = caseStudy.Solution
+		}
+
+		// Fields to translate
+		fields := []string{}
+		if caseStudy.Title != "" {
+			fields = append(fields, "title")
+		}
+		if caseStudy.Problem != "" {
+			fields = append(fields, "problem")
+		}
+		if caseStudy.Context != "" {
+			fields = append(fields, "context")
+		}
+		if caseStudy.Solution != "" {
+			fields = append(fields, "solution")
+		}
+
+		// Queue translations for all supported languages (except English)
+		supportedLanguages := []translationsdomain.Language{
+			translationsdomain.LanguagePTBR,
+			translationsdomain.LanguageFR,
+			translationsdomain.LanguageES,
+			translationsdomain.LanguageDE,
+			translationsdomain.LanguageRU,
+			translationsdomain.LanguageJA,
+			translationsdomain.LanguageKO,
+			translationsdomain.LanguageZHCN,
+			translationsdomain.LanguageEL,
+			translationsdomain.LanguageLA,
+		}
+
+		// Trigger translations asynchronously (don't block the response)
+		go func() {
+			for _, lang := range supportedLanguages {
+				if err := h.translationService.RequestTranslation(
+					c.Context(),
+					translationsdomain.EntityTypeCaseStudy,
+					caseStudy.ID,
+					lang,
+					fields,
+					sourceText,
+				); err != nil {
+					h.logger.Warn("Failed to queue translation",
+						slog.String("caseStudyId", caseStudy.ID.String()),
+						slog.String("language", string(lang)),
+						slog.Any("error", err),
+					)
+				}
+			}
+		}()
+	}
+
 	return response.Success(c, fiber.StatusCreated, caseStudy)
 }
 
@@ -155,6 +228,18 @@ func (h *handler) GetCaseStudy(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":    &caseStudy.Title,
+			"problem":   &caseStudy.Problem,
+			"context":   &caseStudy.Context,
+			"solution":  &caseStudy.Solution,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeCaseStudy, caseStudy.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, caseStudy)
 }
 
@@ -169,6 +254,18 @@ func (h *handler) GetCaseStudyByProjectSlug(c *fiber.Ctx) error {
 	caseStudy, err := h.service.GetCaseStudyByProjectSlug(c.Context(), projectSlug)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":    &caseStudy.Title,
+			"problem":   &caseStudy.Problem,
+			"context":   &caseStudy.Context,
+			"solution":  &caseStudy.Solution,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeCaseStudy, caseStudy.ID, language, fieldMap)
 	}
 
 	return response.Success(c, fiber.StatusOK, caseStudy)

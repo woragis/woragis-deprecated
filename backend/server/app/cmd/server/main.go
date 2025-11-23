@@ -39,6 +39,7 @@ import (
 	postcommentsdomain "github.com/woragis/backend/server/app/internal/domains/posts/comments"
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
 	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
@@ -50,6 +51,7 @@ import (
 	schedulerworker "github.com/woragis/backend/server/app/internal/workers/scheduler"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 )
 
 func main() {
@@ -276,9 +278,17 @@ func main() {
 	// to ensure their middleware runs first for matching routes
 	projectRepo := projectsdomain.NewGormRepository(db)
 	projectService := projectsdomain.NewService(projectRepo, slogLogger)
-	projectHandler := projectsdomain.NewHandler(projectService, slogLogger)
+	// Initialize translation services first (needed by other handlers)
+	translationRepo := translationsdomain.NewGormRepository(db)
+	translationQueue := translationsdomain.NewRedisQueue(redisClient)
+	aiClient := langchainservice.NewClient(slogLogger)
+	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, slogLogger)
+	translationEnricher := translationenricher.NewEnricher(translationRepo, slogLogger)
+
+	projectHandler := projectsdomain.NewHandler(projectService, translationEnricher, translationService, slogLogger)
 	// Projects: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	projectsGroup := api.Group("/projects")
+	projectsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	projectsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -301,8 +311,9 @@ func main() {
 	// Posts: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	postRepo := postsdomain.NewGormRepository(db)
 	postService := postsdomain.NewService(postRepo, slogLogger)
-	postHandler := postsdomain.NewHandler(postService, slogLogger)
+	postHandler := postsdomain.NewHandler(postService, translationEnricher, translationService, slogLogger)
 	postsGroup := api.Group("/posts")
+	postsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	postsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -334,8 +345,9 @@ func main() {
 	// Testimonials: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	testimonialRepo := testimonialsdomain.NewGormRepository(db)
 	testimonialService := testimonialsdomain.NewService(testimonialRepo, slogLogger)
-	testimonialHandler := testimonialsdomain.NewHandler(testimonialService, slogLogger)
+	testimonialHandler := testimonialsdomain.NewHandler(testimonialService, translationEnricher, translationService, slogLogger)
 	testimonialsGroup := api.Group("/testimonials")
+	testimonialsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	testimonialsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -343,11 +355,22 @@ func main() {
 	))
 	testimonialsdomain.SetupRoutes(testimonialsGroup, testimonialHandler)
 
+	// Translations: POST endpoints require JWT, GET endpoints support API keys
+	translationHandler := translationsdomain.NewHandler(translationService, db, slogLogger)
+	translationsGroup := api.Group("/translations")
+	translationsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	translationsdomain.SetupRoutes(translationsGroup, translationHandler)
+
 	// Case Studies: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	caseStudyRepo := casestudiesdomain.NewGormRepository(db)
 	caseStudyService := casestudiesdomain.NewService(caseStudyRepo, slogLogger)
-	caseStudyHandler := casestudiesdomain.NewHandler(caseStudyService, slogLogger)
+	caseStudyHandler := casestudiesdomain.NewHandler(caseStudyService, translationEnricher, translationService, slogLogger)
 	caseStudiesGroup := api.Group("/case-studies")
+	caseStudiesGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	caseStudiesGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -582,6 +605,7 @@ func migrate(db *gorm.DB) error {
 		&postcommentsdomain.Comment{},
 		&testimonialsdomain.Testimonial{},
 		&casestudiesdomain.CaseStudy{},
+		&translationsdomain.Translation{},
 	)
 }
 

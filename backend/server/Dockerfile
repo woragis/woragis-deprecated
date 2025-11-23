@@ -16,6 +16,7 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o /build/bin/server ./app/cmd/server
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o /build/bin/translation-worker ./app/cmd/translation-worker
 
 FROM debian:bookworm-slim AS runtime
 
@@ -26,6 +27,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/bin/server /usr/local/bin/server
+COPY --from=builder /build/bin/translation-worker /usr/local/bin/translation-worker
 
 ENV APP_NAME=woragis-server \
     APP_ENV=production \

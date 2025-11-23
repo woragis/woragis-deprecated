@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -46,17 +48,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a post handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -144,6 +150,91 @@ func (h *handler) CreatePost(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Automatically trigger translations for all supported languages
+	if h.translationService != nil {
+		// Prepare source text for translation
+		sourceText := make(map[string]string)
+		if post.Title != "" {
+			sourceText["title"] = post.Title
+		}
+		if post.Content != "" {
+			sourceText["content"] = post.Content
+		}
+		if post.Excerpt != "" {
+			sourceText["excerpt"] = post.Excerpt
+		}
+		if post.MetaTitle != "" {
+			sourceText["metaTitle"] = post.MetaTitle
+		}
+		if post.MetaDescription != "" {
+			sourceText["metaDescription"] = post.MetaDescription
+		}
+		if post.OGTitle != "" {
+			sourceText["ogTitle"] = post.OGTitle
+		}
+		if post.OGDescription != "" {
+			sourceText["ogDescription"] = post.OGDescription
+		}
+
+		// Fields to translate
+		fields := []string{}
+		if post.Title != "" {
+			fields = append(fields, "title")
+		}
+		if post.Content != "" {
+			fields = append(fields, "content")
+		}
+		if post.Excerpt != "" {
+			fields = append(fields, "excerpt")
+		}
+		if post.MetaTitle != "" {
+			fields = append(fields, "metaTitle")
+		}
+		if post.MetaDescription != "" {
+			fields = append(fields, "metaDescription")
+		}
+		if post.OGTitle != "" {
+			fields = append(fields, "ogTitle")
+		}
+		if post.OGDescription != "" {
+			fields = append(fields, "ogDescription")
+		}
+
+		// Queue translations for all supported languages (except English)
+		supportedLanguages := []translationsdomain.Language{
+			translationsdomain.LanguagePTBR,
+			translationsdomain.LanguageFR,
+			translationsdomain.LanguageES,
+			translationsdomain.LanguageDE,
+			translationsdomain.LanguageRU,
+			translationsdomain.LanguageJA,
+			translationsdomain.LanguageKO,
+			translationsdomain.LanguageZHCN,
+			translationsdomain.LanguageEL,
+			translationsdomain.LanguageLA,
+		}
+
+		// Trigger translations asynchronously (don't block the response)
+		go func() {
+			for _, lang := range supportedLanguages {
+				if err := h.translationService.RequestTranslation(
+					c.Context(),
+					translationsdomain.EntityTypePost,
+					post.ID,
+					lang,
+					fields,
+					sourceText,
+				); err != nil {
+					h.logger.Warn("Failed to queue translation",
+						slog.String("postId", post.ID.String()),
+						slog.String("language", string(lang)),
+						slog.Any("error", err),
+					)
+				}
+			}
+		}()
+	}
+
 	return response.Success(c, fiber.StatusCreated, toPostResponse(post))
 }
 
@@ -200,6 +291,21 @@ func (h *handler) GetPost(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":          &post.Title,
+			"content":        &post.Content,
+			"excerpt":        &post.Excerpt,
+			"metaTitle":      &post.MetaTitle,
+			"metaDescription": &post.MetaDescription,
+			"ogTitle":        &post.OGTitle,
+			"ogDescription":  &post.OGDescription,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypePost, post.ID, language, fieldMap)
+	}
+
 	// Increment views for published posts
 	if post.Status == PostStatusPublished {
 		go h.service.IncrementPostViews(c.Context(), postID)
@@ -217,6 +323,21 @@ func (h *handler) GetPostBySlug(c *fiber.Ctx) error {
 	post, err := h.service.GetPostBySlug(c.Context(), slug)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":          &post.Title,
+			"content":        &post.Content,
+			"excerpt":        &post.Excerpt,
+			"metaTitle":      &post.MetaTitle,
+			"metaDescription": &post.MetaDescription,
+			"ogTitle":        &post.OGTitle,
+			"ogDescription":  &post.OGDescription,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypePost, post.ID, language, fieldMap)
 	}
 
 	// Increment views for published posts

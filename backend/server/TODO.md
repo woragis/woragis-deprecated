@@ -150,7 +150,7 @@
   - [x] Add interactive architecture diagrams (Mermaid/PlantUML rendering).
   - [x] Link case studies from project cards.
   - [ ] Add AI assistant for creating/editing posts: Show an AI helper as a sidebar on CRUD pages to help turn ideas into better, more explanatory posts (the AI translates your thinking into improved content).
-
+- [ ] - Fazer o pipeline ser automatico e traduzir para todas as 11 linguas. seja para testimonials, projects, posts, ou qualquer outra coisa que ficara publica, tipo descricao de skills or qualquer coisa
 - [x] **Testimonials & Recommendations** (Complete)
   - [x] Add testimonials section from colleagues, clients, or mentors (backend domain created).
   - [x] Include LinkedIn recommendations integration (LinkedInURL field in entity).

@@ -9,6 +9,8 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -25,17 +27,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a testimonial handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -93,6 +99,67 @@ func (h *handler) CreateTestimonial(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Automatically trigger translations for all supported languages
+	if h.translationService != nil {
+		// Prepare source text for translation
+		sourceText := make(map[string]string)
+		if testimonial.Content != "" {
+			sourceText["content"] = testimonial.Content
+		}
+		if testimonial.AuthorRole != "" {
+			sourceText["authorRole"] = testimonial.AuthorRole
+		}
+		if testimonial.AuthorCompany != "" {
+			sourceText["authorCompany"] = testimonial.AuthorCompany
+		}
+
+		// Fields to translate
+		fields := []string{}
+		if testimonial.Content != "" {
+			fields = append(fields, "content")
+		}
+		if testimonial.AuthorRole != "" {
+			fields = append(fields, "authorRole")
+		}
+		if testimonial.AuthorCompany != "" {
+			fields = append(fields, "authorCompany")
+		}
+
+		// Queue translations for all supported languages (except English)
+		supportedLanguages := []translationsdomain.Language{
+			translationsdomain.LanguagePTBR,
+			translationsdomain.LanguageFR,
+			translationsdomain.LanguageES,
+			translationsdomain.LanguageDE,
+			translationsdomain.LanguageRU,
+			translationsdomain.LanguageJA,
+			translationsdomain.LanguageKO,
+			translationsdomain.LanguageZHCN,
+			translationsdomain.LanguageEL,
+			translationsdomain.LanguageLA,
+		}
+
+		// Trigger translations asynchronously (don't block the response)
+		go func() {
+			for _, lang := range supportedLanguages {
+				if err := h.translationService.RequestTranslation(
+					c.Context(),
+					translationsdomain.EntityTypeTestimonial,
+					testimonial.ID,
+					lang,
+					fields,
+					sourceText,
+				); err != nil {
+					h.logger.Warn("Failed to queue translation",
+						slog.String("testimonialId", testimonial.ID.String()),
+						slog.String("language", string(lang)),
+						slog.Any("error", err),
+					)
+				}
+			}
+		}()
+	}
+
 	return response.Success(c, fiber.StatusCreated, testimonial)
 }
 
@@ -147,6 +214,17 @@ func (h *handler) GetTestimonial(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"content":      &testimonial.Content,
+			"authorRole":   &testimonial.AuthorRole,
+			"authorCompany": &testimonial.AuthorCompany,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeTestimonial, testimonial.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, testimonial)
 }
 
@@ -197,6 +275,19 @@ func (h *handler) ListTestimonials(c *fiber.Ctx) error {
 	testimonials, err := h.service.ListTestimonials(c.Context(), filters)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range testimonials {
+			fieldMap := map[string]*string{
+				"content":      &testimonials[i].Content,
+				"authorRole":   &testimonials[i].AuthorRole,
+				"authorCompany": &testimonials[i].AuthorCompany,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeTestimonial, testimonials[i].ID, language, fieldMap)
+		}
 	}
 
 	return response.Success(c, fiber.StatusOK, testimonials)
