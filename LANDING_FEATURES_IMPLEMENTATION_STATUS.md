@@ -327,6 +327,9 @@ All domains need CRUD interfaces in the admin frontend:
 6. **Skills Section** ✅
    - Popular skills display
    - Shows category and project count
+   - ✅ Proficiency level badges with star ratings (IMPLEMENTED)
+   - ✅ Years of experience display (IMPLEMENTED)
+   - ✅ Last used date display (IMPLEMENTED)
    - Links to full skills page
 
 7. **System Designs Section** ✅
@@ -399,13 +402,14 @@ All domains need CRUD interfaces in the admin frontend:
 
 #### Hard Skills Display Enhancements
 
-1. **Skill Proficiency Levels** ❌
-   - Currently shows only name, category, and project count
-   - Missing: Proficiency level badges (Expert/Advanced/Proficient/Learning)
-   - Missing: Visual indicators
+1. **Skill Proficiency Levels** ✅
+   - ✅ Proficiency level badges (Expert/Advanced/Proficient/Learning) (IMPLEMENTED)
+   - ✅ Visual indicators with star ratings (IMPLEMENTED)
+   - ✅ Color-coded badges (purple for expert, blue for advanced, green for proficient, yellow for learning)
 
-2. **Years of Experience & Last Used Date** ❌
-   - Backend has the data, but not displayed on landing page
+2. **Years of Experience & Last Used Date** ✅
+   - ✅ Years of experience display (IMPLEMENTED)
+   - ✅ Last used date display (IMPLEMENTED)
 
 3. **Technology Stack Timeline** ❌
    - Backend has `/skills/timeline` endpoint

@@ -52,7 +52,15 @@
 	"skills": {
 		"title": "Skills & Expertise",
 		"subtitle": "Technologies and tools I work with",
-		"noSkills": "No skills found"
+		"noSkills": "No skills found",
+		"proficiency": {
+			"expert": "Expert",
+			"advanced": "Advanced",
+			"proficient": "Proficient",
+			"learning": "Learning"
+		},
+		"yearsExperience": "{years} of experience",
+		"lastUsed": "Last used: {date}"
 	},
 	"testimonials": {
 		"title": "What People Say",

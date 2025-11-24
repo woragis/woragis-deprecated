@@ -13,6 +13,8 @@ export type SkillCategory =
 	| 'library'
 	| 'other';
 
+export type ProficiencyLevel = 'expert' | 'advanced' | 'proficient' | 'learning';
+
 export interface Skill {
 	id: string;
 	name: string;
@@ -20,6 +22,10 @@ export interface Skill {
 	category: SkillCategory;
 	description?: string;
 	icon?: string;
+	proficiencyLevel?: ProficiencyLevel;
+	yearsOfExperience?: number;
+	firstUsedDate?: string;
+	lastUsedDate?: string;
 	createdAt: string;
 	updatedAt: string;
 }
