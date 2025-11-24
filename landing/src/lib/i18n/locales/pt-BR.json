@@ -74,7 +74,8 @@
 		"github": "GitHub",
 		"instagram": "Instagram",
 		"clickToCall": "Clique para ligar →",
-		"clickToEmail": "Clique para enviar e-mail →"
+		"clickToEmail": "Clique para enviar e-mail →",
+		"whatsappMessage": "Olá! Encontrei seu site (www.woragis.me) e gostaria de entrar em contato."
 	},
 	"footer": {
 		"tagline": "Construindo o futuro, um serviço de cada vez.",
