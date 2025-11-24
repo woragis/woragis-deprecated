@@ -23,6 +23,7 @@
 	import CaseStudiesSection from '$lib/components/CaseStudiesSection.svelte';
 	import CertificationsSection from '$lib/components/CertificationsSection.svelte';
 	import TechnicalWritingsSection from '$lib/components/TechnicalWritingsSection.svelte';
+	import SocialMediaPostsSection from '$lib/components/SocialMediaPostsSection.svelte';
 	import { language, translationsStore } from '$lib/i18n';
 	import { useProjectsQuery } from '$lib/queries/projects';
 	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
@@ -746,6 +747,21 @@
 				</p>
 			</div>
 			<CertificationsSection />
+		</div>
+	</section>
+
+	<!-- Social Media Posts Section -->
+	<section id="social-media" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+					{t('socialMedia.title')}
+				</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					{t('socialMedia.subtitle')}
+				</p>
+			</div>
+			<SocialMediaPostsSection />
 		</div>
 	</section>
 

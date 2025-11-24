@@ -86,6 +86,17 @@
 		"piece": "piece",
 		"pieces": "pieces"
 	},
+	"socialMedia": {
+		"title": "Social Media Engagement",
+		"subtitle": "Thoughts, insights, and technical content shared across social platforms",
+		"noPosts": "No social media posts available",
+		"checkBack": "Check back later",
+		"viewPost": "View post",
+		"post": "post",
+		"posts": "posts",
+		"andMore": "And {count} more {posts}...",
+		"engagementScore": "Engagement Score"
+	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
 	},
