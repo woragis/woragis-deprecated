@@ -13,8 +13,8 @@
 	} from 'svelte-icons-pack/si';
 	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch, Tag, Layers, Zap, Target, CheckCircle2, XCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { contact, skills, interests } from '$lib/constants';
-	import { caseStudies, systemDesigns, problemSolutions } from '$lib/constants/technical';
-	import type { TechnicalCaseStudy, SystemDesign, ProblemSolution } from '$lib/types/technical';
+	import { caseStudies, problemSolutions } from '$lib/constants/technical';
+	import type { TechnicalCaseStudy, ProblemSolution } from '$lib/types/technical';
 	import type { SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
 	import TestimonialsCarousel from './_components/TestimonialsCarousel.svelte';
@@ -26,6 +26,7 @@
 	import SocialMediaPostsSection from './_components/SocialMediaPostsSection.svelte';
 	import AIMLIntegrationsSection from './_components/AIMLIntegrationsSection.svelte';
 	import ImpactMetricsDashboard from './_components/ImpactMetricsDashboard.svelte';
+	import SystemDesignsSection from './_components/SystemDesignsSection.svelte';
 	import HeroSection from './_components/HeroSection.svelte';
 	import AboutSection from './_components/AboutSection.svelte';
 	import SkillsSection from './_components/SkillsSection.svelte';
@@ -39,6 +40,7 @@
 	import { useSocialMediaPostsQuery } from '$lib/queries/social-media-posts';
 	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
 	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
+	import { useFeaturedSystemDesignsQuery } from '$lib/queries/system-designs';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { queryClient } from '$lib/query-client';
@@ -148,6 +150,11 @@
 	let impactMetrics = $derived(impactMetricsQuery.data || []);
 	let loadingImpactMetrics = $derived(impactMetricsQuery.isPending);
 
+	// System designs query
+	const systemDesignsQuery = useFeaturedSystemDesignsQuery();
+	let systemDesigns = $derived(systemDesignsQuery.data || []);
+	let loadingSystemDesigns = $derived(systemDesignsQuery.isPending);
+
 	// Testimonials
 	let testimonials: Testimonial[] = $state([]);
 	let loadingTestimonials = $state(false);
@@ -226,15 +233,10 @@
 
 	// Technical sections state
 	let expandedCaseStudy: string | null = $state(null);
-	let expandedSystemDesign: string | null = $state(null);
 	let expandedProblem: string | null = $state(null);
 
 	function toggleCaseStudy(id: string) {
 		expandedCaseStudy = expandedCaseStudy === id ? null : id;
-	}
-
-	function toggleSystemDesign(id: string) {
-		expandedSystemDesign = expandedSystemDesign === id ? null : id;
 	}
 
 	function toggleProblem(id: string) {
@@ -310,89 +312,18 @@
 
 	<SkillsSection skills={popularSkills} loading={loadingSkills} />
 
-	<!-- Technical Depth Section -->
-	<section id="technical-depth" class="container mx-auto px-6 py-20">
+	<!-- System Designs Section -->
+	<section id="system-designs" class="container mx-auto px-6 py-20">
 		<div class="max-w-7xl mx-auto">
 			<div class="text-center mb-12">
-				<h2 class="text-4xl font-bold mb-4">Technical Depth</h2>
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+					{t('systemDesigns.title')}
+				</h2>
 				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
-					Deep dive into system architectures, design decisions, and technical implementations
+					{t('systemDesigns.subtitle')}
 				</p>
 			</div>
-
-			<div class="grid md:grid-cols-2 gap-6 mb-12">
-				{#each systemDesigns as design (design.id)}
-					<div
-						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300"
-					>
-						<div class="flex items-start justify-between mb-4">
-							<div class="flex items-center gap-3">
-								<div
-									class="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center"
-								>
-									<Layers class="w-6 h-6" />
-								</div>
-								<div>
-									<h3 class="text-xl font-bold text-white">{design.title}</h3>
-									<p class="text-sm text-gray-400">System Design</p>
-								</div>
-							</div>
-							<button
-								onclick={() => toggleSystemDesign(design.id)}
-								class="text-gray-400 hover:text-white transition-colors"
-							>
-								{#if expandedSystemDesign === design.id}
-									<ChevronUp class="w-5 h-5" />
-								{:else}
-									<ChevronDown class="w-5 h-5" />
-								{/if}
-							</button>
-						</div>
-
-						<p class="text-gray-300 mb-4">{design.description}</p>
-
-						{#if expandedSystemDesign === design.id}
-							<div class="mt-4 space-y-4 pt-4 border-t border-gray-700">
-								<div>
-									<h4 class="text-sm font-semibold text-blue-400 mb-2">Components</h4>
-									<div class="space-y-2">
-										{#each design.components as component (component.name)}
-											<div class="bg-gray-800/50 rounded-lg p-3">
-												<div class="flex items-center justify-between mb-1">
-													<span class="font-medium text-white">{component.name}</span>
-													<span class="text-xs text-cyan-400">{component.technology}</span>
-												</div>
-												<p class="text-sm text-gray-400">{component.description}</p>
-											</div>
-										{/each}
-									</div>
-								</div>
-
-								{#if design.dataFlow}
-									<div>
-										<h4 class="text-sm font-semibold text-blue-400 mb-2">Data Flow</h4>
-										<p class="text-sm text-gray-300">{design.dataFlow}</p>
-									</div>
-								{/if}
-
-								{#if design.scalability}
-									<div>
-										<h4 class="text-sm font-semibold text-green-400 mb-2">Scalability</h4>
-										<p class="text-sm text-gray-300">{design.scalability}</p>
-									</div>
-								{/if}
-
-								{#if design.reliability}
-									<div>
-										<h4 class="text-sm font-semibold text-purple-400 mb-2">Reliability</h4>
-										<p class="text-sm text-gray-300">{design.reliability}</p>
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
+			<SystemDesignsSection designs={systemDesigns} loading={loadingSystemDesigns} />
 		</div>
 	</section>
 

@@ -130,6 +130,17 @@
 		"range": "Range",
 		"andMore": "And {count} more {metrics}..."
 	},
+	"systemDesigns": {
+		"title": "System Designs",
+		"subtitle": "Architectural designs and system implementations showcasing scalability, reliability, and technical depth",
+		"noDesigns": "No system designs available",
+		"checkBack": "Check back later",
+		"components": "Components",
+		"dataFlow": "Data Flow",
+		"scalability": "Scalability",
+		"reliability": "Reliability",
+		"viewDiagram": "View Diagram"
+	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
 	},

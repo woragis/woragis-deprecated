@@ -329,9 +329,13 @@ All domains need CRUD interfaces in the admin frontend:
    - Shows category and project count
    - Links to full skills page
 
-7. **Technical Depth Section** ✅
-   - System designs display (expandable)
-   - Shows components, data flow, scalability, reliability
+7. **System Designs Section** ✅
+    - SystemDesignsSection component
+    - Backend API integration
+    - Expandable design cards
+    - Component details with icons
+    - Data flow, scalability, and reliability information
+    - Diagram links
 
 8. **Problem Solving Section** ✅
    - Problem solutions display (expandable)
