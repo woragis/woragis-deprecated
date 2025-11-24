@@ -29,6 +29,7 @@ const (
 	EntityTypeSystemDesign     EntityType = "system_design"
 	EntityTypeInterest         EntityType = "interest"
 	EntityTypeTestimonial      EntityType = "testimonial"
+	EntityTypeCertification    EntityType = "certification"
 )
 
 // RelationshipType represents how prominently an entity is mentioned in a social media post.

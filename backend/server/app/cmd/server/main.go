@@ -30,6 +30,7 @@ import (
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	casestudiesdomain "github.com/woragis/backend/server/app/internal/domains/casestudies"
+	certificationsdomain "github.com/woragis/backend/server/app/internal/domains/certifications"
 	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
 	clientsdomain "github.com/woragis/backend/server/app/internal/domains/clients"
 	financesdomain "github.com/woragis/backend/server/app/internal/domains/finances"
@@ -47,6 +48,9 @@ import (
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
 	interestsdomain "github.com/woragis/backend/server/app/internal/domains/interests"
+	impactmetricsdomain "github.com/woragis/backend/server/app/internal/domains/impactmetrics"
+	aimlintegrationsdomain "github.com/woragis/backend/server/app/internal/domains/aimlintegrations"
+	technicalwritingsdomain "github.com/woragis/backend/server/app/internal/domains/technicalwritings"
 	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
@@ -439,6 +443,55 @@ func main() {
 	))
 	problemsolutionsdomain.SetupRoutes(problemSolutionsGroup, problemSolutionHandler)
 
+	// Certifications: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	certificationRepo := certificationsdomain.NewGormRepository(db)
+	certificationService := certificationsdomain.NewService(certificationRepo, slogLogger)
+	certificationHandler := certificationsdomain.NewHandler(certificationService, translationEnricher, translationService, slogLogger)
+	certificationsGroup := api.Group("/certifications")
+	certificationsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
+	certificationsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	certificationsdomain.SetupRoutes(certificationsGroup, certificationHandler)
+
+	// Impact Metrics: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	impactMetricRepo := impactmetricsdomain.NewGormRepository(db)
+	impactMetricService := impactmetricsdomain.NewService(impactMetricRepo, slogLogger)
+	impactMetricHandler := impactmetricsdomain.NewHandler(impactMetricService, slogLogger)
+	impactMetricsGroup := api.Group("/impact-metrics")
+	impactMetricsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	impactmetricsdomain.SetupRoutes(impactMetricsGroup, impactMetricHandler)
+
+	// AI/ML Integrations: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	aimlIntegrationRepo := aimlintegrationsdomain.NewGormRepository(db)
+	aimlIntegrationService := aimlintegrationsdomain.NewService(aimlIntegrationRepo, slogLogger)
+	aimlIntegrationHandler := aimlintegrationsdomain.NewHandler(aimlIntegrationService, slogLogger)
+	aimlIntegrationsGroup := api.Group("/aiml-integrations")
+	aimlIntegrationsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	aimlintegrationsdomain.SetupRoutes(aimlIntegrationsGroup, aimlIntegrationHandler)
+
+	// Technical Writings: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	technicalWritingRepo := technicalwritingsdomain.NewGormRepository(db)
+	technicalWritingService := technicalwritingsdomain.NewService(technicalWritingRepo, slogLogger)
+	technicalWritingHandler := technicalwritingsdomain.NewHandler(technicalWritingService, slogLogger)
+	technicalWritingsGroup := api.Group("/technical-writings")
+	technicalWritingsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	technicalwritingsdomain.SetupRoutes(technicalWritingsGroup, technicalWritingHandler)
+
 	// Protected API group - requires JWT for all operations
 	// Create protected routes group and apply JWT middleware
 	protectedAPI := api.Group("")
@@ -673,6 +726,12 @@ func migrate(db *gorm.DB) error {
 		&projectcasestudiesdomain.ProjectCaseStudy{},
 		&systemdesignsdomain.SystemDesign{},
 		&problemsolutionsdomain.ProblemSolution{},
+		&certificationsdomain.Certification{},
+		&certificationsdomain.CertificationSkill{},
+		&certificationsdomain.CertificationEntityLink{},
+		&impactmetricsdomain.ImpactMetric{},
+		&aimlintegrationsdomain.AIMLIntegration{},
+		&technicalwritingsdomain.TechnicalWriting{},
 		&translationsdomain.Translation{},
 	)
 }
