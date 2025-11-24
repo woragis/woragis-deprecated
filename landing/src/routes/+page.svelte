@@ -73,15 +73,22 @@
 	// Featured projects - using TanStack Query
 	const featuredProjectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
 
+	// Track previous language to avoid unnecessary invalidations
+	let previousLang = $state($language);
+	
 	// Invalidate queries when language changes to trigger refetch with new language
 	$effect(() => {
 		const currentLang = $language;
-		// Invalidate all project list queries when language changes
-		queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-		// Invalidate impact metrics queries when language changes
-		queryClient.invalidateQueries({ queryKey: ['impact-metrics'] });
-		// Invalidate skills timeline queries when language changes
-		queryClient.invalidateQueries({ queryKey: skillKeys.timeline() });
+		// Only invalidate if language actually changed
+		if (currentLang !== previousLang) {
+			previousLang = currentLang;
+			// Invalidate all project list queries when language changes
+			queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+			// Invalidate impact metrics queries when language changes
+			queryClient.invalidateQueries({ queryKey: ['impact-metrics'] });
+			// Invalidate skills queries when language changes
+			queryClient.invalidateQueries({ queryKey: skillKeys.all });
+		}
 	});
 	
 	let projects = $derived(featuredProjectsQuery.data || []);
@@ -187,11 +194,6 @@
 			.slice(0, 6);
 	});
 	let loadingSkills = $derived(skillsQuery.isPending);
-
-	// Skills Timeline
-	const skillsTimelineQuery = useSkillsTimelineQuery();
-	let timelineSkills = $derived(skillsTimelineQuery.data || []);
-	let loadingTimeline = $derived(skillsTimelineQuery.isPending);
 
 	// Fetch testimonials and case studies on mount
 	onMount(async () => {

@@ -87,12 +87,17 @@ export function useSkillsQuery() {
 	}));
 }
 
-// Hook for listing skills with counts
+// Hook for listing skills with counts - reactive to language changes
 export function useSkillsWithCountsQuery() {
-	return createQuery(() => ({
-		queryKey: skillKeys.withCounts(),
-		queryFn: () => listSkillsWithCounts()
-	}));
+	// Read language from store in the callback - TanStack Query will track this reactively
+	// The query key includes the language, so it will refetch when language changes
+	return createQuery(() => {
+		const currentLang = get(language);
+		return {
+			queryKey: skillKeys.withCounts(currentLang),
+			queryFn: () => listSkillsWithCounts()
+		};
+	});
 }
 
 // Hook for getting a skill by ID
