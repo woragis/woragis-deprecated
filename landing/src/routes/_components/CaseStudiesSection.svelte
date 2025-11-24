@@ -1,29 +1,14 @@
 <script lang="ts">
 	import { Calendar, ExternalLink, Star, Code2, Target, TrendingUp } from 'lucide-svelte';
-	import { useCaseStudiesQuery } from '$lib/queries/case-studies';
 	import type { CaseStudy } from '$lib/types/case-study';
 
-	// Fetch case studies using TanStack Query
-	const featuredCaseStudiesQuery = useCaseStudiesQuery({
-		featured: true,
-		limit: 3,
-		orderBy: 'updatedAt',
-		order: 'desc'
-	});
+	interface Props {
+		featuredCaseStudies?: CaseStudy[];
+		latestCaseStudies?: CaseStudy[];
+		loading?: boolean;
+	}
 
-	const latestCaseStudiesQuery = useCaseStudiesQuery({
-		limit: 6,
-		orderBy: 'updatedAt',
-		order: 'desc'
-	});
-
-	let featuredCaseStudies: CaseStudy[] = $derived(featuredCaseStudiesQuery.data || []);
-	let latestCaseStudies: CaseStudy[] = $derived(
-		latestCaseStudiesQuery.data?.filter(
-			(cs) => !featuredCaseStudies.some((fcs) => fcs.id === cs.id)
-		) || []
-	);
-	let loading = $derived(featuredCaseStudiesQuery.isPending || latestCaseStudiesQuery.isPending);
+	let { featuredCaseStudies = [], latestCaseStudies = [], loading = false }: Props = $props();
 
 	function formatDate(dateString?: string): string {
 		if (!dateString) return '';

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { Share2, ExternalLink, Calendar, Heart, MessageCircle, Eye, TrendingUp, Linkedin, Twitter, Instagram } from 'lucide-svelte';
-	import { useSocialMediaPostsQuery } from '$lib/queries/social-media-posts';
 	import type { SocialMediaPost, Platform } from '$lib/types/social-media-post';
 
-	const postsQuery = useSocialMediaPostsQuery({ status: 'active' });
-	let allPosts = $derived(postsQuery.data || []);
-	let loading = $derived(postsQuery.isPending);
+	interface Props {
+		posts: SocialMediaPost[];
+		loading?: boolean;
+	}
+
+	let { posts: allPosts = [], loading = false }: Props = $props();
 
 	// Sort posts by engagement (total engagement score)
 	let sortedPosts = $derived.by(() => {

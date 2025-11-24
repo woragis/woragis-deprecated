@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { Award, ExternalLink, Calendar, CheckCircle2, Clock, XCircle, Building2 } from 'lucide-svelte';
-	import { useFeaturedCertificationsQuery } from '$lib/queries/certifications';
 	import type { Certification, CertificationCategory } from '$lib/types/certification';
 
-	const certificationsQuery = useFeaturedCertificationsQuery();
-	let certifications = $derived(certificationsQuery.data || []);
-	let loading = $derived(certificationsQuery.isPending);
+	interface Props {
+		certifications: Certification[];
+		loading?: boolean;
+	}
+
+	let { certifications = [], loading = false }: Props = $props();
 
 	// Group certifications by category
 	let groupedCertifications = $derived.by(() => {

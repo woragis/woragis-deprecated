@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { BookOpen, ExternalLink, Calendar, Clock, Eye, Heart, Share2, MessageCircle, FileText, Code, GraduationCap, Book, FileCode, Layers } from 'lucide-svelte';
-	import { useFeaturedTechnicalWritingsQuery } from '$lib/queries/technical-writings';
 	import type { TechnicalWriting, WritingType, PublicationPlatform } from '$lib/types/technical-writing';
 
-	const writingsQuery = useFeaturedTechnicalWritingsQuery();
-	let writings = $derived(writingsQuery.data || []);
-	let loading = $derived(writingsQuery.isPending);
+	interface Props {
+		writings: TechnicalWriting[];
+		loading?: boolean;
+	}
+
+	let { writings = [], loading = false }: Props = $props();
 
 	// Group writings by type
 	let groupedWritings = $derived.by(() => {

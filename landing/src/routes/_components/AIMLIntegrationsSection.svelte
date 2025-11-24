@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { Brain, ExternalLink, Code, Zap, Target, Layers, Sparkles, Cpu, MessageSquare, TrendingUp, Eye, FileText, Github } from 'lucide-svelte';
-	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
 	import type { AIMLIntegration, IntegrationType, Framework } from '$lib/types/aiml-integration';
 
-	const integrationsQuery = useFeaturedAIMLIntegrationsQuery();
-	let integrations = $derived(integrationsQuery.data || []);
-	let loading = $derived(integrationsQuery.isPending);
+	interface Props {
+		integrations: AIMLIntegration[];
+		loading?: boolean;
+	}
+
+	let { integrations = [], loading = false }: Props = $props();
 
 	// Group integrations by type
 	let groupedIntegrations = $derived.by(() => {

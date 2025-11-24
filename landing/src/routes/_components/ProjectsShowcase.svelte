@@ -2,28 +2,18 @@
 	import { Search, Filter, X, ExternalLink, Calendar, TrendingUp, Code2, Globe, Github } from 'lucide-svelte';
 	import { Icon } from 'svelte-icons-pack';
 	import { SiGo, SiDocker, SiKubernetes, SiRedis, SiPython } from 'svelte-icons-pack/si';
-	import { listCaseStudies } from '$lib/api/case-studies';
-	import type { Project, ProjectStatus, ProjectTechnology } from '$lib/types/project';
-	import { useProjectsQuery } from '$lib/queries/projects';
-	import { language } from '$lib/i18n';
-	import { queryClient } from '$lib/query-client';
-	import { projectKeys } from '$lib/queries/projects';
-	import { onMount } from 'svelte';
+	import type { Project, ProjectStatus } from '$lib/types/project';
+	import type { CaseStudy } from '$lib/types/case-study';
 
-	// Fetch projects using TanStack Query
-	const projectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
+	interface Props {
+		projects: Project[];
+		caseStudyMap?: Map<string, CaseStudy>;
+		loading?: boolean;
+	}
 
-	// Invalidate query when language changes to trigger refetch with new language
-	$effect(() => {
-		const currentLang = $language;
-		// Invalidate all project list queries when language changes
-		queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-	});
+	let { projects = [], caseStudyMap = new Map(), loading = false }: Props = $props();
 
-	let projects = $derived(projectsQuery.data || []);
 	let filteredProjects: Project[] = $state([]);
-	let caseStudyMap: Map<string, import('$lib/types/case-study').CaseStudy> = $state(new Map());
-	let loading = $derived(projectsQuery.isPending);
 	let searchQuery = $state('');
 	let statusFilter: ProjectStatus | 'all' = $state('all');
 	let technologyFilter = $state('');
@@ -40,33 +30,12 @@
 		).sort()
 	);
 
-	// Watch for projects data changes and fetch case studies
+	// Watch for projects data changes and apply filters
 	$effect(() => {
 		if (projects.length > 0) {
 			applyFilters();
-			fetchAllCaseStudies();
 		}
 	});
-
-	async function fetchAllCaseStudies() {
-		try {
-			// Fetch all case studies at once instead of one per project
-			// This avoids 404 errors for projects without case studies
-			const caseStudies = await listCaseStudies();
-			
-			// Map case studies by project slug
-			const newMap = new Map();
-			caseStudies.forEach((caseStudy) => {
-				if (caseStudy.projectSlug) {
-					newMap.set(caseStudy.projectSlug, caseStudy);
-				}
-			});
-			caseStudyMap = newMap;
-		} catch (error) {
-			// Silently fail - case studies are optional
-			console.error('Error fetching case studies:', error);
-		}
-	}
 
 	function applyFilters() {
 		let filtered = [...projects];
@@ -112,6 +81,11 @@
 		applyFilters();
 	}
 
+	// Watch for filter changes
+	$effect(() => {
+		applyFilters();
+	});
+
 	function getStatusColor(status: string): string {
 		const colors: Record<string, string> = {
 			idea: 'bg-purple-600',
@@ -137,11 +111,6 @@
 		const date = new Date(dateString);
 		return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
-
-	// Watch for filter changes
-	$effect(() => {
-		applyFilters();
-	});
 </script>
 
 <div class="w-full">

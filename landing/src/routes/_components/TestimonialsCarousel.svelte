@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { ChevronLeft, ChevronRight, Star, Linkedin } from 'lucide-svelte';
-	import { listTestimonials } from '$lib/api/testimonials';
 	import type { Testimonial } from '$lib/types/testimonial';
 
-	let testimonials: Testimonial[] = $state([]);
-	let loading = $state(false);
+	interface Props {
+		testimonials: Testimonial[];
+		loading?: boolean;
+	}
+
+	let { testimonials = [], loading = false }: Props = $props();
+
 	let currentIndex = $state(0);
 	let autoplayInterval: ReturnType<typeof setInterval> | null = null;
 
-	onMount(async () => {
-		await fetchTestimonials();
+	onMount(() => {
 		if (testimonials.length > 1) {
 			startAutoplay();
 		}
@@ -18,26 +21,6 @@
 			stopAutoplay();
 		};
 	});
-
-	async function fetchTestimonials() {
-		loading = true;
-		try {
-			const data = await listTestimonials({
-				status: 'approved',
-				orderBy: 'displayOrder',
-				order: 'asc'
-			});
-			testimonials = data;
-			// Start autoplay after testimonials are loaded
-			if (testimonials.length > 1 && !autoplayInterval) {
-				startAutoplay();
-			}
-		} catch (error) {
-			console.error('Error fetching testimonials:', error);
-		} finally {
-			loading = false;
-		}
-	}
 
 	function nextTestimonial() {
 		if (testimonials.length === 0) return;

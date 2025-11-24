@@ -1,65 +1,17 @@
 <script lang="ts">
 	import { Calendar, Clock, ExternalLink, Tag as TagIcon, FolderOpen, Star } from 'lucide-svelte';
-	import { calculateReadingTime, getPostSkills, getPostCategories, getPostTags } from '$lib/api/posts';
-	import { usePostsQuery } from '$lib/queries/posts';
+	import { calculateReadingTime } from '$lib/api/posts';
 	import type { Post } from '$lib/types/post';
 
-	// Fetch posts using TanStack Query
-	const featuredPostsQuery = usePostsQuery({
-		status: 'published',
-		featured: true,
-		limit: 3,
-		orderBy: 'publishedAt',
-		order: 'desc'
-	});
-
-	const latestPostsQuery = usePostsQuery({
-		status: 'published',
-		limit: 6,
-		orderBy: 'publishedAt',
-		order: 'desc'
-	});
-
-	let featuredPosts: Post[] = $state([]);
-	let latestPosts: Post[] = $state([]);
-	let posts: Post[] = $derived([...featuredPosts, ...latestPosts.filter(p => !featuredPosts.some(fp => fp.id === p.id))]);
-	let loading = $derived(featuredPostsQuery.isPending || latestPostsQuery.isPending);
-
-	// Enrich posts when data is available
-	$effect(async () => {
-		if (featuredPostsQuery.data) {
-			featuredPosts = await enrichPosts(featuredPostsQuery.data);
-		}
-	});
-
-	$effect(async () => {
-		if (latestPostsQuery.data) {
-			latestPosts = await enrichPosts(latestPostsQuery.data.slice(0, 6));
-		}
-	});
-
-	async function enrichPosts(postsToEnrich: Post[]): Promise<Post[]> {
-		return Promise.all(
-			postsToEnrich.map(async (post) => {
-				try {
-					const [skills, categories, tags] = await Promise.all([
-						getPostSkills(post.id),
-						getPostCategories(post.id),
-						getPostTags(post.id)
-					]);
-					return {
-						...post,
-						skills,
-						categories,
-						tags
-					};
-				} catch (error) {
-					console.error(`Error enriching post ${post.id}:`, error);
-					return post;
-				}
-			})
-		);
+	interface Props {
+		featuredPosts?: Post[];
+		latestPosts?: Post[];
+		loading?: boolean;
 	}
+
+	let { featuredPosts = [], latestPosts = [], loading = false }: Props = $props();
+
+	let posts: Post[] = $derived([...featuredPosts, ...latestPosts.filter(p => !featuredPosts.some(fp => fp.id === p.id))]);
 
 	function formatDate(dateString?: string): string {
 		if (!dateString) return '';

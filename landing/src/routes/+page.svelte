@@ -17,19 +17,33 @@
 	import type { TechnicalCaseStudy, SystemDesign, ProblemSolution } from '$lib/types/technical';
 	import type { SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
-	import TestimonialsCarousel from '$lib/components/TestimonialsCarousel.svelte';
-	import BlogPostsSection from '$lib/components/BlogPostsSection.svelte';
-	import ProjectsShowcase from '$lib/components/ProjectsShowcase.svelte';
-	import CaseStudiesSection from '$lib/components/CaseStudiesSection.svelte';
-	import CertificationsSection from '$lib/components/CertificationsSection.svelte';
-	import TechnicalWritingsSection from '$lib/components/TechnicalWritingsSection.svelte';
-	import SocialMediaPostsSection from '$lib/components/SocialMediaPostsSection.svelte';
-	import AIMLIntegrationsSection from '$lib/components/AIMLIntegrationsSection.svelte';
+	import TestimonialsCarousel from './_components/TestimonialsCarousel.svelte';
+	import BlogPostsSection from './_components/BlogPostsSection.svelte';
+	import ProjectsShowcase from './_components/ProjectsShowcase.svelte';
+	import CaseStudiesSection from './_components/CaseStudiesSection.svelte';
+	import CertificationsSection from './_components/CertificationsSection.svelte';
+	import TechnicalWritingsSection from './_components/TechnicalWritingsSection.svelte';
+	import SocialMediaPostsSection from './_components/SocialMediaPostsSection.svelte';
+	import AIMLIntegrationsSection from './_components/AIMLIntegrationsSection.svelte';
+	import HeroSection from './_components/HeroSection.svelte';
+	import AboutSection from './_components/AboutSection.svelte';
+	import SkillsSection from './_components/SkillsSection.svelte';
 	import { language, translationsStore } from '$lib/i18n';
 	import { useProjectsQuery } from '$lib/queries/projects';
 	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
+	import { usePostsQuery } from '$lib/queries/posts';
+	import { useCaseStudiesQuery } from '$lib/queries/case-studies';
+	import { useFeaturedCertificationsQuery } from '$lib/queries/certifications';
+	import { useFeaturedTechnicalWritingsQuery } from '$lib/queries/technical-writings';
+	import { useSocialMediaPostsQuery } from '$lib/queries/social-media-posts';
+	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
+	import { listTestimonials } from '$lib/api/testimonials';
+	import { listCaseStudies } from '$lib/api/case-studies';
 	import { queryClient } from '$lib/query-client';
 	import { projectKeys } from '$lib/queries/projects';
+	import { onMount } from 'svelte';
+	import type { Testimonial } from '$lib/types/testimonial';
+	import type { CaseStudy } from '$lib/types/case-study';
 
 	// Reactive translation helper
 	let t = $derived($translationsStore);
@@ -49,7 +63,7 @@
 	}
 
 	// Featured projects - using TanStack Query
-	const featuredProjectsQuery = useProjectsQuery({ limit: 6, sortBy: 'updatedAt', sortOrder: 'desc' });
+	const featuredProjectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
 
 	// Invalidate query when language changes to trigger refetch with new language
 	$effect(() => {
@@ -58,8 +72,78 @@
 		queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
 	});
 	
-	let featuredProjects = $derived(featuredProjectsQuery.data?.slice(0, 6) || []);
+	let projects = $derived(featuredProjectsQuery.data || []);
 	let loadingProjects = $derived(featuredProjectsQuery.isPending);
+
+	// Case studies for projects
+	let caseStudyMap: Map<string, CaseStudy> = $state(new Map());
+	let loadingCaseStudies = $state(false);
+
+	// Blog posts queries
+	const featuredPostsQuery = usePostsQuery({
+		status: 'published',
+		featured: true,
+		limit: 3,
+		orderBy: 'publishedAt',
+		order: 'desc'
+	});
+
+	const latestPostsQuery = usePostsQuery({
+		status: 'published',
+		limit: 6,
+		orderBy: 'publishedAt',
+		order: 'desc'
+	});
+
+	let featuredPosts = $derived(featuredPostsQuery.data || []);
+	let latestPosts = $derived(latestPostsQuery.data?.slice(0, 6) || []);
+	let loadingPosts = $derived(featuredPostsQuery.isPending || latestPostsQuery.isPending);
+
+	// Case studies queries
+	const featuredCaseStudiesQuery = useCaseStudiesQuery({
+		featured: true,
+		limit: 3,
+		orderBy: 'updatedAt',
+		order: 'desc'
+	});
+
+	const latestCaseStudiesQuery = useCaseStudiesQuery({
+		limit: 6,
+		orderBy: 'updatedAt',
+		order: 'desc'
+	});
+
+	let featuredCaseStudies = $derived(featuredCaseStudiesQuery.data || []);
+	let latestCaseStudies = $derived(
+		latestCaseStudiesQuery.data?.filter(
+			(cs) => !featuredCaseStudies.some((fcs) => fcs.id === cs.id)
+		) || []
+	);
+	let loadingCaseStudiesSection = $derived(featuredCaseStudiesQuery.isPending || latestCaseStudiesQuery.isPending);
+
+	// Certifications query
+	const certificationsQuery = useFeaturedCertificationsQuery();
+	let certifications = $derived(certificationsQuery.data || []);
+	let loadingCertifications = $derived(certificationsQuery.isPending);
+
+	// Technical writings query
+	const technicalWritingsQuery = useFeaturedTechnicalWritingsQuery();
+	let technicalWritings = $derived(technicalWritingsQuery.data || []);
+	let loadingTechnicalWritings = $derived(technicalWritingsQuery.isPending);
+
+	// Social media posts query
+	const socialMediaPostsQuery = useSocialMediaPostsQuery({ status: 'active' });
+	let socialMediaPosts = $derived(socialMediaPostsQuery.data || []);
+	let loadingSocialMediaPosts = $derived(socialMediaPostsQuery.isPending);
+
+	// AI/ML integrations query
+	const aimlIntegrationsQuery = useFeaturedAIMLIntegrationsQuery();
+	let aimlIntegrations = $derived(aimlIntegrationsQuery.data || []);
+	let loadingAIMLIntegrations = $derived(aimlIntegrationsQuery.isPending);
+
+	// Testimonials
+	let testimonials: Testimonial[] = $state([]);
+	let loadingTestimonials = $state(false);
 
 	// Skills - using TanStack Query
 	const skillsQuery = useSkillsWithCountsQuery();
@@ -71,6 +155,41 @@
 			.slice(0, 6);
 	});
 	let loadingSkills = $derived(skillsQuery.isPending);
+
+	// Fetch testimonials and case studies on mount
+	onMount(async () => {
+		// Fetch testimonials
+		loadingTestimonials = true;
+		try {
+			const data = await listTestimonials({
+				status: 'approved',
+				orderBy: 'displayOrder',
+				order: 'asc'
+			});
+			testimonials = data;
+		} catch (error) {
+			console.error('Error fetching testimonials:', error);
+		} finally {
+			loadingTestimonials = false;
+		}
+
+		// Fetch case studies for project mapping
+		loadingCaseStudies = true;
+		try {
+			const caseStudies = await listCaseStudies();
+			const newMap = new Map<string, CaseStudy>();
+			caseStudies.forEach((caseStudy) => {
+				if (caseStudy.projectSlug) {
+					newMap.set(caseStudy.projectSlug, caseStudy);
+				}
+			});
+			caseStudyMap = newMap;
+		} catch (error) {
+			console.error('Error fetching case studies:', error);
+		} finally {
+			loadingCaseStudies = false;
+		}
+	});
 
 	function formatDate(dateString: string): string {
 		const date = new Date(dateString);
@@ -117,68 +236,8 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-	<!-- Hero Section -->
-	<section class="container mx-auto px-6 py-20 md:py-32">
-		<div class="max-w-4xl mx-auto text-center">
-			<div
-				class="inline-block mb-6 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-full text-blue-300 text-sm font-medium"
-			>
-				{t('hero.badge')}
-			</div>
-			<h1
-				class="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse"
-			>
-				{t('hero.title')}
-			</h1>
-			<p class="text-xl md:text-2xl text-gray-300 mb-8 leading-relaxed">
-				{t('hero.subtitle')}
-			</p>
-			<div class="flex flex-wrap gap-4 justify-center">
-				<a
-					href="#projects"
-					class="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-blue-500/50"
-				>
-					{t('hero.viewProjects')}
-				</a>
-				<a
-					href="#technical-depth"
-					class="px-8 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-purple-500/50"
-				>
-					{t('hero.technicalDepth')}
-				</a>
-				<a
-					href="/skills"
-					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
-				>
-					{t('hero.viewSkills')}
-				</a>
-				<a
-					href="#testimonials"
-					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
-				>
-					{t('testimonials.title')}
-				</a>
-				<a
-					href="#contact"
-					class="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 border border-gray-600"
-				>
-					{t('hero.contactMe')}
-				</a>
-			</div>
-		</div>
-	</section>
-
-	<!-- About Section -->
-	<section id="about" class="container mx-auto px-6 py-20">
-		<div class="max-w-4xl mx-auto">
-			<h2 class="text-4xl font-bold mb-8 text-center">{t('about.title')}</h2>
-			<div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 shadow-xl">
-				<p class="text-lg text-gray-300 leading-relaxed">
-					{t('about.description')}
-				</p>
-			</div>
-		</div>
-	</section>
+	<HeroSection translations={t} />
+	<AboutSection translations={t} />
 
 	<!-- Projects Section -->
 	<section id="projects" class="container mx-auto px-6 py-20">
@@ -193,7 +252,7 @@
 					<ExternalLink class="w-5 h-5" />
 				</a>
 			</div>
-			<ProjectsShowcase />
+			<ProjectsShowcase projects={projects} caseStudyMap={caseStudyMap} loading={loadingProjects} />
 		</div>
 	</section>
 
@@ -208,7 +267,7 @@
 					{t('blog.subtitle')}
 				</p>
 			</div>
-			<BlogPostsSection />
+			<BlogPostsSection featuredPosts={featuredPosts} latestPosts={latestPosts} loading={loadingPosts} />
 		</div>
 	</section>
 
@@ -223,7 +282,7 @@
 					{t('technicalWritings.subtitle')}
 				</p>
 			</div>
-			<TechnicalWritingsSection />
+			<TechnicalWritingsSection writings={technicalWritings} loading={loadingTechnicalWritings} />
 		</div>
 	</section>
 
@@ -238,78 +297,11 @@
 					Real-world projects with detailed technical implementations, challenges, and solutions
 				</p>
 			</div>
-			<CaseStudiesSection />
+			<CaseStudiesSection featuredCaseStudies={featuredCaseStudies} latestCaseStudies={latestCaseStudies} loading={loadingCaseStudiesSection} />
 		</div>
 	</section>
 
-	<!-- Skills Section -->
-	<section id="skills" class="container mx-auto px-6 py-20">
-		<div class="max-w-6xl mx-auto">
-			<div class="flex items-center justify-between mb-12">
-				<h2 class="text-4xl font-bold text-center flex-1">Popular Skills</h2>
-				<a
-					href="/skills"
-					class="text-blue-400 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
-				>
-					View All Skills
-					<ExternalLink class="w-5 h-5" />
-				</a>
-			</div>
-
-			{#if loadingSkills}
-				<div class="flex items-center justify-center py-20">
-					<div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-				</div>
-			{:else if popularSkills.length === 0}
-				<div class="text-center py-20">
-					<Tag class="w-16 h-16 mx-auto mb-4 text-gray-600" />
-					<p class="text-gray-400 text-lg mb-2">No skills found</p>
-					<p class="text-gray-500 text-sm">Skills will appear here once they're added to projects</p>
-				</div>
-			{:else}
-				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{#each popularSkills as skill (skill.id || skill.name)}
-						<a
-							href="/skills"
-							class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 group"
-						>
-							<div class="flex items-start justify-between mb-4">
-								<div class="flex-1">
-									<h3
-										class="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors"
-									>
-										{skill.name}
-									</h3>
-									<span
-										class="inline-block px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 capitalize"
-									>
-										{skill.category}
-									</span>
-								</div>
-								{#if skill.icon}
-									<div class="w-10 h-10 bg-gray-700 rounded flex items-center justify-center">
-										<span class="text-lg">{skill.icon}</span>
-									</div>
-								{/if}
-							</div>
-
-							{#if skill.description}
-								<p class="text-gray-300 text-sm mb-4 line-clamp-2">{skill.description}</p>
-							{/if}
-
-							<div class="flex items-center justify-between pt-4 border-t border-gray-700">
-								<div class="flex items-center gap-2">
-									<Tag class="w-4 h-4 text-gray-400" />
-									<span class="text-sm text-gray-400">Projects</span>
-								</div>
-								<span class="text-lg font-bold text-blue-400">{skill.projectCount}</span>
-							</div>
-						</a>
-					{/each}
-				</div>
-			{/if}
-		</div>
-	</section>
+	<SkillsSection skills={popularSkills} loading={loadingSkills} />
 
 	<!-- Technical Depth Section -->
 	<section id="technical-depth" class="container mx-auto px-6 py-20">
@@ -732,7 +724,7 @@
 					{t('testimonials.subtitle')}
 				</p>
 			</div>
-			<TestimonialsCarousel />
+			<TestimonialsCarousel testimonials={testimonials} loading={loadingTestimonials} />
 		</div>
 	</section>
 
@@ -747,7 +739,7 @@
 					{t('certifications.subtitle')}
 				</p>
 			</div>
-			<CertificationsSection />
+			<CertificationsSection certifications={certifications} loading={loadingCertifications} />
 		</div>
 	</section>
 
@@ -762,7 +754,7 @@
 					{t('socialMedia.subtitle')}
 				</p>
 			</div>
-			<SocialMediaPostsSection />
+			<SocialMediaPostsSection posts={socialMediaPosts} loading={loadingSocialMediaPosts} />
 		</div>
 	</section>
 
@@ -777,7 +769,7 @@
 					{t('aimlIntegrations.subtitle')}
 				</p>
 			</div>
-			<AIMLIntegrationsSection />
+			<AIMLIntegrationsSection integrations={aimlIntegrations} loading={loadingAIMLIntegrations} />
 		</div>
 	</section>
 
@@ -1101,11 +1093,4 @@
 		scroll-behavior: smooth;
 	}
 
-	.line-clamp-2 {
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
 </style>
