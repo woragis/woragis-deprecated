@@ -60,6 +60,32 @@
 		"noTestimonials": "No testimonials available",
 		"checkBack": "Check back later"
 	},
+	"certifications": {
+		"title": "Certifications & Credentials",
+		"subtitle": "Professional certifications and credentials demonstrating continuous learning and expertise",
+		"noCertifications": "No certifications available",
+		"checkBack": "Check back later",
+		"issued": "Issued",
+		"expires": "Expires",
+		"expired": "Expired",
+		"expiresIn": "Expires in",
+		"days": "days",
+		"day": "day",
+		"verify": "Verify",
+		"viewCertificate": "View Certificate",
+		"certification": "certification",
+		"certifications": "certifications"
+	},
+	"technicalWritings": {
+		"title": "Technical Writing Portfolio",
+		"subtitle": "Articles, tutorials, documentation, and guides showcasing technical communication and expertise",
+		"noWritings": "No technical writings available",
+		"checkBack": "Check back later",
+		"readArticle": "Read article",
+		"min": "min",
+		"piece": "piece",
+		"pieces": "pieces"
+	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
 	},
