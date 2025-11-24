@@ -3,6 +3,8 @@ package casestudies
 import (
 	"context"
 	"errors"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -166,12 +168,16 @@ func (r *gormRepository) ListCaseStudies(ctx context.Context, filters CaseStudyF
 	}
 
 	// Default ordering
-	orderBy := filters.OrderBy
+	orderBy := normalizeOrderBy(filters.OrderBy)
 	if orderBy == "" {
 		orderBy = "created_at"
 	}
 	order := filters.Order
 	if order == "" {
+		order = "desc"
+	}
+	// Validate order direction
+	if order != "asc" && order != "desc" {
 		order = "desc"
 	}
 	query = query.Order(orderBy + " " + order)
@@ -206,5 +212,43 @@ func (r *gormRepository) DeleteCaseStudy(ctx context.Context, caseStudyID uuid.U
 	}
 
 	return nil
+}
+
+// normalizeOrderBy converts camelCase orderBy values to snake_case database column names
+// and validates that the column is allowed for ordering
+func normalizeOrderBy(orderBy string) string {
+	if orderBy == "" {
+		return ""
+	}
+
+	// Map of allowed camelCase to snake_case conversions
+	allowedColumns := map[string]string{
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
+		"title":       "title",
+		"created_at":  "created_at",
+		"updated_at":  "updated_at",
+	}
+
+	// Check if it's already in the map
+	if normalized, ok := allowedColumns[orderBy]; ok {
+		return normalized
+	}
+
+	// Convert camelCase to snake_case
+	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+	snake := matchFirstCap.ReplaceAllString(orderBy, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	snake = strings.ToLower(snake)
+
+	// Validate the converted value is allowed
+	if _, ok := allowedColumns[snake]; ok {
+		return snake
+	}
+
+	// If not in allowed list, return empty string to use default
+	return ""
 }
 

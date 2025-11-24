@@ -12,6 +12,8 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Get("/with-counts", handler.GetAllSkillsWithProjectCounts)
 	api.Get("/search", handler.SearchSkills)
 	api.Get("/category", handler.ListSkillsByCategory)
+	// Timeline - must be before /:id to avoid route conflict
+	api.Get("/timeline", handler.GetSkillsTimeline)
 	api.Get("/:id", handler.GetSkill)
 	api.Get("/slug/:slug", handler.GetSkillBySlug)
 	api.Patch("/:id", handler.UpdateSkill)
@@ -23,8 +25,5 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Delete("/projects/:projectId/skills/:skillId", handler.DetachSkillFromProject)
 	api.Get("/projects/:projectId/skills", handler.GetProjectSkills)
 	api.Get("/:skillId/projects", handler.GetProjectsBySkill)
-	
-	// Timeline
-	api.Get("/timeline", handler.GetSkillsTimeline)
 }
 

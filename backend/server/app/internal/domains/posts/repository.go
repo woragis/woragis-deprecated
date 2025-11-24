@@ -3,6 +3,8 @@ package posts
 import (
 	"context"
 	"errors"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -204,12 +206,16 @@ func (r *gormRepository) ListPosts(ctx context.Context, filters PostFilters) ([]
 	}
 
 	// Ordering
-	orderBy := filters.OrderBy
+	orderBy := normalizeOrderBy(filters.OrderBy)
 	if orderBy == "" {
 		orderBy = "created_at"
 	}
 	order := filters.Order
 	if order == "" {
+		order = "desc"
+	}
+	// Validate order direction
+	if order != "asc" && order != "desc" {
 		order = "desc"
 	}
 	query = query.Order(orderBy + " " + order)
@@ -546,5 +552,46 @@ func (r *gormRepository) PostHasTag(ctx context.Context, postID, tagID uuid.UUID
 		return false, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return count > 0, nil
+}
+
+// normalizeOrderBy converts camelCase orderBy values to snake_case database column names
+// and validates that the column is allowed for ordering
+func normalizeOrderBy(orderBy string) string {
+	if orderBy == "" {
+		return ""
+	}
+
+	// Map of allowed camelCase to snake_case conversions
+	allowedColumns := map[string]string{
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
+		"publishedAt": "published_at",
+		"viewsCount":  "views_count",
+		"created_at":  "created_at",
+		"updated_at":  "updated_at",
+		"published_at": "published_at",
+		"views_count":  "views_count",
+	}
+
+	// Check if it's already in the map
+	if normalized, ok := allowedColumns[orderBy]; ok {
+		return normalized
+	}
+
+	// Convert camelCase to snake_case
+	var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+	snake := matchFirstCap.ReplaceAllString(orderBy, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	snake = strings.ToLower(snake)
+
+	// Validate the converted value is allowed
+	if _, ok := allowedColumns[snake]; ok {
+		return snake
+	}
+
+	// If not in allowed list, return empty string to use default
+	return ""
 }
 
