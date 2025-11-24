@@ -70,4 +70,7 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Get("/architecture-diagrams/:diagramID", handler.GetArchitectureDiagram)
 	api.Patch("/architecture-diagrams/:diagramID", handler.UpdateArchitectureDiagram)
 	api.Delete("/architecture-diagrams/:diagramID", handler.DeleteArchitectureDiagram)
+
+	// Project Case Study routes (handled by projectcasestudies subdomain)
+	// Routes are registered separately in main.go after project handler is created
 }

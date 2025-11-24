@@ -27,14 +27,19 @@ const (
 
 // Skill represents a global skill that can be attached to projects.
 type Skill struct {
-	ID          uuid.UUID    `gorm:"column:id;type:uuid;primaryKey" json:"id"`
-	Name        string       `gorm:"column:name;size:120;not null;uniqueIndex:idx_skill_name" json:"name"`
-	Slug        string       `gorm:"column:slug;size:160;not null;uniqueIndex:idx_skill_slug" json:"slug"`
-	Category    SkillCategory `gorm:"column:category;type:varchar(32);not null;index" json:"category"`
-	Description string       `gorm:"column:description;size:512" json:"description,omitempty"`
-	Icon        string       `gorm:"column:icon;size:255" json:"icon,omitempty"` // Icon name/identifier (e.g., "redis", "postgresql")
-	CreatedAt   time.Time    `gorm:"column:created_at" json:"createdAt"`
-	UpdatedAt   time.Time    `gorm:"column:updated_at" json:"updatedAt"`
+	ID              uuid.UUID    `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	Name            string       `gorm:"column:name;size:120;not null;uniqueIndex:idx_skill_name" json:"name"`
+	Slug            string       `gorm:"column:slug;size:160;not null;uniqueIndex:idx_skill_slug" json:"slug"`
+	Category        SkillCategory `gorm:"column:category;type:varchar(32);not null;index" json:"category"`
+	Description     string       `gorm:"column:description;type:text" json:"description,omitempty"`
+	Icon            string       `gorm:"column:icon;size:255" json:"icon,omitempty"` // Icon name/identifier (e.g., "SiKubernetes", "SiGo")
+	Color           string       `gorm:"column:color;size:50" json:"color,omitempty"` // Color name (e.g., "cyan", "yellow")
+	BgGradient      string       `gorm:"column:bg_gradient;size:255" json:"bgGradient,omitempty"` // Tailwind gradient classes
+	BorderColor     string       `gorm:"column:border_color;size:255" json:"borderColor,omitempty"` // Tailwind border classes
+	HoverBorderColor string      `gorm:"column:hover_border_color;size:255" json:"hoverBorderColor,omitempty"` // Tailwind hover border classes
+	ShadowColor     string       `gorm:"column:shadow_color;size:255" json:"shadowColor,omitempty"` // Tailwind shadow classes
+	CreatedAt       time.Time    `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt       time.Time    `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // ProjectSkill represents the many-to-many relationship between projects and skills.
@@ -50,15 +55,20 @@ func (ProjectSkill) TableName() string {
 }
 
 // NewSkill creates a new skill entity.
-func NewSkill(name, description, icon string, category SkillCategory) (*Skill, error) {
+func NewSkill(name, description, icon, color, bgGradient, borderColor, hoverBorderColor, shadowColor string, category SkillCategory) (*Skill, error) {
 	skill := &Skill{
-		ID:          uuid.New(),
-		Name:        strings.TrimSpace(name),
-		Description: strings.TrimSpace(description),
-		Icon:        strings.TrimSpace(icon),
-		Category:    category,
-		CreatedAt:   time.Now().UTC(),
-		UpdatedAt:   time.Now().UTC(),
+		ID:              uuid.New(),
+		Name:            strings.TrimSpace(name),
+		Description:     strings.TrimSpace(description),
+		Icon:            strings.TrimSpace(icon),
+		Color:           strings.TrimSpace(color),
+		BgGradient:      strings.TrimSpace(bgGradient),
+		BorderColor:     strings.TrimSpace(borderColor),
+		HoverBorderColor: strings.TrimSpace(hoverBorderColor),
+		ShadowColor:     strings.TrimSpace(shadowColor),
+		Category:        category,
+		CreatedAt:       time.Now().UTC(),
+		UpdatedAt:       time.Now().UTC(),
 	}
 	skill.Slug = generateSkillSlug(skill.Name)
 
@@ -96,7 +106,7 @@ func (s *Skill) Validate() error {
 }
 
 // UpdateDetails updates skill details.
-func (s *Skill) UpdateDetails(name, description, icon string, category SkillCategory) error {
+func (s *Skill) UpdateDetails(name, description, icon, color, bgGradient, borderColor, hoverBorderColor, shadowColor string, category SkillCategory) error {
 	if name != "" {
 		s.Name = strings.TrimSpace(name)
 		s.Slug = generateSkillSlug(s.Name)
@@ -106,6 +116,21 @@ func (s *Skill) UpdateDetails(name, description, icon string, category SkillCate
 	}
 	if icon != "" {
 		s.Icon = strings.TrimSpace(icon)
+	}
+	if color != "" {
+		s.Color = strings.TrimSpace(color)
+	}
+	if bgGradient != "" {
+		s.BgGradient = strings.TrimSpace(bgGradient)
+	}
+	if borderColor != "" {
+		s.BorderColor = strings.TrimSpace(borderColor)
+	}
+	if hoverBorderColor != "" {
+		s.HoverBorderColor = strings.TrimSpace(hoverBorderColor)
+	}
+	if shadowColor != "" {
+		s.ShadowColor = strings.TrimSpace(shadowColor)
 	}
 	if category != "" {
 		s.Category = category

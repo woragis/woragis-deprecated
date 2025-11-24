@@ -12,10 +12,13 @@ import (
 type EntityType string
 
 const (
-	EntityTypeTestimonial EntityType = "testimonial"
-	EntityTypePost        EntityType = "post"
-	EntityTypeProject     EntityType = "project"
-	EntityTypeCaseStudy   EntityType = "case_study"
+	EntityTypeTestimonial      EntityType = "testimonial"
+	EntityTypePost             EntityType = "post"
+	EntityTypeProject          EntityType = "project"
+	EntityTypeCaseStudy        EntityType = "case_study"
+	EntityTypeProjectCaseStudy EntityType = "project_case_study"
+	EntityTypeSystemDesign     EntityType = "system_design"
+	EntityTypeProblemSolution  EntityType = "problem_solution"
 )
 
 // Language represents supported languages.
@@ -124,7 +127,7 @@ func (t *Translation) Validate() error {
 
 func isValidEntityType(et EntityType) bool {
 	switch et {
-	case EntityTypeTestimonial, EntityTypePost, EntityTypeProject, EntityTypeCaseStudy:
+	case EntityTypeTestimonial, EntityTypePost, EntityTypeProject, EntityTypeCaseStudy, EntityTypeProjectCaseStudy, EntityTypeSystemDesign, EntityTypeProblemSolution:
 		return true
 	}
 	return false

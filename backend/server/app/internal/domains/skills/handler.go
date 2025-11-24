@@ -46,17 +46,27 @@ func NewHandler(service Service, logger *slog.Logger) Handler {
 // Payloads
 
 type createSkillPayload struct {
-	Name        string       `json:"name"`
-	Description string       `json:"description,omitempty"`
-	Icon        string       `json:"icon,omitempty"`
-	Category    SkillCategory `json:"category"`
+	Name            string       `json:"name"`
+	Description     string       `json:"description,omitempty"`
+	Icon            string       `json:"icon,omitempty"`
+	Color           string       `json:"color,omitempty"`
+	BgGradient      string       `json:"bgGradient,omitempty"`
+	BorderColor     string       `json:"borderColor,omitempty"`
+	HoverBorderColor string      `json:"hoverBorderColor,omitempty"`
+	ShadowColor     string       `json:"shadowColor,omitempty"`
+	Category        SkillCategory `json:"category"`
 }
 
 type updateSkillPayload struct {
-	Name        string        `json:"name,omitempty"`
-	Description string        `json:"description,omitempty"`
-	Icon        string        `json:"icon,omitempty"`
-	Category    SkillCategory `json:"category,omitempty"`
+	Name            string        `json:"name,omitempty"`
+	Description     string        `json:"description,omitempty"`
+	Icon            string        `json:"icon,omitempty"`
+	Color           string        `json:"color,omitempty"`
+	BgGradient      string        `json:"bgGradient,omitempty"`
+	BorderColor     string        `json:"borderColor,omitempty"`
+	HoverBorderColor string       `json:"hoverBorderColor,omitempty"`
+	ShadowColor     string        `json:"shadowColor,omitempty"`
+	Category        SkillCategory `json:"category,omitempty"`
 }
 
 // Handlers
@@ -68,10 +78,15 @@ func (h *handler) CreateSkill(c *fiber.Ctx) error {
 	}
 
 	skill, err := h.service.CreateSkill(c.Context(), CreateSkillRequest{
-		Name:        payload.Name,
-		Description: payload.Description,
-		Icon:        payload.Icon,
-		Category:    payload.Category,
+		Name:            payload.Name,
+		Description:     payload.Description,
+		Icon:            payload.Icon,
+		Color:           payload.Color,
+		BgGradient:      payload.BgGradient,
+		BorderColor:     payload.BorderColor,
+		HoverBorderColor: payload.HoverBorderColor,
+		ShadowColor:     payload.ShadowColor,
+		Category:        payload.Category,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -92,11 +107,16 @@ func (h *handler) UpdateSkill(c *fiber.Ctx) error {
 	}
 
 	skill, err := h.service.UpdateSkill(c.Context(), UpdateSkillRequest{
-		SkillID:     skillID,
-		Name:        payload.Name,
-		Description: payload.Description,
-		Icon:        payload.Icon,
-		Category:    payload.Category,
+		SkillID:         skillID,
+		Name:            payload.Name,
+		Description:     payload.Description,
+		Icon:            payload.Icon,
+		Color:           payload.Color,
+		BgGradient:      payload.BgGradient,
+		BorderColor:     payload.BorderColor,
+		HoverBorderColor: payload.HoverBorderColor,
+		ShadowColor:     payload.ShadowColor,
+		Category:        payload.Category,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -294,14 +314,19 @@ func (h *handler) GetProjectsBySkill(c *fiber.Ctx) error {
 // Response helpers
 
 type skillResponse struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Slug        string       `json:"slug"`
-	Category    SkillCategory `json:"category"`
-	Description string       `json:"description,omitempty"`
-	Icon        string       `json:"icon,omitempty"`
-	CreatedAt   string       `json:"createdAt"`
-	UpdatedAt   string       `json:"updatedAt"`
+	ID              string       `json:"id"`
+	Name            string       `json:"name"`
+	Slug            string       `json:"slug"`
+	Category        SkillCategory `json:"category"`
+	Description     string       `json:"description,omitempty"`
+	Icon            string       `json:"icon,omitempty"`
+	Color           string       `json:"color,omitempty"`
+	BgGradient      string       `json:"bgGradient,omitempty"`
+	BorderColor     string       `json:"borderColor,omitempty"`
+	HoverBorderColor string      `json:"hoverBorderColor,omitempty"`
+	ShadowColor     string       `json:"shadowColor,omitempty"`
+	CreatedAt       string       `json:"createdAt"`
+	UpdatedAt       string       `json:"updatedAt"`
 }
 
 type skillWithCountResponse struct {
@@ -311,14 +336,19 @@ type skillWithCountResponse struct {
 
 func toSkillResponse(skill *Skill) skillResponse {
 	return skillResponse{
-		ID:          skill.ID.String(),
-		Name:        skill.Name,
-		Slug:        skill.Slug,
-		Category:    skill.Category,
-		Description: skill.Description,
-		Icon:        skill.Icon,
-		CreatedAt:   skill.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:   skill.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:              skill.ID.String(),
+		Name:            skill.Name,
+		Slug:            skill.Slug,
+		Category:        skill.Category,
+		Description:     skill.Description,
+		Icon:            skill.Icon,
+		Color:           skill.Color,
+		BgGradient:      skill.BgGradient,
+		BorderColor:     skill.BorderColor,
+		HoverBorderColor: skill.HoverBorderColor,
+		ShadowColor:     skill.ShadowColor,
+		CreatedAt:       skill.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:       skill.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 

@@ -43,24 +43,34 @@ func NewService(repo Repository, logger *slog.Logger) Service {
 // Request payloads
 
 type CreateSkillRequest struct {
-	Name        string       `json:"name"`
-	Description string       `json:"description,omitempty"`
-	Icon        string       `json:"icon,omitempty"`
-	Category    SkillCategory `json:"category"`
+	Name            string       `json:"name"`
+	Description     string       `json:"description,omitempty"`
+	Icon            string       `json:"icon,omitempty"`
+	Color           string       `json:"color,omitempty"`
+	BgGradient      string       `json:"bgGradient,omitempty"`
+	BorderColor     string       `json:"borderColor,omitempty"`
+	HoverBorderColor string      `json:"hoverBorderColor,omitempty"`
+	ShadowColor     string       `json:"shadowColor,omitempty"`
+	Category        SkillCategory `json:"category"`
 }
 
 type UpdateSkillRequest struct {
-	SkillID     uuid.UUID    `json:"-"`
-	Name        string        `json:"name,omitempty"`
-	Description string        `json:"description,omitempty"`
-	Icon        string        `json:"icon,omitempty"`
-	Category    SkillCategory `json:"category,omitempty"`
+	SkillID         uuid.UUID    `json:"-"`
+	Name            string        `json:"name,omitempty"`
+	Description     string        `json:"description,omitempty"`
+	Icon            string        `json:"icon,omitempty"`
+	Color           string        `json:"color,omitempty"`
+	BgGradient      string        `json:"bgGradient,omitempty"`
+	BorderColor     string        `json:"borderColor,omitempty"`
+	HoverBorderColor string       `json:"hoverBorderColor,omitempty"`
+	ShadowColor     string        `json:"shadowColor,omitempty"`
+	Category        SkillCategory `json:"category,omitempty"`
 }
 
 // Skill operations
 
 func (s *service) CreateSkill(ctx context.Context, req CreateSkillRequest) (*Skill, error) {
-	skill, err := NewSkill(req.Name, req.Description, req.Icon, req.Category)
+	skill, err := NewSkill(req.Name, req.Description, req.Icon, req.Color, req.BgGradient, req.BorderColor, req.HoverBorderColor, req.ShadowColor, req.Category)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +94,7 @@ func (s *service) UpdateSkill(ctx context.Context, req UpdateSkillRequest) (*Ski
 		return nil, err
 	}
 
-	if err := skill.UpdateDetails(req.Name, req.Description, req.Icon, req.Category); err != nil {
+	if err := skill.UpdateDetails(req.Name, req.Description, req.Icon, req.Color, req.BgGradient, req.BorderColor, req.HoverBorderColor, req.ShadowColor, req.Category); err != nil {
 		return nil, err
 	}
 

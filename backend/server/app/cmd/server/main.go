@@ -37,12 +37,17 @@ import (
 	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
 	postsdomain "github.com/woragis/backend/server/app/internal/domains/posts"
 	postcommentsdomain "github.com/woragis/backend/server/app/internal/domains/posts/comments"
+	problemsolutionsdomain "github.com/woragis/backend/server/app/internal/domains/problemsolutions"
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
+	systemdesignsdomain "github.com/woragis/backend/server/app/internal/domains/systemdesigns"
+	projectcasestudiesdomain "github.com/woragis/backend/server/app/internal/domains/projects/projectcasestudies"
 	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
 	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
+	interestsdomain "github.com/woragis/backend/server/app/internal/domains/interests"
+	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -296,6 +301,12 @@ func main() {
 	))
 	projectsdomain.SetupRoutes(projectsGroup, projectHandler)
 
+	// Project Case Studies: subdomain within projects
+	projectCaseStudyRepo := projectcasestudiesdomain.NewGormRepository(db)
+	projectCaseStudyService := projectcasestudiesdomain.NewService(projectCaseStudyRepo, projectRepo)
+	projectCaseStudyHandler := projectcasestudiesdomain.NewHandler(projectCaseStudyService, translationEnricher, translationService, slogLogger)
+	projectcasestudiesdomain.SetupRoutes(projectsGroup, projectCaseStudyHandler)
+
 	skillRepo := skillsdomain.NewGormRepository(db)
 	skillService := skillsdomain.NewService(skillRepo, slogLogger)
 	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
@@ -307,6 +318,30 @@ func main() {
 		slogLogger,
 	))
 	skillsdomain.SetupRoutes(skillsGroup, skillHandler)
+
+	// Interests: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	interestRepo := interestsdomain.NewGormRepository(db)
+	interestService := interestsdomain.NewService(interestRepo, slogLogger)
+	interestHandler := interestsdomain.NewHandler(interestService, slogLogger)
+	interestsGroup := api.Group("/interests")
+	interestsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	interestsdomain.SetupRoutes(interestsGroup, interestHandler)
+
+	// Social Media Posts: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	socialMediaPostRepo := socialmediapostsdomain.NewGormRepository(db)
+	socialMediaPostService := socialmediapostsdomain.NewService(socialMediaPostRepo, slogLogger)
+	socialMediaPostHandler := socialmediapostsdomain.NewHandler(socialMediaPostService, slogLogger)
+	socialMediaPostsGroup := api.Group("/social-media-posts")
+	socialMediaPostsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	socialmediapostsdomain.SetupRoutes(socialMediaPostsGroup, socialMediaPostHandler)
 
 	// Posts: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	postRepo := postsdomain.NewGormRepository(db)
@@ -377,6 +412,32 @@ func main() {
 		slogLogger,
 	))
 	casestudiesdomain.SetupRoutes(caseStudiesGroup, caseStudyHandler)
+
+	// System Designs: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	systemDesignRepo := systemdesignsdomain.NewGormRepository(db)
+	systemDesignService := systemdesignsdomain.NewService(systemDesignRepo)
+	systemDesignHandler := systemdesignsdomain.NewHandler(systemDesignService, translationEnricher, translationService, slogLogger)
+	systemDesignsGroup := api.Group("/system-designs")
+	systemDesignsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
+	systemDesignsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	systemdesignsdomain.SetupRoutes(systemDesignsGroup, systemDesignHandler)
+
+	// Problem Solutions: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	problemSolutionRepo := problemsolutionsdomain.NewGormRepository(db)
+	problemSolutionService := problemsolutionsdomain.NewService(problemSolutionRepo)
+	problemSolutionHandler := problemsolutionsdomain.NewHandler(problemSolutionService, translationEnricher, translationService, slogLogger)
+	problemSolutionsGroup := api.Group("/problem-solutions")
+	problemSolutionsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
+	problemSolutionsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	problemsolutionsdomain.SetupRoutes(problemSolutionsGroup, problemSolutionHandler)
 
 	// Protected API group - requires JWT for all operations
 	// Create protected routes group and apply JWT middleware
@@ -595,6 +656,9 @@ func migrate(db *gorm.DB) error {
 		&clientsdomain.Client{},
 		&skillsdomain.Skill{},
 		&skillsdomain.ProjectSkill{},
+		&interestsdomain.Interest{},
+		&socialmediapostsdomain.SocialMediaPost{},
+		&socialmediapostsdomain.SocialMediaEntityLink{},
 		&apikeysdomain.APIKey{},
 		&postsdomain.Post{},
 		&postsdomain.PostSkill{},
@@ -605,6 +669,9 @@ func migrate(db *gorm.DB) error {
 		&postcommentsdomain.Comment{},
 		&testimonialsdomain.Testimonial{},
 		&casestudiesdomain.CaseStudy{},
+		&projectcasestudiesdomain.ProjectCaseStudy{},
+		&systemdesignsdomain.SystemDesign{},
+		&problemsolutionsdomain.ProblemSolution{},
 		&translationsdomain.Translation{},
 	)
 }
