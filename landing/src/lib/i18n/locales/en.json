@@ -97,6 +97,19 @@
 		"andMore": "And {count} more {posts}...",
 		"engagementScore": "Engagement Score"
 	},
+	"aimlIntegrations": {
+		"title": "AI/ML Integrations",
+		"subtitle": "Cutting-edge AI and machine learning integrations showcasing RAG systems, LLM implementations, and advanced ML solutions",
+		"noIntegrations": "No AI/ML integrations available",
+		"checkBack": "Check back later",
+		"integration": "integration",
+		"integrations": "integrations",
+		"useCase": "Use Case",
+		"impact": "Impact",
+		"demo": "Demo",
+		"docs": "Docs",
+		"code": "Code"
+	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
 	},
