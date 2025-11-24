@@ -35,7 +35,7 @@
 	import SkillsSection from './_components/SkillsSection.svelte';
 	import { language, translationsStore } from '$lib/i18n';
 	import { useProjectsQuery } from '$lib/queries/projects';
-	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
+	import { useSkillsWithCountsQuery, useSkillsTimelineQuery, skillKeys } from '$lib/queries/skills';
 	import { usePostsQuery } from '$lib/queries/posts';
 	import { useCaseStudiesQuery } from '$lib/queries/case-studies';
 	import { useFeaturedCertificationsQuery } from '$lib/queries/certifications';
@@ -45,7 +45,6 @@
 	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
 	import { useFeaturedSystemDesignsQuery } from '$lib/queries/system-designs';
 	import { useFeaturedProblemSolutionsQuery, useProblemSolutionMatrixQuery } from '$lib/queries/problem-solutions';
-	import { useSkillsTimelineQuery } from '$lib/queries/skills';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { queryClient } from '$lib/query-client';
@@ -74,11 +73,15 @@
 	// Featured projects - using TanStack Query
 	const featuredProjectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
 
-	// Invalidate query when language changes to trigger refetch with new language
+	// Invalidate queries when language changes to trigger refetch with new language
 	$effect(() => {
 		const currentLang = $language;
 		// Invalidate all project list queries when language changes
 		queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+		// Invalidate impact metrics queries when language changes
+		queryClient.invalidateQueries({ queryKey: ['impact-metrics'] });
+		// Invalidate skills timeline queries when language changes
+		queryClient.invalidateQueries({ queryKey: skillKeys.timeline() });
 	});
 	
 	let projects = $derived(featuredProjectsQuery.data || []);

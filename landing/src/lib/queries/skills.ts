@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listSkills,
 	listSkillsWithCounts,
@@ -12,18 +14,18 @@ import {
 	type SkillCategory
 } from '$lib/api/skills';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const skillKeys = {
 	all: ['skills'] as const,
 	lists: () => [...skillKeys.all, 'list'] as const,
-	list: () => [...skillKeys.lists()] as const,
-	withCounts: () => [...skillKeys.all, 'with-counts'] as const,
+	list: (lang?: string) => [...skillKeys.lists(), lang] as const,
+	withCounts: (lang?: string) => [...skillKeys.all, 'with-counts', lang] as const,
 	details: () => [...skillKeys.all, 'detail'] as const,
-	detail: (id: string) => [...skillKeys.details(), id] as const,
-	bySlug: (slug: string) => [...skillKeys.details(), 'slug', slug] as const,
-	search: (query: string) => [...skillKeys.all, 'search', query] as const,
-	byCategory: (category: SkillCategory) => [...skillKeys.all, 'category', category] as const,
-	timeline: () => [...skillKeys.all, 'timeline'] as const
+	detail: (id: string, lang?: string) => [...skillKeys.details(), id, lang] as const,
+	bySlug: (slug: string, lang?: string) => [...skillKeys.details(), 'slug', slug, lang] as const,
+	search: (query: string, lang?: string) => [...skillKeys.all, 'search', query, lang] as const,
+	byCategory: (category: SkillCategory, lang?: string) => [...skillKeys.all, 'category', category, lang] as const,
+	timeline: (lang?: string) => [...skillKeys.all, 'timeline', lang] as const
 };
 
 // Query options for listing skills
@@ -129,18 +131,23 @@ export function useSkillsByCategoryQuery(category: SkillCategory) {
 }
 
 // Query options for getting skills timeline
-export function getSkillsTimelineQueryOptions() {
+export function getSkillsTimelineQueryOptions(lang?: string) {
 	return queryOptions({
-		queryKey: skillKeys.timeline(),
+		queryKey: skillKeys.timeline(lang),
 		queryFn: () => getSkillsTimeline()
 	});
 }
 
-// Hook for getting skills timeline
+// Hook for getting skills timeline - reactive to language changes
 export function useSkillsTimelineQuery() {
-	return createQuery(() => ({
-		queryKey: skillKeys.timeline(),
-		queryFn: () => getSkillsTimeline()
-	}));
+	// Read language from store in the callback - TanStack Query will track this reactively
+	// The query key includes the language, so it will refetch when language changes
+	return createQuery(() => {
+		const currentLang = get(language);
+		return {
+			queryKey: skillKeys.timeline(currentLang),
+			queryFn: () => getSkillsTimeline()
+		};
+	});
 }
 

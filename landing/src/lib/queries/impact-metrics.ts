@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listImpactMetrics,
 	getFeaturedImpactMetrics,
@@ -7,17 +9,17 @@ import {
 } from '$lib/api/impact-metrics';
 import type { ImpactMetric, MetricType, EntityType } from '$lib/types/impact-metric';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const impactMetricKeys = {
 	all: ['impact-metrics'] as const,
 	lists: () => [...impactMetricKeys.all, 'list'] as const,
-	list: (params?: { type?: MetricType; featured?: boolean }) =>
-		[...impactMetricKeys.lists(), params] as const,
-	featured: () => [...impactMetricKeys.all, 'featured'] as const,
+	list: (params?: { type?: MetricType; featured?: boolean }, lang?: string) =>
+		[...impactMetricKeys.lists(), params, lang] as const,
+	featured: (lang?: string) => [...impactMetricKeys.all, 'featured', lang] as const,
 	details: () => [...impactMetricKeys.all, 'detail'] as const,
-	detail: (id: string) => [...impactMetricKeys.details(), id] as const,
-	byEntity: (entityType: EntityType, entityId: string) =>
-		[...impactMetricKeys.all, 'entity', entityType, entityId] as const
+	detail: (id: string, lang?: string) => [...impactMetricKeys.details(), id, lang] as const,
+	byEntity: (entityType: EntityType, entityId: string, lang?: string) =>
+		[...impactMetricKeys.all, 'entity', entityType, entityId, lang] as const
 };
 
 // Query options for listing impact metrics
@@ -32,9 +34,9 @@ export function getImpactMetricsQueryOptions(params?: {
 }
 
 // Query options for featured impact metrics
-export function getFeaturedImpactMetricsQueryOptions() {
+export function getFeaturedImpactMetricsQueryOptions(lang?: string) {
 	return queryOptions({
-		queryKey: impactMetricKeys.featured(),
+		queryKey: impactMetricKeys.featured(lang),
 		queryFn: () => getFeaturedImpactMetrics()
 	});
 }
@@ -65,12 +67,17 @@ export function useImpactMetricsQuery(params?: { type?: MetricType; featured?: b
 	}));
 }
 
-// Hook for featured impact metrics
+// Hook for featured impact metrics - reactive to language changes
 export function useFeaturedImpactMetricsQuery() {
-	return createQuery(() => ({
-		queryKey: impactMetricKeys.featured(),
-		queryFn: () => getFeaturedImpactMetrics()
-	}));
+	// Read language from store in the callback - TanStack Query will track this reactively
+	// The query key includes the language, so it will refetch when language changes
+	return createQuery(() => {
+		const currentLang = get(language);
+		return {
+			queryKey: impactMetricKeys.featured(currentLang),
+			queryFn: () => getFeaturedImpactMetrics()
+		};
+	});
 }
 
 // Hook for getting an impact metric by ID
