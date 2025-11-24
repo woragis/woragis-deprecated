@@ -58,7 +58,15 @@
 		"title": "What People Say",
 		"subtitle": "Testimonials from colleagues, clients, and mentors who have worked with me",
 		"noTestimonials": "No testimonials available",
-		"checkBack": "Check back later"
+		"checkBack": "Check back later",
+		"watchVideo": "Watch Video",
+		"project": "Project",
+		"skill": "Skill",
+		"type": {
+			"general": "General",
+			"project_specific": "Project Specific",
+			"skill_specific": "Skill Specific"
+		}
 	},
 	"certifications": {
 		"title": "Certifications & Credentials",

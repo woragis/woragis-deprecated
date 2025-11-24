@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { ChevronLeft, ChevronRight, Star, Linkedin } from 'lucide-svelte';
-	import type { Testimonial } from '$lib/types/testimonial';
+	import { ChevronLeft, ChevronRight, Star, Linkedin, Play, ExternalLink, FolderKanban, Code2 } from 'lucide-svelte';
+	import type { Testimonial, TestimonialType } from '$lib/types/testimonial';
 
 	interface Props {
 		testimonials: Testimonial[];
@@ -55,6 +55,24 @@
 	function renderStars(rating?: number) {
 		if (!rating) return [];
 		return Array.from({ length: 5 }, (_, i) => i < rating);
+	}
+
+	function getTypeLabel(type: TestimonialType): string {
+		const labels: Record<TestimonialType, string> = {
+			general: 'General',
+			project_specific: 'Project Specific',
+			skill_specific: 'Skill Specific'
+		};
+		return labels[type] || type;
+	}
+
+	function getTypeColor(type: TestimonialType): string {
+		const colors: Record<TestimonialType, string> = {
+			general: 'bg-gray-600/20 text-gray-300 border-gray-500/30',
+			project_specific: 'bg-blue-600/20 text-blue-300 border-blue-500/30',
+			skill_specific: 'bg-purple-600/20 text-purple-300 border-purple-500/30'
+		};
+		return colors[type] || colors.general;
 	}
 </script>
 
@@ -112,10 +130,51 @@
 									</div>
 								{/if}
 
+								<!-- Type Badge -->
+								{#if testimonial.type && testimonial.type !== 'general'}
+									<div class="mb-4">
+										<span
+											class="px-3 py-1 text-xs rounded-full border {getTypeColor(testimonial.type)}"
+										>
+											{getTypeLabel(testimonial.type)}
+										</span>
+									</div>
+								{/if}
+
 								<!-- Content -->
-								<blockquote class="text-gray-200 text-lg mb-6 max-w-3xl leading-relaxed">
+								<blockquote class="text-gray-200 text-lg mb-4 max-w-3xl leading-relaxed">
 									"{testimonial.content}"
 								</blockquote>
+
+								<!-- Context -->
+								{#if testimonial.context}
+									<div class="mb-4 max-w-3xl">
+										<p class="text-sm text-gray-400 italic">
+											{testimonial.context}
+										</p>
+									</div>
+								{/if}
+
+								<!-- Entity Links -->
+								{#if testimonial.entityLinks && testimonial.entityLinks.length > 0}
+									<div class="flex flex-wrap items-center justify-center gap-2 mb-4">
+										{#each testimonial.entityLinks as link}
+											<a
+												href={link.entityType === 'project' ? `/projects/${link.entityId}` : `/skills#${link.entityId}`}
+												class="flex items-center gap-1 px-3 py-1 text-xs rounded-full bg-gray-700/50 text-gray-300 border border-gray-600 hover:border-blue-500/50 hover:text-blue-300 transition-colors"
+											>
+												{#if link.entityType === 'project'}
+													<FolderKanban class="w-3 h-3" />
+													<span>Project</span>
+												{:else}
+													<Code2 class="w-3 h-3" />
+													<span>Skill</span>
+												{/if}
+												<ExternalLink class="w-3 h-3" />
+											</a>
+										{/each}
+									</div>
+								{/if}
 
 								<!-- Author Info -->
 								<div class="flex flex-col items-center gap-2">
@@ -146,6 +205,19 @@
 											<span>{testimonial.authorCompany}</span>
 										{/if}
 									</div>
+
+									<!-- Video Link -->
+									{#if testimonial.videoUrl}
+										<a
+											href={testimonial.videoUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="mt-2 flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
+										>
+											<Play class="w-4 h-4" />
+											<span>Watch Video</span>
+										</a>
+									{/if}
 								</div>
 							</div>
 						{/if}
