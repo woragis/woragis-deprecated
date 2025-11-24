@@ -340,7 +340,20 @@ All domains need CRUD interfaces in the admin frontend:
 9. **Testimonials Section** ✅
    - TestimonialsCarousel component
 
-10. **Contact Section** ✅
+10. **Certifications Section** ✅
+    - CertificationsSection component
+    - Grouped by category (Cloud, Security, Programming, etc.)
+    - Status indicators and expiry dates
+    - Skills tags and verification links
+
+11. **Technical Writings Section** ✅
+    - TechnicalWritingsSection component
+    - Grouped by type (articles, tutorials, guides, documentation, etc.)
+    - Engagement metrics (views, likes, shares, comments)
+    - Platform badges and reading time
+    - Topics and technologies tags
+
+12. **Contact Section** ✅
     - Contact information
 
 ### Missing Landing Page Features ❌
@@ -381,7 +394,7 @@ All domains need CRUD interfaces in the admin frontend:
 
 8. **Communication Skills** ⚠️
    - Blog posts section exists
-   - Missing: Technical writings section
+   - ✅ Technical writings section (IMPLEMENTED)
    - Missing: Social media posts section
 
 9. **Leadership Indicators** ❌
@@ -474,9 +487,14 @@ All domains need CRUD interfaces in the admin frontend:
 27. **Open Source Contributions** ❌
     - Not implemented
 
-28. **Technical Writing Portfolio** ❌
+28. **Technical Writing Portfolio** ✅
     - Backend fully implemented
-    - Missing: Technical writings section on landing page
+    - ✅ Technical writings section on landing page (IMPLEMENTED)
+    - ✅ Grouped by type (articles, tutorials, guides, documentation, etc.)
+    - ✅ Engagement metrics display (views, likes, shares, comments)
+    - ✅ Platform badges (Medium, Dev.to, GitHub, etc.)
+    - ✅ Reading time and publication dates
+    - ✅ Topics and technologies tags
 
 ---
 
@@ -485,10 +503,10 @@ All domains need CRUD interfaces in the admin frontend:
 ### High Impact, Quick Wins
 
 1. **Display skill proficiency levels on landing page** (Backend ready)
-2. **Add certifications section to landing page** (Backend ready)
+2. ✅ **Add certifications section to landing page** (COMPLETED)
 3. **Add social media posts section to landing page** (Backend ready)
 4. **Add impact metrics dashboard to landing page** (Backend ready)
-5. **Add technical writings section to landing page** (Backend ready)
+5. ✅ **Add technical writings section to landing page** (COMPLETED)
 6. **Add AI/ML integrations showcase to landing page** (Backend ready)
 
 ### High Impact, More Complex
