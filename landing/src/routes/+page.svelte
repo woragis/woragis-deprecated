@@ -13,8 +13,8 @@
 	} from 'svelte-icons-pack/si';
 	import { Mail, Phone, MapPin, ExternalLink, Calendar, TrendingUp, Code2, Settings, Brain, GitBranch, Tag, Layers, Zap, Target, CheckCircle2, XCircle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-svelte';
 	import { contact, skills, interests } from '$lib/constants';
-	import { caseStudies, problemSolutions } from '$lib/constants/technical';
-	import type { TechnicalCaseStudy, ProblemSolution } from '$lib/types/technical';
+	import { caseStudies } from '$lib/constants/technical';
+	import type { TechnicalCaseStudy } from '$lib/types/technical';
 	import type { SkillWithCount } from '$lib/api/skills';
 	import type { Project, ProjectTechnology } from '$lib/types/project';
 	import TestimonialsCarousel from './_components/TestimonialsCarousel.svelte';
@@ -27,6 +27,7 @@
 	import AIMLIntegrationsSection from './_components/AIMLIntegrationsSection.svelte';
 	import ImpactMetricsDashboard from './_components/ImpactMetricsDashboard.svelte';
 	import SystemDesignsSection from './_components/SystemDesignsSection.svelte';
+	import ProblemSolutionsSection from './_components/ProblemSolutionsSection.svelte';
 	import HeroSection from './_components/HeroSection.svelte';
 	import AboutSection from './_components/AboutSection.svelte';
 	import SkillsSection from './_components/SkillsSection.svelte';
@@ -41,6 +42,7 @@
 	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
 	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
 	import { useFeaturedSystemDesignsQuery } from '$lib/queries/system-designs';
+	import { useFeaturedProblemSolutionsQuery } from '$lib/queries/problem-solutions';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { queryClient } from '$lib/query-client';
@@ -155,6 +157,11 @@
 	let systemDesigns = $derived(systemDesignsQuery.data || []);
 	let loadingSystemDesigns = $derived(systemDesignsQuery.isPending);
 
+	// Problem solutions query
+	const problemSolutionsQuery = useFeaturedProblemSolutionsQuery();
+	let problemSolutions = $derived(problemSolutionsQuery.data || []);
+	let loadingProblemSolutions = $derived(problemSolutionsQuery.isPending);
+
 	// Testimonials
 	let testimonials: Testimonial[] = $state([]);
 	let loadingTestimonials = $state(false);
@@ -233,14 +240,9 @@
 
 	// Technical sections state
 	let expandedCaseStudy: string | null = $state(null);
-	let expandedProblem: string | null = $state(null);
 
 	function toggleCaseStudy(id: string) {
 		expandedCaseStudy = expandedCaseStudy === id ? null : id;
-	}
-
-	function toggleProblem(id: string) {
-		expandedProblem = expandedProblem === id ? null : id;
 	}
 </script>
 
@@ -327,102 +329,18 @@
 		</div>
 	</section>
 
-	<!-- Problem Solving Section -->
-	<section id="problem-solving" class="container mx-auto px-6 py-20">
+	<!-- Problem Solutions Section -->
+	<section id="problem-solutions" class="container mx-auto px-6 py-20">
 		<div class="max-w-7xl mx-auto">
 			<div class="text-center mb-12">
-				<h2 class="text-4xl font-bold mb-4">Problem Solving & Communication</h2>
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+					{t('problemSolutions.title')}
+				</h2>
 				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
-					Real challenges solved with clear communication of solutions and impact
+					{t('problemSolutions.subtitle')}
 				</p>
 			</div>
-
-			<div class="space-y-6">
-				{#each problemSolutions as solution (solution.id)}
-					<div
-						class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300"
-					>
-						<div class="flex items-start justify-between mb-4">
-							<div class="flex-1">
-								<div class="flex items-center gap-3 mb-2">
-									<div
-										class="w-10 h-10 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-lg flex items-center justify-center"
-									>
-										<Zap class="w-5 h-5" />
-									</div>
-									<h3 class="text-xl font-bold text-white">{solution.problem}</h3>
-								</div>
-								<p class="text-sm text-gray-400 mb-3">{solution.context}</p>
-							</div>
-							<button
-								onclick={() => toggleProblem(solution.id)}
-								class="text-gray-400 hover:text-white transition-colors ml-4"
-							>
-								{#if expandedProblem === solution.id}
-									<ChevronUp class="w-5 h-5" />
-								{:else}
-									<ChevronDown class="w-5 h-5" />
-								{/if}
-							</button>
-						</div>
-
-						<div class="grid md:grid-cols-2 gap-4 mb-4">
-							<div class="bg-gray-800/30 rounded-lg p-4">
-								<h4 class="text-sm font-semibold text-red-400 mb-2">Problem</h4>
-								<p class="text-sm text-gray-300">{solution.problem}</p>
-							</div>
-							<div class="bg-gray-800/30 rounded-lg p-4">
-								<h4 class="text-sm font-semibold text-green-400 mb-2">Solution</h4>
-								<p class="text-sm text-gray-300">{solution.solution}</p>
-							</div>
-						</div>
-
-						{#if expandedProblem === solution.id}
-							<div class="mt-4 pt-4 border-t border-gray-700 space-y-4">
-								<div>
-									<h4 class="text-sm font-semibold text-blue-400 mb-2">Technologies Used</h4>
-									<div class="flex flex-wrap gap-2">
-										{#each solution.technologies as tech (tech)}
-											<span
-												class="px-3 py-1 bg-blue-600/20 text-blue-300 rounded-full text-xs border border-blue-600/30"
-											>
-												{tech}
-											</span>
-										{/each}
-									</div>
-								</div>
-
-								<div>
-									<h4 class="text-sm font-semibold text-purple-400 mb-2">Impact</h4>
-									<p class="text-sm text-gray-300">{solution.impact}</p>
-								</div>
-
-								{#if solution.metrics}
-									<div class="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg p-4">
-										<h4 class="text-sm font-semibold text-cyan-400 mb-3">Metrics</h4>
-										<div class="grid grid-cols-3 gap-4">
-											<div>
-												<p class="text-xs text-gray-400 mb-1">Before</p>
-												<p class="text-sm font-medium text-red-300">{solution.metrics.before}</p>
-											</div>
-											<div>
-												<p class="text-xs text-gray-400 mb-1">After</p>
-												<p class="text-sm font-medium text-green-300">{solution.metrics.after}</p>
-											</div>
-											<div>
-												<p class="text-xs text-gray-400 mb-1">Improvement</p>
-												<p class="text-sm font-medium text-cyan-300">
-													{solution.metrics.improvement}
-												</p>
-											</div>
-										</div>
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
+			<ProblemSolutionsSection solutions={problemSolutions} loading={loadingProblemSolutions} />
 		</div>
 	</section>
 

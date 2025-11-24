@@ -141,6 +141,21 @@
 		"reliability": "Reliability",
 		"viewDiagram": "View Diagram"
 	},
+	"problemSolutions": {
+		"title": "Problem Solving & Solutions",
+		"subtitle": "Real challenges solved with clear communication of solutions, impact, and measurable results",
+		"noSolutions": "No problem solutions available",
+		"checkBack": "Check back later",
+		"problem": "Problem",
+		"solution": "Solution",
+		"context": "Context",
+		"impact": "Impact",
+		"technologiesUsed": "Technologies Used",
+		"metrics": "Metrics",
+		"before": "Before",
+		"after": "After",
+		"improvement": "Improvement"
+	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
 	},
