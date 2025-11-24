@@ -5,11 +5,9 @@ import {
 	getTechnicalWriting,
 	searchTechnicalWritings,
 	getWritingsByType,
-	getWritingsByPlatform,
-	type TechnicalWriting,
-	type WritingType,
-	type PublicationPlatform
+	getWritingsByPlatform
 } from '$lib/api/technical-writings';
+import type { TechnicalWriting, WritingType, PublicationPlatform } from '$lib/types/technical-writing';
 
 // Query keys factory
 export const technicalWritingKeys = {

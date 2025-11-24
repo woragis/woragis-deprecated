@@ -121,7 +121,7 @@
 								<div class="mt-6">
 									<h3 class="text-xl font-semibold mb-4 text-green-200">Approach</h3>
 									<ul class="space-y-3">
-										{#each caseStudy.approach as step}
+										{#each caseStudy.approach as step, index}
 											<li class="flex items-start gap-3 text-gray-200">
 												<span
 													class="flex-shrink-0 w-6 h-6 rounded-full bg-green-600/30 border border-green-500/50 flex items-center justify-center text-green-300 text-sm font-medium mt-0.5"

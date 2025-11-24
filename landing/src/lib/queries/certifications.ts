@@ -3,11 +3,9 @@ import {
 	listCertifications,
 	getFeaturedCertifications,
 	getCertification,
-	getCertificationsBySkill,
-	type Certification,
-	type CertificationStatus,
-	type CertificationCategory
+	getCertificationsBySkill
 } from '$lib/api/certifications';
+import type { Certification, CertificationStatus, CertificationCategory } from '$lib/types/certification';
 
 // Query keys factory
 export const certificationKeys = {

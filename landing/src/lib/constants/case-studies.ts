@@ -3,6 +3,8 @@ import type { CaseStudy } from '$lib/types/case-study';
 export const caseStudies: CaseStudy[] = [
 	{
 		id: 'woragis-backend-architecture',
+		userId: 'system',
+		projectId: 'woragis-backend',
 		projectSlug: 'woragis-backend',
 		title: 'Woragis Backend: Microservices Architecture & API Design',
 		problem:
@@ -137,10 +139,14 @@ export const caseStudies: CaseStudy[] = [
 			'Docker containerization simplifies deployment and development setup'
 		],
 		technologies: ['Go', 'Fiber', 'PostgreSQL', 'Redis', 'GORM', 'Docker', 'JWT'],
-		featured: true
+		featured: true,
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString()
 	},
 	{
 		id: 'api-key-authentication',
+		userId: 'system',
+		projectId: 'woragis-backend',
 		projectSlug: 'woragis-backend',
 		title: 'Flexible API Key Authentication for Public Access',
 		problem:
@@ -223,7 +229,9 @@ export const caseStudies: CaseStudy[] = [
 			'API keys should be scoped to read-only operations for security'
 		],
 		technologies: ['Go', 'Fiber', 'JWT', 'CORS', 'Middleware'],
-		featured: true
+		featured: true,
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString()
 	}
 ];
 

@@ -4,11 +4,9 @@ import {
 	getFeaturedAIMLIntegrations,
 	getAIMLIntegration,
 	getIntegrationsByType,
-	getIntegrationsByFramework,
-	type AIMLIntegration,
-	type IntegrationType,
-	type Framework
+	getIntegrationsByFramework
 } from '$lib/api/aiml-integrations';
+import type { AIMLIntegration, IntegrationType, Framework } from '$lib/types/aiml-integration';
 
 // Query keys factory
 export const aimlIntegrationKeys = {

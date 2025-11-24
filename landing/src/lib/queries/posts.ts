@@ -1,6 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
-import { listPosts, getPostBySlug, getPost, listCategories, listTags, type ListPostsParams } from '$lib/api/posts';
-import type { Post, Category, Tag } from '$lib/types/post';
+import { listPosts, getPostBySlug, getPost, listCategories, listTags } from '$lib/api/posts';
+import type { Post, Category, Tag, ListPostsParams } from '$lib/types/post';
 
 // Query keys factory
 export const postKeys = {

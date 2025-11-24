@@ -3,10 +3,9 @@ import {
 	listProblemSolutions,
 	getFeaturedProblemSolutions,
 	getProblemSolution,
-	getProblemSolutionMatrix,
-	type ProblemSolution
+	getProblemSolutionMatrix
 } from '$lib/api/problem-solutions';
-import type { ProblemSolutionMatrixEntry } from '$lib/types/problem-solution';
+import type { ProblemSolution, ProblemSolutionMatrixEntry } from '$lib/types/problem-solution';
 
 // Query keys factory
 export const problemSolutionKeys = {

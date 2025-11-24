@@ -2,11 +2,9 @@ import { queryOptions, createQuery } from '@tanstack/svelte-query';
 import {
 	listSocialMediaPosts,
 	getSocialMediaPost,
-	getSocialMediaPostByURL,
-	type SocialMediaPost,
-	type Platform,
-	type PostStatus
+	getSocialMediaPostByURL
 } from '$lib/api/social-media-posts';
+import type { SocialMediaPost, Platform, PostStatus } from '$lib/types/social-media-post';
 
 // Query keys factory
 export const socialMediaPostKeys = {

@@ -3,11 +3,9 @@ import {
 	listImpactMetrics,
 	getFeaturedImpactMetrics,
 	getImpactMetric,
-	getMetricsByEntity,
-	type ImpactMetric,
-	type MetricType,
-	type EntityType
+	getMetricsByEntity
 } from '$lib/api/impact-metrics';
+import type { ImpactMetric, MetricType, EntityType } from '$lib/types/impact-metric';
 
 // Query keys factory
 export const impactMetricKeys = {

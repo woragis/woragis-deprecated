@@ -2,9 +2,9 @@ import { queryOptions, createQuery } from '@tanstack/svelte-query';
 import {
 	listSystemDesigns,
 	getFeaturedSystemDesigns,
-	getSystemDesign,
-	type SystemDesign
+	getSystemDesign
 } from '$lib/api/system-designs';
+import type { SystemDesign } from '$lib/types/system-design';
 
 // Query keys factory
 export const systemDesignKeys = {
