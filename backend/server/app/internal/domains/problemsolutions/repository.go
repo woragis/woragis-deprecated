@@ -16,6 +16,7 @@ type Repository interface {
 	ListProblemSolutions(ctx context.Context, userID uuid.UUID) ([]ProblemSolution, error)
 	ListFeaturedProblemSolutions(ctx context.Context) ([]ProblemSolution, error)
 	DeleteProblemSolution(ctx context.Context, problemSolutionID uuid.UUID, userID uuid.UUID) error
+	GetProblemSolutionMatrix(ctx context.Context) ([]ProblemSolutionMatrixEntry, error)
 }
 
 type gormRepository struct {
@@ -114,5 +115,61 @@ func (r *gormRepository) DeleteProblemSolution(ctx context.Context, problemSolut
 		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
 	}
 	return nil
+}
+
+// ProblemSolutionMatrixEntry represents a technology and the problems solved with it.
+type ProblemSolutionMatrixEntry struct {
+	Technology string   `json:"technology"`
+	Problems   []string `json:"problems"`
+	Count      int      `json:"count"`
+}
+
+func (r *gormRepository) GetProblemSolutionMatrix(ctx context.Context) ([]ProblemSolutionMatrixEntry, error) {
+	// Get all problem solutions
+	var problemSolutions []ProblemSolution
+	if err := r.db.WithContext(ctx).Find(&problemSolutions).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	// Build technology map: technology -> []problem IDs
+	techMap := make(map[string]map[string]bool) // technology -> problem ID set
+
+	for _, ps := range problemSolutions {
+		for _, tech := range ps.Technologies {
+			if techMap[tech] == nil {
+				techMap[tech] = make(map[string]bool)
+			}
+			techMap[tech][ps.ID.String()] = true
+		}
+	}
+
+	// Convert to matrix entries
+	var matrix []ProblemSolutionMatrixEntry
+	for tech, problemIDs := range techMap {
+		// Get problem summaries for this technology
+		var problems []string
+		for problemID := range problemIDs {
+			// Find the problem solution to get the problem text
+			for _, ps := range problemSolutions {
+				if ps.ID.String() == problemID {
+					// Use a short version of the problem (first 100 chars)
+					problemText := ps.Problem
+					if len(problemText) > 100 {
+						problemText = problemText[:100] + "..."
+					}
+					problems = append(problems, problemText)
+					break
+				}
+			}
+		}
+
+		matrix = append(matrix, ProblemSolutionMatrixEntry{
+			Technology: tech,
+			Problems:   problems,
+			Count:      len(problems),
+		})
+	}
+
+	return matrix, nil
 }
 

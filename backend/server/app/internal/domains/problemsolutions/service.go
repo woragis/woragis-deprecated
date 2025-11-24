@@ -15,6 +15,7 @@ type Service interface {
 	ListProblemSolutions(ctx context.Context, userID uuid.UUID) ([]ProblemSolution, error)
 	ListFeaturedProblemSolutions(ctx context.Context) ([]ProblemSolution, error)
 	DeleteProblemSolution(ctx context.Context, req DeleteProblemSolutionRequest) error
+	GetProblemSolutionMatrix(ctx context.Context) ([]ProblemSolutionMatrixEntry, error)
 }
 
 type service struct {
@@ -153,5 +154,9 @@ func (s *service) ListFeaturedProblemSolutions(ctx context.Context) ([]ProblemSo
 
 func (s *service) DeleteProblemSolution(ctx context.Context, req DeleteProblemSolutionRequest) error {
 	return s.repo.DeleteProblemSolution(ctx, req.ProblemSolutionID, req.UserID)
+}
+
+func (s *service) GetProblemSolutionMatrix(ctx context.Context) ([]ProblemSolutionMatrixEntry, error) {
+	return s.repo.GetProblemSolutionMatrix(ctx)
 }
 

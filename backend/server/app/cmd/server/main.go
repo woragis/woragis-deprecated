@@ -668,6 +668,7 @@ func migrate(db *gorm.DB) error {
 		&postsdomain.PostTag{},
 		&postcommentsdomain.Comment{},
 		&testimonialsdomain.Testimonial{},
+		&testimonialsdomain.TestimonialEntityLink{},
 		&casestudiesdomain.CaseStudy{},
 		&projectcasestudiesdomain.ProjectCaseStudy{},
 		&systemdesignsdomain.SystemDesign{},

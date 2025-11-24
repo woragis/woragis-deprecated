@@ -8,6 +8,7 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Post("/", handler.CreateProblemSolution)
 	api.Get("/", handler.ListProblemSolutions)
 	api.Get("/featured", handler.ListFeaturedProblemSolutions) // Public access
+	api.Get("/matrix", handler.GetProblemSolutionMatrix)        // Public access - Problem-Solution Matrix
 	api.Get("/:id", handler.GetProblemSolution)
 	api.Get("/:id/public", handler.GetProblemSolutionPublic) // Public access
 	api.Patch("/:id", handler.UpdateProblemSolution)

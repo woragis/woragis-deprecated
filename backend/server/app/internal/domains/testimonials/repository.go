@@ -20,6 +20,12 @@ type Repository interface {
 	ApproveTestimonial(ctx context.Context, testimonialID uuid.UUID) error
 	RejectTestimonial(ctx context.Context, testimonialID uuid.UUID) error
 	HideTestimonial(ctx context.Context, testimonialID uuid.UUID) error
+	// Entity link methods
+	CreateTestimonialEntityLink(ctx context.Context, link *TestimonialEntityLink) error
+	GetTestimonialEntityLinks(ctx context.Context, testimonialID uuid.UUID) ([]TestimonialEntityLink, error)
+	GetEntityTestimonials(ctx context.Context, entityType EntityType, entityID uuid.UUID) ([]Testimonial, error)
+	DeleteTestimonialEntityLink(ctx context.Context, linkID uuid.UUID) error
+	DeleteTestimonialEntityLinks(ctx context.Context, testimonialID uuid.UUID) error
 }
 
 // TestimonialFilters represents filtering options for listing testimonials.
@@ -231,6 +237,84 @@ func (r *gormRepository) HideTestimonial(ctx context.Context, testimonialID uuid
 
 	if result.RowsAffected == 0 {
 		return NewDomainError(ErrCodeNotFound, ErrTestimonialNotFound)
+	}
+
+	return nil
+}
+
+// Entity link methods
+
+func (r *gormRepository) CreateTestimonialEntityLink(ctx context.Context, link *TestimonialEntityLink) error {
+	if link == nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrNilLink)
+	}
+
+	if err := link.Validate(); err != nil {
+		return err
+	}
+
+	now := time.Now()
+	link.CreatedAt = now
+	link.UpdatedAt = now
+
+	if err := r.db.WithContext(ctx).Create(link).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) GetTestimonialEntityLinks(ctx context.Context, testimonialID uuid.UUID) ([]TestimonialEntityLink, error) {
+	if testimonialID == uuid.Nil {
+		return nil, NewDomainError(ErrCodeInvalidPayload, ErrEmptyTestimonialID)
+	}
+
+	var links []TestimonialEntityLink
+	if err := r.db.WithContext(ctx).Where("testimonial_id = ?", testimonialID).Find(&links).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return links, nil
+}
+
+func (r *gormRepository) GetEntityTestimonials(ctx context.Context, entityType EntityType, entityID uuid.UUID) ([]Testimonial, error) {
+	if entityID == uuid.Nil {
+		return nil, NewDomainError(ErrCodeInvalidPayload, ErrEmptyEntityID)
+	}
+
+	var testimonials []Testimonial
+	if err := r.db.WithContext(ctx).
+		Table("testimonials").
+		Joins("INNER JOIN testimonial_entity_links ON testimonials.id = testimonial_entity_links.testimonial_id").
+		Where("testimonial_entity_links.entity_type = ? AND testimonial_entity_links.entity_id = ?", entityType, entityID).
+		Find(&testimonials).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+
+	return testimonials, nil
+}
+
+func (r *gormRepository) DeleteTestimonialEntityLink(ctx context.Context, linkID uuid.UUID) error {
+	if linkID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyLinkID)
+	}
+
+	result := r.db.WithContext(ctx).Where("id = ?", linkID).Delete(&TestimonialEntityLink{})
+	if result.Error != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) DeleteTestimonialEntityLinks(ctx context.Context, testimonialID uuid.UUID) error {
+	if testimonialID == uuid.Nil {
+		return NewDomainError(ErrCodeInvalidPayload, ErrEmptyTestimonialID)
+	}
+
+	result := r.db.WithContext(ctx).Where("testimonial_id = ?", testimonialID).Delete(&TestimonialEntityLink{})
+	if result.Error != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
 	}
 
 	return nil

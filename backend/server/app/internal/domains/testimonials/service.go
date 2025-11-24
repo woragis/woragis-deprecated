@@ -38,26 +38,40 @@ func NewService(repo Repository, logger *slog.Logger) Service {
 // Request payloads
 
 type CreateTestimonialRequest struct {
-	AuthorName    string `json:"authorName"`
-	AuthorRole    string `json:"authorRole,omitempty"`
-	AuthorCompany string `json:"authorCompany,omitempty"`
-	AuthorPhoto   string `json:"authorPhoto,omitempty"`
-	Content       string `json:"content"`
-	Rating        *int   `json:"rating,omitempty"`
-	LinkedInURL   string `json:"linkedinUrl,omitempty"`
-	DisplayOrder  int    `json:"displayOrder,omitempty"`
+	AuthorName    string          `json:"authorName"`
+	AuthorRole    string          `json:"authorRole,omitempty"`
+	AuthorCompany string          `json:"authorCompany,omitempty"`
+	AuthorPhoto   string          `json:"authorPhoto,omitempty"`
+	Content       string          `json:"content"`
+	Context       string          `json:"context,omitempty"`
+	VideoURL      string          `json:"videoUrl,omitempty"`
+	Type          TestimonialType `json:"type,omitempty"`
+	Rating        *int            `json:"rating,omitempty"`
+	LinkedInURL   string          `json:"linkedinUrl,omitempty"`
+	DisplayOrder  int             `json:"displayOrder,omitempty"`
+	EntityLinks   []EntityLink    `json:"entityLinks,omitempty"` // Optional entity links (project or skill)
 }
 
 type UpdateTestimonialRequest struct {
-	AuthorName    *string `json:"authorName,omitempty"`
-	AuthorRole    *string `json:"authorRole,omitempty"`
-	AuthorCompany *string `json:"authorCompany,omitempty"`
-	AuthorPhoto   *string `json:"authorPhoto,omitempty"`
-	Content       *string `json:"content,omitempty"`
-	Rating        *int    `json:"rating,omitempty"`
-	LinkedInURL   *string `json:"linkedinUrl,omitempty"`
+	AuthorName    *string            `json:"authorName,omitempty"`
+	AuthorRole    *string            `json:"authorRole,omitempty"`
+	AuthorCompany *string            `json:"authorCompany,omitempty"`
+	AuthorPhoto   *string            `json:"authorPhoto,omitempty"`
+	Content       *string            `json:"content,omitempty"`
+	Context       *string            `json:"context,omitempty"`
+	VideoURL      *string            `json:"videoUrl,omitempty"`
+	Type          *TestimonialType  `json:"type,omitempty"`
+	Rating        *int               `json:"rating,omitempty"`
+	LinkedInURL   *string            `json:"linkedinUrl,omitempty"`
 	Status        *TestimonialStatus `json:"status,omitempty"`
-	DisplayOrder  *int    `json:"displayOrder,omitempty"`
+	DisplayOrder  *int               `json:"displayOrder,omitempty"`
+	EntityLinks   []EntityLink       `json:"entityLinks,omitempty"` // Optional entity links (project or skill)
+}
+
+// EntityLink represents a link to a project or skill.
+type EntityLink struct {
+	EntityType EntityType `json:"entityType"`
+	EntityID   uuid.UUID  `json:"entityId"`
 }
 
 type ListTestimonialsFilters struct {
@@ -87,6 +101,17 @@ func (s *service) CreateTestimonial(ctx context.Context, userID uuid.UUID, req C
 	if req.AuthorPhoto != "" {
 		testimonial.AuthorPhoto = req.AuthorPhoto
 	}
+	if req.Context != "" {
+		testimonial.SetContext(req.Context)
+	}
+	if req.VideoURL != "" {
+		testimonial.SetVideoURL(req.VideoURL)
+	}
+	if req.Type != "" {
+		if err := testimonial.SetType(req.Type); err != nil {
+			return nil, err
+		}
+	}
 	if req.Rating != nil {
 		testimonial.Rating = req.Rating
 	}
@@ -101,6 +126,19 @@ func (s *service) CreateTestimonial(ctx context.Context, userID uuid.UUID, req C
 
 	if err := s.repo.CreateTestimonial(ctx, testimonial); err != nil {
 		return nil, err
+	}
+
+	// Create entity links if provided
+	if len(req.EntityLinks) > 0 {
+		for _, link := range req.EntityLinks {
+			entityLink, err := NewTestimonialEntityLink(testimonial.ID, link.EntityType, link.EntityID)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.repo.CreateTestimonialEntityLink(ctx, entityLink); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return testimonial, nil
@@ -141,6 +179,17 @@ func (s *service) UpdateTestimonial(ctx context.Context, userID, testimonialID u
 	if req.Content != nil {
 		testimonial.Content = *req.Content
 	}
+	if req.Context != nil {
+		testimonial.SetContext(*req.Context)
+	}
+	if req.VideoURL != nil {
+		testimonial.SetVideoURL(*req.VideoURL)
+	}
+	if req.Type != nil {
+		if err := testimonial.SetType(*req.Type); err != nil {
+			return nil, err
+		}
+	}
 	if req.Rating != nil {
 		testimonial.Rating = req.Rating
 	}
@@ -162,6 +211,24 @@ func (s *service) UpdateTestimonial(ctx context.Context, userID, testimonialID u
 
 	if err := s.repo.UpdateTestimonial(ctx, testimonial); err != nil {
 		return nil, err
+	}
+
+	// Update entity links if provided
+	if req.EntityLinks != nil {
+		// Delete existing links
+		if err := s.repo.DeleteTestimonialEntityLinks(ctx, testimonialID); err != nil {
+			return nil, err
+		}
+		// Create new links
+		for _, link := range req.EntityLinks {
+			entityLink, err := NewTestimonialEntityLink(testimonial.ID, link.EntityType, link.EntityID)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.repo.CreateTestimonialEntityLink(ctx, entityLink); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return testimonial, nil

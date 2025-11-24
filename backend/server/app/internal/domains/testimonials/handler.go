@@ -49,14 +49,18 @@ func NewHandler(service Service, enricher *translationenricher.Enricher, transla
 // Payloads
 
 type createTestimonialPayload struct {
-	AuthorName    string `json:"authorName"`
-	AuthorRole    string `json:"authorRole,omitempty"`
-	AuthorCompany string `json:"authorCompany,omitempty"`
-	AuthorPhoto   string `json:"authorPhoto,omitempty"`
-	Content       string `json:"content"`
-	Rating        *int   `json:"rating,omitempty"`
-	LinkedInURL   string `json:"linkedinUrl,omitempty"`
-	DisplayOrder  int    `json:"displayOrder,omitempty"`
+	AuthorName    string          `json:"authorName"`
+	AuthorRole    string          `json:"authorRole,omitempty"`
+	AuthorCompany string          `json:"authorCompany,omitempty"`
+	AuthorPhoto   string          `json:"authorPhoto,omitempty"`
+	Content       string          `json:"content"`
+	Context       string          `json:"context,omitempty"`
+	VideoURL      string          `json:"videoUrl,omitempty"`
+	Type          TestimonialType `json:"type,omitempty"`
+	Rating        *int            `json:"rating,omitempty"`
+	LinkedInURL   string          `json:"linkedinUrl,omitempty"`
+	DisplayOrder  int             `json:"displayOrder,omitempty"`
+	EntityLinks   []EntityLink    `json:"entityLinks,omitempty"`
 }
 
 type updateTestimonialPayload struct {
@@ -65,10 +69,14 @@ type updateTestimonialPayload struct {
 	AuthorCompany *string            `json:"authorCompany,omitempty"`
 	AuthorPhoto   *string            `json:"authorPhoto,omitempty"`
 	Content       *string            `json:"content,omitempty"`
+	Context       *string            `json:"context,omitempty"`
+	VideoURL      *string            `json:"videoUrl,omitempty"`
+	Type          *TestimonialType   `json:"type,omitempty"`
 	Rating        *int               `json:"rating,omitempty"`
 	LinkedInURL   *string            `json:"linkedinUrl,omitempty"`
 	Status        *TestimonialStatus `json:"status,omitempty"`
 	DisplayOrder  *int               `json:"displayOrder,omitempty"`
+	EntityLinks   []EntityLink       `json:"entityLinks,omitempty"`
 }
 
 // Handlers
@@ -92,9 +100,13 @@ func (h *handler) CreateTestimonial(c *fiber.Ctx) error {
 		AuthorCompany: payload.AuthorCompany,
 		AuthorPhoto:   payload.AuthorPhoto,
 		Content:       payload.Content,
+		Context:       payload.Context,
+		VideoURL:      payload.VideoURL,
+		Type:          payload.Type,
 		Rating:        payload.Rating,
 		LinkedInURL:   payload.LinkedInURL,
 		DisplayOrder:  payload.DisplayOrder,
+		EntityLinks:   payload.EntityLinks,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -107,6 +119,9 @@ func (h *handler) CreateTestimonial(c *fiber.Ctx) error {
 		if testimonial.Content != "" {
 			sourceText["content"] = testimonial.Content
 		}
+		if testimonial.Context != "" {
+			sourceText["context"] = testimonial.Context
+		}
 		if testimonial.AuthorRole != "" {
 			sourceText["authorRole"] = testimonial.AuthorRole
 		}
@@ -118,6 +133,9 @@ func (h *handler) CreateTestimonial(c *fiber.Ctx) error {
 		fields := []string{}
 		if testimonial.Content != "" {
 			fields = append(fields, "content")
+		}
+		if testimonial.Context != "" {
+			fields = append(fields, "context")
 		}
 		if testimonial.AuthorRole != "" {
 			fields = append(fields, "authorRole")
@@ -192,10 +210,14 @@ func (h *handler) UpdateTestimonial(c *fiber.Ctx) error {
 		AuthorCompany: payload.AuthorCompany,
 		AuthorPhoto:   payload.AuthorPhoto,
 		Content:       payload.Content,
+		Context:       payload.Context,
+		VideoURL:      payload.VideoURL,
+		Type:          payload.Type,
 		Rating:        payload.Rating,
 		LinkedInURL:   payload.LinkedInURL,
 		Status:        payload.Status,
 		DisplayOrder:  payload.DisplayOrder,
+		EntityLinks:   payload.EntityLinks,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -222,6 +244,7 @@ func (h *handler) GetTestimonial(c *fiber.Ctx) error {
 		language := translationsdomain.LanguageFromContext(c)
 		fieldMap := map[string]*string{
 			"content":      &testimonial.Content,
+			"context":      &testimonial.Context,
 			"authorRole":   &testimonial.AuthorRole,
 			"authorCompany": &testimonial.AuthorCompany,
 		}
@@ -286,6 +309,7 @@ func (h *handler) ListTestimonials(c *fiber.Ctx) error {
 		for i := range testimonials {
 			fieldMap := map[string]*string{
 				"content":      &testimonials[i].Content,
+				"context":      &testimonials[i].Context,
 				"authorRole":   &testimonials[i].AuthorRole,
 				"authorCompany": &testimonials[i].AuthorCompany,
 			}

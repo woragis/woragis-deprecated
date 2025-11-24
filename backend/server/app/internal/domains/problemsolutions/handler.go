@@ -23,6 +23,7 @@ type Handler interface {
 	ListProblemSolutions(c *fiber.Ctx) error
 	ListFeaturedProblemSolutions(c *fiber.Ctx) error
 	DeleteProblemSolution(c *fiber.Ctx) error
+	GetProblemSolutionMatrix(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -413,6 +414,15 @@ func (h *handler) DeleteProblemSolution(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, fiber.Map{"id": problemSolutionID.String()})
+}
+
+func (h *handler) GetProblemSolutionMatrix(c *fiber.Ctx) error {
+	matrix, err := h.service.GetProblemSolutionMatrix(c.Context())
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, matrix)
 }
 
 // Helper functions
