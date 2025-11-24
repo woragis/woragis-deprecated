@@ -3,8 +3,10 @@ import {
 	listProblemSolutions,
 	getFeaturedProblemSolutions,
 	getProblemSolution,
+	getProblemSolutionMatrix,
 	type ProblemSolution
 } from '$lib/api/problem-solutions';
+import type { ProblemSolutionMatrixEntry } from '$lib/types/problem-solution';
 
 // Query keys factory
 export const problemSolutionKeys = {
@@ -13,7 +15,8 @@ export const problemSolutionKeys = {
 	list: (params?: { featured?: boolean }) => [...problemSolutionKeys.lists(), params] as const,
 	featured: () => [...problemSolutionKeys.all, 'featured'] as const,
 	details: () => [...problemSolutionKeys.all, 'detail'] as const,
-	detail: (id: string) => [...problemSolutionKeys.details(), id] as const
+	detail: (id: string) => [...problemSolutionKeys.details(), id] as const,
+	matrix: () => [...problemSolutionKeys.all, 'matrix'] as const
 };
 
 // Query options for listing problem solutions
@@ -63,6 +66,22 @@ export function useProblemSolutionQuery(id: string) {
 		queryKey: problemSolutionKeys.detail(id),
 		queryFn: () => getProblemSolution(id),
 		enabled: !!id
+	}));
+}
+
+// Query options for getting problem-solution matrix
+export function getProblemSolutionMatrixQueryOptions() {
+	return queryOptions({
+		queryKey: problemSolutionKeys.matrix(),
+		queryFn: () => getProblemSolutionMatrix()
+	});
+}
+
+// Hook for getting problem-solution matrix
+export function useProblemSolutionMatrixQuery() {
+	return createQuery(() => ({
+		queryKey: problemSolutionKeys.matrix(),
+		queryFn: () => getProblemSolutionMatrix()
 	}));
 }
 

@@ -1,5 +1,9 @@
 import { apiClient } from './client';
-import type { ProblemSolution, ListProblemSolutionsParams } from '$lib/types/problem-solution';
+import type {
+	ProblemSolution,
+	ListProblemSolutionsParams,
+	ProblemSolutionMatrixEntry
+} from '$lib/types/problem-solution';
 
 // List all problem solutions
 export async function listProblemSolutions(
@@ -58,6 +62,20 @@ export async function getProblemSolution(id: string): Promise<ProblemSolution | 
 	} catch (error) {
 		console.error(`Error fetching problem solution ${id}:`, error);
 		return null;
+	}
+}
+
+// Get problem-solution matrix
+export async function getProblemSolutionMatrix(): Promise<ProblemSolutionMatrixEntry[]> {
+	try {
+		const response = await apiClient.get<{
+			success: boolean;
+			data: ProblemSolutionMatrixEntry[];
+		}>('/problem-solutions/matrix');
+		return response.data || [];
+	} catch (error) {
+		console.error('Error fetching problem-solution matrix:', error);
+		throw error;
 	}
 }
 

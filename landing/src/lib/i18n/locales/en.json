@@ -173,7 +173,22 @@
 		"metrics": "Metrics",
 		"before": "Before",
 		"after": "After",
-		"improvement": "Improvement"
+		"improvement": "Improvement",
+		"matrix": {
+			"title": "Problem-Solution Matrix",
+			"subtitle": "Visualization of problems solved vs technologies used, showcasing problem-solving breadth and technology expertise",
+			"noData": "No matrix data available",
+			"checkBack": "Problem solutions with technologies will appear here",
+			"technologies": "Technologies",
+			"uniqueTechnologies": "Unique technologies used",
+			"problemsSolved": "Problems Solved",
+			"totalPairs": "Total problem-solution pairs",
+			"mostUsed": "Most Used",
+			"problems": "problems",
+			"problem": "problem",
+			"usage": "Usage",
+			"problemsSolvedCount": "Problems Solved ({count}):"
+		}
 	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"

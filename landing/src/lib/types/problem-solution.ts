@@ -26,3 +26,9 @@ export interface ListProblemSolutionsParams {
 	order?: 'asc' | 'desc';
 }
 
+export interface ProblemSolutionMatrixEntry {
+	technology: string;
+	problems: string[];
+	count: number;
+}
+

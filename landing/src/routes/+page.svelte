@@ -28,6 +28,7 @@
 	import ImpactMetricsDashboard from './_components/ImpactMetricsDashboard.svelte';
 	import SystemDesignsSection from './_components/SystemDesignsSection.svelte';
 	import ProblemSolutionsSection from './_components/ProblemSolutionsSection.svelte';
+	import ProblemSolutionMatrix from './_components/ProblemSolutionMatrix.svelte';
 	import SkillsTimeline from './_components/SkillsTimeline.svelte';
 	import HeroSection from './_components/HeroSection.svelte';
 	import AboutSection from './_components/AboutSection.svelte';
@@ -43,7 +44,7 @@
 	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
 	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
 	import { useFeaturedSystemDesignsQuery } from '$lib/queries/system-designs';
-	import { useFeaturedProblemSolutionsQuery } from '$lib/queries/problem-solutions';
+	import { useFeaturedProblemSolutionsQuery, useProblemSolutionMatrixQuery } from '$lib/queries/problem-solutions';
 	import { useSkillsTimelineQuery } from '$lib/queries/skills';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
@@ -163,6 +164,11 @@
 	const problemSolutionsQuery = useFeaturedProblemSolutionsQuery();
 	let problemSolutions = $derived(problemSolutionsQuery.data || []);
 	let loadingProblemSolutions = $derived(problemSolutionsQuery.isPending);
+
+	// Problem-Solution Matrix query
+	const problemSolutionMatrixQuery = useProblemSolutionMatrixQuery();
+	let problemSolutionMatrix = $derived(problemSolutionMatrixQuery.data || []);
+	let loadingMatrix = $derived(problemSolutionMatrixQuery.isPending);
 
 	// Testimonials
 	let testimonials: Testimonial[] = $state([]);
@@ -363,6 +369,21 @@
 				</p>
 			</div>
 			<ProblemSolutionsSection solutions={problemSolutions} loading={loadingProblemSolutions} />
+		</div>
+	</section>
+
+	<!-- Problem-Solution Matrix Section -->
+	<section id="problem-solution-matrix" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
+					{t('problemSolutions.matrix.title')}
+				</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					{t('problemSolutions.matrix.subtitle')}
+				</p>
+			</div>
+			<ProblemSolutionMatrix />
 		</div>
 	</section>
 
