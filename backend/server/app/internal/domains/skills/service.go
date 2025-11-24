@@ -3,6 +3,7 @@ package skills
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -23,6 +24,9 @@ type Service interface {
 	DetachSkillFromProject(ctx context.Context, projectID, skillID uuid.UUID) error
 	GetProjectSkills(ctx context.Context, projectID uuid.UUID) ([]Skill, error)
 	GetProjectsBySkill(ctx context.Context, skillID uuid.UUID) ([]uuid.UUID, error)
+	
+	// Timeline operations
+	GetSkillsTimeline(ctx context.Context) ([]Skill, error)
 }
 
 type service struct {
@@ -43,34 +47,42 @@ func NewService(repo Repository, logger *slog.Logger) Service {
 // Request payloads
 
 type CreateSkillRequest struct {
-	Name            string       `json:"name"`
-	Description     string       `json:"description,omitempty"`
-	Icon            string       `json:"icon,omitempty"`
-	Color           string       `json:"color,omitempty"`
-	BgGradient      string       `json:"bgGradient,omitempty"`
-	BorderColor     string       `json:"borderColor,omitempty"`
-	HoverBorderColor string      `json:"hoverBorderColor,omitempty"`
-	ShadowColor     string       `json:"shadowColor,omitempty"`
-	Category        SkillCategory `json:"category"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description,omitempty"`
+	Icon              string          `json:"icon,omitempty"`
+	Color             string          `json:"color,omitempty"`
+	BgGradient        string          `json:"bgGradient,omitempty"`
+	BorderColor       string          `json:"borderColor,omitempty"`
+	HoverBorderColor  string          `json:"hoverBorderColor,omitempty"`
+	ShadowColor       string          `json:"shadowColor,omitempty"`
+	Category          SkillCategory   `json:"category"`
+	ProficiencyLevel  ProficiencyLevel `json:"proficiencyLevel,omitempty"`
+	YearsOfExperience *int            `json:"yearsOfExperience,omitempty"`
+	FirstUsedDate     *time.Time      `json:"firstUsedDate,omitempty"`
+	LastUsedDate      *time.Time      `json:"lastUsedDate,omitempty"`
 }
 
 type UpdateSkillRequest struct {
-	SkillID         uuid.UUID    `json:"-"`
-	Name            string        `json:"name,omitempty"`
-	Description     string        `json:"description,omitempty"`
-	Icon            string        `json:"icon,omitempty"`
-	Color           string        `json:"color,omitempty"`
-	BgGradient      string        `json:"bgGradient,omitempty"`
-	BorderColor     string        `json:"borderColor,omitempty"`
-	HoverBorderColor string       `json:"hoverBorderColor,omitempty"`
-	ShadowColor     string        `json:"shadowColor,omitempty"`
-	Category        SkillCategory `json:"category,omitempty"`
+	SkillID           uuid.UUID       `json:"-"`
+	Name              string          `json:"name,omitempty"`
+	Description       string          `json:"description,omitempty"`
+	Icon              string          `json:"icon,omitempty"`
+	Color             string          `json:"color,omitempty"`
+	BgGradient        string          `json:"bgGradient,omitempty"`
+	BorderColor       string          `json:"borderColor,omitempty"`
+	HoverBorderColor  string          `json:"hoverBorderColor,omitempty"`
+	ShadowColor       string          `json:"shadowColor,omitempty"`
+	Category          SkillCategory   `json:"category,omitempty"`
+	ProficiencyLevel  ProficiencyLevel `json:"proficiencyLevel,omitempty"`
+	YearsOfExperience *int            `json:"yearsOfExperience,omitempty"`
+	FirstUsedDate     *time.Time      `json:"firstUsedDate,omitempty"`
+	LastUsedDate      *time.Time      `json:"lastUsedDate,omitempty"`
 }
 
 // Skill operations
 
 func (s *service) CreateSkill(ctx context.Context, req CreateSkillRequest) (*Skill, error) {
-	skill, err := NewSkill(req.Name, req.Description, req.Icon, req.Color, req.BgGradient, req.BorderColor, req.HoverBorderColor, req.ShadowColor, req.Category)
+	skill, err := NewSkill(req.Name, req.Description, req.Icon, req.Color, req.BgGradient, req.BorderColor, req.HoverBorderColor, req.ShadowColor, req.Category, req.ProficiencyLevel, req.YearsOfExperience, req.FirstUsedDate, req.LastUsedDate)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +106,7 @@ func (s *service) UpdateSkill(ctx context.Context, req UpdateSkillRequest) (*Ski
 		return nil, err
 	}
 
-	if err := skill.UpdateDetails(req.Name, req.Description, req.Icon, req.Color, req.BgGradient, req.BorderColor, req.HoverBorderColor, req.ShadowColor, req.Category); err != nil {
+	if err := skill.UpdateDetails(req.Name, req.Description, req.Icon, req.Color, req.BgGradient, req.BorderColor, req.HoverBorderColor, req.ShadowColor, req.Category, req.ProficiencyLevel, req.YearsOfExperience, req.FirstUsedDate, req.LastUsedDate); err != nil {
 		return nil, err
 	}
 
@@ -158,5 +170,9 @@ func (s *service) GetProjectSkills(ctx context.Context, projectID uuid.UUID) ([]
 
 func (s *service) GetProjectsBySkill(ctx context.Context, skillID uuid.UUID) ([]uuid.UUID, error) {
 	return s.repo.GetProjectsBySkill(ctx, skillID)
+}
+
+func (s *service) GetSkillsTimeline(ctx context.Context) ([]Skill, error) {
+	return s.repo.GetSkillsTimeline(ctx)
 }
 

@@ -23,5 +23,8 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Delete("/projects/:projectId/skills/:skillId", handler.DetachSkillFromProject)
 	api.Get("/projects/:projectId/skills", handler.GetProjectSkills)
 	api.Get("/:skillId/projects", handler.GetProjectsBySkill)
+	
+	// Timeline
+	api.Get("/timeline", handler.GetSkillsTimeline)
 }
 

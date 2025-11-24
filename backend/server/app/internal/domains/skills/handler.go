@@ -2,6 +2,7 @@ package skills
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -26,6 +27,9 @@ type Handler interface {
 	DetachSkillFromProject(c *fiber.Ctx) error
 	GetProjectSkills(c *fiber.Ctx) error
 	GetProjectsBySkill(c *fiber.Ctx) error
+	
+	// Timeline operations
+	GetSkillsTimeline(c *fiber.Ctx) error
 }
 
 type handler struct {
@@ -46,27 +50,35 @@ func NewHandler(service Service, logger *slog.Logger) Handler {
 // Payloads
 
 type createSkillPayload struct {
-	Name            string       `json:"name"`
-	Description     string       `json:"description,omitempty"`
-	Icon            string       `json:"icon,omitempty"`
-	Color           string       `json:"color,omitempty"`
-	BgGradient      string       `json:"bgGradient,omitempty"`
-	BorderColor     string       `json:"borderColor,omitempty"`
-	HoverBorderColor string      `json:"hoverBorderColor,omitempty"`
-	ShadowColor     string       `json:"shadowColor,omitempty"`
-	Category        SkillCategory `json:"category"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description,omitempty"`
+	Icon              string          `json:"icon,omitempty"`
+	Color             string          `json:"color,omitempty"`
+	BgGradient        string          `json:"bgGradient,omitempty"`
+	BorderColor       string          `json:"borderColor,omitempty"`
+	HoverBorderColor  string          `json:"hoverBorderColor,omitempty"`
+	ShadowColor       string          `json:"shadowColor,omitempty"`
+	Category          SkillCategory   `json:"category"`
+	ProficiencyLevel  ProficiencyLevel `json:"proficiencyLevel,omitempty"`
+	YearsOfExperience *int            `json:"yearsOfExperience,omitempty"`
+	FirstUsedDate     *string         `json:"firstUsedDate,omitempty"` // ISO date string
+	LastUsedDate      *string         `json:"lastUsedDate,omitempty"`  // ISO date string
 }
 
 type updateSkillPayload struct {
-	Name            string        `json:"name,omitempty"`
-	Description     string        `json:"description,omitempty"`
-	Icon            string        `json:"icon,omitempty"`
-	Color           string        `json:"color,omitempty"`
-	BgGradient      string        `json:"bgGradient,omitempty"`
-	BorderColor     string        `json:"borderColor,omitempty"`
-	HoverBorderColor string       `json:"hoverBorderColor,omitempty"`
-	ShadowColor     string        `json:"shadowColor,omitempty"`
-	Category        SkillCategory `json:"category,omitempty"`
+	Name              string          `json:"name,omitempty"`
+	Description       string          `json:"description,omitempty"`
+	Icon              string          `json:"icon,omitempty"`
+	Color             string          `json:"color,omitempty"`
+	BgGradient        string          `json:"bgGradient,omitempty"`
+	BorderColor       string          `json:"borderColor,omitempty"`
+	HoverBorderColor  string          `json:"hoverBorderColor,omitempty"`
+	ShadowColor       string          `json:"shadowColor,omitempty"`
+	Category          SkillCategory   `json:"category,omitempty"`
+	ProficiencyLevel  ProficiencyLevel `json:"proficiencyLevel,omitempty"`
+	YearsOfExperience *int            `json:"yearsOfExperience,omitempty"`
+	FirstUsedDate     *string         `json:"firstUsedDate,omitempty"` // ISO date string
+	LastUsedDate      *string         `json:"lastUsedDate,omitempty"`  // ISO date string
 }
 
 // Handlers
@@ -77,16 +89,34 @@ func (h *handler) CreateSkill(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	var firstUsedDate, lastUsedDate *time.Time
+	if payload.FirstUsedDate != nil {
+		parsed, err := time.Parse("2006-01-02", *payload.FirstUsedDate)
+		if err == nil {
+			firstUsedDate = &parsed
+		}
+	}
+	if payload.LastUsedDate != nil {
+		parsed, err := time.Parse("2006-01-02", *payload.LastUsedDate)
+		if err == nil {
+			lastUsedDate = &parsed
+		}
+	}
+
 	skill, err := h.service.CreateSkill(c.Context(), CreateSkillRequest{
-		Name:            payload.Name,
-		Description:     payload.Description,
-		Icon:            payload.Icon,
-		Color:           payload.Color,
-		BgGradient:      payload.BgGradient,
-		BorderColor:     payload.BorderColor,
-		HoverBorderColor: payload.HoverBorderColor,
-		ShadowColor:     payload.ShadowColor,
-		Category:        payload.Category,
+		Name:              payload.Name,
+		Description:       payload.Description,
+		Icon:              payload.Icon,
+		Color:             payload.Color,
+		BgGradient:        payload.BgGradient,
+		BorderColor:       payload.BorderColor,
+		HoverBorderColor:  payload.HoverBorderColor,
+		ShadowColor:       payload.ShadowColor,
+		Category:          payload.Category,
+		ProficiencyLevel:  payload.ProficiencyLevel,
+		YearsOfExperience: payload.YearsOfExperience,
+		FirstUsedDate:     firstUsedDate,
+		LastUsedDate:      lastUsedDate,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -106,17 +136,35 @@ func (h *handler) UpdateSkill(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	var firstUsedDate, lastUsedDate *time.Time
+	if payload.FirstUsedDate != nil {
+		parsed, err := time.Parse("2006-01-02", *payload.FirstUsedDate)
+		if err == nil {
+			firstUsedDate = &parsed
+		}
+	}
+	if payload.LastUsedDate != nil {
+		parsed, err := time.Parse("2006-01-02", *payload.LastUsedDate)
+		if err == nil {
+			lastUsedDate = &parsed
+		}
+	}
+
 	skill, err := h.service.UpdateSkill(c.Context(), UpdateSkillRequest{
-		SkillID:         skillID,
-		Name:            payload.Name,
-		Description:     payload.Description,
-		Icon:            payload.Icon,
-		Color:           payload.Color,
-		BgGradient:      payload.BgGradient,
-		BorderColor:     payload.BorderColor,
-		HoverBorderColor: payload.HoverBorderColor,
-		ShadowColor:     payload.ShadowColor,
-		Category:        payload.Category,
+		SkillID:           skillID,
+		Name:              payload.Name,
+		Description:       payload.Description,
+		Icon:              payload.Icon,
+		Color:             payload.Color,
+		BgGradient:        payload.BgGradient,
+		BorderColor:       payload.BorderColor,
+		HoverBorderColor:  payload.HoverBorderColor,
+		ShadowColor:       payload.ShadowColor,
+		Category:          payload.Category,
+		ProficiencyLevel:  payload.ProficiencyLevel,
+		YearsOfExperience: payload.YearsOfExperience,
+		FirstUsedDate:     firstUsedDate,
+		LastUsedDate:      lastUsedDate,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -311,6 +359,20 @@ func (h *handler) GetProjectsBySkill(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, fiber.Map{"project_ids": projectIDStrings})
 }
 
+func (h *handler) GetSkillsTimeline(c *fiber.Ctx) error {
+	skills, err := h.service.GetSkillsTimeline(c.Context())
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	responses := make([]skillResponse, len(skills))
+	for i := range skills {
+		responses[i] = toSkillResponse(&skills[i])
+	}
+
+	return response.Success(c, fiber.StatusOK, responses)
+}
+
 // Response helpers
 
 type skillResponse struct {
@@ -335,20 +397,34 @@ type skillWithCountResponse struct {
 }
 
 func toSkillResponse(skill *Skill) skillResponse {
+	var firstUsedDate, lastUsedDate *string
+	if skill.FirstUsedDate != nil {
+		dateStr := skill.FirstUsedDate.Format("2006-01-02")
+		firstUsedDate = &dateStr
+	}
+	if skill.LastUsedDate != nil {
+		dateStr := skill.LastUsedDate.Format("2006-01-02")
+		lastUsedDate = &dateStr
+	}
+
 	return skillResponse{
-		ID:              skill.ID.String(),
-		Name:            skill.Name,
-		Slug:            skill.Slug,
-		Category:        skill.Category,
-		Description:     skill.Description,
-		Icon:            skill.Icon,
-		Color:           skill.Color,
-		BgGradient:      skill.BgGradient,
-		BorderColor:     skill.BorderColor,
-		HoverBorderColor: skill.HoverBorderColor,
-		ShadowColor:     skill.ShadowColor,
-		CreatedAt:       skill.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:       skill.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		ID:                skill.ID.String(),
+		Name:              skill.Name,
+		Slug:              skill.Slug,
+		Category:          skill.Category,
+		Description:       skill.Description,
+		Icon:              skill.Icon,
+		Color:             skill.Color,
+		BgGradient:        skill.BgGradient,
+		BorderColor:       skill.BorderColor,
+		HoverBorderColor:  skill.HoverBorderColor,
+		ShadowColor:       skill.ShadowColor,
+		ProficiencyLevel:  skill.ProficiencyLevel,
+		YearsOfExperience: skill.YearsOfExperience,
+		FirstUsedDate:     firstUsedDate,
+		LastUsedDate:      lastUsedDate,
+		CreatedAt:         skill.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:         skill.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 

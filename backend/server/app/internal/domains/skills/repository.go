@@ -29,6 +29,9 @@ type Repository interface {
 	GetSkillProjectCount(ctx context.Context, skillID uuid.UUID) (int64, error)
 	GetAllSkillsWithProjectCounts(ctx context.Context) ([]SkillWithCount, error)
 	ProjectHasSkill(ctx context.Context, projectID, skillID uuid.UUID) (bool, error)
+	
+	// Timeline operations
+	GetSkillsTimeline(ctx context.Context) ([]Skill, error) // Ordered by firstUsedDate
 }
 
 // SkillWithCount represents a skill with its project count.
@@ -229,6 +232,17 @@ func (r *gormRepository) ProjectHasSkill(ctx context.Context, projectID, skillID
 		return false, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return count > 0, nil
+}
+
+func (r *gormRepository) GetSkillsTimeline(ctx context.Context) ([]Skill, error) {
+	var skills []Skill
+	if err := r.db.WithContext(ctx).
+		Where("first_used_date IS NOT NULL").
+		Order("first_used_date asc, name asc").
+		Find(&skills).Error; err != nil {
+		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+	}
+	return skills, nil
 }
 
 // isUniqueConstraintError checks if the error is a unique constraint violation.

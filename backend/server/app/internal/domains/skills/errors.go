@@ -3,12 +3,13 @@ package skills
 import "errors"
 
 const (
-	ErrCodeInvalidPayload    = 5000
-	ErrCodeInvalidName       = 5001
-	ErrCodeInvalidCategory   = 5002
-	ErrCodeRepositoryFailure = 5003
-	ErrCodeNotFound          = 5004
-	ErrCodeConflict          = 5005
+	ErrCodeInvalidPayload     = 5000
+	ErrCodeInvalidName        = 5001
+	ErrCodeInvalidCategory    = 5002
+	ErrCodeInvalidProficiency = 5003
+	ErrCodeRepositoryFailure  = 5004
+	ErrCodeNotFound           = 5005
+	ErrCodeConflict           = 5006
 )
 
 const (
@@ -16,12 +17,13 @@ const (
 	ErrEmptySkillID      = "skills: skill id cannot be empty"
 	ErrEmptySkillName    = "skills: skill name cannot be empty"
 	ErrEmptySkillSlug    = "skills: skill slug cannot be empty"
-	ErrSkillNotFound     = "skills: skill not found"
-	ErrSkillAlreadyExists = "skills: skill with this name already exists"
-	ErrUnsupportedCategory = "skills: unsupported skill category"
-	ErrUnableToPersist   = "skills: unable to persist data"
-	ErrUnableToFetch     = "skills: unable to fetch data"
-	ErrUnableToUpdate    = "skills: unable to update data"
+	ErrSkillNotFound         = "skills: skill not found"
+	ErrSkillAlreadyExists    = "skills: skill with this name already exists"
+	ErrUnsupportedCategory   = "skills: unsupported skill category"
+	ErrUnsupportedProficiency = "skills: unsupported proficiency level"
+	ErrUnableToPersist       = "skills: unable to persist data"
+	ErrUnableToFetch         = "skills: unable to fetch data"
+	ErrUnableToUpdate        = "skills: unable to update data"
 )
 
 type DomainError struct {

@@ -47,7 +47,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-cyan-700/30",
         "hoverBorderColor": "hover:border-cyan-500/50",
         "shadowColor": "hover:shadow-cyan-500/20",
-        "category": "language"
+        "category": "language",
+        "proficiencyLevel": "expert",
+        "yearsOfExperience": 5,
+        "firstUsedDate": "2019-01-15",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: Golang"
@@ -65,7 +69,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-yellow-700/30",
         "hoverBorderColor": "hover:border-yellow-500/50",
         "shadowColor": "hover:shadow-yellow-500/20",
-        "category": "language"
+        "category": "language",
+        "proficiencyLevel": "advanced",
+        "yearsOfExperience": 4,
+        "firstUsedDate": "2020-03-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: Python"
@@ -83,7 +91,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-blue-700/30",
         "hoverBorderColor": "hover:border-blue-500/50",
         "shadowColor": "hover:shadow-blue-500/20",
-        "category": "tool"
+        "category": "tool",
+        "proficiencyLevel": "advanced",
+        "yearsOfExperience": 4,
+        "firstUsedDate": "2020-06-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: Docker"
@@ -101,7 +113,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-indigo-700/30",
         "hoverBorderColor": "hover:border-indigo-500/50",
         "shadowColor": "hover:shadow-indigo-500/20",
-        "category": "infrastructure"
+        "category": "infrastructure",
+        "proficiencyLevel": "proficient",
+        "yearsOfExperience": 3,
+        "firstUsedDate": "2021-02-15",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: Kubernetes"
@@ -119,7 +135,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-purple-700/30",
         "hoverBorderColor": "hover:border-purple-500/50",
         "shadowColor": "hover:shadow-purple-500/20",
-        "category": "devops"
+        "category": "devops",
+        "proficiencyLevel": "advanced",
+        "yearsOfExperience": 4,
+        "firstUsedDate": "2020-01-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: DevOps"
@@ -139,7 +159,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-blue-700/30",
         "hoverBorderColor": "hover:border-blue-500/50",
         "shadowColor": "hover:shadow-blue-500/20",
-        "category": "database"
+        "category": "database",
+        "proficiencyLevel": "advanced",
+        "yearsOfExperience": 5,
+        "firstUsedDate": "2019-05-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: PostgreSQL"
@@ -157,7 +181,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-red-700/30",
         "hoverBorderColor": "hover:border-red-500/50",
         "shadowColor": "hover:shadow-red-500/20",
-        "category": "database"
+        "category": "database",
+        "proficiencyLevel": "proficient",
+        "yearsOfExperience": 3,
+        "firstUsedDate": "2021-08-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: Redis"
@@ -175,7 +203,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-cyan-700/30",
         "hoverBorderColor": "hover:border-cyan-500/50",
         "shadowColor": "hover:shadow-cyan-500/20",
-        "category": "framework"
+        "category": "framework",
+        "proficiencyLevel": "advanced",
+        "yearsOfExperience": 3,
+        "firstUsedDate": "2021-01-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: Fiber"
@@ -193,7 +225,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-green-700/30",
         "hoverBorderColor": "hover:border-green-500/50",
         "shadowColor": "hover:shadow-green-500/20",
-        "category": "library"
+        "category": "library",
+        "proficiencyLevel": "proficient",
+        "yearsOfExperience": 1,
+        "firstUsedDate": "2023-06-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: LangChain"
@@ -211,7 +247,11 @@ curl -s -X POST "$API_BASE/skills" \
         "borderColor": "border-cyan-700/30",
         "hoverBorderColor": "hover:border-cyan-500/50",
         "shadowColor": "hover:shadow-cyan-500/20",
-        "category": "library"
+        "category": "library",
+        "proficiencyLevel": "advanced",
+        "yearsOfExperience": 4,
+        "firstUsedDate": "2020-03-01",
+        "lastUsedDate": "'$(date +%Y-%m-%d)'"
     }' > /dev/null
 
 echo "Created skill: GORM"
