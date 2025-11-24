@@ -118,10 +118,10 @@
 	{:else}
 		<div class="space-y-8">
 			{#each groupedPosts as [platform, posts]}
+				{@const PlatformIcon = getPlatformIcon(platform as Platform)}
 				<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
 					<!-- Platform Header -->
 					<div class="flex items-center gap-3 mb-6">
-						{@const PlatformIcon = getPlatformIcon(platform as Platform)}
 						<div
 							class="w-12 h-12 bg-gradient-to-br {getPlatformColor(platform as Platform)} rounded-lg flex items-center justify-center"
 						>

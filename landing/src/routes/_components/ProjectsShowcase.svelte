@@ -243,9 +243,12 @@
 	{:else}
 		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 			{#each filteredProjects as project}
-				<a
-					href="/projects/{project.slug}"
-					class="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02]"
+				<div
+					class="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] cursor-pointer"
+					onclick={() => (window.location.href = `/projects/${project.slug}`)}
+					role="link"
+					tabindex="0"
+					onkeydown={(e) => e.key === 'Enter' && (window.location.href = `/projects/${project.slug}`)}
 				>
 					<div class="flex items-start justify-between mb-4">
 						<div class="flex-1">
@@ -332,7 +335,7 @@
 						{#if caseStudyMap.has(project.slug)}
 							{@const caseStudy = caseStudyMap.get(project.slug)}
 							<a
-								href="/case-studies/{caseStudy.id}"
+								href="/case-studies/{caseStudy?.id}"
 								onclick={(e) => e.stopPropagation()}
 								class="flex items-center gap-1 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 text-xs rounded border border-purple-600/30 transition-colors"
 							>
@@ -374,7 +377,7 @@
 							<span>Updated {formatDate(project.updatedAt)}</span>
 						</div>
 					</div>
-				</a>
+				</div>
 			{/each}
 		</div>
 	{/if}

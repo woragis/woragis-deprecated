@@ -129,10 +129,10 @@
 	{:else}
 		<div class="space-y-8">
 			{#each groupedWritings as [type, items]}
+				{@const TypeIcon = getTypeIcon(type as WritingType)}
 				<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
 					<!-- Type Header -->
 					<div class="flex items-center gap-3 mb-6">
-						{@const TypeIcon = getTypeIcon(type as WritingType)}
 						<div
 							class="w-12 h-12 bg-gradient-to-br {getTypeColor(type as WritingType)} rounded-lg flex items-center justify-center"
 						>
@@ -161,10 +161,10 @@
 										class="w-full h-40 object-cover rounded-lg mb-4"
 									/>
 								{:else}
+									{@const WritingIcon = getTypeIcon(writing.type)}
 									<div
 										class="w-full h-40 bg-gradient-to-br {getTypeColor(writing.type)} rounded-lg mb-4 flex items-center justify-center"
 									>
-										{@const WritingIcon = getTypeIcon(writing.type)}
 										<WritingIcon class="w-12 h-12 text-white opacity-50" />
 									</div>
 								{/if}

@@ -132,10 +132,10 @@
 	{:else}
 		<div class="space-y-8">
 			{#each groupedIntegrations as [type, items]}
+				{@const TypeIcon = getTypeIcon(type as IntegrationType)}
 				<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
 					<!-- Type Header -->
 					<div class="flex items-center gap-3 mb-6">
-						{@const TypeIcon = getTypeIcon(type as IntegrationType)}
 						<div
 							class="w-12 h-12 bg-gradient-to-br {getTypeColor(type as IntegrationType)} rounded-lg flex items-center justify-center"
 						>
@@ -238,7 +238,7 @@
 											target="_blank"
 											rel="noopener noreferrer"
 											class="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-											onclick|stopPropagation
+											on:click|stopPropagation
 										>
 											<Eye class="w-4 h-4" />
 											<span>Demo</span>
@@ -250,7 +250,7 @@
 											target="_blank"
 											rel="noopener noreferrer"
 											class="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300 transition-colors"
-											onclick|stopPropagation
+											on:click|stopPropagation
 										>
 											<FileText class="w-4 h-4" />
 											<span>Docs</span>
@@ -262,7 +262,7 @@
 											target="_blank"
 											rel="noopener noreferrer"
 											class="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-300 transition-colors"
-											onclick|stopPropagation
+											on:click|stopPropagation
 										>
 											<Github class="w-4 h-4" />
 											<span>Code</span>
