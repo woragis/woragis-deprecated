@@ -74,7 +74,8 @@
 		"github": "GitHub",
 		"instagram": "Instagram",
 		"clickToCall": "Нажмите, чтобы позвонить →",
-		"clickToEmail": "Нажмите, чтобы отправить письмо →"
+		"clickToEmail": "Нажмите, чтобы отправить письмо →",
+		"whatsappMessage": "Здравствуйте! Я нашел ваш сайт (www.woragis.me) и хотел бы связаться с вами."
 	},
 	"footer": {
 		"tagline": "Строим будущее, один сервис за раз.",

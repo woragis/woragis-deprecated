@@ -74,7 +74,8 @@
 		"github": "GitHub",
 		"instagram": "Instagram",
 		"clickToCall": "点击拨打电话 →",
-		"clickToEmail": "点击发送电子邮件 →"
+		"clickToEmail": "点击发送电子邮件 →",
+		"whatsappMessage": "您好！我发现了您的网站 (www.woragis.me)，想与您取得联系。"
 	},
 	"footer": {
 		"tagline": "构建未来，一次一个服务。",

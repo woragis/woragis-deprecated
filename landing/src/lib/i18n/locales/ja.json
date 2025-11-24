@@ -74,7 +74,8 @@
 		"github": "GitHub",
 		"instagram": "Instagram",
 		"clickToCall": "クリックして電話をかける →",
-		"clickToEmail": "クリックしてメールを送信 →"
+		"clickToEmail": "クリックしてメールを送信 →",
+		"whatsappMessage": "こんにちは！あなたのウェブサイト（www.woragis.me）を見つけましたので、連絡を取りたいと思います。"
 	},
 	"footer": {
 		"tagline": "未来を築く、一度に一つのサービス。",
