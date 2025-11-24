@@ -60,7 +60,18 @@
 			"learning": "Learning"
 		},
 		"yearsExperience": "{years} of experience",
-		"lastUsed": "Last used: {date}"
+		"lastUsed": "Last used: {date}",
+		"timeline": {
+			"title": "Technology Stack Timeline",
+			"subtitle": "Journey of learning and growth - skills acquired over time",
+			"noData": "No timeline data available",
+			"checkBack": "Skills with first used dates will appear here",
+			"skillsLearned": "{count} {skills} learned",
+			"skill": "skill",
+			"skills": "skills",
+			"year": "year",
+			"years": "years"
+		}
 	},
 	"testimonials": {
 		"title": "What People Say",

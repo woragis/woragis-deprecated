@@ -124,6 +124,19 @@ export async function listSkillsByCategory(category: SkillCategory): Promise<Ski
 	}
 }
 
+// Get skills timeline (ordered by firstUsedDate)
+export async function getSkillsTimeline(): Promise<Skill[]> {
+	try {
+		const response = await apiClient.get<{ success: boolean; data: Skill[] }>(
+			'/skills/timeline'
+		);
+		return response.data || [];
+	} catch (error) {
+		console.error('Error fetching skills timeline:', error);
+		throw error;
+	}
+}
+
 // Create skill
 export async function createSkill(skill: CreateSkillRequest): Promise<Skill> {
 	try {

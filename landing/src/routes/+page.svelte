@@ -28,6 +28,7 @@
 	import ImpactMetricsDashboard from './_components/ImpactMetricsDashboard.svelte';
 	import SystemDesignsSection from './_components/SystemDesignsSection.svelte';
 	import ProblemSolutionsSection from './_components/ProblemSolutionsSection.svelte';
+	import SkillsTimeline from './_components/SkillsTimeline.svelte';
 	import HeroSection from './_components/HeroSection.svelte';
 	import AboutSection from './_components/AboutSection.svelte';
 	import SkillsSection from './_components/SkillsSection.svelte';
@@ -43,6 +44,7 @@
 	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
 	import { useFeaturedSystemDesignsQuery } from '$lib/queries/system-designs';
 	import { useFeaturedProblemSolutionsQuery } from '$lib/queries/problem-solutions';
+	import { useSkillsTimelineQuery } from '$lib/queries/skills';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { queryClient } from '$lib/query-client';
@@ -176,6 +178,11 @@
 			.slice(0, 6);
 	});
 	let loadingSkills = $derived(skillsQuery.isPending);
+
+	// Skills Timeline
+	const skillsTimelineQuery = useSkillsTimelineQuery();
+	let timelineSkills = $derived(skillsTimelineQuery.data || []);
+	let loadingTimeline = $derived(skillsTimelineQuery.isPending);
 
 	// Fetch testimonials and case studies on mount
 	onMount(async () => {
@@ -313,6 +320,21 @@
 	</section>
 
 	<SkillsSection skills={popularSkills} loading={loadingSkills} />
+
+	<!-- Technology Stack Timeline Section -->
+	<section id="skills-timeline" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+					{t('skills.timeline.title')}
+				</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					{t('skills.timeline.subtitle')}
+				</p>
+			</div>
+			<SkillsTimeline />
+		</div>
+	</section>
 
 	<!-- System Designs Section -->
 	<section id="system-designs" class="container mx-auto px-6 py-20">

@@ -6,6 +6,7 @@ import {
 	getSkillBySlug,
 	searchSkills,
 	listSkillsByCategory,
+	getSkillsTimeline,
 	type Skill,
 	type SkillWithCount,
 	type SkillCategory
@@ -21,7 +22,8 @@ export const skillKeys = {
 	detail: (id: string) => [...skillKeys.details(), id] as const,
 	bySlug: (slug: string) => [...skillKeys.details(), 'slug', slug] as const,
 	search: (query: string) => [...skillKeys.all, 'search', query] as const,
-	byCategory: (category: SkillCategory) => [...skillKeys.all, 'category', category] as const
+	byCategory: (category: SkillCategory) => [...skillKeys.all, 'category', category] as const,
+	timeline: () => [...skillKeys.all, 'timeline'] as const
 };
 
 // Query options for listing skills
@@ -123,6 +125,22 @@ export function useSkillsByCategoryQuery(category: SkillCategory) {
 	return createQuery(() => ({
 		queryKey: skillKeys.byCategory(category),
 		queryFn: () => listSkillsByCategory(category)
+	}));
+}
+
+// Query options for getting skills timeline
+export function getSkillsTimelineQueryOptions() {
+	return queryOptions({
+		queryKey: skillKeys.timeline(),
+		queryFn: () => getSkillsTimeline()
+	});
+}
+
+// Hook for getting skills timeline
+export function useSkillsTimelineQuery() {
+	return createQuery(() => ({
+		queryKey: skillKeys.timeline(),
+		queryFn: () => getSkillsTimeline()
 	}));
 }
 
