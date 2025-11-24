@@ -25,6 +25,7 @@
 	import TechnicalWritingsSection from './_components/TechnicalWritingsSection.svelte';
 	import SocialMediaPostsSection from './_components/SocialMediaPostsSection.svelte';
 	import AIMLIntegrationsSection from './_components/AIMLIntegrationsSection.svelte';
+	import ImpactMetricsDashboard from './_components/ImpactMetricsDashboard.svelte';
 	import HeroSection from './_components/HeroSection.svelte';
 	import AboutSection from './_components/AboutSection.svelte';
 	import SkillsSection from './_components/SkillsSection.svelte';
@@ -37,6 +38,7 @@
 	import { useFeaturedTechnicalWritingsQuery } from '$lib/queries/technical-writings';
 	import { useSocialMediaPostsQuery } from '$lib/queries/social-media-posts';
 	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
+	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { queryClient } from '$lib/query-client';
@@ -140,6 +142,11 @@
 	const aimlIntegrationsQuery = useFeaturedAIMLIntegrationsQuery();
 	let aimlIntegrations = $derived(aimlIntegrationsQuery.data || []);
 	let loadingAIMLIntegrations = $derived(aimlIntegrationsQuery.isPending);
+
+	// Impact metrics query
+	const impactMetricsQuery = useFeaturedImpactMetricsQuery();
+	let impactMetrics = $derived(impactMetricsQuery.data || []);
+	let loadingImpactMetrics = $derived(impactMetricsQuery.isPending);
 
 	// Testimonials
 	let testimonials: Testimonial[] = $state([]);
@@ -770,6 +777,21 @@
 				</p>
 			</div>
 			<AIMLIntegrationsSection integrations={aimlIntegrations} loading={loadingAIMLIntegrations} />
+		</div>
+	</section>
+
+	<!-- Impact Metrics Dashboard Section -->
+	<section id="impact-metrics" class="container mx-auto px-6 py-20">
+		<div class="max-w-7xl mx-auto">
+			<div class="text-center mb-12">
+				<h2 class="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+					{t('impactMetrics.title')}
+				</h2>
+				<p class="text-gray-400 text-lg max-w-2xl mx-auto">
+					{t('impactMetrics.subtitle')}
+				</p>
+			</div>
+			<ImpactMetricsDashboard metrics={impactMetrics} loading={loadingImpactMetrics} />
 		</div>
 	</section>
 

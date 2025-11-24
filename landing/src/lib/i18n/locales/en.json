@@ -110,6 +110,18 @@
 		"docs": "Docs",
 		"code": "Code"
 	},
+	"impactMetrics": {
+		"title": "Impact Metrics Dashboard",
+		"subtitle": "Data-driven insights showcasing real-world impact through projects delivered, users impacted, performance improvements, and more",
+		"noMetrics": "No impact metrics available",
+		"checkBack": "Check back later",
+		"metric": "metric",
+		"metrics": "metrics",
+		"total": "Total",
+		"average": "Average",
+		"range": "Range",
+		"andMore": "And {count} more {metrics}..."
+	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
 	},
