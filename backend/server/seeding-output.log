@@ -1,0 +1,152 @@
+==========================================
+Starting Seeding Process
+==========================================
+
+Step 1: Logging in...
+✓ Login successful! Token: eyJhbGciOiJIUzI1NiIs...
+
+Step 2: Deleting existing data...
+
+  - Deleting impact metrics...
+  - Deleting interests...
+  - Deleting skills...
+  - Deleting certifications...
+  - Deleting AIML integrations...
+  - Deleting case studies...
+  - Deleting system designs...
+  - Deleting problem solutions...
+  - Deleting technical writings...
+  - Deleting testimonials...
+✓ Existing data deleted
+
+Step 3: Running seeders...
+
+  - Seeding impact metrics...
+Seeding Impact Metrics...
+
+Creating Projects Delivered metrics...
+✓ Created projects_delivered metric: Total projects successfully delivered in 2024
+✓ Created projects_delivered metric: Projects delivered in Q1 2024
+✓ Created projects_delivered metric: Projects delivered in Q2 2024
+
+Creating Users Impacted metrics...
+✓ Created users_impacted metric: Total users impacted by all projects
+✓ Created users_impacted metric: Users impacted by e-commerce platform migration
+✓ Created users_impacted metric: Users impacted by mobile app launch
+✓ Created users_impacted metric: Users impacted by API optimization project
+
+Creating Performance Improvements metrics...
+✓ Created performance_improvement metric: API response time improvement (from 800ms to 200ms)
+✓ Created performance_improvement metric: Database query optimization (reduced query time by 60%)
+✓ Created performance_improvement metric: Frontend load time reduction (from 5s to 0.75s)
+✓ Created performance_improvement metric: Image processing pipeline optimization
+✓ Created performance_improvement metric: Caching layer implementation (90% cache hit rate)
+
+Creating Cost Savings metrics...
+✓ Created cost_savings metric: Annual cloud infrastructure cost savings through optimization
+✓ Created cost_savings metric: Q1 2024 cost savings from database optimization
+✓ Created cost_savings metric: Q2 2024 cost savings from auto-scaling implementation
+✓ Created cost_savings metric: Q3 2024 cost savings from CDN optimization
+✓ Created cost_savings metric: Cost savings from migrating to serverless architecture
+
+Creating Time Saved metrics...
+✓ Created time_saved metric: Total time saved through automation in 2024
+✓ Created time_saved metric: Time saved through CI/CD pipeline automation
+✓ Created time_saved metric: Time saved through automated testing and deployment
+✓ Created time_saved metric: Time saved through automated data processing workflows
+✓ Created time_saved metric: Time saved through automated monitoring and alerting
+✓ Created time_saved metric: Daily time saved through automated report generation
+
+Creating additional featured metrics...
+✓ Created users_impacted metric: Active users on new mobile platform
+✓ Created performance_improvement metric: Overall system performance improvement
+✓ Created cost_savings metric: Monthly recurring cost savings
+✓ Created time_saved metric: Weekly time saved through automation
+
+Impact Metrics seeding completed!
+
+You can now view the dashboard at: GET http://localhost:8080/api/impact-metrics/dashboard
+Featured metrics: GET http://localhost:8080/api/impact-metrics/featured
+
+  - Seeding interests...
+Logging in...
+Login successful! Token: eyJhbGciOiJIUzI1NiIs...
+Creating interests...
+Created interest: AI & RAG
+Created interest: Redis & Pub/Sub
+Created interest: Distributed Architecture
+
+All interests created successfully!
+
+Summary:
+  - 3 Interests created with full styling information
+  - All interests are featured (publicly visible)
+
+  - Seeding skills...
+Logging in...
+Login successful! Token: eyJhbGciOiJIUzI1NiIs...
+Creating skills...
+Created skill: Golang
+Created skill: Python
+Created skill: Docker
+Created skill: Kubernetes
+Created skill: DevOps
+Created skill: PostgreSQL
+Created skill: Redis
+Created skill: Fiber
+Created skill: LangChain
+Created skill: GORM
+
+All skills created successfully!
+
+Summary:
+  - 10 Skills created with full styling information
+
+  - Seeding certifications...
+Logging in...
+Login successful! Token: eyJhbGciOiJIUzI1NiIs...
+Creating certifications...
+{"data":{"id":"850c067c-1611-408f-b8ba-0047b1da997e","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"AWS Certified Solutions Architect - Associate","issuer":"Amazon Web Services","issueDate":"2023-06-15T00:00:00Z","expiryDate":"2026-06-15T00:00:00Z","credentialId":"AWS-CSA-123456789","verificationUrl":"https://www.credly.com/badges/abc123","certificateUrl":"https://example.com/certificates/aws-saa.pdf","description":"Validates expertise in designing distributed systems on AWS. Covers architecture best practices, cost optimization, security, and scalability.","status":"active","category":"cloud","featured":true,"displayOrder":1,"createdAt":"2025-11-24T17:10:42.962836295Z","updatedAt":"2025-11-24T17:10:42.962836295Z"},"success":true}
+Certification 1 created
+{"data":{"id":"8b4f5e0e-259a-4d39-85f0-dc606be353bb","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"Google Cloud Professional Cloud Architect","issuer":"Google Cloud","issueDate":"2023-09-20T00:00:00Z","expiryDate":"2025-09-20T00:00:00Z","credentialId":"GCP-PCA-987654321","verificationUrl":"https://www.credential.net/xyz789","certificateUrl":"https://example.com/certificates/gcp-pca.pdf","description":"Demonstrates ability to design, develop, and manage robust, secure, scalable, highly available, and dynamic solutions on Google Cloud Platform.","status":"active","category":"cloud","featured":true,"displayOrder":2,"createdAt":"2025-11-24T17:10:44.40037323Z","updatedAt":"2025-11-24T17:10:44.40037323Z"},"success":true}
+Certification 2 created
+{"data":{"id":"9a7c088e-202a-4088-9398-ab27d2e5813e","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"Certified Kubernetes Administrator (CKA)","issuer":"Cloud Native Computing Foundation","issueDate":"2023-03-10T00:00:00Z","expiryDate":"2026-03-10T00:00:00Z","credentialId":"CKA-456789012","verificationUrl":"https://www.credly.com/badges/def456","certificateUrl":"https://example.com/certificates/cka.pdf","description":"Validates skills in Kubernetes administration including cluster architecture, installation, configuration, networking, storage, security, and troubleshooting.","status":"active","category":"devops","featured":true,"displayOrder":3,"createdAt":"2025-11-24T17:10:45.82418233Z","updatedAt":"2025-11-24T17:10:45.82418233Z"},"success":true}
+Certification 3 created
+{"data":{"id":"b24fee63-25a9-4bda-b264-3e5b0ca2ca34","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"HashiCorp Certified: Terraform Associate","issuer":"HashiCorp","issueDate":"2023-11-05T00:00:00Z","expiryDate":"2025-11-05T00:00:00Z","credentialId":"HCTA-789012345","verificationUrl":"https://www.credly.com/badges/ghi789","certificateUrl":"https://example.com/certificates/terraform-associate.pdf","description":"Validates knowledge of infrastructure automation using Terraform. Covers core concepts, state management, modules, and best practices.","status":"active","category":"devops","featured":false,"displayOrder":4,"createdAt":"2025-11-24T17:10:46.91064069Z","updatedAt":"2025-11-24T17:10:46.91064069Z"},"success":true}
+Certification 4 created
+{"data":{"id":"dfdcb726-c1da-47e9-86f8-0ca875f67a54","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"PostgreSQL Certified Professional","issuer":"PostgreSQL Global Development Group","issueDate":"2022-08-12T00:00:00Z","credentialId":"PGCP-2022-001234","verificationUrl":"https://www.postgresql.org/certification/verify/001234","certificateUrl":"https://example.com/certificates/postgresql-professional.pdf","description":"Validates advanced knowledge of PostgreSQL database administration, optimization, replication, and high availability configurations.","status":"active","category":"database","featured":false,"displayOrder":5,"createdAt":"2025-11-24T17:10:47.840683444Z","updatedAt":"2025-11-24T17:10:47.840683444Z"},"success":true}
+Certification 5 created
+{"data":{"id":"f3bb43c6-d38d-4d21-819f-7e7e3138798d","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"Go Programming Language Certification","issuer":"Go Institute","issueDate":"2022-01-20T00:00:00Z","credentialId":"GO-CERT-2022-567890","verificationUrl":"https://www.goinstitute.org/verify/567890","certificateUrl":"https://example.com/certificates/go-certification.pdf","description":"Validates proficiency in Go programming language including concurrency patterns, interfaces, error handling, and best practices.","status":"active","category":"programming","featured":true,"displayOrder":6,"createdAt":"2025-11-24T17:10:48.872113237Z","updatedAt":"2025-11-24T17:10:48.872113237Z"},"success":true}
+Certification 6 created
+{"data":{"id":"6e975c11-5cd9-4564-bb7a-4f2a1e8c898c","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"Certified Information Systems Security Professional (CISSP)","issuer":"(ISC)�","issueDate":"2023-12-01T00:00:00Z","expiryDate":"2026-12-01T00:00:00Z","credentialId":"CISSP-123456","verificationUrl":"https://www.isc2.org/verify/123456","certificateUrl":"https://example.com/certificates/cissp.pdf","description":"Validates expertise in information security. Covers security and risk management, asset security, security architecture, and more.","status":"active","category":"security","featured":true,"displayOrder":7,"createdAt":"2025-11-24T17:10:49.923669802Z","updatedAt":"2025-11-24T17:10:49.923669802Z"},"success":true}
+Certification 7 created
+{"data":{"id":"57274d35-d680-4161-a7aa-a03f2ec6978e","userId":"6ad0d828-f605-45fc-a545-3441e17a015c","name":"System Design Mastery Certification","issuer":"Tech Academy","issueDate":"2023-05-30T00:00:00Z","credentialId":"SDM-2023-001","verificationUrl":"https://techacademy.com/verify/sdm-001","certificateUrl":"https://example.com/certificates/system-design-mastery.pdf","description":"Comprehensive certification covering distributed systems design, scalability patterns, microservices architecture, and performance optimization.","status":"active","category":"architecture","featured":false,"displayOrder":8,"createdAt":"2025-11-24T17:10:48.586507242Z","updatedAt":"2025-11-24T17:10:48.586507242Z"},"success":true}
+Certification 8 created
+
+All certifications created successfully!
+
+Note: Update the skillIds arrays to link certifications to actual skill IDs in your database
+You can link skills using: POST /api/certifications/{certificationId}/skills/{skillId}
+
+  - Seeding AIML integrations...
+Seeding AI/ML Integrations...
+
+Creating RAG (Retrieval-Augmented Generation) integrations...
+✗ Failed to create rag integration: {"error":{"code":11000},"success":false}
+✗ Failed to create rag integration: {"error":{"code":11000},"success":false}
+
+Creating LLM integrations...
+✗ Failed to create llm integration: {"error":{"code":11000},"success":false}
+✗ Failed to create llm integration: {"error":{"code":11000},"success":false}
+
+Creating ML Model integrations...
+✗ Failed to create ml_model integration: {"error":{"code":11000},"success":false}
+✗ Failed to create computer_vision integration: {"error":{"code":11000},"success":false}
+
+Creating NLP integrations...
+✗ Failed to create nlp integration: {"error":{"code":11000},"success":false}
+
+Creating Recommendation System integrations...
+✗ Failed to create recommendation integration: {"error":{"code":11000},"success":false}
+
+Creating Chatbot integrations...
