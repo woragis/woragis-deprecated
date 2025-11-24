@@ -26,6 +26,7 @@ type Repository interface {
 	GetCertificationSkills(ctx context.Context, certificationID uuid.UUID) ([]uuid.UUID, error)
 	// Entity link methods (for projects, etc.)
 	CreateCertificationEntityLink(ctx context.Context, link *CertificationEntityLink) error
+	GetCertificationEntityLink(ctx context.Context, linkID uuid.UUID) (*CertificationEntityLink, error)
 	GetCertificationEntityLinks(ctx context.Context, certificationID uuid.UUID) ([]CertificationEntityLink, error)
 	GetEntityCertifications(ctx context.Context, entityType EntityType, entityID uuid.UUID) ([]Certification, error)
 	DeleteCertificationEntityLink(ctx context.Context, linkID uuid.UUID) error

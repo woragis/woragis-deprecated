@@ -376,19 +376,23 @@ func (h *handler) GetSkillsTimeline(c *fiber.Ctx) error {
 // Response helpers
 
 type skillResponse struct {
-	ID              string       `json:"id"`
-	Name            string       `json:"name"`
-	Slug            string       `json:"slug"`
-	Category        SkillCategory `json:"category"`
-	Description     string       `json:"description,omitempty"`
-	Icon            string       `json:"icon,omitempty"`
-	Color           string       `json:"color,omitempty"`
-	BgGradient      string       `json:"bgGradient,omitempty"`
-	BorderColor     string       `json:"borderColor,omitempty"`
-	HoverBorderColor string      `json:"hoverBorderColor,omitempty"`
-	ShadowColor     string       `json:"shadowColor,omitempty"`
-	CreatedAt       string       `json:"createdAt"`
-	UpdatedAt       string       `json:"updatedAt"`
+	ID                string          `json:"id"`
+	Name              string          `json:"name"`
+	Slug              string          `json:"slug"`
+	Category          SkillCategory   `json:"category"`
+	Description       string          `json:"description,omitempty"`
+	Icon              string          `json:"icon,omitempty"`
+	Color             string          `json:"color,omitempty"`
+	BgGradient        string          `json:"bgGradient,omitempty"`
+	BorderColor       string          `json:"borderColor,omitempty"`
+	HoverBorderColor  string          `json:"hoverBorderColor,omitempty"`
+	ShadowColor       string          `json:"shadowColor,omitempty"`
+	ProficiencyLevel  ProficiencyLevel `json:"proficiencyLevel,omitempty"`
+	YearsOfExperience *int            `json:"yearsOfExperience,omitempty"`
+	FirstUsedDate     *string         `json:"firstUsedDate,omitempty"`
+	LastUsedDate      *string         `json:"lastUsedDate,omitempty"`
+	CreatedAt         string          `json:"createdAt"`
+	UpdatedAt         string          `json:"updatedAt"`
 }
 
 type skillWithCountResponse struct {

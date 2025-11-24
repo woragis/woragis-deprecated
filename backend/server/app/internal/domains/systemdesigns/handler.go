@@ -7,7 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"

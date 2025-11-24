@@ -3,7 +3,6 @@ package projectcasestudies
 import (
 	"context"
 	"log/slog"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
