@@ -10,6 +10,8 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -29,17 +31,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a technical writing handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -279,6 +285,18 @@ func (h *handler) GetTechnicalWriting(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":       &writing.Title,
+			"description": &writing.Description,
+			"content":     &writing.Content,
+			"excerpt":     &writing.Excerpt,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeTechnicalWriting, writing.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, writing)
 }
 
@@ -293,6 +311,18 @@ func (h *handler) GetTechnicalWritingPublic(c *fiber.Ctx) error {
 	writing, err := h.service.GetTechnicalWritingPublic(c.Context(), writingID)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":       &writing.Title,
+			"description": &writing.Description,
+			"content":     &writing.Content,
+			"excerpt":     &writing.Excerpt,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeTechnicalWriting, writing.ID, language, fieldMap)
 	}
 
 	return response.Success(c, fiber.StatusOK, writing)
@@ -359,6 +389,20 @@ func (h *handler) ListTechnicalWritings(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range writings {
+			fieldMap := map[string]*string{
+				"title":       &writings[i].Title,
+				"description": &writings[i].Description,
+				"content":     &writings[i].Content,
+				"excerpt":     &writings[i].Excerpt,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeTechnicalWriting, writings[i].ID, language, fieldMap)
+		}
+	}
+
 	return response.Success(c, fiber.StatusOK, writings)
 }
 
@@ -368,8 +412,21 @@ func (h *handler) ListFeaturedTechnicalWritings(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range writings {
+			fieldMap := map[string]*string{
+				"title":       &writings[i].Title,
+				"description": &writings[i].Description,
+				"content":     &writings[i].Content,
+				"excerpt":     &writings[i].Excerpt,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeTechnicalWriting, writings[i].ID, language, fieldMap)
+		}
+	}
+
 	return response.Success(c, fiber.StatusOK, writings)
-}
 
 func (h *handler) GetWritingsByProject(c *fiber.Ctx) error {
 	projectID, err := uuid.Parse(c.Params("projectId"))

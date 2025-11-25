@@ -338,8 +338,9 @@ func main() {
 	// Social Media Posts: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	socialMediaPostRepo := socialmediapostsdomain.NewGormRepository(db)
 	socialMediaPostService := socialmediapostsdomain.NewService(socialMediaPostRepo, slogLogger)
-	socialMediaPostHandler := socialmediapostsdomain.NewHandler(socialMediaPostService, slogLogger)
+	socialMediaPostHandler := socialmediapostsdomain.NewHandler(socialMediaPostService, translationEnricher, translationService, slogLogger)
 	socialMediaPostsGroup := api.Group("/social-media-posts")
+	socialMediaPostsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	socialMediaPostsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -459,8 +460,9 @@ func main() {
 	// Impact Metrics: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	impactMetricRepo := impactmetricsdomain.NewGormRepository(db)
 	impactMetricService := impactmetricsdomain.NewService(impactMetricRepo, slogLogger)
-	impactMetricHandler := impactmetricsdomain.NewHandler(impactMetricService, slogLogger)
+	impactMetricHandler := impactmetricsdomain.NewHandler(impactMetricService, translationEnricher, translationService, slogLogger)
 	impactMetricsGroup := api.Group("/impact-metrics")
+	impactMetricsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	impactMetricsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -471,8 +473,9 @@ func main() {
 	// AI/ML Integrations: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	aimlIntegrationRepo := aimlintegrationsdomain.NewGormRepository(db)
 	aimlIntegrationService := aimlintegrationsdomain.NewService(aimlIntegrationRepo, slogLogger)
-	aimlIntegrationHandler := aimlintegrationsdomain.NewHandler(aimlIntegrationService, slogLogger)
+	aimlIntegrationHandler := aimlintegrationsdomain.NewHandler(aimlIntegrationService, translationEnricher, translationService, slogLogger)
 	aimlIntegrationsGroup := api.Group("/aiml-integrations")
+	aimlIntegrationsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	aimlIntegrationsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
@@ -483,8 +486,9 @@ func main() {
 	// Technical Writings: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	technicalWritingRepo := technicalwritingsdomain.NewGormRepository(db)
 	technicalWritingService := technicalwritingsdomain.NewService(technicalWritingRepo, slogLogger)
-	technicalWritingHandler := technicalwritingsdomain.NewHandler(technicalWritingService, slogLogger)
+	technicalWritingHandler := technicalwritingsdomain.NewHandler(technicalWritingService, translationEnricher, translationService, slogLogger)
 	technicalWritingsGroup := api.Group("/technical-writings")
+	technicalWritingsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	technicalWritingsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),

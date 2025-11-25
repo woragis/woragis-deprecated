@@ -20,6 +20,10 @@ const (
 	EntityTypeSystemDesign     EntityType = "system_design"
 	EntityTypeProblemSolution  EntityType = "problem_solution"
 	EntityTypeCertification    EntityType = "certification"
+	EntityTypeAIMLIntegration  EntityType = "aiml_integration"
+	EntityTypeImpactMetric     EntityType = "impact_metric"
+	EntityTypeSocialMediaPost  EntityType = "social_media_post"
+	EntityTypeTechnicalWriting EntityType = "technical_writing"
 )
 
 // Language represents supported languages.
@@ -128,7 +132,7 @@ func (t *Translation) Validate() error {
 
 func isValidEntityType(et EntityType) bool {
 	switch et {
-	case EntityTypeTestimonial, EntityTypePost, EntityTypeProject, EntityTypeCaseStudy, EntityTypeProjectCaseStudy, EntityTypeSystemDesign, EntityTypeProblemSolution, EntityTypeCertification:
+	case EntityTypeTestimonial, EntityTypePost, EntityTypeProject, EntityTypeCaseStudy, EntityTypeProjectCaseStudy, EntityTypeSystemDesign, EntityTypeProblemSolution, EntityTypeCertification, EntityTypeAIMLIntegration, EntityTypeImpactMetric, EntityTypeSocialMediaPost, EntityTypeTechnicalWriting:
 		return true
 	}
 	return false

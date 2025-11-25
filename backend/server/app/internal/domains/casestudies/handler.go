@@ -330,6 +330,21 @@ func (h *handler) ListCaseStudies(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range caseStudies {
+			fieldMap := map[string]*string{
+				"title":       &caseStudies[i].Title,
+				"description": &caseStudies[i].Description,
+				"challenge":   &caseStudies[i].Challenge,
+				"solution":   &caseStudies[i].Solution,
+				"architecture": &caseStudies[i].Architecture,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeCaseStudy, caseStudies[i].ID, language, fieldMap)
+		}
+	}
+
 	return response.Success(c, fiber.StatusOK, caseStudies)
 }
 

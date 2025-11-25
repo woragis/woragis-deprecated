@@ -445,6 +445,23 @@ func (h *handler) ListPosts(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range posts {
+			fieldMap := map[string]*string{
+				"title":          &posts[i].Title,
+				"content":        &posts[i].Content,
+				"excerpt":        &posts[i].Excerpt,
+				"metaTitle":      &posts[i].MetaTitle,
+				"metaDescription": &posts[i].MetaDescription,
+				"ogTitle":        &posts[i].OGTitle,
+				"ogDescription":  &posts[i].OGDescription,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypePost, posts[i].ID, language, fieldMap)
+		}
+	}
+
 	responses := make([]postResponse, len(posts))
 	for i := range posts {
 		responses[i] = toPostResponse(&posts[i])

@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -33,17 +35,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a social media post handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -150,6 +156,16 @@ func (h *handler) GetPost(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":         &post.Title,
+			"contentPreview": &post.ContentPreview,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSocialMediaPost, post.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, toPostResponse(post))
 }
 
@@ -162,6 +178,16 @@ func (h *handler) GetPostByURL(c *fiber.Ctx) error {
 	post, err := h.service.GetPostByURL(c.Context(), url)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":         &post.Title,
+			"contentPreview": &post.ContentPreview,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSocialMediaPost, post.ID, language, fieldMap)
 	}
 
 	return response.Success(c, fiber.StatusOK, toPostResponse(post))
@@ -183,6 +209,18 @@ func (h *handler) ListPosts(c *fiber.Ctx) error {
 	posts, err := h.service.ListPosts(c.Context(), filters)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range posts {
+			fieldMap := map[string]*string{
+				"title":         &posts[i].Title,
+				"contentPreview": &posts[i].ContentPreview,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSocialMediaPost, posts[i].ID, language, fieldMap)
+		}
 	}
 
 	responses := make([]postResponse, len(posts))

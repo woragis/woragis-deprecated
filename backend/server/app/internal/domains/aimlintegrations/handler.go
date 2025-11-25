@@ -9,6 +9,8 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -27,17 +29,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs an AI/ML integration handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -239,6 +245,19 @@ func (h *handler) GetAIMLIntegration(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":       &integration.Title,
+			"description": &integration.Description,
+			"useCase":     &integration.UseCase,
+			"impact":      &integration.Impact,
+			"architecture": &integration.Architecture,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeAIMLIntegration, integration.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, integration)
 }
 
@@ -253,6 +272,19 @@ func (h *handler) GetAIMLIntegrationPublic(c *fiber.Ctx) error {
 	integration, err := h.service.GetAIMLIntegrationPublic(c.Context(), integrationID)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"title":       &integration.Title,
+			"description": &integration.Description,
+			"useCase":     &integration.UseCase,
+			"impact":      &integration.Impact,
+			"architecture": &integration.Architecture,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeAIMLIntegration, integration.ID, language, fieldMap)
 	}
 
 	return response.Success(c, fiber.StatusOK, integration)
@@ -319,6 +351,21 @@ func (h *handler) ListAIMLIntegrations(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range integrations {
+			fieldMap := map[string]*string{
+				"title":       &integrations[i].Title,
+				"description": &integrations[i].Description,
+				"useCase":     &integrations[i].UseCase,
+				"impact":      &integrations[i].Impact,
+				"architecture": &integrations[i].Architecture,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeAIMLIntegration, integrations[i].ID, language, fieldMap)
+		}
+	}
+
 	return response.Success(c, fiber.StatusOK, integrations)
 }
 
@@ -326,6 +373,21 @@ func (h *handler) ListFeaturedAIMLIntegrations(c *fiber.Ctx) error {
 	integrations, err := h.service.ListFeaturedAIMLIntegrations(c.Context())
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range integrations {
+			fieldMap := map[string]*string{
+				"title":       &integrations[i].Title,
+				"description": &integrations[i].Description,
+				"useCase":     &integrations[i].UseCase,
+				"impact":      &integrations[i].Impact,
+				"architecture": &integrations[i].Architecture,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeAIMLIntegration, integrations[i].ID, language, fieldMap)
+		}
 	}
 
 	return response.Success(c, fiber.StatusOK, integrations)

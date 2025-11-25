@@ -10,6 +10,8 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -29,17 +31,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	enricher         *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs an impact metric handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -227,6 +233,15 @@ func (h *handler) GetImpactMetric(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"description": &metric.Description,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeImpactMetric, metric.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, metric)
 }
 
@@ -305,6 +320,17 @@ func (h *handler) ListImpactMetrics(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range metrics {
+			fieldMap := map[string]*string{
+				"description": &metrics[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeImpactMetric, metrics[i].ID, language, fieldMap)
+		}
+	}
+
 	return response.Success(c, fiber.StatusOK, metrics)
 }
 
@@ -314,8 +340,18 @@ func (h *handler) ListFeaturedImpactMetrics(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range metrics {
+			fieldMap := map[string]*string{
+				"description": &metrics[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeImpactMetric, metrics[i].ID, language, fieldMap)
+		}
+	}
+
 	return response.Success(c, fiber.StatusOK, metrics)
-}
 
 func (h *handler) GetMetricsByEntity(c *fiber.Ctx) error {
 	entityTypeStr := c.Params("entityType")
