@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
@@ -51,11 +52,18 @@ type translateEntityPayload struct {
 }
 
 func (h *handler) RequestTranslation(c *fiber.Ctx) error {
-	userID, err := authdomain.UserIDFromContext(c)
-	if err != nil {
-		return response.Error(c, fiber.StatusUnauthorized, 401, fiber.Map{
-			"message": "authentication required",
-		})
+	// For POST requests, try to get userID from API key context first, then JWT
+	var userID uuid.UUID
+	var err error
+	if apiKey, hasAPIKey := apikeysdomain.APIKeyFromContext(c); hasAPIKey {
+		userID = apiKey.UserID
+	} else {
+		userID, err = authdomain.UserIDFromContext(c)
+		if err != nil {
+			return response.Error(c, fiber.StatusUnauthorized, 401, fiber.Map{
+				"message": "authentication required",
+			})
+		}
 	}
 	_ = userID // User ID available for future authorization checks
 
@@ -334,11 +342,18 @@ func (h *handler) ListTranslations(c *fiber.Ctx) error {
 }
 
 func (h *handler) TranslateEntity(c *fiber.Ctx) error {
-	userID, err := authdomain.UserIDFromContext(c)
-	if err != nil {
-		return response.Error(c, fiber.StatusUnauthorized, 401, fiber.Map{
-			"message": "authentication required",
-		})
+	// For POST requests, try to get userID from API key context first, then JWT
+	var userID uuid.UUID
+	var err error
+	if apiKey, hasAPIKey := apikeysdomain.APIKeyFromContext(c); hasAPIKey {
+		userID = apiKey.UserID
+	} else {
+		userID, err = authdomain.UserIDFromContext(c)
+		if err != nil {
+			return response.Error(c, fiber.StatusUnauthorized, 401, fiber.Map{
+				"message": "authentication required",
+			})
+		}
 	}
 	_ = userID
 
