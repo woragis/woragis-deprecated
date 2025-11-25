@@ -313,9 +313,10 @@ func main() {
 
 	skillRepo := skillsdomain.NewGormRepository(db)
 	skillService := skillsdomain.NewService(skillRepo, slogLogger)
-	skillHandler := skillsdomain.NewHandler(skillService, slogLogger)
+	skillHandler := skillsdomain.NewHandler(skillService, translationEnricher, translationService, slogLogger)
 	// Skills: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	skillsGroup := api.Group("/skills")
+	skillsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	skillsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),

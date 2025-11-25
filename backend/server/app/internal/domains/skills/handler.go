@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -33,17 +35,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service           Service
+	enricher          *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger            *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a skill handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -184,6 +190,16 @@ func (h *handler) GetSkill(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"name":        &skill.Name,
+			"description": &skill.Description,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skill.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, toSkillResponse(skill))
 }
 
@@ -198,6 +214,16 @@ func (h *handler) GetSkillBySlug(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		fieldMap := map[string]*string{
+			"name":        &skill.Name,
+			"description": &skill.Description,
+		}
+		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skill.ID, language, fieldMap)
+	}
+
 	return response.Success(c, fiber.StatusOK, toSkillResponse(skill))
 }
 
@@ -205,6 +231,18 @@ func (h *handler) ListSkills(c *fiber.Ctx) error {
 	skills, err := h.service.ListSkills(c.Context())
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translation enrichment to each skill
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range skills {
+			fieldMap := map[string]*string{
+				"name":        &skills[i].Name,
+				"description": &skills[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skills[i].ID, language, fieldMap)
+		}
 	}
 
 	responses := make([]skillResponse, len(skills))
@@ -226,6 +264,18 @@ func (h *handler) ListSkillsByCategory(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment to each skill
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range skills {
+			fieldMap := map[string]*string{
+				"name":        &skills[i].Name,
+				"description": &skills[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skills[i].ID, language, fieldMap)
+		}
+	}
+
 	responses := make([]skillResponse, len(skills))
 	for i := range skills {
 		responses[i] = toSkillResponse(&skills[i])
@@ -245,6 +295,18 @@ func (h *handler) SearchSkills(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment to each skill
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range skills {
+			fieldMap := map[string]*string{
+				"name":        &skills[i].Name,
+				"description": &skills[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skills[i].ID, language, fieldMap)
+		}
+	}
+
 	responses := make([]skillResponse, len(skills))
 	for i := range skills {
 		responses[i] = toSkillResponse(&skills[i])
@@ -257,6 +319,18 @@ func (h *handler) GetAllSkillsWithProjectCounts(c *fiber.Ctx) error {
 	skills, err := h.service.GetAllSkillsWithProjectCounts(c.Context())
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translation enrichment to each skill
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range skills {
+			fieldMap := map[string]*string{
+				"name":        &skills[i].Name,
+				"description": &skills[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skills[i].ID, language, fieldMap)
+		}
 	}
 
 	responses := make([]skillWithCountResponse, len(skills))
@@ -332,6 +406,18 @@ func (h *handler) GetProjectSkills(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment to each skill
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range skills {
+			fieldMap := map[string]*string{
+				"name":        &skills[i].Name,
+				"description": &skills[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skills[i].ID, language, fieldMap)
+		}
+	}
+
 	responses := make([]skillResponse, len(skills))
 	for i := range skills {
 		responses[i] = toSkillResponse(&skills[i])
@@ -363,6 +449,18 @@ func (h *handler) GetSkillsTimeline(c *fiber.Ctx) error {
 	skills, err := h.service.GetSkillsTimeline(c.Context())
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translation enrichment to each skill
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range skills {
+			fieldMap := map[string]*string{
+				"name":        &skills[i].Name,
+				"description": &skills[i].Description,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSkill, skills[i].ID, language, fieldMap)
+		}
 	}
 
 	responses := make([]skillResponse, len(skills))

@@ -442,6 +442,23 @@ func (s *service) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 				sourceText["description"] = certification.Description
 			}
 		}
+	case EntityTypeSkill:
+		type Skill struct {
+			Name        string `gorm:"column:name"`
+			Description string `gorm:"column:description"`
+		}
+		var skill Skill
+		if err := s.db.WithContext(ctx).Table("skills").Where("id = ?", entityID).First(&skill).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "name":
+				sourceText["name"] = skill.Name
+			case "description":
+				sourceText["description"] = skill.Description
+			}
+		}
 	default:
 		return nil, fiber.NewError(fiber.StatusBadRequest, "unsupported entity type for auto-fetch")
 	}

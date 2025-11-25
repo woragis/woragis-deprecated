@@ -103,10 +103,28 @@ echo "$CERTIFICATIONS" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | while read id; 
 done
 
 echo ""
+
+# Request translations for skills
+echo "Requesting translations for skills..."
+SKILLS=$(curl -s -X GET "$API_BASE/skills" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
+
+echo "$SKILLS" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | while read id; do
+    if [ ! -z "$id" ]; then
+        echo "  - Requesting translations for skill: $id"
+        RESPONSE=$(curl -s -X POST "$API_BASE/translations/translate-entity" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -d "{\"entityType\":\"skill\",\"entityId\":\"$id\"}")
+        echo "$RESPONSE" | grep -q "queuedCount" && echo "    ✓ Queued" || echo "    ✗ Failed: $RESPONSE"
+    fi
+done
+
+echo ""
 echo "=========================================="
 echo "Translation requests completed!"
 echo "=========================================="
 echo ""
 echo "The translation worker will process these jobs asynchronously."
-echo "Check translation status with: curl -X GET \"$API_BASE/translations?entityType=certification\" -H \"Authorization: Bearer $ACCESS_TOKEN\""
+echo "Check translation status with: curl -X GET \"$API_BASE/translations?entityType=skill\" -H \"Authorization: Bearer $ACCESS_TOKEN\""
 
