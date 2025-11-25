@@ -325,6 +325,103 @@ func (s *service) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 				sourceText["solution"] = caseStudy.Solution
 			}
 		}
+	case EntityTypeAIMLIntegration:
+		type AIMLIntegration struct {
+			Title       string `gorm:"column:title"`
+			Description string `gorm:"column:description"`
+			UseCase     string `gorm:"column:use_case"`
+			Impact      string `gorm:"column:impact"`
+			Architecture string `gorm:"column:architecture"`
+		}
+		var integration AIMLIntegration
+		if err := s.db.WithContext(ctx).Table("aiml_integrations").Where("id = ?", entityID).First(&integration).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = integration.Title
+			case "description":
+				sourceText["description"] = integration.Description
+			case "useCase":
+				sourceText["useCase"] = integration.UseCase
+			case "impact":
+				sourceText["impact"] = integration.Impact
+			case "architecture":
+				sourceText["architecture"] = integration.Architecture
+			}
+		}
+	case EntityTypeImpactMetric:
+		type ImpactMetric struct {
+			Description string `gorm:"column:description"`
+		}
+		var metric ImpactMetric
+		if err := s.db.WithContext(ctx).Table("impact_metrics").Where("id = ?", entityID).First(&metric).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "description":
+				sourceText["description"] = metric.Description
+			}
+		}
+	case EntityTypeSocialMediaPost:
+		type SocialMediaPost struct {
+			Title         string `gorm:"column:title"`
+			ContentPreview string `gorm:"column:content_preview"`
+		}
+		var post SocialMediaPost
+		if err := s.db.WithContext(ctx).Table("social_media_posts").Where("id = ?", entityID).First(&post).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = post.Title
+			case "contentPreview":
+				sourceText["contentPreview"] = post.ContentPreview
+			}
+		}
+	case EntityTypeTechnicalWriting:
+		type TechnicalWriting struct {
+			Title       string `gorm:"column:title"`
+			Description string `gorm:"column:description"`
+			Content     string `gorm:"column:content"`
+			Excerpt     string `gorm:"column:excerpt"`
+		}
+		var writing TechnicalWriting
+		if err := s.db.WithContext(ctx).Table("technical_writings").Where("id = ?", entityID).First(&writing).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = writing.Title
+			case "description":
+				sourceText["description"] = writing.Description
+			case "content":
+				sourceText["content"] = writing.Content
+			case "excerpt":
+				sourceText["excerpt"] = writing.Excerpt
+			}
+		}
+	case EntityTypeInterest:
+		type Interest struct {
+			Title       string `gorm:"column:title"`
+			Description string `gorm:"column:description"`
+		}
+		var interest Interest
+		if err := s.db.WithContext(ctx).Table("interests").Where("id = ?", entityID).First(&interest).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = interest.Title
+			case "description":
+				sourceText["description"] = interest.Description
+			}
+		}
 	default:
 		return nil, fiber.NewError(fiber.StatusBadRequest, "unsupported entity type for auto-fetch")
 	}

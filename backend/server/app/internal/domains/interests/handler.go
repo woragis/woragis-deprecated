@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -22,17 +24,21 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service           Service
+	enricher          *translationenricher.Enricher
+	translationService translationsdomain.Service
+	logger            *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs an interest handler.
-func NewHandler(service Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
 	return &handler{
-		service: service,
-		logger:  logger,
+		service:           service,
+		enricher:          enricher,
+		translationService: translationService,
+		logger:            logger,
 	}
 }
 
@@ -143,6 +149,22 @@ func (h *handler) GetInterest(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment
+	language := translationsdomain.LanguageFromContext(c)
+	fieldMap := map[string]*string{
+		"title":       &interest.Title,
+		"description": &interest.Description,
+	}
+	if err := h.enricher.EnrichEntityFields(
+		c.Context(),
+		translationsdomain.EntityTypeInterest,
+		interest.ID,
+		language,
+		fieldMap,
+	); err != nil {
+		h.logger.Warn("Failed to enrich interest with translations", slog.Any("error", err))
+	}
+
 	return response.Success(c, fiber.StatusOK, toInterestResponse(interest))
 }
 
@@ -157,6 +179,22 @@ func (h *handler) GetInterestBySlug(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
+	// Apply translation enrichment
+	language := translationsdomain.LanguageFromContext(c)
+	fieldMap := map[string]*string{
+		"title":       &interest.Title,
+		"description": &interest.Description,
+	}
+	if err := h.enricher.EnrichEntityFields(
+		c.Context(),
+		translationsdomain.EntityTypeInterest,
+		interest.ID,
+		language,
+		fieldMap,
+	); err != nil {
+		h.logger.Warn("Failed to enrich interest with translations", slog.Any("error", err))
+	}
+
 	return response.Success(c, fiber.StatusOK, toInterestResponse(interest))
 }
 
@@ -164,6 +202,27 @@ func (h *handler) ListInterests(c *fiber.Ctx) error {
 	interests, err := h.service.ListInterests(c.Context())
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translation enrichment to each interest
+	language := translationsdomain.LanguageFromContext(c)
+	for i := range interests {
+		fieldMap := map[string]*string{
+			"title":       &interests[i].Title,
+			"description": &interests[i].Description,
+		}
+		if err := h.enricher.EnrichEntityFields(
+			c.Context(),
+			translationsdomain.EntityTypeInterest,
+			interests[i].ID,
+			language,
+			fieldMap,
+		); err != nil {
+			h.logger.Warn("Failed to enrich interest with translations",
+				slog.String("interestId", interests[i].ID.String()),
+				slog.Any("error", err),
+			)
+		}
 	}
 
 	responses := make([]interestResponse, len(interests))
@@ -178,6 +237,27 @@ func (h *handler) ListFeaturedInterests(c *fiber.Ctx) error {
 	interests, err := h.service.ListFeaturedInterests(c.Context())
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translation enrichment to each interest
+	language := translationsdomain.LanguageFromContext(c)
+	for i := range interests {
+		fieldMap := map[string]*string{
+			"title":       &interests[i].Title,
+			"description": &interests[i].Description,
+		}
+		if err := h.enricher.EnrichEntityFields(
+			c.Context(),
+			translationsdomain.EntityTypeInterest,
+			interests[i].ID,
+			language,
+			fieldMap,
+		); err != nil {
+			h.logger.Warn("Failed to enrich interest with translations",
+				slog.String("interestId", interests[i].ID.String()),
+				slog.Any("error", err),
+			)
+		}
 	}
 
 	responses := make([]interestResponse, len(interests))
@@ -197,6 +277,27 @@ func (h *handler) SearchInterests(c *fiber.Ctx) error {
 	interests, err := h.service.SearchInterests(c.Context(), query)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Apply translation enrichment to each interest
+	language := translationsdomain.LanguageFromContext(c)
+	for i := range interests {
+		fieldMap := map[string]*string{
+			"title":       &interests[i].Title,
+			"description": &interests[i].Description,
+		}
+		if err := h.enricher.EnrichEntityFields(
+			c.Context(),
+			translationsdomain.EntityTypeInterest,
+			interests[i].ID,
+			language,
+			fieldMap,
+		); err != nil {
+			h.logger.Warn("Failed to enrich interest with translations",
+				slog.String("interestId", interests[i].ID.String()),
+				slog.Any("error", err),
+			)
+		}
 	}
 
 	responses := make([]interestResponse, len(interests))

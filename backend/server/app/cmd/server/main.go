@@ -326,8 +326,9 @@ func main() {
 	// Interests: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	interestRepo := interestsdomain.NewGormRepository(db)
 	interestService := interestsdomain.NewService(interestRepo, slogLogger)
-	interestHandler := interestsdomain.NewHandler(interestService, slogLogger)
+	interestHandler := interestsdomain.NewHandler(interestService, translationEnricher, translationService, slogLogger)
 	interestsGroup := api.Group("/interests")
+	interestsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	interestsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
 		apiKeyService,
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
