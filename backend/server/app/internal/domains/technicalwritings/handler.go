@@ -427,6 +427,7 @@ func (h *handler) ListFeaturedTechnicalWritings(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, writings)
+}
 
 func (h *handler) GetWritingsByProject(c *fiber.Ctx) error {
 	projectID, err := uuid.Parse(c.Params("projectId"))

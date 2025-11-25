@@ -335,11 +335,10 @@ func (h *handler) ListCaseStudies(c *fiber.Ctx) error {
 		language := translationsdomain.LanguageFromContext(c)
 		for i := range caseStudies {
 			fieldMap := map[string]*string{
-				"title":       &caseStudies[i].Title,
-				"description": &caseStudies[i].Description,
-				"challenge":   &caseStudies[i].Challenge,
-				"solution":   &caseStudies[i].Solution,
-				"architecture": &caseStudies[i].Architecture,
+				"title":    &caseStudies[i].Title,
+				"problem":  &caseStudies[i].Problem,
+				"context":  &caseStudies[i].Context,
+				"solution": &caseStudies[i].Solution,
 			}
 			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeCaseStudy, caseStudies[i].ID, language, fieldMap)
 		}

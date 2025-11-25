@@ -2,6 +2,7 @@ package translations
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
@@ -184,6 +185,86 @@ func (h *handler) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 				sourceText["solution"] = caseStudy.Solution
 			}
 		}
+	case EntityTypeAIMLIntegration:
+		type AIMLIntegration struct {
+			Title       string `gorm:"column:title"`
+			Description string `gorm:"column:description"`
+			UseCase     string `gorm:"column:use_case"`
+			Impact      string `gorm:"column:impact"`
+			Architecture string `gorm:"column:architecture"`
+		}
+		var integration AIMLIntegration
+		if err := h.db.WithContext(ctx).Table("aiml_integrations").Where("id = ?", entityID).First(&integration).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = integration.Title
+			case "description":
+				sourceText["description"] = integration.Description
+			case "useCase":
+				sourceText["useCase"] = integration.UseCase
+			case "impact":
+				sourceText["impact"] = integration.Impact
+			case "architecture":
+				sourceText["architecture"] = integration.Architecture
+			}
+		}
+	case EntityTypeImpactMetric:
+		type ImpactMetric struct {
+			Description string `gorm:"column:description"`
+		}
+		var metric ImpactMetric
+		if err := h.db.WithContext(ctx).Table("impact_metrics").Where("id = ?", entityID).First(&metric).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "description":
+				sourceText["description"] = metric.Description
+			}
+		}
+	case EntityTypeSocialMediaPost:
+		type SocialMediaPost struct {
+			Title         string `gorm:"column:title"`
+			ContentPreview string `gorm:"column:content_preview"`
+		}
+		var post SocialMediaPost
+		if err := h.db.WithContext(ctx).Table("social_media_posts").Where("id = ?", entityID).First(&post).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = post.Title
+			case "contentPreview":
+				sourceText["contentPreview"] = post.ContentPreview
+			}
+		}
+	case EntityTypeTechnicalWriting:
+		type TechnicalWriting struct {
+			Title       string `gorm:"column:title"`
+			Description string `gorm:"column:description"`
+			Content     string `gorm:"column:content"`
+			Excerpt     string `gorm:"column:excerpt"`
+		}
+		var writing TechnicalWriting
+		if err := h.db.WithContext(ctx).Table("technical_writings").Where("id = ?", entityID).First(&writing).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = writing.Title
+			case "description":
+				sourceText["description"] = writing.Description
+			case "content":
+				sourceText["content"] = writing.Content
+			case "excerpt":
+				sourceText["excerpt"] = writing.Excerpt
+			}
+		}
 	default:
 		return nil, fiber.NewError(fiber.StatusBadRequest, "unsupported entity type for auto-fetch")
 	}
@@ -275,12 +356,85 @@ func (h *handler) TranslateEntity(c *fiber.Ctx) error {
 		}
 	}
 
-	// This is a convenience endpoint - actual implementation would need to fetch source text
-	// from the entity and queue jobs for each language
-	// For now, return success and let the caller use RequestTranslation for each language
+	// Determine fields to translate based on entity type
+	var fields []string
+	switch payload.EntityType {
+	case EntityTypeTestimonial:
+		fields = []string{"content", "context", "authorRole", "authorCompany"}
+	case EntityTypePost:
+		fields = []string{"title", "content", "excerpt", "metaTitle", "metaDescription", "ogTitle", "ogDescription"}
+	case EntityTypeProject:
+		fields = []string{"name", "description"}
+	case EntityTypeCaseStudy:
+		fields = []string{"title", "problem", "context", "solution"}
+	case EntityTypeProjectCaseStudy:
+		fields = []string{"title", "description", "challenge", "solution", "architecture"}
+	case EntityTypeSystemDesign:
+		fields = []string{"title", "description", "dataFlow", "scalability", "reliability"}
+	case EntityTypeProblemSolution:
+		fields = []string{"problem", "context", "solution", "impact"}
+	case EntityTypeCertification:
+		fields = []string{"name", "issuer", "description"}
+	case EntityTypeAIMLIntegration:
+		fields = []string{"title", "description", "useCase", "impact", "architecture"}
+	case EntityTypeImpactMetric:
+		fields = []string{"description"}
+	case EntityTypeSocialMediaPost:
+		fields = []string{"title", "contentPreview"}
+	case EntityTypeTechnicalWriting:
+		fields = []string{"title", "description", "content", "excerpt"}
+	default:
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidEntityType, fiber.Map{
+			"message": "unsupported entity type",
+		})
+	}
+
+	// Fetch source text from entity
+	sourceText, err := h.fetchSourceTextFromEntity(c.Context(), payload.EntityType, payload.EntityID, fields)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": fmt.Sprintf("failed to fetch entity: %v", err),
+		})
+	}
+
+	// Filter out empty fields
+	filteredFields := []string{}
+	filteredSourceText := make(map[string]string)
+	for _, field := range fields {
+		if text, ok := sourceText[field]; ok && text != "" {
+			filteredFields = append(filteredFields, field)
+			filteredSourceText[field] = text
+		}
+	}
+
+	if len(filteredFields) == 0 {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": "no translatable fields found in entity",
+		})
+	}
+
+	// Queue translation jobs for each language
+	queuedCount := 0
+	for _, language := range languages {
+		if err := h.service.RequestTranslation(c.Context(), payload.EntityType, payload.EntityID, language, filteredFields, filteredSourceText); err != nil {
+			h.logger.Warn("Failed to queue translation",
+				slog.String("entityType", string(payload.EntityType)),
+				slog.String("entityId", payload.EntityID.String()),
+				slog.String("language", string(language)),
+				slog.Any("error", err),
+			)
+			continue
+		}
+		queuedCount++
+	}
+
 	return response.Success(c, fiber.StatusAccepted, fiber.Map{
-		"message": "Use /translations/request endpoint for each language",
-		"languages": languages,
+		"message":     fmt.Sprintf("Queued %d translation jobs for entity", queuedCount),
+		"entityType":  payload.EntityType,
+		"entityId":    payload.EntityID,
+		"languages":   languages,
+		"fields":      filteredFields,
+		"queuedCount": queuedCount,
 	})
 }
 

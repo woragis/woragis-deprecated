@@ -352,6 +352,7 @@ func (h *handler) ListFeaturedImpactMetrics(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, metrics)
+}
 
 func (h *handler) GetMetricsByEntity(c *fiber.Ctx) error {
 	entityTypeStr := c.Params("entityType")
