@@ -290,6 +290,26 @@ func (h *handler) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 				sourceText["description"] = interest.Description
 			}
 		}
+	case EntityTypeCertification:
+		type Certification struct {
+			Name        string `gorm:"column:name"`
+			Issuer      string `gorm:"column:issuer"`
+			Description string `gorm:"column:description"`
+		}
+		var certification Certification
+		if err := h.db.WithContext(ctx).Table("certifications").Where("id = ?", entityID).First(&certification).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "name":
+				sourceText["name"] = certification.Name
+			case "issuer":
+				sourceText["issuer"] = certification.Issuer
+			case "description":
+				sourceText["description"] = certification.Description
+			}
+		}
 	default:
 		return nil, fiber.NewError(fiber.StatusBadRequest, "unsupported entity type for auto-fetch")
 	}
