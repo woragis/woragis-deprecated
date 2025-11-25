@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listSystemDesigns,
 	getFeaturedSystemDesigns,
@@ -6,14 +8,14 @@ import {
 } from '$lib/api/system-designs';
 import type { SystemDesign } from '$lib/types/system-design';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const systemDesignKeys = {
 	all: ['system-designs'] as const,
 	lists: () => [...systemDesignKeys.all, 'list'] as const,
-	list: (params?: { featured?: boolean }) => [...systemDesignKeys.lists(), params] as const,
-	featured: () => [...systemDesignKeys.all, 'featured'] as const,
+	list: (params?: { featured?: boolean }, lang?: string) => [...systemDesignKeys.lists(), params, lang] as const,
+	featured: (lang?: string) => [...systemDesignKeys.all, 'featured', lang] as const,
 	details: () => [...systemDesignKeys.all, 'detail'] as const,
-	detail: (id: string) => [...systemDesignKeys.details(), id] as const
+	detail: (id: string, lang?: string) => [...systemDesignKeys.details(), id, lang] as const
 };
 
 // Query options for listing system designs
@@ -49,12 +51,15 @@ export function useSystemDesignsQuery(params?: { featured?: boolean }) {
 	}));
 }
 
-// Hook for featured system designs
-export function useFeaturedSystemDesignsQuery() {
-	return createQuery(() => ({
-		queryKey: systemDesignKeys.featured(),
-		queryFn: () => getFeaturedSystemDesigns()
-	}));
+// Hook for featured system designs - reactive to language changes
+export function useFeaturedSystemDesignsQuery(lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: systemDesignKeys.featured(currentLang),
+			queryFn: () => getFeaturedSystemDesigns()
+		};
+	});
 }
 
 // Hook for getting a system design by ID

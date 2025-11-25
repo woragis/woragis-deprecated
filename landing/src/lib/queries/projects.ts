@@ -1,5 +1,5 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
-import { get } from 'svelte/store';
+import { derived, get } from 'svelte/store';
 import { language } from '$lib/i18n';
 import { listProjects, getProjectBySlug, type ListProjectsParams, type ProjectWithTechnologies } from '$lib/api/projects';
 
@@ -7,13 +7,13 @@ import { listProjects, getProjectBySlug, type ListProjectsParams, type ProjectWi
 export const projectKeys = {
 	all: ['projects'] as const,
 	lists: () => [...projectKeys.all, 'list'] as const,
-	list: (filters?: ListProjectsParams, lang?: string) => [...projectKeys.lists(), filters, lang] as const,
+	list: (filters: ListProjectsParams, lang: string) => [...projectKeys.lists(), filters, lang] as const,
 	details: () => [...projectKeys.all, 'detail'] as const,
 	detail: (slug: string, lang?: string) => [...projectKeys.details(), slug, lang] as const
 };
 
 // Query options for listing projects
-export function getProjectsQueryOptions(filters?: ListProjectsParams, lang?: string) {
+export function getProjectsQueryOptions(filters: ListProjectsParams, lang: string) {
 	return queryOptions({
 		queryKey: projectKeys.list(filters, lang),
 		queryFn: () => listProjects(filters),
@@ -22,7 +22,7 @@ export function getProjectsQueryOptions(filters?: ListProjectsParams, lang?: str
 }
 
 // Query options for getting a project by slug
-export function getProjectBySlugQueryOptions(slug: string, lang?: string) {
+export function getProjectBySlugQueryOptions(slug: string, lang: string) {
 	return queryOptions({
 		queryKey: projectKeys.detail(slug, lang),
 		queryFn: () => getProjectBySlug(slug),
@@ -31,10 +31,11 @@ export function getProjectBySlugQueryOptions(slug: string, lang?: string) {
 }
 
 // Hook for listing projects - reactive to language changes
-export function useProjectsQuery(filters?: ListProjectsParams) {
-	// Read language from store in the callback - TanStack Query will track this reactively
-	// The query key includes the language, so it will refetch when language changes
+export function useProjectsQuery(filters: ListProjectsParams, lang: string) {
+	// In v6, createQuery expects an Accessor function that's reactive
+	// Access the language store directly - TanStack Query will track changes
 	return createQuery(() => {
+		// Read language from store - this should be tracked by TanStack Query
 		const currentLang = get(language);
 		return {
 			queryKey: projectKeys.list(filters, currentLang),
@@ -44,10 +45,11 @@ export function useProjectsQuery(filters?: ListProjectsParams) {
 }
 
 // Hook for getting a project by slug - reactive to language changes
-export function useProjectBySlugQuery(slug: string) {
-	// Read language from store in the callback - TanStack Query will track this reactively
-	// The query key includes the language, so it will refetch when language changes
+export function useProjectBySlugQuery(slug: string, lang: string) {
+	// In v6, createQuery expects an Accessor function that's reactive
+	// Access the language store directly - TanStack Query will track changes
 	return createQuery(() => {
+		// Read language from store - this should be tracked by TanStack Query
 		const currentLang = get(language);
 		return {
 			queryKey: projectKeys.detail(slug, currentLang),

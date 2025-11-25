@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listCaseStudies,
 	getCaseStudy,
@@ -7,14 +9,14 @@ import {
 } from '$lib/api/case-studies';
 import type { CaseStudy } from '$lib/types/case-study';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const caseStudyKeys = {
 	all: ['case-studies'] as const,
 	lists: () => [...caseStudyKeys.all, 'list'] as const,
-	list: (params?: ListCaseStudiesParams) => [...caseStudyKeys.lists(), params] as const,
+	list: (params?: ListCaseStudiesParams, lang?: string) => [...caseStudyKeys.lists(), params, lang] as const,
 	details: () => [...caseStudyKeys.all, 'detail'] as const,
-	detail: (id: string) => [...caseStudyKeys.details(), id] as const,
-	byProjectSlug: (slug: string) => [...caseStudyKeys.details(), 'project-slug', slug] as const
+	detail: (id: string, lang?: string) => [...caseStudyKeys.details(), id, lang] as const,
+	byProjectSlug: (slug: string, lang?: string) => [...caseStudyKeys.details(), 'project-slug', slug, lang] as const
 };
 
 // Query options for listing case studies
@@ -43,12 +45,15 @@ export function getCaseStudyByProjectSlugQueryOptions(projectSlug: string) {
 	});
 }
 
-// Hook for listing case studies
-export function useCaseStudiesQuery(params?: ListCaseStudiesParams) {
-	return createQuery(() => ({
-		queryKey: caseStudyKeys.list(params),
-		queryFn: () => listCaseStudies(params)
-	}));
+// Hook for listing case studies - reactive to language changes
+export function useCaseStudiesQuery(params?: ListCaseStudiesParams, lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: caseStudyKeys.list(params, currentLang),
+			queryFn: () => listCaseStudies(params)
+		};
+	});
 }
 
 // Hook for getting a case study by ID

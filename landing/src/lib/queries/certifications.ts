@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listCertifications,
 	getFeaturedCertifications,
@@ -7,16 +9,16 @@ import {
 } from '$lib/api/certifications';
 import type { Certification, CertificationStatus, CertificationCategory } from '$lib/types/certification';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const certificationKeys = {
 	all: ['certifications'] as const,
 	lists: () => [...certificationKeys.all, 'list'] as const,
-	list: (params?: { status?: CertificationStatus; category?: CertificationCategory; featured?: boolean }) =>
-		[...certificationKeys.lists(), params] as const,
-	featured: () => [...certificationKeys.all, 'featured'] as const,
+	list: (params?: { status?: CertificationStatus; category?: CertificationCategory; featured?: boolean }, lang?: string) =>
+		[...certificationKeys.lists(), params, lang] as const,
+	featured: (lang?: string) => [...certificationKeys.all, 'featured', lang] as const,
 	details: () => [...certificationKeys.all, 'detail'] as const,
-	detail: (id: string) => [...certificationKeys.details(), id] as const,
-	bySkill: (skillId: string) => [...certificationKeys.all, 'skill', skillId] as const
+	detail: (id: string, lang?: string) => [...certificationKeys.details(), id, lang] as const,
+	bySkill: (skillId: string, lang?: string) => [...certificationKeys.all, 'skill', skillId, lang] as const
 };
 
 // Query options for listing certifications
@@ -69,12 +71,15 @@ export function useCertificationsQuery(params?: {
 	}));
 }
 
-// Hook for featured certifications
-export function useFeaturedCertificationsQuery() {
-	return createQuery(() => ({
-		queryKey: certificationKeys.featured(),
-		queryFn: () => getFeaturedCertifications()
-	}));
+// Hook for featured certifications - reactive to language changes
+export function useFeaturedCertificationsQuery(lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: certificationKeys.featured(currentLang),
+			queryFn: () => getFeaturedCertifications()
+		};
+	});
 }
 
 // Hook for getting a certification by ID

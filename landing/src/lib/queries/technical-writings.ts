@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listTechnicalWritings,
 	getFeaturedTechnicalWritings,
@@ -9,7 +11,7 @@ import {
 } from '$lib/api/technical-writings';
 import type { TechnicalWriting, WritingType, PublicationPlatform } from '$lib/types/technical-writing';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const technicalWritingKeys = {
 	all: ['technical-writings'] as const,
 	lists: () => [...technicalWritingKeys.all, 'list'] as const,
@@ -17,14 +19,14 @@ export const technicalWritingKeys = {
 		type?: WritingType;
 		platform?: PublicationPlatform;
 		featured?: boolean;
-	}) => [...technicalWritingKeys.lists(), params] as const,
-	featured: () => [...technicalWritingKeys.all, 'featured'] as const,
+	}, lang?: string) => [...technicalWritingKeys.lists(), params, lang] as const,
+	featured: (lang?: string) => [...technicalWritingKeys.all, 'featured', lang] as const,
 	details: () => [...technicalWritingKeys.all, 'detail'] as const,
-	detail: (id: string) => [...technicalWritingKeys.details(), id] as const,
-	search: (query: string) => [...technicalWritingKeys.all, 'search', query] as const,
-	byType: (type: WritingType) => [...technicalWritingKeys.all, 'type', type] as const,
-	byPlatform: (platform: PublicationPlatform) =>
-		[...technicalWritingKeys.all, 'platform', platform] as const
+	detail: (id: string, lang?: string) => [...technicalWritingKeys.details(), id, lang] as const,
+	search: (query: string, lang?: string) => [...technicalWritingKeys.all, 'search', query, lang] as const,
+	byType: (type: WritingType, lang?: string) => [...technicalWritingKeys.all, 'type', type, lang] as const,
+	byPlatform: (platform: PublicationPlatform, lang?: string) =>
+		[...technicalWritingKeys.all, 'platform', platform, lang] as const
 };
 
 // Query options for listing technical writings
@@ -93,12 +95,15 @@ export function useTechnicalWritingsQuery(params?: {
 	}));
 }
 
-// Hook for featured technical writings
-export function useFeaturedTechnicalWritingsQuery() {
-	return createQuery(() => ({
-		queryKey: technicalWritingKeys.featured(),
-		queryFn: () => getFeaturedTechnicalWritings()
-	}));
+// Hook for featured technical writings - reactive to language changes
+export function useFeaturedTechnicalWritingsQuery(lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: technicalWritingKeys.featured(currentLang),
+			queryFn: () => getFeaturedTechnicalWritings()
+		};
+	});
 }
 
 // Hook for getting a technical writing by ID

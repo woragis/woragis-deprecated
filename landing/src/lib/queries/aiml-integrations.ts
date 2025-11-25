@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listAIMLIntegrations,
 	getFeaturedAIMLIntegrations,
@@ -8,7 +10,7 @@ import {
 } from '$lib/api/aiml-integrations';
 import type { AIMLIntegration, IntegrationType, Framework } from '$lib/types/aiml-integration';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const aimlIntegrationKeys = {
 	all: ['aiml-integrations'] as const,
 	lists: () => [...aimlIntegrationKeys.all, 'list'] as const,
@@ -16,13 +18,13 @@ export const aimlIntegrationKeys = {
 		type?: IntegrationType;
 		framework?: Framework;
 		featured?: boolean;
-	}) => [...aimlIntegrationKeys.lists(), params] as const,
-	featured: () => [...aimlIntegrationKeys.all, 'featured'] as const,
+	}, lang?: string) => [...aimlIntegrationKeys.lists(), params, lang] as const,
+	featured: (lang?: string) => [...aimlIntegrationKeys.all, 'featured', lang] as const,
 	details: () => [...aimlIntegrationKeys.all, 'detail'] as const,
-	detail: (id: string) => [...aimlIntegrationKeys.details(), id] as const,
-	byType: (type: IntegrationType) => [...aimlIntegrationKeys.all, 'type', type] as const,
-	byFramework: (framework: Framework) =>
-		[...aimlIntegrationKeys.all, 'framework', framework] as const
+	detail: (id: string, lang?: string) => [...aimlIntegrationKeys.details(), id, lang] as const,
+	byType: (type: IntegrationType, lang?: string) => [...aimlIntegrationKeys.all, 'type', type, lang] as const,
+	byFramework: (framework: Framework, lang?: string) =>
+		[...aimlIntegrationKeys.all, 'framework', framework, lang] as const
 };
 
 // Query options for listing AI/ML integrations
@@ -82,12 +84,15 @@ export function useAIMLIntegrationsQuery(params?: {
 	}));
 }
 
-// Hook for featured AI/ML integrations
-export function useFeaturedAIMLIntegrationsQuery() {
-	return createQuery(() => ({
-		queryKey: aimlIntegrationKeys.featured(),
-		queryFn: () => getFeaturedAIMLIntegrations()
-	}));
+// Hook for featured AI/ML integrations - reactive to language changes
+export function useFeaturedAIMLIntegrationsQuery(lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: aimlIntegrationKeys.featured(currentLang),
+			queryFn: () => getFeaturedAIMLIntegrations()
+		};
+	});
 }
 
 // Hook for getting an AI/ML integration by ID

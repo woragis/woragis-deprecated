@@ -68,11 +68,9 @@ export function useImpactMetricsQuery(params?: { type?: MetricType; featured?: b
 }
 
 // Hook for featured impact metrics - reactive to language changes
-export function useFeaturedImpactMetricsQuery() {
-	// Read language from store in the callback - TanStack Query will track this reactively
-	// The query key includes the language, so it will refetch when language changes
+export function useFeaturedImpactMetricsQuery(lang?: string) {
 	return createQuery(() => {
-		const currentLang = get(language);
+		const currentLang = lang ?? get(language);
 		return {
 			queryKey: impactMetricKeys.featured(currentLang),
 			queryFn: () => getFeaturedImpactMetrics()

@@ -19,21 +19,22 @@
 	import ImpactMetricsSection from './_sections/ImpactMetricsSection.svelte';
 	import ContactSection from './_sections/ContactSection.svelte';
 	import FooterSection from './_sections/FooterSection.svelte';
-	import { translationsStore } from '$lib/i18n';
-	import { useProjectsQuery } from '$lib/queries/projects';
-	import { useSkillsWithCountsQuery } from '$lib/queries/skills';
-	import { usePostsQuery } from '$lib/queries/posts';
-	import { useCaseStudiesQuery } from '$lib/queries/case-studies';
-	import { useFeaturedCertificationsQuery } from '$lib/queries/certifications';
-	import { useFeaturedTechnicalWritingsQuery } from '$lib/queries/technical-writings';
-	import { useSocialMediaPostsQuery } from '$lib/queries/social-media-posts';
-	import { useFeaturedAIMLIntegrationsQuery } from '$lib/queries/aiml-integrations';
-	import { useFeaturedImpactMetricsQuery } from '$lib/queries/impact-metrics';
-	import { useFeaturedSystemDesignsQuery } from '$lib/queries/system-designs';
-	import { useFeaturedProblemSolutionsQuery } from '$lib/queries/problem-solutions';
+	import { translationsStore, language } from '$lib/i18n';
+	import { useProjectsQuery, projectKeys } from '$lib/queries/projects';
+	import { useSkillsWithCountsQuery, skillKeys } from '$lib/queries/skills';
+	import { usePostsQuery, postKeys } from '$lib/queries/posts';
+	import { useCaseStudiesQuery, caseStudyKeys } from '$lib/queries/case-studies';
+	import { useFeaturedCertificationsQuery, certificationKeys } from '$lib/queries/certifications';
+	import { useFeaturedTechnicalWritingsQuery, technicalWritingKeys } from '$lib/queries/technical-writings';
+	import { useSocialMediaPostsQuery, socialMediaPostKeys } from '$lib/queries/social-media-posts';
+	import { useFeaturedAIMLIntegrationsQuery, aimlIntegrationKeys } from '$lib/queries/aiml-integrations';
+	import { useFeaturedImpactMetricsQuery, impactMetricKeys } from '$lib/queries/impact-metrics';
+	import { useFeaturedSystemDesignsQuery, systemDesignKeys } from '$lib/queries/system-designs';
+	import { useFeaturedProblemSolutionsQuery, problemSolutionKeys } from '$lib/queries/problem-solutions';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { onMount } from 'svelte';
+	import { useQueryClient } from '@tanstack/svelte-query';
 	import type { Testimonial } from '$lib/types/testimonial';
 	import type { CaseStudy } from '$lib/types/case-study';
 	import type { SkillWithCount } from '$lib/api/skills';
@@ -41,8 +42,29 @@
 	// Reactive translation helper
 	let t = $derived($translationsStore);
 
-	// Featured projects - using TanStack Query
-	const featuredProjectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' });
+	// Get query client for invalidating queries
+	const queryClient = useQueryClient();
+
+	// Featured projects - using TanStack Query - reactive to language changes
+	const featuredProjectsQuery = useProjectsQuery({ limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' }, $language);
+
+	// Invalidate all language-dependent queries when language changes
+	$effect(() => {
+		// Track language changes
+		const currentLang = $language;
+		// Invalidate all queries that depend on language
+		queryClient.invalidateQueries({ queryKey: projectKeys.all });
+		queryClient.invalidateQueries({ queryKey: postKeys.all });
+		queryClient.invalidateQueries({ queryKey: caseStudyKeys.all });
+		queryClient.invalidateQueries({ queryKey: certificationKeys.all });
+		queryClient.invalidateQueries({ queryKey: technicalWritingKeys.all });
+		queryClient.invalidateQueries({ queryKey: socialMediaPostKeys.all });
+		queryClient.invalidateQueries({ queryKey: aimlIntegrationKeys.all });
+		queryClient.invalidateQueries({ queryKey: impactMetricKeys.all });
+		queryClient.invalidateQueries({ queryKey: systemDesignKeys.all });
+		queryClient.invalidateQueries({ queryKey: problemSolutionKeys.all });
+		queryClient.invalidateQueries({ queryKey: skillKeys.all });
+	});
 
 	let projects = $derived(featuredProjectsQuery.data || []);
 	let loadingProjects = $derived(featuredProjectsQuery.isPending);
@@ -51,39 +73,39 @@
 	let caseStudyMap: Map<string, CaseStudy> = $state(new Map());
 	let loadingCaseStudies = $state(false);
 
-	// Blog posts queries
+	// Blog posts queries - reactive to language changes
 	const featuredPostsQuery = usePostsQuery({
 		status: 'published',
 		featured: true,
 		limit: 3,
 		orderBy: 'publishedAt',
 		order: 'desc'
-	});
+	}, $language);
 
 	const latestPostsQuery = usePostsQuery({
 		status: 'published',
 		limit: 6,
 		orderBy: 'publishedAt',
 		order: 'desc'
-	});
+	}, $language);
 
 	let featuredPosts = $derived(featuredPostsQuery.data || []);
 	let latestPosts = $derived(latestPostsQuery.data?.slice(0, 6) || []);
 	let loadingPosts = $derived(featuredPostsQuery.isPending || latestPostsQuery.isPending);
 
-	// Case studies queries
+	// Case studies queries - reactive to language changes
 	const featuredCaseStudiesQuery = useCaseStudiesQuery({
 		featured: true,
 		limit: 3,
 		orderBy: 'updatedAt',
 		order: 'desc'
-	});
+	}, $language);
 
 	const latestCaseStudiesQuery = useCaseStudiesQuery({
 		limit: 6,
 		orderBy: 'updatedAt',
 		order: 'desc'
-	});
+	}, $language);
 
 	let featuredCaseStudies = $derived(featuredCaseStudiesQuery.data || []);
 	let latestCaseStudies = $derived(
@@ -93,38 +115,38 @@
 	);
 	let loadingCaseStudiesSection = $derived(featuredCaseStudiesQuery.isPending || latestCaseStudiesQuery.isPending);
 
-	// Certifications query
-	const certificationsQuery = useFeaturedCertificationsQuery();
+	// Certifications query - reactive to language changes
+	const certificationsQuery = useFeaturedCertificationsQuery($language);
 	let certifications = $derived(certificationsQuery.data || []);
 	let loadingCertifications = $derived(certificationsQuery.isPending);
 
-	// Technical writings query
-	const technicalWritingsQuery = useFeaturedTechnicalWritingsQuery();
+	// Technical writings query - reactive to language changes
+	const technicalWritingsQuery = useFeaturedTechnicalWritingsQuery($language);
 	let technicalWritings = $derived(technicalWritingsQuery.data || []);
 	let loadingTechnicalWritings = $derived(technicalWritingsQuery.isPending);
 
-	// Social media posts query
-	const socialMediaPostsQuery = useSocialMediaPostsQuery({ status: 'active' });
+	// Social media posts query - reactive to language changes
+	const socialMediaPostsQuery = useSocialMediaPostsQuery({ status: 'active' }, $language);
 	let socialMediaPosts = $derived(socialMediaPostsQuery.data || []);
 	let loadingSocialMediaPosts = $derived(socialMediaPostsQuery.isPending);
 
-	// AI/ML integrations query
-	const aimlIntegrationsQuery = useFeaturedAIMLIntegrationsQuery();
+	// AI/ML integrations query - reactive to language changes
+	const aimlIntegrationsQuery = useFeaturedAIMLIntegrationsQuery($language);
 	let aimlIntegrations = $derived(aimlIntegrationsQuery.data || []);
 	let loadingAIMLIntegrations = $derived(aimlIntegrationsQuery.isPending);
 
-	// Impact metrics query
-	const impactMetricsQuery = useFeaturedImpactMetricsQuery();
+	// Impact metrics query - reactive to language changes
+	const impactMetricsQuery = useFeaturedImpactMetricsQuery($language);
 	let impactMetrics = $derived(impactMetricsQuery.data || []);
 	let loadingImpactMetrics = $derived(impactMetricsQuery.isPending);
 
-	// System designs query
-	const systemDesignsQuery = useFeaturedSystemDesignsQuery();
+	// System designs query - reactive to language changes
+	const systemDesignsQuery = useFeaturedSystemDesignsQuery($language);
 	let systemDesigns = $derived(systemDesignsQuery.data || []);
 	let loadingSystemDesigns = $derived(systemDesignsQuery.isPending);
 
-	// Problem solutions query
-	const problemSolutionsQuery = useFeaturedProblemSolutionsQuery();
+	// Problem solutions query - reactive to language changes
+	const problemSolutionsQuery = useFeaturedProblemSolutionsQuery($language);
 	let problemSolutions = $derived(problemSolutionsQuery.data || []);
 	let loadingProblemSolutions = $derived(problemSolutionsQuery.isPending);
 
@@ -132,8 +154,8 @@
 	let testimonials: Testimonial[] = $state([]);
 	let loadingTestimonials = $state(false);
 
-	// Skills - using TanStack Query
-	const skillsQuery = useSkillsWithCountsQuery();
+	// Skills - using TanStack Query - reactive to language changes
+	const skillsQuery = useSkillsWithCountsQuery($language);
 	let popularSkills = $derived.by(() => {
 		const allSkills = skillsQuery.data || [];
 		return allSkills

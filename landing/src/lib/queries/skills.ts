@@ -88,11 +88,9 @@ export function useSkillsQuery() {
 }
 
 // Hook for listing skills with counts - reactive to language changes
-export function useSkillsWithCountsQuery() {
-	// Read language from store in the callback - TanStack Query will track this reactively
-	// The query key includes the language, so it will refetch when language changes
+export function useSkillsWithCountsQuery(lang?: string) {
 	return createQuery(() => {
-		const currentLang = get(language);
+		const currentLang = lang ?? get(language);
 		return {
 			queryKey: skillKeys.withCounts(currentLang),
 			queryFn: () => listSkillsWithCounts()
@@ -144,11 +142,9 @@ export function getSkillsTimelineQueryOptions(lang?: string) {
 }
 
 // Hook for getting skills timeline - reactive to language changes
-export function useSkillsTimelineQuery() {
-	// Read language from store in the callback - TanStack Query will track this reactively
-	// The query key includes the language, so it will refetch when language changes
+export function useSkillsTimelineQuery(lang?: string) {
 	return createQuery(() => {
-		const currentLang = get(language);
+		const currentLang = lang ?? get(language);
 		return {
 			queryKey: skillKeys.timeline(currentLang),
 			queryFn: () => getSkillsTimeline()

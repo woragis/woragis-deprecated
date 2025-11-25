@@ -1,15 +1,17 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import { listPosts, getPostBySlug, getPost, listCategories, listTags } from '$lib/api/posts';
 import type { Post, Category, Tag, ListPostsParams } from '$lib/types/post';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const postKeys = {
 	all: ['posts'] as const,
 	lists: () => [...postKeys.all, 'list'] as const,
-	list: (params?: ListPostsParams) => [...postKeys.lists(), params] as const,
+	list: (params?: ListPostsParams, lang?: string) => [...postKeys.lists(), params, lang] as const,
 	details: () => [...postKeys.all, 'detail'] as const,
-	detail: (id: string) => [...postKeys.details(), id] as const,
-	bySlug: (slug: string) => [...postKeys.details(), 'slug', slug] as const,
+	detail: (id: string, lang?: string) => [...postKeys.details(), id, lang] as const,
+	bySlug: (slug: string, lang?: string) => [...postKeys.details(), 'slug', slug, lang] as const,
 	categories: () => [...postKeys.all, 'categories'] as const,
 	tags: () => [...postKeys.all, 'tags'] as const
 };
@@ -56,30 +58,39 @@ export function getTagsQueryOptions() {
 	});
 }
 
-// Hook for listing posts
-export function usePostsQuery(params?: ListPostsParams) {
-	return createQuery(() => ({
-		queryKey: postKeys.list(params),
-		queryFn: () => listPosts(params)
-	}));
+// Hook for listing posts - reactive to language changes
+export function usePostsQuery(params?: ListPostsParams, lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: postKeys.list(params, currentLang),
+			queryFn: () => listPosts(params)
+		};
+	});
 }
 
-// Hook for getting a post by ID
-export function usePostQuery(id: string) {
-	return createQuery(() => ({
-		queryKey: postKeys.detail(id),
-		queryFn: () => getPost(id),
-		enabled: !!id
-	}));
+// Hook for getting a post by ID - reactive to language changes
+export function usePostQuery(id: string, lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: postKeys.detail(id, currentLang),
+			queryFn: () => getPost(id),
+			enabled: !!id
+		};
+	});
 }
 
-// Hook for getting a post by slug
-export function usePostBySlugQuery(slug: string) {
-	return createQuery(() => ({
-		queryKey: postKeys.bySlug(slug),
-		queryFn: () => getPostBySlug(slug),
-		enabled: !!slug
-	}));
+// Hook for getting a post by slug - reactive to language changes
+export function usePostBySlugQuery(slug: string, lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: postKeys.bySlug(slug, currentLang),
+			queryFn: () => getPostBySlug(slug),
+			enabled: !!slug
+		};
+	});
 }
 
 // Hook for listing categories

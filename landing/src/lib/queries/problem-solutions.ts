@@ -1,4 +1,6 @@
 import { queryOptions, createQuery } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
+import { language } from '$lib/i18n';
 import {
 	listProblemSolutions,
 	getFeaturedProblemSolutions,
@@ -7,15 +9,15 @@ import {
 } from '$lib/api/problem-solutions';
 import type { ProblemSolution, ProblemSolutionMatrixEntry } from '$lib/types/problem-solution';
 
-// Query keys factory
+// Query keys factory - includes language for proper cache separation
 export const problemSolutionKeys = {
 	all: ['problem-solutions'] as const,
 	lists: () => [...problemSolutionKeys.all, 'list'] as const,
-	list: (params?: { featured?: boolean }) => [...problemSolutionKeys.lists(), params] as const,
-	featured: () => [...problemSolutionKeys.all, 'featured'] as const,
+	list: (params?: { featured?: boolean }, lang?: string) => [...problemSolutionKeys.lists(), params, lang] as const,
+	featured: (lang?: string) => [...problemSolutionKeys.all, 'featured', lang] as const,
 	details: () => [...problemSolutionKeys.all, 'detail'] as const,
-	detail: (id: string) => [...problemSolutionKeys.details(), id] as const,
-	matrix: () => [...problemSolutionKeys.all, 'matrix'] as const
+	detail: (id: string, lang?: string) => [...problemSolutionKeys.details(), id, lang] as const,
+	matrix: (lang?: string) => [...problemSolutionKeys.all, 'matrix', lang] as const
 };
 
 // Query options for listing problem solutions
@@ -51,12 +53,15 @@ export function useProblemSolutionsQuery(params?: { featured?: boolean }) {
 	}));
 }
 
-// Hook for featured problem solutions
-export function useFeaturedProblemSolutionsQuery() {
-	return createQuery(() => ({
-		queryKey: problemSolutionKeys.featured(),
-		queryFn: () => getFeaturedProblemSolutions()
-	}));
+// Hook for featured problem solutions - reactive to language changes
+export function useFeaturedProblemSolutionsQuery(lang?: string) {
+	return createQuery(() => {
+		const currentLang = lang ?? get(language);
+		return {
+			queryKey: problemSolutionKeys.featured(currentLang),
+			queryFn: () => getFeaturedProblemSolutions()
+		};
+	});
 }
 
 // Hook for getting a problem solution by ID

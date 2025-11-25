@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Calendar, Code2, TrendingUp, Star } from 'lucide-svelte';
 	import { useSkillsTimelineQuery } from '$lib/queries/skills';
+	import { language } from '$lib/i18n';
 	import type { Skill, ProficiencyLevel } from '$lib/api/skills';
 
-	const timelineQuery = useSkillsTimelineQuery();
+	const timelineQuery = useSkillsTimelineQuery($language);
 	let skills = $derived(timelineQuery.data || []);
 	let loading = $derived(timelineQuery.isPending);
 
