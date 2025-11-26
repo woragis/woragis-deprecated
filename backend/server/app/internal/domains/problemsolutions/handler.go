@@ -416,9 +416,72 @@ func (h *handler) DeleteProblemSolution(c *fiber.Ctx) error {
 }
 
 func (h *handler) GetProblemSolutionMatrix(c *fiber.Ctx) error {
-	matrix, err := h.service.GetProblemSolutionMatrix(c.Context())
+	// Get all problem solutions first
+	problemSolutions, err := h.service.ListFeaturedProblemSolutions(c.Context())
 	if err != nil {
-		return h.handleError(c, err)
+		// Fallback to all problem solutions if featured fails
+		userID, _ := authdomain.UserIDFromContext(c)
+		if userID != uuid.Nil {
+			problemSolutions, err = h.service.ListProblemSolutions(c.Context(), userID)
+			if err != nil {
+				return h.handleError(c, err)
+			}
+		} else {
+			return h.handleError(c, err)
+		}
+	}
+
+	// Apply translations if enricher is available
+	if h.enricher != nil {
+		language := translationsdomain.LanguageFromContext(c)
+		for i := range problemSolutions {
+			fieldMap := map[string]*string{
+				"problem":  &problemSolutions[i].Problem,
+				"context":  &problemSolutions[i].Context,
+				"solution": &problemSolutions[i].Solution,
+				"impact":   &problemSolutions[i].Impact,
+			}
+			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeProblemSolution, problemSolutions[i].ID, language, fieldMap)
+		}
+	}
+
+	// Build technology map: technology -> []problem IDs
+	techMap := make(map[string]map[string]bool) // technology -> problem ID set
+
+	for _, ps := range problemSolutions {
+		for _, tech := range ps.Technologies {
+			if techMap[tech] == nil {
+				techMap[tech] = make(map[string]bool)
+			}
+			techMap[tech][ps.ID.String()] = true
+		}
+	}
+
+	// Convert to matrix entries
+	var matrix []ProblemSolutionMatrixEntry
+	for tech, problemIDs := range techMap {
+		// Get problem summaries for this technology
+		var problems []string
+		for problemID := range problemIDs {
+			// Find the problem solution to get the problem text
+			for _, ps := range problemSolutions {
+				if ps.ID.String() == problemID {
+					// Use a short version of the problem (first 100 chars)
+					problemText := ps.Problem
+					if len(problemText) > 100 {
+						problemText = problemText[:100] + "..."
+					}
+					problems = append(problems, problemText)
+					break
+				}
+			}
+		}
+
+		matrix = append(matrix, ProblemSolutionMatrixEntry{
+			Technology: tech,
+			Problems:   problems,
+			Count:      len(problems),
+		})
 	}
 
 	return response.Success(c, fiber.StatusOK, matrix)

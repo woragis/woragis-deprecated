@@ -327,6 +327,55 @@ func (h *handler) fetchSourceTextFromEntity(ctx context.Context, entityType Enti
 				sourceText["description"] = skill.Description
 			}
 		}
+	case EntityTypeSystemDesign:
+		type SystemDesign struct {
+			Title       string `gorm:"column:title"`
+			Description string `gorm:"column:description"`
+			DataFlow    string `gorm:"column:data_flow"`
+			Scalability string `gorm:"column:scalability"`
+			Reliability string `gorm:"column:reliability"`
+		}
+		var systemDesign SystemDesign
+		if err := h.db.WithContext(ctx).Table("system_designs").Where("id = ?", entityID).First(&systemDesign).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "title":
+				sourceText["title"] = systemDesign.Title
+			case "description":
+				sourceText["description"] = systemDesign.Description
+			case "dataFlow":
+				sourceText["dataFlow"] = systemDesign.DataFlow
+			case "scalability":
+				sourceText["scalability"] = systemDesign.Scalability
+			case "reliability":
+				sourceText["reliability"] = systemDesign.Reliability
+			}
+		}
+	case EntityTypeProblemSolution:
+		type ProblemSolution struct {
+			Problem  string `gorm:"column:problem"`
+			Context  string `gorm:"column:context"`
+			Solution string `gorm:"column:solution"`
+			Impact   string `gorm:"column:impact"`
+		}
+		var problemSolution ProblemSolution
+		if err := h.db.WithContext(ctx).Table("problem_solutions").Where("id = ?", entityID).First(&problemSolution).Error; err != nil {
+			return nil, err
+		}
+		for _, field := range fields {
+			switch field {
+			case "problem":
+				sourceText["problem"] = problemSolution.Problem
+			case "context":
+				sourceText["context"] = problemSolution.Context
+			case "solution":
+				sourceText["solution"] = problemSolution.Solution
+			case "impact":
+				sourceText["impact"] = problemSolution.Impact
+			}
+		}
 	default:
 		return nil, fiber.NewError(fiber.StatusBadRequest, "unsupported entity type for auto-fetch")
 	}

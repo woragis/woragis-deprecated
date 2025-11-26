@@ -121,6 +121,42 @@ echo "$SKILLS" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | while read id; do
 done
 
 echo ""
+
+# Request translations for system designs
+echo "Requesting translations for system designs..."
+SYSTEM_DESIGNS=$(curl -s -X GET "$API_BASE/system-designs" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
+
+echo "$SYSTEM_DESIGNS" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | while read id; do
+    if [ ! -z "$id" ]; then
+        echo "  - Requesting translations for system design: $id"
+        RESPONSE=$(curl -s -X POST "$API_BASE/translations/translate-entity" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -d "{\"entityType\":\"system_design\",\"entityId\":\"$id\"}")
+        echo "$RESPONSE" | grep -q "queuedCount" && echo "    ✓ Queued" || echo "    ✗ Failed: $RESPONSE"
+    fi
+done
+
+echo ""
+
+# Request translations for problem solutions
+echo "Requesting translations for problem solutions..."
+PROBLEM_SOLUTIONS=$(curl -s -X GET "$API_BASE/problem-solutions" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
+
+echo "$PROBLEM_SOLUTIONS" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | while read id; do
+    if [ ! -z "$id" ]; then
+        echo "  - Requesting translations for problem solution: $id"
+        RESPONSE=$(curl -s -X POST "$API_BASE/translations/translate-entity" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -d "{\"entityType\":\"problem_solution\",\"entityId\":\"$id\"}")
+        echo "$RESPONSE" | grep -q "queuedCount" && echo "    ✓ Queued" || echo "    ✗ Failed: $RESPONSE"
+    fi
+done
+
+echo ""
 echo "=========================================="
 echo "Translation requests completed!"
 echo "=========================================="
