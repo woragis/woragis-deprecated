@@ -1,51 +1,24 @@
-FROM golang:1.24-bookworm AS builder
-
-WORKDIR /build
-
-# Enable automatic toolchain download if needed
-ENV GOTOOLCHAIN=auto
-
-COPY go.mod go.sum ./
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential libsqlite3-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN go mod download
-
-COPY . .
-
-# Build job application worker
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o /build/bin/job-application-worker ./app/cmd/job-application-worker
-
-# Install Playwright and browsers in builder stage
-# This is done here to cache the browser downloads
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Node.js (required for Playwright)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs
-
-# Install Playwright browsers
-# Note: This will download Chromium, Firefox, and WebKit (~500MB)
-# We'll use a multi-stage build to keep final image smaller
-RUN npm install -g playwright@latest && \
-    npx playwright install --with-deps chromium
-
-FROM debian:bookworm-slim AS runtime
+FROM node:20-bookworm AS builder
 
 WORKDIR /app
 
-# Install runtime dependencies for Playwright
+# Copy package files
+COPY job-application-worker/package.json job-application-worker/package-lock.json* ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy application code
+COPY job-application-worker/ ./
+
+FROM node:20-bookworm-slim AS runtime
+
+WORKDIR /app
+
+# Install Playwright dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
-    libsqlite3-0 \
     # Chromium dependencies
     libnss3 \
     libnspr4 \
@@ -63,39 +36,20 @@ RUN apt-get update && \
     libasound2 \
     libatspi2.0-0 \
     libxshmfence1 \
-    # Node.js for Playwright
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy built binary
-COPY --from=builder /build/bin/job-application-worker /usr/local/bin/job-application-worker
+# Copy application from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/package.json ./
 
-# Install Playwright in runtime stage (browsers already installed in builder)
-# We need to reinstall Playwright but browsers are cached
-RUN npm install -g playwright@latest && \
-    npx playwright install chromium --with-deps || true
-
-# Create directories for Playwright
-RUN mkdir -p /app/.playwright && \
-    chmod 755 /app/.playwright
-
-# Set Playwright environment variables
-ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright \
-    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+# Install Playwright browsers
+RUN npx playwright install chromium --with-deps
 
 # Default environment variables
-ENV APP_NAME=woragis-job-application-worker \
-    APP_ENV=production \
-    JOB_APPLICATION_ENABLED=true \
+ENV NODE_ENV=production \
     PLAYWRIGHT_HEADLESS=true \
     PLAYWRIGHT_SLOW_MO=100 \
-    PLAYWRIGHT_TIMEOUT=30000 \
-    LOG_LEVEL=info
+    PLAYWRIGHT_TIMEOUT=30000
 
-# Health check (if you add a health endpoint to the worker)
-# EXPOSE 8082
-
-CMD ["job-application-worker"]
-
+CMD ["node", "src/index.js"]
