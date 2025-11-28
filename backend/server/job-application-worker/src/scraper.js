@@ -1,9 +1,15 @@
 import { chromium } from 'playwright';
 import { logger } from './utils/logger.js';
+import { SelfHealingScraper } from './selfHealingScraper.js';
 
 export class Scraper {
   constructor() {
     this.browser = null;
+    this.selfHealing = new SelfHealingScraper();
+  }
+
+  async initialize() {
+    await this.selfHealing.initialize();
   }
 
   async applyToJob(job, coverLetter) {
@@ -57,6 +63,7 @@ export class Scraper {
         error: error.message,
         company: job.companyName,
         website: job.website,
+        stack: error.stack,
       });
       throw error;
     } finally {
@@ -66,35 +73,173 @@ export class Scraper {
   }
 
   async applyLinkedIn(page, job, coverLetter) {
-    // TODO: Implement LinkedIn-specific application flow
-    // 1. Check if logged in (may need to handle login separately)
-    // 2. Find and click "Easy Apply" button
-    // 3. Fill form fields
-    // 4. Upload resume if needed
-    // 5. Paste cover letter
-    // 6. Submit application
+    const website = 'linkedin';
     
-    logger.warn('LinkedIn application not yet implemented');
-    throw new Error('LinkedIn application not yet implemented');
+    try {
+      // Step 1: Find and click "Easy Apply" button
+      await this.selfHealing.clickElement(
+        page,
+        website,
+        'easy-apply-button',
+        'Easy Apply button or Apply button'
+      );
+
+      // Wait for application form to appear
+      await page.waitForTimeout(2000);
+
+      // Step 2: Fill phone number (if required)
+      try {
+        await this.selfHealing.fillField(
+          page,
+          website,
+          'phone-field',
+          'Phone number input field',
+          '1234567890' // TODO: Get from user profile
+        );
+      } catch (error) {
+        logger.warn('Phone field not found or not required', { error: error.message });
+      }
+
+      // Step 3: Fill cover letter
+      try {
+        await this.selfHealing.fillField(
+          page,
+          website,
+          'cover-letter-field',
+          'Cover letter or message textarea',
+          coverLetter
+        );
+      } catch (error) {
+        logger.warn('Cover letter field not found', { error: error.message });
+      }
+
+      // Step 4: Submit application
+      await this.selfHealing.clickElement(
+        page,
+        website,
+        'submit-button',
+        'Submit application button'
+      );
+
+      // Wait for confirmation
+      await page.waitForTimeout(2000);
+
+      logger.info('LinkedIn application completed');
+    } catch (error) {
+      logger.error('LinkedIn application failed', { error: error.message });
+      throw error;
+    }
   }
 
   async applyGlassdoor(page, job, coverLetter) {
-    // TODO: Implement Glassdoor-specific application flow
-    logger.warn('Glassdoor application not yet implemented');
-    throw new Error('Glassdoor application not yet implemented');
+    const website = 'glassdoor';
+    
+    try {
+      // Step 1: Find and click "Apply Now" button
+      await this.selfHealing.clickElement(
+        page,
+        website,
+        'apply-button',
+        'Apply Now or Apply button'
+      );
+
+      await page.waitForTimeout(2000);
+
+      // Step 2: Fill application form fields
+      // Glassdoor often redirects to external sites, so this may vary
+      try {
+        await this.selfHealing.fillField(
+          page,
+          website,
+          'cover-letter-field',
+          'Cover letter textarea',
+          coverLetter
+        );
+      } catch (error) {
+        logger.warn('Cover letter field not found', { error: error.message });
+      }
+
+      // Step 3: Submit
+      await this.selfHealing.clickElement(
+        page,
+        website,
+        'submit-button',
+        'Submit application button'
+      );
+
+      await page.waitForTimeout(2000);
+      logger.info('Glassdoor application completed');
+    } catch (error) {
+      logger.error('Glassdoor application failed', { error: error.message });
+      throw error;
+    }
   }
 
   async applyWeWorkRemotely(page, job, coverLetter) {
-    // TODO: Implement WeWorkRemotely-specific application flow
-    logger.warn('WeWorkRemotely application not yet implemented');
-    throw new Error('WeWorkRemotely application not yet implemented');
+    const website = 'weworkremotely';
+    
+    try {
+      // WeWorkRemotely usually has a simpler form
+      await this.selfHealing.fillField(
+        page,
+        website,
+        'email-field',
+        'Email input field',
+        'user@example.com' // TODO: Get from user profile
+      );
+
+      await this.selfHealing.fillField(
+        page,
+        website,
+        'cover-letter-field',
+        'Cover letter or message textarea',
+        coverLetter
+      );
+
+      await this.selfHealing.clickElement(
+        page,
+        website,
+        'submit-button',
+        'Submit application button'
+      );
+
+      await page.waitForTimeout(2000);
+      logger.info('WeWorkRemotely application completed');
+    } catch (error) {
+      logger.error('WeWorkRemotely application failed', { error: error.message });
+      throw error;
+    }
   }
 
   async applyGeneric(page, job, coverLetter) {
-    // TODO: Implement generic application flow
-    // Try to find common form elements and fill them
-    logger.warn('Generic application not yet implemented');
-    throw new Error('Generic application not yet implemented');
+    // Generic application: try to find common form elements
+    try {
+      // Look for common form fields
+      const emailField = await page.locator('input[type="email"], input[name*="email" i]').first();
+      if (await emailField.count() > 0) {
+        await emailField.fill('user@example.com'); // TODO: Get from user profile
+      }
+
+      const messageField = await page.locator('textarea[name*="message" i], textarea[name*="cover" i], textarea[name*="letter" i]').first();
+      if (await messageField.count() > 0) {
+        await messageField.fill(coverLetter);
+      }
+
+      const submitButton = await page.locator('button[type="submit"], input[type="submit"], button:has-text("Submit"), button:has-text("Apply")').first();
+      if (await submitButton.count() > 0) {
+        await submitButton.click();
+      }
+
+      await page.waitForTimeout(2000);
+      logger.info('Generic application completed');
+    } catch (error) {
+      logger.error('Generic application failed', { error: error.message });
+      throw error;
+    }
+  }
+
+  async cleanup() {
+    await this.selfHealing.cleanup();
   }
 }
 

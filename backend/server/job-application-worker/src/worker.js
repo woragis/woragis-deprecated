@@ -22,6 +22,7 @@ export class Worker {
     // Initialize connections
     await this.queue.connect();
     await this.db.connect();
+    await this.scraper.initialize();
 
     // Start processing loop
     this.processLoop();
@@ -132,6 +133,7 @@ export class Worker {
     this.running = false;
     this.queue.disconnect();
     this.db.disconnect();
+    this.scraper.cleanup();
   }
 
   sleep(ms) {
