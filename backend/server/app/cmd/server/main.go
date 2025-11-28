@@ -52,6 +52,8 @@ import (
 	aimlintegrationsdomain "github.com/woragis/backend/server/app/internal/domains/aimlintegrations"
 	technicalwritingsdomain "github.com/woragis/backend/server/app/internal/domains/technicalwritings"
 	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
+	jobapplicationsdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications"
+	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -587,6 +589,21 @@ func main() {
 
 	// Setup WhatsApp routes (handler is now initialized)
 	whatsappservice.SetupRoutes(protectedAPI, whatsappHandler)
+
+	// Job Applications: requires JWT for all operations
+	applicationRepo := jobapplicationsdomain.NewGormRepository(db)
+	applicationQueue := jobapplicationsdomain.NewRedisQueue(redisClient)
+	applicationService := jobapplicationsdomain.NewService(applicationRepo, applicationQueue, slogLogger)
+	applicationHandler := jobapplicationsdomain.NewHandler(applicationService, slogLogger)
+	jobApplicationsGroup := protectedAPI.Group("/job-applications")
+	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler)
+
+	// Job Websites: requires JWT for all operations
+	websiteRepo := jobwebsitesdomain.NewGormRepository(db)
+	websiteService := jobwebsitesdomain.NewService(websiteRepo, slogLogger)
+	websiteHandler := jobwebsitesdomain.NewHandler(websiteService, slogLogger)
+	jobWebsitesGroup := protectedAPI.Group("/job-websites")
+	jobwebsitesdomain.SetupRoutes(jobWebsitesGroup, websiteHandler)
 
 	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)
 	go schedulerRunner.Start(workerCtx)
