@@ -1,0 +1,128 @@
+/* Clean Dark Theme - Reusable Styles */
+
+/* Button Styles */
+.btn-primary {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.12);
+	color: #e5e5e5;
+}
+
+.btn-primary:hover {
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.18);
+	color: #f5f5f5;
+}
+
+.btn-secondary {
+	background: rgba(255, 255, 255, 0.05);
+	border-color: rgba(255, 255, 255, 0.1);
+	color: #d4d4d4;
+}
+
+.btn-secondary:hover {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.15);
+	color: #e5e5e5;
+}
+
+.btn-danger {
+	background: rgba(239, 68, 68, 0.12);
+	border-color: rgba(239, 68, 68, 0.25);
+	color: #fca5a5;
+}
+
+.btn-danger:hover {
+	background: rgba(239, 68, 68, 0.18);
+	border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* Input Styles */
+.input {
+	background: rgba(15, 15, 15, 0.6);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #f5f5f5;
+}
+
+.input:focus {
+	border-color: rgba(255, 255, 255, 0.2);
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+/* Table Styles */
+.table-container {
+	background: rgba(15, 15, 15, 0.4);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table thead {
+	background: rgba(15, 15, 15, 0.6);
+}
+
+.table tbody tr:hover {
+	background: rgba(255, 255, 255, 0.03);
+}
+
+/* Modal Styles */
+.modal {
+	background: rgba(15, 15, 15, 0.98);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8);
+}
+
+.modal-overlay {
+	background: rgba(0, 0, 0, 0.75);
+	backdrop-filter: blur(4px);
+}
+
+/* Status Badges */
+.status-active {
+	background: rgba(34, 197, 94, 0.15);
+	color: #86efac;
+	border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.status-badge {
+	border: 1px solid transparent;
+}
+
+/* Bulk Actions */
+.bulk-actions-bar {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bulk-count {
+	color: #d4d4d4;
+}
+
+/* Loading Spinner */
+.spinner {
+	border-color: rgba(255, 255, 255, 0.1);
+	border-top-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Alert Styles */
+.alert-error {
+	background: rgba(239, 68, 68, 0.1);
+	border-color: rgba(239, 68, 68, 0.2);
+	color: #fca5a5;
+}
+
+/* Checkbox Button */
+.checkbox-btn {
+	color: rgba(255, 255, 255, 0.4);
+}
+
+.checkbox-btn:hover {
+	color: rgba(255, 255, 255, 0.6);
+}
+
+/* Links */
+.link {
+	color: #d4d4d4;
+}
+
+.link:hover {
+	color: #f5f5f5;
+}
+

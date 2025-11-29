@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { createProjectsListLogic } from './projects-list.logic';
-	import WorkspaceHeader from './_components/WorkspaceHeader.svelte';
 	import AuthNotice from './_components/AuthNotice.svelte';
 	import ErrorBanner from './_components/ErrorBanner.svelte';
 	import CreateProjectForm from './_components/CreateProjectForm.svelte';
-	import ProjectsTable from './_components/ProjectsTable.svelte';
+	import ProjectsHero from './_components/ProjectsHero.svelte';
+	import ProjectsStatsBar from './_components/ProjectsStatsBar.svelte';
+	import ProjectsGrid from './_components/ProjectsGrid.svelte';
+	import CollapsibleSection from '$lib/components/CollapsibleSection.svelte';
 
 	const {
 		isAuthenticated,
@@ -16,32 +18,50 @@
 		updateProjectFormField,
 		statusOptions
 	} = createProjectsListLogic();
+
+	let showCreateForm = false;
+
+	function toggleCreateForm() {
+		showCreateForm = !showCreateForm;
+	}
 </script>
 
-<section class="space-y-6">
-	<WorkspaceHeader isAuthenticated={$isAuthenticated} onRefresh={loadProjects} />
+<div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+	<ProjectsHero
+		isAuthenticated={$isAuthenticated}
+		{showCreateForm}
+		onToggleCreateForm={toggleCreateForm}
+		onRefresh={loadProjects}
+	/>
 
-	{#if $error}
-		<ErrorBanner message={$error} />
-	{/if}
+	<!-- Main Content -->
+	<div class="mx-auto max-w-7xl px-6 py-8 lg:px-8">
+		{#if $error}
+			<div class="mb-6">
+				<ErrorBanner message={$error} />
+			</div>
+		{/if}
 
-	{#if !$isAuthenticated}
-		<AuthNotice />
-	{:else}
-		<section class="grid gap-6 lg:grid-cols-[1.05fr_2fr]">
-			<div class="space-y-6">
+		{#if !$isAuthenticated}
+			<div class="mx-auto max-w-2xl">
+				<AuthNotice />
+			</div>
+		{:else}
+			<CollapsibleSection open={showCreateForm}>
 				<CreateProjectForm
 					formState={$projectForm}
 					statusOptions={statusOptions}
 					onFieldChange={updateProjectFormField}
 					onSubmit={handleCreateProject}
 				/>
-			</div>
+			</CollapsibleSection>
 
+			<!-- Projects Section -->
 			<div class="space-y-6">
-				<ProjectsTable projects={$projects} />
+				<ProjectsStatsBar projects={$projects} />
+				<ProjectsGrid projects={$projects} />
 			</div>
-		</section>
-	{/if}
-</section>
+		{/if}
+	</div>
+</div>
 
