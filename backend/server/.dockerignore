@@ -76,3 +76,16 @@ job-application-worker/
 
 # Resume worker (has its own Dockerfile)
 resume-worker/
+
+# Script files
+scripts/
+*.sh
+*.bash
+*.zsh
+*.fish
+*.ps1
+*.bat
+*.cmd
+*.exe
+*.dll
+*.so
