@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,6 +49,9 @@ type Repository interface {
 	DeleteEmailTokensByUser(ctx context.Context, userID uuid.UUID, tokenType EmailTokenType) error
 
 	BulkUpdateUserStatus(ctx context.Context, userIDs []uuid.UUID, updates map[string]any) error
+
+	// Admin operations
+	ListUsers(ctx context.Context, limit, offset int, search string) ([]User, int64, error)
 }
 
 // GormRepository implements Repository using PostgreSQL via GORM.
@@ -480,6 +484,32 @@ func (r *GormRepository) BulkUpdateUserStatus(ctx context.Context, userIDs []uui
 		return mapPersistenceError(result.Error)
 	}
 	return nil
+}
+
+// ListUsers retrieves users with pagination and optional search.
+func (r *GormRepository) ListUsers(ctx context.Context, limit, offset int, search string) ([]User, int64, error) {
+	var users []User
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&User{})
+
+	// Apply search filter if provided
+	if search != "" {
+		searchPattern := "%" + strings.ToLower(search) + "%"
+		query = query.Where("LOWER(email) LIKE ? OR LOWER(role) LIKE ?", searchPattern, searchPattern)
+	}
+
+	// Get total count
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, mapPersistenceError(err)
+	}
+
+	// Apply pagination and fetch users
+	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+		return nil, 0, mapPersistenceError(err)
+	}
+
+	return users, total, nil
 }
 
 func mapPersistenceError(err error) error {

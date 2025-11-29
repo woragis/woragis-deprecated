@@ -506,6 +506,12 @@ func main() {
 	protectedAPI.Use(authdomain.NewAuthMiddleware(jwtManager, slogLogger))
 	authdomain.SetupProtectedRoutes(protectedAPI, authHandler)
 
+	// Admin routes - require JWT + admin role
+	adminAPI := api.Group("/admin")
+	adminAPI.Use(authdomain.NewAuthMiddleware(jwtManager, slogLogger))
+	adminAPI.Use(authdomain.RequireAdminMiddleware(authRepo, slogLogger))
+	authdomain.SetupAdminRoutes(adminAPI, authHandler)
+
 	if monitoringRepo != nil {
 		monitoringHandler := monitoring.NewHandler(monitoringService)
 		monitoring.SetupRoutes(api, monitoringHandler)

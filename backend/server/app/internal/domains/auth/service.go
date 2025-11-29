@@ -680,6 +680,98 @@ func (s *Service) GetCurrentUser(ctx context.Context, userID uuid.UUID) (*User, 
 	return s.repo.FindByID(ctx, userID)
 }
 
+// AdminUserListRequest contains parameters for listing users.
+type AdminUserListRequest struct {
+	Limit  int
+	Offset int
+	Search string
+}
+
+// AdminUserListResponse contains paginated user list.
+type AdminUserListResponse struct {
+	Users []User
+	Total int64
+}
+
+// ListUsers retrieves users with pagination and search (admin only).
+func (s *Service) ListUsers(ctx context.Context, req AdminUserListRequest) (*AdminUserListResponse, error) {
+	if req.Limit <= 0 {
+		req.Limit = 20
+	}
+	if req.Limit > 100 {
+		req.Limit = 100
+	}
+	if req.Offset < 0 {
+		req.Offset = 0
+	}
+
+	users, total, err := s.repo.ListUsers(ctx, req.Limit, req.Offset, req.Search)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AdminUserListResponse{
+		Users: users,
+		Total: total,
+	}, nil
+}
+
+// AdminUpdateUserRequest contains fields for admin user updates.
+type AdminUpdateUserRequest struct {
+	UserID          uuid.UUID
+	SetRole         *string
+	SetEmail        *string
+	ConfirmEmail    bool
+	DisableMFA      bool
+	SetPhoneNumber  *string
+	SetPreferredLocale *string
+}
+
+// UpdateUser allows admins to update user fields.
+func (s *Service) UpdateUser(ctx context.Context, req AdminUpdateUserRequest) (*User, error) {
+	user, err := s.repo.FindByID(ctx, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := make(map[string]any)
+	if req.SetRole != nil {
+		updates["role"] = strings.TrimSpace(*req.SetRole)
+	}
+	if req.SetEmail != nil {
+		email := strings.TrimSpace(*req.SetEmail)
+		if email != "" {
+			updates["email"] = email
+		}
+	}
+	if req.ConfirmEmail {
+		now := time.Now().UTC()
+		updates["email_confirmed_at"] = now
+	}
+	if req.DisableMFA {
+		updates["mfa_enabled"] = false
+		updates["mfa_method"] = ""
+	}
+	if req.SetPhoneNumber != nil {
+		updates["phone_number"] = strings.TrimSpace(*req.SetPhoneNumber)
+	}
+	if req.SetPreferredLocale != nil {
+		updates["preferred_locale"] = strings.TrimSpace(*req.SetPreferredLocale)
+	}
+
+	if len(updates) == 0 {
+		return user, nil
+	}
+
+	updates["updated_at"] = time.Now().UTC()
+	if err := s.repo.BulkUpdateUserStatus(ctx, []uuid.UUID{req.UserID}, updates); err != nil {
+		return nil, err
+	}
+
+	// Fetch updated user
+	return s.repo.FindByID(ctx, req.UserID)
+}
+
 // UpdateProfileRequest contains profile update data.
 type UpdateProfileRequest struct {
 	UserID       uuid.UUID

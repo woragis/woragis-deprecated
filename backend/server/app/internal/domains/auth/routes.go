@@ -33,3 +33,15 @@ func SetupProtectedRoutes(api fiber.Router, handler *Handler) {
 	authGroup.Get("/oauth/accounts", handler.ListOAuthAccounts)
 	authGroup.Delete("/oauth/accounts/:provider", handler.UnlinkOAuthAccount)
 }
+
+// SetupAdminRoutes wires admin-only handlers requiring JWT and admin role middleware.
+// The admin middleware must be applied before calling this function.
+func SetupAdminRoutes(api fiber.Router, handler *Handler) {
+	adminGroup := api.Group("/admin/users")
+
+	adminGroup.Get("/", handler.ListUsers)
+	adminGroup.Get("/:id", handler.GetUser)
+	adminGroup.Patch("/:id", handler.UpdateUser)
+	adminGroup.Post("/bulk-update", handler.BulkUpdateUsers)
+	adminGroup.Get("/:id/audit-logs", handler.GetUserAuditLogs)
+}

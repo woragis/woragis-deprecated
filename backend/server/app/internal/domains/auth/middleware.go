@@ -104,3 +104,37 @@ func extractTokenFromCookie(c *fiber.Ctx) (string, error) {
 
 	return strings.TrimSpace(payload.Token), nil
 }
+
+// RequireAdminMiddleware produces a Fiber middleware that enforces admin role.
+// This middleware must be used after NewAuthMiddleware.
+func RequireAdminMiddleware(repo Repository, logger *slog.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userID, err := UserIDFromContext(c)
+		if err != nil {
+			return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidToken, fiber.Map{
+				"message": "unauthorized",
+			})
+		}
+
+		user, err := repo.FindByID(c.Context(), userID)
+		if err != nil {
+			if logger != nil {
+				logger.Warn("admin: failed to find user", slog.Any("error", err), slog.String("user_id", userID.String()))
+			}
+			return response.Error(c, fiber.StatusForbidden, ErrCodeInvalidToken, fiber.Map{
+				"message": "unauthorized",
+			})
+		}
+
+		if user.Role != "admin" {
+			if logger != nil {
+				logger.Warn("admin: access denied", slog.String("user_id", userID.String()), slog.String("role", user.Role))
+			}
+			return response.Error(c, fiber.StatusForbidden, ErrCodeInvalidToken, fiber.Map{
+				"message": "admin access required",
+			})
+		}
+
+		return c.Next()
+	}
+}

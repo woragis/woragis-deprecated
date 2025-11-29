@@ -821,3 +821,202 @@ func currentUserID(c *fiber.Ctx) (uuid.UUID, error) {
 
 	return userID, nil
 }
+
+// Admin handlers
+
+type adminListUsersPayload struct {
+	Limit  int    `json:"limit"`
+	Offset int    `json:"offset"`
+	Search string `json:"search"`
+}
+
+type adminUpdateUserPayload struct {
+	SetRole            *string `json:"set_role,omitempty"`
+	SetEmail           *string `json:"set_email,omitempty"`
+	ConfirmEmail       bool    `json:"confirm_email"`
+	DisableMFA         bool    `json:"disable_mfa"`
+	SetPhoneNumber     *string `json:"set_phone_number,omitempty"`
+	SetPreferredLocale *string `json:"set_preferred_locale,omitempty"`
+}
+
+type adminBulkUpdateUsersPayload struct {
+	UserIDs            []string `json:"user_ids"`
+	SetRole            *string  `json:"set_role,omitempty"`
+	ConfirmEmail       bool     `json:"confirm_email"`
+	DisableMFA         bool     `json:"disable_mfa"`
+}
+
+type adminUserResponse struct {
+	ID                string     `json:"id"`
+	Email             string     `json:"email"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	EmailConfirmedAt  *time.Time `json:"email_confirmed_at,omitempty"`
+	LastLoginAt       *time.Time `json:"last_login_at,omitempty"`
+	Role              string     `json:"role"`
+	MFAEnabled        bool       `json:"mfa_enabled"`
+	PreferredLocale   string     `json:"preferred_locale"`
+	PhoneNumber       string     `json:"phone_number,omitempty"`
+}
+
+type adminUserListResponse struct {
+	Users []adminUserResponse `json:"users"`
+	Total int64               `json:"total"`
+	Limit int                 `json:"limit"`
+	Offset int                `json:"offset"`
+}
+
+// ListUsers handles GET /admin/users - List all users with pagination.
+func (h *Handler) ListUsers(c *fiber.Ctx) error {
+	limit := c.QueryInt("limit", 20)
+	offset := c.QueryInt("offset", 0)
+	search := c.Query("search", "")
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	resp, err := h.service.ListUsers(c.Context(), AdminUserListRequest{
+		Limit:  limit,
+		Offset: offset,
+		Search: search,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	users := make([]adminUserResponse, len(resp.Users))
+	for i, user := range resp.Users {
+		users[i] = toAdminUserResponse(&user)
+	}
+
+	return response.Success(c, fiber.StatusOK, adminUserListResponse{
+		Users:  users,
+		Total:   resp.Total,
+		Limit:   limit,
+		Offset:  offset,
+	})
+}
+
+// GetUser handles GET /admin/users/:id - Get user by ID.
+func (h *Handler) GetUser(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid user id"})
+	}
+
+	user, err := h.service.GetCurrentUser(c.Context(), userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toAdminUserResponse(user))
+}
+
+// UpdateUser handles PATCH /admin/users/:id - Update user (admin).
+func (h *Handler) UpdateUser(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid user id"})
+	}
+
+	var payload adminUpdateUserPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	user, err := h.service.UpdateUser(c.Context(), AdminUpdateUserRequest{
+		UserID:            userID,
+		SetRole:           payload.SetRole,
+		SetEmail:          payload.SetEmail,
+		ConfirmEmail:      payload.ConfirmEmail,
+		DisableMFA:        payload.DisableMFA,
+		SetPhoneNumber:    payload.SetPhoneNumber,
+		SetPreferredLocale: payload.SetPreferredLocale,
+	})
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toAdminUserResponse(user))
+}
+
+// BulkUpdateUsers handles POST /admin/users/bulk-update - Bulk update users.
+func (h *Handler) BulkUpdateUsers(c *fiber.Ctx) error {
+	var payload adminBulkUpdateUsersPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	if len(payload.UserIDs) == 0 {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "user_ids required"})
+	}
+
+	userIDs := make([]uuid.UUID, 0, len(payload.UserIDs))
+	for _, idStr := range payload.UserIDs {
+		userID, err := uuid.Parse(idStr)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid user_id: " + idStr})
+		}
+		userIDs = append(userIDs, userID)
+	}
+
+	if err := h.service.BulkUpdateUsers(c.Context(), BulkUserUpdateRequest{
+		UserIDs:      userIDs,
+		SetRole:      payload.SetRole,
+		ConfirmEmail: payload.ConfirmEmail,
+		DisableMFA:   payload.DisableMFA,
+	}); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"status": "users_updated", "count": len(userIDs)})
+}
+
+// GetUserAuditLogs handles GET /admin/users/:id/audit-logs - Get audit logs for a user.
+func (h *Handler) GetUserAuditLogs(c *fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid user id"})
+	}
+
+	limit := c.QueryInt("limit", 50)
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	logs, err := h.service.ListAuditLogs(c.Context(), userID, limit)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"audit_logs": logs})
+}
+
+func toAdminUserResponse(user *User) adminUserResponse {
+	if user == nil {
+		return adminUserResponse{}
+	}
+
+	return adminUserResponse{
+		ID:               user.ID.String(),
+		Email:            user.Email,
+		CreatedAt:        user.CreatedAt,
+		UpdatedAt:        user.UpdatedAt,
+		EmailConfirmedAt: user.EmailConfirmedAt,
+		LastLoginAt:      user.LastLoginAt,
+		Role:             user.Role,
+		MFAEnabled:       user.MFAEnabled,
+		PreferredLocale:  user.PreferredLocale,
+		PhoneNumber:      user.PhoneNumber,
+	}
+}
