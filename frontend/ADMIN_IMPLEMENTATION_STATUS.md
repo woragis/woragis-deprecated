@@ -287,8 +287,14 @@ The backend provides several administrative capabilities, but not all are expose
 ## 🔄 Last Updated
 
 - **Date:** 2025-01-XX
-- **Review Status:** Initial review completed
-- **Next Review:** After implementing user management features
+- **Review Status:** Major implementation completed
+- **Recent Changes:**
+  - ✅ User Management - Fully implemented (backend + frontend)
+  - ✅ Admin Dashboard - Created with stats and quick actions
+  - ✅ Route Organization - Created landing and personal route groups
+  - ✅ Landing Domains - API clients created, placeholder pages added
+  - ✅ Personal Domains - Finances and Ideas moved to `/personal/` group
+- **Next Review:** After completing full CRUD interfaces for landing domains
 
 ---
 
@@ -297,14 +303,83 @@ The backend provides several administrative capabilities, but not all are expose
 | Feature | Backend Service | Backend Endpoints | Frontend UI | Status |
 |---------|----------------|-------------------|-------------|--------|
 | API Key Management | ✅ | ✅ | ✅ | **Complete** |
-| User Management | ⚠️ Partial | ❌ | ❌ | **Missing** |
-| Audit Logs | ⚠️ Partial | ❌ | ❌ | **Missing** |
+| User Management | ✅ | ✅ | ✅ | **Complete** |
+| Audit Logs | ✅ | ✅ | ✅ | **Complete** |
 | Monitoring | ✅ | ✅ | ✅ | **Complete** |
 | Session Management | ✅ | ✅ | ✅ | **Complete** |
 | MFA Management | ✅ | ✅ | ✅ | **Complete** |
 | OAuth Management | ✅ | ✅ | ✅ | **Complete** |
-| Admin Dashboard | ❌ | ❌ | ❌ | **Missing** |
+| Admin Dashboard | ✅ | ✅ | ✅ | **Complete** |
 | System Settings | ❌ | ❌ | ❌ | **Missing** |
+
+---
+
+## 🎯 Landing Content Domains
+
+### Status: ⚠️ Partially Implemented
+
+**Backend:** All domains have full CRUD endpoints
+**Frontend:** Route structure created, pages in progress
+
+| Domain | Backend | Frontend Route | Frontend Page | Status |
+|--------|---------|----------------|---------------|--------|
+| Posts | ✅ | `/landing/posts` | ⚠️ Basic | **In Progress** |
+| Technical Writings | ✅ | `/landing/technical-writings` | ⚠️ Placeholder | **In Progress** |
+| Case Studies | ✅ | `/landing/case-studies` | ⚠️ Placeholder | **In Progress** |
+| Problem Solutions | ✅ | `/landing/problem-solutions` | ⚠️ Placeholder | **In Progress** |
+| Skills | ✅ | `/landing/skills` | ⚠️ Placeholder | **In Progress** |
+| Social Media Posts | ✅ | `/landing/social-media-posts` | ⚠️ Placeholder | **In Progress** |
+| Certifications | ✅ | `/landing/certifications` | ⚠️ Placeholder | **In Progress** |
+| Testimonials | ✅ | `/landing/testimonials` | ⚠️ Placeholder | **In Progress** |
+| System Designs | ✅ | `/landing/system-designs` | ⚠️ Placeholder | **In Progress** |
+
+**What's Needed:**
+- Full CRUD UI for each domain
+- List views with pagination and search
+- Create/Edit forms
+- Delete functionality
+- Relationship management (skills, categories, tags, etc.)
+
+---
+
+## 👤 Personal Domains
+
+### Status: ✅ Implemented
+
+| Domain | Backend | Frontend Route | Frontend Page | Status |
+|--------|---------|----------------|---------------|--------|
+| Finances | ✅ | `/personal/finances` | ✅ Complete | **Complete** |
+| Ideas | ✅ | `/personal/ideas` | ✅ Complete | **Complete** |
+
+**Note:** Routes have been moved from root to `/personal/` group with navigation layout.
+
+---
+
+## ❌ Still Missing Admin Features
+
+### 1. **System Settings Management**
+**What's Needed:**
+- System-wide configuration
+- Feature flags
+- Rate limiting settings
+- Email/SMS provider configuration
+
+**Backend Requirements:**
+- `GET /admin/settings` - Get system settings
+- `PATCH /admin/settings` - Update system settings
+
+**Frontend Requirements:**
+- `/admin/settings` - Settings page
+- Settings form with validation
+- Feature flag toggles
+
+### 2. **Landing Content Management (Full Implementation)**
+**What's Needed:**
+- Complete CRUD interfaces for all 9 landing domains
+- Bulk operations
+- Content relationships management
+- Publishing workflows
+- SEO management
 
 **Legend:**
 - ✅ = Implemented
