@@ -5,15 +5,15 @@ import { logger } from './utils/logger.js';
 const worker = new Worker();
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully');
-  worker.stop();
+  await worker.stop();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully');
-  worker.stop();
+  await worker.stop();
   process.exit(0);
 });
 

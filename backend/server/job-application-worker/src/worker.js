@@ -128,12 +128,12 @@ export class Worker {
     }
   }
 
-  stop() {
+  async stop() {
     logger.info('Stopping job application worker');
     this.running = false;
-    this.queue.disconnect();
-    this.db.disconnect();
-    this.scraper.cleanup();
+    await this.queue.disconnect();
+    await this.db.disconnect();
+    await this.scraper.cleanup();
   }
 
   sleep(ms) {
