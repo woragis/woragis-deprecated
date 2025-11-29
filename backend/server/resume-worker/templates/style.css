@@ -11,11 +11,16 @@
 }
 
 body {
-    font-family: 'Arial', 'Helvetica', sans-serif;
+    font-family: 'Arial', 'Helvetica', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     font-size: 10pt;
     line-height: 1.5;
     color: #000;
     background: #fff;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: normal;
 }
 
 .resume-container {
@@ -26,7 +31,7 @@ body {
 
 /* Header */
 .resume-header {
-    text-align: center;
+    text-align: left;
     margin-bottom: 1.2em;
     padding-bottom: 0.8em;
 }
@@ -37,6 +42,7 @@ body {
     color: #000;
     margin-bottom: 0.3em;
     letter-spacing: 0.5px;
+    text-align: left;
 }
 
 .job-title {
@@ -44,43 +50,37 @@ body {
     color: #333;
     margin-bottom: 0.8em;
     font-weight: 400;
+    text-align: left;
 }
 
 .contact-info {
     font-size: 9pt;
     color: #333;
     line-height: 1.6;
+    text-align: left;
 }
 
 .contact-item {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.4em;
     margin-bottom: 0.3em;
 }
 
 .contact-icon {
     font-size: 9pt;
-    color: #666;
+    color: #000;
+    margin-right: 0.3em;
+    font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Arial', sans-serif;
+    display: inline-block;
 }
 
 .contact-value {
     color: #333;
 }
 
-.social-links {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1em;
-    margin-top: 0.5em;
-}
-
 .social-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
     color: #0066cc;
     text-decoration: none;
     font-size: 9pt;
@@ -90,20 +90,11 @@ body {
     text-decoration: underline;
 }
 
-.link-icon {
-    font-size: 8pt;
-    color: #0066cc;
-}
-
-.link-text {
-    color: #0066cc;
-}
-
 /* Dividers */
 .divider {
     border: none;
-    border-top: 1px solid #000;
-    margin: 1.2em 0;
+    border-top: 1px solid #ccc;
+    margin: 1em 0;
 }
 
 .project-divider {
@@ -125,26 +116,31 @@ body {
     margin-bottom: 0.6em;
     text-transform: none;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 0.2em;
+    border-bottom: none;
+    padding-bottom: 0;
+    text-align: left;
 }
 
 .section-content {
     font-size: 9.5pt;
     line-height: 1.5;
     color: #333;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: normal;
 }
 
 /* Projects - Two Column Layout */
 .projects-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.2em;
+    gap: 0.8em;
     column-gap: 1.5em;
 }
 
 .project-item {
-    margin-bottom: 1.2em;
+    margin-bottom: 0.6em;
     page-break-inside: avoid;
 }
 
@@ -152,33 +148,37 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 0.5em;
+    margin-bottom: 0.3em;
 }
 
 .project-name {
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     font-weight: bold;
     color: #000;
     flex: 1;
 }
 
 .project-status {
-    font-size: 9pt;
+    font-size: 8pt;
     color: #7f8c8d;
     text-transform: capitalize;
     font-style: italic;
 }
 
 .project-description {
-    margin-bottom: 0.5em;
+    margin-bottom: 0.3em;
     color: #555;
-    font-size: 9pt;
-    line-height: 1.4;
+    font-size: 8.5pt;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: normal;
 }
 
 .project-technologies {
-    margin-top: 0.5em;
-    font-size: 8.5pt;
+    margin-top: 0.3em;
+    font-size: 8pt;
+    line-height: 1.2;
 }
 
 .tech-tags {
@@ -206,8 +206,8 @@ body {
     width: 48%;
     vertical-align: top;
     margin-right: 2%;
-    margin-bottom: 0.6em;
-    padding: 0.5em;
+    margin-bottom: 0.3em;
+    padding: 0.3em 0.4em;
     background: #f8f9fa;
     border-left: 2px solid #3498db;
     border-radius: 2px;
@@ -221,15 +221,15 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 0.3em;
+    margin-bottom: 0.15em;
 }
 
 .cert-name {
-    font-size: 9.5pt;
+    font-size: 9pt;
     font-weight: bold;
     color: #2c3e50;
     flex: 1;
-    line-height: 1.3;
+    line-height: 1.2;
 }
 
 .cert-category {
@@ -237,34 +237,61 @@ body {
     color: #7f8c8d;
     text-transform: capitalize;
     background: #e8e8e8;
-    padding: 0.15em 0.4em;
+    padding: 0.1em 0.3em;
     border-radius: 2px;
 }
 
 .cert-issuer {
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #555;
-    margin-bottom: 0.2em;
+    margin-bottom: 0.1em;
     font-weight: 500;
+    line-height: 1.3;
 }
 
 .cert-date {
-    font-size: 8pt;
+    font-size: 7.5pt;
     color: #7f8c8d;
-    margin-bottom: 0.2em;
-    line-height: 1.4;
+    margin-bottom: 0.1em;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: normal;
 }
 
 .cert-id {
-    font-size: 7.5pt;
+    font-size: 7pt;
     color: #95a5a6;
     font-family: 'Courier New', monospace;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
 }
 
-/* Skills */
-.skills-content {
+/* Technical Skills - Two Column Layout */
+.skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+    column-gap: 2em;
     white-space: pre-line;
     line-height: 1.8;
+    font-size: 9.5pt;
+}
+
+.skills-grid .skill-category {
+    margin-bottom: 0.8em;
+}
+
+.skills-grid .skill-category-title {
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 0.3em;
+    font-size: 10pt;
+}
+
+.skills-grid .skill-items {
+    color: #333;
+    line-height: 1.6;
 }
 
 /* Languages - Two Column Layout */

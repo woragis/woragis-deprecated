@@ -114,6 +114,15 @@ class ResumeGenerator:
         if user_email == 'masteringthecode.woragis@gmail.com':
             display_name = "Jezreel de Andrade Galvao Veloso"
         
+        # Project limit logic: up to 4 projects, but if exactly 3, show only 2
+        if projects:
+            if len(projects) == 3:
+                projects_to_show = projects[:2]
+            else:
+                projects_to_show = projects[:4]
+        else:
+            projects_to_show = []
+        
         context = {
             'name': display_name,
             'email': user_info.get('email', ''),
@@ -124,7 +133,7 @@ class ResumeGenerator:
             'about': about,
             'experience': experience,
             'skills': skills,
-            'projects': projects[:8] if projects else [],  # Top 8 projects
+            'projects': projects_to_show,
             'certifications': certifications if certifications else [],
             'job_title': job_title,
             'generated_date': datetime.now().strftime('%B %Y')

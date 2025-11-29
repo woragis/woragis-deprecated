@@ -15,33 +15,23 @@
             {% endif %}
             <div class="contact-info">
                 <div class="contact-item">
-                    <span class="contact-icon">📍</span>
+                    <span class="contact-icon">&#128205;</span>
                     <span class="contact-value">João Pessoa - PB, Brazil</span>
                 </div>
                 <div class="contact-item">
-                    <span class="contact-icon">✉</span>
+                    <span class="contact-icon">&#128231;</span>
                     <span class="contact-value">{{ email }}</span>
                 </div>
                 {% if website or github or linkedin %}
-                <div class="social-links">
-                    {% if linkedin %}
-                    <a href="https://{{ linkedin }}" class="social-link" target="_blank">
-                        <span class="link-icon">🔗</span>
-                        <span class="link-text">LinkedIn</span>
-                    </a>
-                    {% endif %}
-                    {% if github %}
-                    <a href="https://{{ github }}" class="social-link" target="_blank">
-                        <span class="link-icon">🔗</span>
-                        <span class="link-text">GitHub</span>
-                    </a>
-                    {% endif %}
-                    {% if website %}
-                    <a href="https://{{ website }}" class="social-link" target="_blank">
-                        <span class="link-icon">🔗</span>
-                        <span class="link-text">Portfolio</span>
-                    </a>
-                    {% endif %}
+                <div class="contact-item">
+                    <span class="contact-icon">&#128279;</span>
+                    <span class="contact-value">
+                        {% if linkedin %}<a href="https://{{ linkedin }}" class="social-link" target="_blank">LinkedIn</a>{% endif %}
+                        {% if linkedin and (github or website) %} | {% endif %}
+                        {% if github %}<a href="https://{{ github }}" class="social-link" target="_blank">GitHub</a>{% endif %}
+                        {% if github and website %} | {% endif %}
+                        {% if website %}<a href="https://{{ website }}" class="social-link" target="_blank">Portfolio</a>{% endif %}
+                    </span>
                 </div>
                 {% endif %}
             </div>
@@ -49,15 +39,13 @@
 
         <hr class="divider">
 
-        <!-- Professional Summary -->
-        {% if profile %}
+        <!-- Profile -->
         <section class="section">
-            <h2 class="section-title">Professional Summary</h2>
+            <h2 class="section-title">Profile</h2>
             <div class="section-content">
-                <p>{{ profile }}</p>
+                <p>{{ about if about else profile }}</p>
             </div>
         </section>
-        {% endif %}
 
         <hr class="divider">
 
@@ -66,12 +54,11 @@
         <section class="section">
             <h2 class="section-title">Technical Skills</h2>
             <div class="section-content">
-                <div class="skills-content">{{ skills }}</div>
+                <div class="skills-grid">{{ skills }}</div>
             </div>
         </section>
-        {% endif %}
-
         <hr class="divider">
+        {% endif %}
 
         <!-- Projects -->
         {% if projects %}
@@ -103,9 +90,8 @@
                 </div>
             </div>
         </section>
-        {% endif %}
-
         <hr class="divider">
+        {% endif %}
 
         <!-- Experience (AI-generated) -->
         {% if experience %}
@@ -115,9 +101,8 @@
                 <pre>{{ experience }}</pre>
             </div>
         </section>
-        {% endif %}
-
         <hr class="divider">
+        {% endif %}
 
         <!-- Certifications -->
         {% if certifications %}
@@ -146,9 +131,8 @@
                 </div>
             </div>
         </section>
-        {% endif %}
-
         <hr class="divider">
+        {% endif %}
 
         <!-- Languages -->
         <section class="section">
@@ -183,17 +167,6 @@
             </div>
         </section>
 
-        <hr class="divider">
-
-        <!-- About Me -->
-        {% if about %}
-        <section class="section">
-            <h2 class="section-title">About Me</h2>
-            <div class="section-content">
-                <p>{{ about }}</p>
-            </div>
-        </section>
-        {% endif %}
 
         <!-- Footer -->
         <footer class="resume-footer">

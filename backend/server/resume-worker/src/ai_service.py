@@ -149,14 +149,14 @@ Requirements:
 - Format as plain text with project names as headers followed by bullet points"""
     
     def _build_skills_prompt(self, job_description: str, projects: List[Dict]) -> str:
-        """Build prompt for technical skills section"""
+        """Build prompt for technical skills section - formatted for 2-column display"""
         all_techs = []
         for p in projects:
             all_techs.extend([t.get('name', '') for t in p.get('technologies', [])])
         
         unique_techs = list(set(all_techs))
         
-        return f"""Based on the job description and these technologies, create a categorized technical skills list:
+        return f"""Based on the job description and these technologies, create a categorized technical skills list formatted for a 2-column resume layout.
 
 Job Description:
 {job_description}
@@ -165,8 +165,21 @@ Technologies Used:
 {', '.join(unique_techs[:30])}
 
 Requirements:
-- Group skills into categories (e.g., Languages, Frameworks, Tools, Cloud)
+- Group skills into 4-6 categories (e.g., "Backend Development", "Frontend Development", "Architecture & Design", "Tools & Technologies", "Cloud & DevOps", "Databases")
+- Format each category as: "Category Name" (bold) followed by skills separated by " • " (bullet points)
 - Only include skills relevant to the job
 - Use standard naming conventions
-- Format as a clean list"""
+- Keep categories balanced for 2-column display
+- Format example:
+Backend Development
+Go • JavaScript/TypeScript • Python • Java
+
+Frontend Development
+React.js • Next.js • SvelteKit
+
+Architecture & Design
+Domain-Driven Design (DDD) • Clean Architecture • Microservices • RESTful APIs
+
+Tools & Technologies
+Docker • Kubernetes • PostgreSQL • Redis"""
 
