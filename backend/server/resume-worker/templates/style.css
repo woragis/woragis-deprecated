@@ -11,11 +11,16 @@
 }
 
 body {
-    font-family: 'Arial', 'Helvetica', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+    font-family: 'DejaVu Sans', 'Liberation Sans', 'Arial', 'Helvetica', sans-serif;
     font-size: 10pt;
     line-height: 1.5;
     color: #000;
     background: #fff;
+}
+
+/* Emoji support only for contact icons */
+.contact-icon {
+    font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'DejaVu Sans', 'Arial', sans-serif;
 }
 
 .resume-container {
@@ -289,6 +294,36 @@ body {
 .skills-grid .skill-items {
     color: #333;
     line-height: 1.6;
+}
+
+/* Hard Skills - Two Column Layout with Categories */
+.hard-skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5em;
+    column-gap: 2em;
+    white-space: pre-line;
+    line-height: 1.4;
+    font-size: 9pt;
+}
+
+.hard-skills-grid .skill-category {
+    margin-bottom: 0.4em;
+}
+
+.hard-skills-grid .skill-category-title {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 0.15em;
+    font-size: 9pt;
+    letter-spacing: 0.3px;
+}
+
+.hard-skills-grid .skill-items {
+    color: #555;
+    line-height: 1.4;
+    font-size: 8.5pt;
+    margin-left: 0;
 }
 
 /* Languages - Two Column Layout */

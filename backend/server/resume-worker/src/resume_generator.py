@@ -96,6 +96,8 @@ class ResumeGenerator:
         about = self.ai_service.generate_resume_section('about', job_description, projects)
         experience = self.ai_service.generate_resume_section('experience', job_description, projects)
         skills = self.ai_service.generate_resume_section('skills', job_description, projects)
+        hard_skills = self.ai_service.generate_resume_section('hard_skills', job_description, projects)
+        logger.info(f"Hard skills generated: {len(hard_skills) if hard_skills else 0} characters")
         
         # Ensure profile is never empty - use fallback if AI returns empty
         if not profile or not profile.strip():
@@ -138,6 +140,7 @@ class ResumeGenerator:
             'about': about,
             'experience': experience,
             'skills': skills,
+            'hard_skills': hard_skills,
             'projects': projects_to_show,
             'certifications': certifications if certifications else [],
             'job_title': job_title,

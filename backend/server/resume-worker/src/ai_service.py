@@ -48,6 +48,8 @@ class AIService:
                 prompt = self._build_experience_prompt(job_description, projects)
             elif section_type == 'skills':
                 prompt = self._build_skills_prompt(job_description, projects)
+            elif section_type == 'hard_skills':
+                prompt = self._build_hard_skills_prompt(job_description, projects)
             else:
                 prompt = f"Generate a {section_type} section for a resume based on this job description: {job_description}"
             
@@ -210,4 +212,54 @@ Domain-Driven Design (DDD) • Clean Architecture • Microservices • RESTful 
 
 Tools & Technologies
 Docker • Kubernetes • PostgreSQL • Redis"""
+    
+    def _build_hard_skills_prompt(self, job_description: str, projects: List[Dict]) -> str:
+        """Build prompt for hard skills section - comprehensive technical skills list"""
+        all_techs = []
+        for p in projects:
+            all_techs.extend([t.get('name', '') for t in p.get('technologies', [])])
+        
+        unique_techs = list(set(all_techs))
+        
+        return f"""Based on the job description and these technologies, create a comprehensive "Hard Skills" section formatted for a 2-column resume layout with categorized skills.
+
+Job Description:
+{job_description}
+
+Technologies Used:
+{', '.join(unique_techs[:40])}
+
+Requirements:
+- Group skills into 6-8 categories such as:
+  * Primary Stack (main programming languages and frameworks)
+  * Backend Expertise (patterns, architectures, concepts)
+  * Databases & Storage
+  * Infrastructure & DevOps
+  * Additional Technologies
+  * Testing & Quality
+  * Cloud Platforms (AWS, GCP, Azure if relevant)
+  * Other relevant categories based on job requirements
+- Format each category as: "Category Name" (bold) followed by skills separated by " • " (bullet points)
+- Only include skills relevant to the job description
+- Use standard naming conventions
+- Keep categories balanced for 2-column display
+- Be comprehensive but focused on job requirements
+- Format example:
+Primary Stack
+Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems
+
+Backend Expertise
+Concurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues
+
+Databases & Storage
+PostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization
+
+Infrastructure & DevOps
+Docker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix
+
+Additional Technologies
+JavaScript/TypeScript • Python • Java • GraphQL
+
+Testing & Quality
+Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing"""
 
