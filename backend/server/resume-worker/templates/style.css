@@ -16,11 +16,6 @@ body {
     line-height: 1.5;
     color: #000;
     background: #fff;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
-    letter-spacing: normal;
 }
 
 .resume-container {
@@ -126,9 +121,6 @@ body {
     line-height: 1.5;
     color: #333;
     text-align: left;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
-    letter-spacing: normal;
 }
 
 /* Projects - Two Column Layout (styled like certifications) */
@@ -182,9 +174,6 @@ body {
     color: #555;
     font-size: 8.5pt;
     line-height: 1.3;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
-    letter-spacing: normal;
 }
 
 .project-technologies {
@@ -265,9 +254,6 @@ body {
     color: #7f8c8d;
     margin-bottom: 0.1em;
     line-height: 1.2;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
-    letter-spacing: normal;
 }
 
 .cert-id {
@@ -361,6 +347,8 @@ body {
     font-size: 8pt;
     color: #95a5a6;
     font-style: italic;
+    letter-spacing: 0;
+    font-kerning: normal;
 }
 
 /* Print optimizations */

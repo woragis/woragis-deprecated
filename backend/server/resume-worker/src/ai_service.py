@@ -73,13 +73,27 @@ class AIService:
             data = response.json()
             
             # Extract content from response (handle both response formats)
+            content = ""
             if 'message' in data and 'content' in data['message']:
-                return data['message']['content'].strip()
+                content = data['message']['content']
             elif 'choices' in data and len(data['choices']) > 0:
-                return data['choices'][0]['message']['content'].strip()
+                content = data['choices'][0]['message']['content']
             else:
                 logger.warning(f"Unexpected AI response format: {data}")
                 return ""
+            
+            # Clean up content: remove extra whitespace but preserve normal spacing
+            # Replace any non-breaking spaces or special Unicode spaces with regular spaces
+            content = content.replace('\u00A0', ' ')  # Non-breaking space
+            content = content.replace('\u2009', ' ')   # Thin space
+            content = content.replace('\u2006', ' ')   # Six-per-em space
+            content = content.replace('\u2007', ' ')   # Figure space
+            content = content.replace('\u2008', ' ')   # Punctuation space
+            # Normalize multiple spaces to single space, but preserve line breaks
+            import re
+            content = re.sub(r' +', ' ', content)  # Multiple spaces to single
+            content = re.sub(r'\n\s*\n', '\n\n', content)  # Multiple newlines to double
+            return content.strip()
                 
         except Exception as e:
             logger.error(f"Error generating {section_type} section: {e}")
