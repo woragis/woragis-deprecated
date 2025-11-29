@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node test-all.js",
+    "test:scraping": "node src/test-linkedin-scraping.js",
+    "test:cover-letter": "node src/test-cover-letter.js"
   },
   "keywords": [
     "playwright",

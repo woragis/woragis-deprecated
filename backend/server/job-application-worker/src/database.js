@@ -89,33 +89,251 @@ export class Database {
   }
 
   async fetchUserProfile(userId) {
-    // TODO: Fetch projects, posts, technical writings, skills, etc.
-    // This is a placeholder - implement based on your schema
     const profile = {
       projects: [],
       posts: [],
       technicalWritings: [],
+      caseStudies: [],
+      certifications: [],
       skills: [],
       interests: [],
-      certifications: [],
+      projectCaseStudies: [],
     };
 
-    // Example: Fetch projects
+    // Fetch Projects with Technologies
     try {
       const projectsResult = await this.pool.query(
-        'SELECT name, description FROM projects WHERE user_id = $1',
+        `SELECT p.id, p.name, p.description, p.status, p.health_score, p.mrr, p.cac, p.ltv, p.churn_rate
+         FROM projects p
+         WHERE p.user_id = $1
+         ORDER BY p.created_at DESC
+         LIMIT 20`,
         [userId]
       );
-      profile.projects = projectsResult.rows.map(row => ({
-        name: row.name,
-        description: row.description,
-        techStack: [], // TODO: Fetch from project_technologies
-      }));
+
+      for (const project of projectsResult.rows) {
+        // Fetch technologies for each project
+        const techResult = await this.pool.query(
+          `SELECT name, version, category, purpose
+           FROM project_technologies
+           WHERE project_id = $1
+           ORDER BY category, name`,
+          [project.id]
+        );
+
+        profile.projects.push({
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          healthScore: project.health_score,
+          metrics: {
+            mrr: project.mrr,
+            cac: project.cac,
+            ltv: project.ltv,
+            churnRate: project.churn_rate,
+          },
+          techStack: techResult.rows.map(tech => ({
+            name: tech.name,
+            version: tech.version,
+            category: tech.category,
+            purpose: tech.purpose,
+          })),
+        });
+      }
     } catch (error) {
       logger.warn('Failed to fetch projects', { error: error.message });
     }
 
-    // TODO: Fetch other profile data similarly
+    // Fetch Posts with Skills/Tags
+    try {
+      const postsResult = await this.pool.query(
+        `SELECT id, title, content, excerpt, status, published_at, featured
+         FROM posts
+         WHERE user_id = $1 AND status = 'published'
+         ORDER BY published_at DESC
+         LIMIT 15`,
+        [userId]
+      );
+
+      for (const post of postsResult.rows) {
+        // Fetch skills associated with post
+        const postSkillsResult = await this.pool.query(
+          `SELECT s.name, s.category, s.description
+           FROM skills s
+           INNER JOIN post_skills ps ON s.id = ps.skill_id
+           WHERE ps.post_id = $1`,
+          [post.id]
+        );
+
+        profile.posts.push({
+          title: post.title,
+          content: post.content?.substring(0, 1000) || post.excerpt || '', // Limit content length
+          excerpt: post.excerpt,
+          publishedAt: post.published_at,
+          featured: post.featured,
+          skills: postSkillsResult.rows.map(skill => skill.name),
+        });
+      }
+    } catch (error) {
+      logger.warn('Failed to fetch posts', { error: error.message });
+    }
+
+    // Fetch Technical Writings
+    try {
+      const writingsResult = await this.pool.query(
+        `SELECT title, description, content, type, platform, url, published_at, featured
+         FROM technical_writings
+         WHERE user_id = $1
+         ORDER BY published_at DESC
+         LIMIT 15`,
+        [userId]
+      );
+
+      profile.technicalWritings = writingsResult.rows.map(writing => ({
+        title: writing.title,
+        content: writing.content?.substring(0, 1000) || writing.description || '',
+        description: writing.description,
+        type: writing.type,
+        platform: writing.platform,
+        url: writing.url,
+        publishedAt: writing.published_at,
+        featured: writing.featured,
+      }));
+    } catch (error) {
+      logger.warn('Failed to fetch technical writings', { error: error.message });
+    }
+
+    // Fetch Case Studies
+    try {
+      const caseStudiesResult = await this.pool.query(
+        `SELECT title, problem, context, solution, approach, technologies, lessons_learned, featured
+         FROM case_studies
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 10`,
+        [userId]
+      );
+
+      profile.caseStudies = caseStudiesResult.rows.map(cs => ({
+        title: cs.title,
+        problem: cs.problem?.substring(0, 500) || '',
+        context: cs.context?.substring(0, 500) || '',
+        solution: cs.solution?.substring(0, 1000) || '',
+        approach: cs.approach || [],
+        technologies: cs.technologies || [],
+        lessonsLearned: cs.lessons_learned || [],
+        featured: cs.featured,
+      }));
+    } catch (error) {
+      logger.warn('Failed to fetch case studies', { error: error.message });
+    }
+
+    // Fetch Project Case Studies
+    try {
+      const projectCaseStudiesResult = await this.pool.query(
+        `SELECT pcs.title, pcs.problem, pcs.context, pcs.solution, pcs.approach, 
+                pcs.technologies, pcs.lessons_learned, p.name as project_name
+         FROM project_case_studies pcs
+         INNER JOIN projects p ON p.id = pcs.project_id
+         WHERE p.user_id = $1
+         ORDER BY pcs.created_at DESC
+         LIMIT 10`,
+        [userId]
+      );
+
+      profile.projectCaseStudies = projectCaseStudiesResult.rows.map(pcs => ({
+        title: pcs.title,
+        projectName: pcs.project_name,
+        problem: pcs.problem?.substring(0, 500) || '',
+        context: pcs.context?.substring(0, 500) || '',
+        solution: pcs.solution?.substring(0, 1000) || '',
+        approach: pcs.approach || [],
+        technologies: pcs.technologies || [],
+        lessonsLearned: pcs.lessons_learned || [],
+      }));
+    } catch (error) {
+      logger.warn('Failed to fetch project case studies', { error: error.message });
+    }
+
+    // Fetch Certifications
+    try {
+      const certsResult = await this.pool.query(
+        `SELECT name, issuer, issue_date, expiry_date, description, category, status, featured
+         FROM certifications
+         WHERE user_id = $1 AND status = 'active'
+         ORDER BY issue_date DESC`,
+        [userId]
+      );
+
+      profile.certifications = certsResult.rows.map(cert => ({
+        name: cert.name,
+        issuer: cert.issuer,
+        issueDate: cert.issue_date,
+        expiryDate: cert.expiry_date,
+        description: cert.description,
+        category: cert.category,
+        featured: cert.featured,
+      }));
+    } catch (error) {
+      logger.warn('Failed to fetch certifications', { error: error.message });
+    }
+
+    // Fetch Skills (all skills, not just user-specific)
+    // Skills are global, but we can fetch featured ones or all
+    try {
+      const skillsResult = await this.pool.query(
+        `SELECT DISTINCT s.name, s.category, s.description
+         FROM skills s
+         INNER JOIN project_technologies pt ON LOWER(pt.name) = LOWER(s.name)
+         INNER JOIN projects p ON p.id = pt.project_id
+         WHERE p.user_id = $1
+         UNION
+         SELECT DISTINCT s.name, s.category, s.description
+         FROM skills s
+         INNER JOIN post_skills ps ON s.id = ps.skill_id
+         INNER JOIN posts p ON p.id = ps.post_id
+         WHERE p.user_id = $1
+         ORDER BY category, name
+         LIMIT 50`,
+        [userId]
+      );
+
+      profile.skills = skillsResult.rows.map(skill => ({
+        name: skill.name,
+        category: skill.category,
+        description: skill.description,
+      }));
+    } catch (error) {
+      logger.warn('Failed to fetch skills', { error: error.message });
+    }
+
+    // Fetch Interests (interests are global, not user-specific)
+    try {
+      const interestsResult = await this.pool.query(
+        `SELECT title, description, featured
+         FROM interests
+         WHERE featured = true
+         ORDER BY created_at DESC
+         LIMIT 10`
+      );
+
+      profile.interests = interestsResult.rows.map(interest => ({
+        title: interest.title,
+        description: interest.description,
+      }));
+    } catch (error) {
+      logger.warn('Failed to fetch interests', { error: error.message });
+    }
+
+    logger.info('User profile fetched', {
+      userId,
+      projectsCount: profile.projects.length,
+      postsCount: profile.posts.length,
+      writingsCount: profile.technicalWritings.length,
+      caseStudiesCount: profile.caseStudies.length,
+      certificationsCount: profile.certifications.length,
+      skillsCount: profile.skills.length,
+    });
 
     return profile;
   }

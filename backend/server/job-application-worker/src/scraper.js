@@ -12,6 +12,95 @@ export class Scraper {
     await this.selfHealing.initialize();
   }
 
+  /**
+   * Test method: Extract job information without applying
+   * Useful for testing scraping capabilities
+   */
+  async testJobExtraction(jobUrl) {
+    logger.info('Testing job extraction', { jobUrl });
+
+    const headless = process.env.PLAYWRIGHT_HEADLESS !== 'false';
+    const slowMo = parseInt(process.env.PLAYWRIGHT_SLOW_MO || '100');
+    
+    this.browser = await chromium.launch({
+      headless,
+      slowMo,
+    });
+
+    const context = await this.browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
+
+    const page = await context.newPage();
+
+    try {
+      await page.goto(jobUrl, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.waitForTimeout(2000);
+
+      const jobInfo = {};
+
+      // Extract job title
+      const titleSelectors = [
+        'h1.job-details-jobs-unified-top-card__job-title',
+        'h1[data-test-id="job-title"]',
+        'h1.jobs-details-top-card__job-title',
+      ];
+
+      for (const selector of titleSelectors) {
+        try {
+          const element = await page.locator(selector).first();
+          if (await element.count() > 0) {
+            jobInfo.title = (await element.textContent())?.trim();
+            break;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+
+      // Extract company
+      const companySelectors = [
+        'a.job-details-jobs-unified-top-card__company-name',
+        'a[data-test-id="company-name"]',
+      ];
+
+      for (const selector of companySelectors) {
+        try {
+          const element = await page.locator(selector).first();
+          if (await element.count() > 0) {
+            jobInfo.company = (await element.textContent())?.trim();
+            break;
+          }
+        } catch (error) {
+          continue;
+        }
+      }
+
+      // Extract description
+      try {
+        const descElement = await page.locator('.jobs-description-content__text').first();
+        if (await descElement.count() > 0) {
+          jobInfo.description = (await descElement.textContent())?.trim();
+        }
+      } catch (error) {
+        // Ignore
+      }
+
+      // Take screenshot
+      await page.screenshot({ path: '/tmp/linkedin-job-test.png', fullPage: false });
+
+      await context.close();
+      await this.browser.close();
+
+      return jobInfo;
+    } catch (error) {
+      await context.close();
+      await this.browser.close();
+      throw error;
+    }
+  }
+
   async applyToJob(job, coverLetter) {
     logger.info('Applying to job', {
       company: job.companyName,
