@@ -302,7 +302,6 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 0.5em;
     column-gap: 2em;
-    white-space: pre-line;
     line-height: 1.4;
     font-size: 9pt;
 }
@@ -312,7 +311,7 @@ body {
 }
 
 .hard-skills-grid .skill-category-title {
-    font-weight: bold;
+    font-weight: 900;
     color: #2c3e50;
     margin-bottom: 0.15em;
     font-size: 9pt;
@@ -323,7 +322,12 @@ body {
     color: #555;
     line-height: 1.4;
     font-size: 8.5pt;
-    margin-left: 0;
+}
+
+.hard-skills-grid .skill-item {
+    color: #555;
+    font-size: 8.5pt;
+    white-space: nowrap;
 }
 
 /* Languages - Two Column Layout */

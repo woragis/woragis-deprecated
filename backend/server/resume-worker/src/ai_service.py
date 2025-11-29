@@ -244,6 +244,7 @@ Requirements:
 - Use standard naming conventions
 - Keep categories balanced for 2-column display
 - Be comprehensive but focused on job requirements
+- Skills within each category should be displayed in a 2-column grid format
 - Format example:
 Primary Stack
 Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems

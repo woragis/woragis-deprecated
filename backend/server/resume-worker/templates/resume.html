@@ -50,21 +50,21 @@
         <hr class="divider">
 
         <!-- Technical Skills -->
-        {% if skills %}
         <section class="section">
             <h2 class="section-title">Technical Skills</h2>
             <div class="section-content">
-                <div class="skills-grid">{{ skills }}</div>
-            </div>
-        </section>
-        <hr class="divider">
-        {% endif %}
-
-        <!-- Hard Skills -->
-        <section class="section">
-            <h2 class="section-title">Hard Skills</h2>
-            <div class="section-content">
-                <div class="hard-skills-grid">{{ hard_skills if hard_skills else 'Primary Stack\nGo (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems\n\nBackend Expertise\nConcurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues\n\nDatabases & Storage\nPostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization\n\nInfrastructure & DevOps\nDocker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix\n\nAdditional Technologies\nJavaScript/TypeScript • Python • Java • GraphQL\n\nTesting & Quality\nUnit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing' }}</div>
+                <div class="hard-skills-grid">
+                    {% for category in hard_skills %}
+                    <div class="skill-category">
+                        <div class="skill-category-title">{{ category.title }}</div>
+                        <div class="skill-items">
+                            {% for skill in category.skills %}
+                            <span class="skill-item">{{ skill }}{% if not loop.last %} •{% endif %}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </section>
         <hr class="divider">

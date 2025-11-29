@@ -56,6 +56,53 @@ class ResumeGenerator:
         # Ensure output directory exists
         os.makedirs(self.output_dir, exist_ok=True)
     
+    def _parse_hard_skills(self, skills_text: str) -> List[Dict]:
+        """Parse hard skills text into structured format for template rendering"""
+        if not skills_text or not skills_text.strip():
+            return []
+        
+        categories = []
+        current_category = None
+        
+        lines = skills_text.split('\n')
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line:
+                i += 1
+                continue
+            
+            # Check if line is a category title (no bullet points)
+            if '•' not in line:
+                # Save previous category if it has skills
+                if current_category and current_category.get('skills'):
+                    categories.append(current_category)
+                
+                # Start new category
+                current_category = {
+                    'title': line,
+                    'skills': []
+                }
+                i += 1
+                
+                # Check if next line has skills
+                if i < len(lines):
+                    next_line = lines[i].strip()
+                    if '•' in next_line:
+                        # This is a skills line - split by bullet points
+                        skills = [s.strip() for s in next_line.split('•') if s.strip()]
+                        current_category['skills'].extend(skills)
+                        i += 1
+            else:
+                # This is a skills line without a category - skip or handle
+                i += 1
+        
+        # Add last category
+        if current_category and current_category.get('skills'):
+            categories.append(current_category)
+        
+        return categories
+    
     def generate_resume(
         self,
         user_id: str,
@@ -98,11 +145,33 @@ class ResumeGenerator:
         skills = self.ai_service.generate_resume_section('skills', job_description, projects)
         hard_skills = self.ai_service.generate_resume_section('hard_skills', job_description, projects)
         logger.info(f"Hard skills generated: {len(hard_skills) if hard_skills else 0} characters")
-        
+
         # Ensure profile is never empty - use fallback if AI returns empty
         if not profile or not profile.strip():
             logger.warning("Profile generation returned empty, using fallback")
             profile = PROFILE_TEMPLATE
+
+        # Parse hard_skills text into structured format for 2-column grid display,
+        # with a deterministic fallback when the AI section is empty or on error.
+        if not hard_skills or not hard_skills.strip():
+            logger.warning("Hard skills generation returned empty, using fallback hard skills template")
+            fallback_skills = (
+                "Primary Stack\n"
+                "Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems\n\n"
+                "Backend Expertise\n"
+                "Concurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues\n\n"
+                "Databases & Storage\n"
+                "PostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization\n\n"
+                "Infrastructure & DevOps\n"
+                "Docker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix\n\n"
+                "Additional Technologies\n"
+                "JavaScript/TypeScript • Python • Java • GraphQL\n\n"
+                "Testing & Quality\n"
+                "Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing"
+            )
+            hard_skills_parsed = self._parse_hard_skills(fallback_skills)
+        else:
+            hard_skills_parsed = self._parse_hard_skills(hard_skills)
         
         # Prepare template context
         # Set default social links for this user
@@ -140,7 +209,7 @@ class ResumeGenerator:
             'about': about,
             'experience': experience,
             'skills': skills,
-            'hard_skills': hard_skills,
+            'hard_skills': hard_skills_parsed,
             'projects': projects_to_show,
             'certifications': certifications if certifications else [],
             'job_title': job_title,
