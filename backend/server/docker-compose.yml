@@ -74,7 +74,7 @@ services:
   translation-worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.translation-worker
     container_name: woragis-translation-worker
     depends_on:
       database:
