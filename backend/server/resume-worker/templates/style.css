@@ -342,7 +342,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5em;
+    gap: 0.6em;
     padding: 0.4em 0.6em;
     background: #f8f9fa;
     border-radius: 3px;
@@ -352,6 +352,11 @@ body {
 .language-name {
     font-weight: 500;
     color: #2c3e50;
+}
+
+.language-flag {
+    font-size: 10pt;
+    margin-right: 0.25em;
 }
 
 .language-level {
