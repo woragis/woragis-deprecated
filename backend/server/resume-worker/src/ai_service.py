@@ -8,6 +8,13 @@ from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
+# Profile template - base structure for AI to follow
+PROFILE_TEMPLATE = """Passionate Full-Stack Developer specializing in clean architecture and domain-driven design principles.
+
+Currently pursuing a Computer Science degree with a strong focus on building scalable, maintainable applications across backend, frontend, and mobile platforms. Committed to writing elegant code that reflects real-world business domains and delivers measurable business value.
+
+Experienced in designing and implementing distributed systems, microservices architectures, and high-performance APIs. Continuously learning and applying modern software engineering principles to create solutions that balance technical excellence with practical business outcomes."""
+
 # About Me template - base structure for AI to follow
 ABOUT_ME_TEMPLATE = """Passionate Full-Stack Developer specializing in clean architecture, domain-driven design, and scalable system development.
 
@@ -79,13 +86,16 @@ class AIService:
             return ""
     
     def _build_profile_prompt(self, job_description: str, projects: List[Dict]) -> str:
-        """Build prompt for professional summary/profile section"""
+        """Build prompt for professional summary/profile section - uses base template"""
         projects_text = "\n".join([
             f"- {p['name']}: {p.get('description', '')}"
             for p in projects[:10]  # Limit to top 10
         ])
         
-        return f"""Write a professional summary (4-5 lines) for a resume optimized for this job description:
+        return f"""Write a personalized "Profile" section (3-4 sentences) for a resume based on this job description. Follow this structure and style:
+
+BASE TEMPLATE STRUCTURE:
+{PROFILE_TEMPLATE}
 
 Job Description:
 {job_description}
@@ -94,12 +104,16 @@ Relevant Projects:
 {projects_text}
 
 Requirements:
+- Follow the same 3-paragraph structure as the template
+- First paragraph: Passion + specialization + key principles (match job requirements)
+- Second paragraph: Education/background + focus areas + commitment to quality
+- Third paragraph: Experience highlights + continuous learning + value delivery
+- Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
+- Keep the same professional tone and length
+- Use strong action words and technical terminology relevant to the job
+- Maintain the structure but personalize content based on job requirements
 - Write in English
-- Use strong action verbs
-- Highlight relevant technical skills
-- Be concise and impactful
-- Optimize for ATS (Applicant Tracking Systems)
-- Focus on achievements and impact"""
+- Optimize for ATS (Applicant Tracking Systems)"""
     
     def _build_about_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for about me section - follows a specific template structure"""

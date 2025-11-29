@@ -16,7 +16,7 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from database import Database
-from ai_service import AIService
+from ai_service import AIService, PROFILE_TEMPLATE
 from keyword_extractor import extract_keywords
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,11 @@ class ResumeGenerator:
         about = self.ai_service.generate_resume_section('about', job_description, projects)
         experience = self.ai_service.generate_resume_section('experience', job_description, projects)
         skills = self.ai_service.generate_resume_section('skills', job_description, projects)
+        
+        # Ensure profile is never empty - use fallback if AI returns empty
+        if not profile or not profile.strip():
+            logger.warning("Profile generation returned empty, using fallback")
+            profile = PROFILE_TEMPLATE
         
         # Prepare template context
         # Set default social links for this user
