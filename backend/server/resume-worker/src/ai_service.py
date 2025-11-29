@@ -35,7 +35,8 @@ class AIService:
         job_description: str,
         projects: List[Dict],
         certifications: List[Dict] = None,
-        context: Dict = None
+        context: Dict = None,
+        language: str = "en",
     ) -> str:
         """Generate a resume section using AI"""
         try:
@@ -53,6 +54,12 @@ class AIService:
             else:
                 prompt = f"Generate a {section_type} section for a resume based on this job description: {job_description}"
             
+            # Choose language instruction
+            if language.lower().startswith("pt"):
+                lang_instruction = "in Brazilian Portuguese (pt-BR). Write naturally, using professional tone in Portuguese."
+            else:
+                lang_instruction = "in English."
+
             # Call AI service
             response = requests.post(
                 f"{self.base_url}/api/chat/completions",
@@ -62,7 +69,12 @@ class AIService:
                     "messages": [
                         {
                             "role": "user",
-                            "content": f"You are an expert resume writer. Generate professional, ATS-friendly resume content in English. Be concise, use strong action verbs, and quantify achievements when possible.\n\n{prompt}"
+                            "content": (
+                                "You are an expert resume writer. "
+                                f"Generate professional, ATS-friendly resume content {lang_instruction} "
+                                "Be concise, use strong action verbs, and quantify achievements when possible.\n\n"
+                                f"{prompt}"
+                            )
                         }
                     ],
                     "temperature": 0.3,
@@ -119,17 +131,16 @@ Job Description:
 Relevant Projects:
 {projects_text}
 
-Requirements:
-- Follow the same 3-paragraph structure as the template
-- First paragraph: Passion + specialization + key principles (match job requirements)
-- Second paragraph: Education/background + focus areas + commitment to quality
-- Third paragraph: Experience highlights + continuous learning + value delivery
-- Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
-- Keep the same professional tone and length
-- Use strong action words and technical terminology relevant to the job
-- Maintain the structure but personalize content based on job requirements
-- Write in English
-- Optimize for ATS (Applicant Tracking Systems)"""
+        Requirements:
+        - Follow the same 3-paragraph structure as the template
+        - First paragraph: Passion + specialization + key principles (match job requirements)
+        - Second paragraph: Education/background + focus areas + commitment to quality
+        - Third paragraph: Experience highlights + continuous learning + value delivery
+        - Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
+        - Keep the same professional tone and length
+        - Use strong action words and technical terminology relevant to the job
+        - Maintain the structure but personalize content based on job requirements
+        - Optimize for ATS (Applicant Tracking Systems)"""
     
     def _build_about_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for about me section - follows a specific template structure"""

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume - {{ name }}</title>
+</head>
+<body>
+    <div class="resume-container">
+        <!-- Header Section -->
+        <header class="resume-header">
+            <h1 class="name">{{ name }}</h1>
+            {% if job_title %}
+            <div class="job-title">{{ job_title }}</div>
+            {% endif %}
+            <div class="contact-info">
+                <div class="contact-item">
+                    <span class="contact-icon">&#128205;</span>
+                    <span class="contact-value">João Pessoa - PB, Brazil</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon">&#128231;</span>
+                    <span class="contact-value">{{ email }}</span>
+                </div>
+                {% if website or github or linkedin %}
+                <div class="contact-item">
+                    <span class="contact-icon">&#128279;</span>
+                    <span class="contact-value">
+                        {% if linkedin %}<a href="https://{{ linkedin }}" class="social-link" target="_blank">LinkedIn</a>{% endif %}
+                        {% if linkedin and (github or website) %} | {% endif %}
+                        {% if github %}<a href="https://{{ github }}" class="social-link" target="_blank">GitHub</a>{% endif %}
+                        {% if github and website %} | {% endif %}
+                        {% if website %}<a href="https://{{ website }}" class="social-link" target="_blank">Portfolio</a>{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <hr class="divider">
+
+        <!-- Profile -->
+        <section class="section">
+            <h2 class="section-title">Profile</h2>
+            <div class="section-content">
+                <p>{{ profile if profile else 'Passionate Full-Stack Developer specializing in clean architecture and domain-driven design principles. Currently pursuing a Computer Science degree with a strong focus on building scalable, maintainable applications across backend, frontend, and mobile platforms. Committed to writing elegant code that reflects real-world business domains and delivers measurable business value.' }}</p>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Technical Skills -->
+        <section class="section">
+            <h2 class="section-title">Technical Skills</h2>
+            <div class="section-content">
+                <div class="hard-skills-grid">
+                    {% for category in hard_skills %}
+                    <div class="skill-category">
+                        <div class="skill-category-title">{{ category.title }}</div>
+                        <div class="skill-items">
+                            {% for skill in category.skills %}
+                            <span class="skill-item">{{ skill }}{% if not loop.last %} •{% endif %}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+
+        <!-- Projects -->
+        {% if projects %}
+        <section class="section">
+            <h2 class="section-title">Projects</h2>
+            <div class="section-content">
+                <div class="projects-grid">
+                    {% for project in projects %}
+                    <div class="project-item">
+                        <div class="project-header">
+                            <h3 class="project-name">{{ project.name }}</h3>
+                            <span class="project-status">{{ project.status }}</span>
+                        </div>
+                        {% if project.description %}
+                        <p class="project-description">{{ project.description }}</p>
+                        {% endif %}
+                        {% if project.technologies %}
+                        <div class="project-technologies">
+                            <strong>Technologies:</strong>
+                            <span class="tech-tags">
+                                {% for tech in project.technologies[:10] %}
+                                <span class="tech-tag">{{ tech.name }}{% if tech.version %} ({{ tech.version }}){% endif %}</span>
+                                {% endfor %}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
+        <!-- Experience (AI-generated) -->
+        {% if experience %}
+        <section class="section">
+            <h2 class="section-title">Experience</h2>
+            <div class="section-content experience-content">
+                <pre>{{ experience }}</pre>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
+        <!-- Certifications -->
+        {% if certifications %}
+        <section class="section">
+            <h2 class="section-title">Certifications</h2>
+            <div class="section-content">
+                <div class="certifications-grid">
+                    {% for cert in certifications %}
+                    <div class="certification-item">
+                        <div class="cert-header">
+                            <h3 class="cert-name">{{ cert.name }}</h3>
+                            <span class="cert-category">{{ cert.category }}</span>
+                        </div>
+                        <p class="cert-issuer">{{ cert.issuer }}</p>
+                        <p class="cert-date">
+                            Issued: {{ cert.issue_date.strftime('%B %Y') }}
+                            {% if cert.expiry_date %}
+                            | Expires: {{ cert.expiry_date.strftime('%B %Y') }}
+                            {% endif %}
+                        </p>
+                        {% if cert.credential_id %}
+                        <p class="cert-id">Credential ID: {{ cert.credential_id }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
+        <!-- Languages -->
+        <section class="section">
+            <h2 class="section-title">Languages</h2>
+            <div class="section-content">
+                <div class="languages-grid">
+                    <div class="language-item">
+                        <span class="language-name">🇧🇷 Portuguese</span>
+                        <span class="language-level">Native</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-name">🇺🇸 English</span>
+                        <span class="language-level">Fluent</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-name">🇫🇷 French</span>
+                        <span class="language-level">Fluent</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-name">🇪🇸 Spanish</span>
+                        <span class="language-level">Advanced</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-name">🇯🇵 Japanese</span>
+                        <span class="language-level">Intermediate</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-name">🇩🇪 German</span>
+                        <span class="language-level">Intermediate</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+    </div>
+</body>
+</html>
+

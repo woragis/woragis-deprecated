@@ -108,7 +108,8 @@ class ResumeGenerator:
         user_id: str,
         job_description: str,
         job_title: str = "Software Engineer",
-        output_filename: str = None
+        output_filename: str = None,
+        language: str = "en"
     ) -> Dict[str, any]:
         """Generate a customized resume PDF and return metadata"""
         logger.info(f"Generating resume for user {user_id}, job: {job_title}")
@@ -139,11 +140,11 @@ class ResumeGenerator:
         
         # Generate resume sections using AI
         logger.info("Generating resume sections with AI...")
-        profile = self.ai_service.generate_resume_section('profile', job_description, projects)
-        about = self.ai_service.generate_resume_section('about', job_description, projects)
-        experience = self.ai_service.generate_resume_section('experience', job_description, projects)
-        skills = self.ai_service.generate_resume_section('skills', job_description, projects)
-        hard_skills = self.ai_service.generate_resume_section('hard_skills', job_description, projects)
+        profile = self.ai_service.generate_resume_section('profile', job_description, projects, language=language)
+        about = self.ai_service.generate_resume_section('about', job_description, projects, language=language)
+        experience = self.ai_service.generate_resume_section('experience', job_description, projects, language=language)
+        skills = self.ai_service.generate_resume_section('skills', job_description, projects, language=language)
+        hard_skills = self.ai_service.generate_resume_section('hard_skills', job_description, projects, language=language)
         logger.info(f"Hard skills generated: {len(hard_skills) if hard_skills else 0} characters")
 
         # Ensure profile is never empty - use fallback if AI returns empty
@@ -173,6 +174,12 @@ class ResumeGenerator:
         else:
             hard_skills_parsed = self._parse_hard_skills(hard_skills)
         
+        # Choose template based on language (English vs Brazilian Portuguese)
+        if language.lower().startswith("pt"):
+            template_name = 'resume_pt.html'
+        else:
+            template_name = 'resume.html'
+
         # Prepare template context
         # Set default social links for this user
         website = None
@@ -216,7 +223,7 @@ class ResumeGenerator:
         }
         
         # Render HTML template
-        template = self.template_env.get_template('resume.html')
+        template = self.template_env.get_template(template_name)
         html_content = template.render(**context)
         
         # Generate PDF filename

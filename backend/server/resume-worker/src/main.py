@@ -71,20 +71,22 @@ def main():
         
         # Check command line arguments
         if len(sys.argv) < 3:
-            logger.error("Usage: python main.py <user_id> <job_description> [job_title] [output_filename]")
+            logger.error("Usage: python main.py <user_id> <job_description> [job_title] [output_filename] [language]")
             sys.exit(1)
         
         user_id = sys.argv[1]
         job_description = sys.argv[2]
         job_title = sys.argv[3] if len(sys.argv) > 3 else "Software Engineer"
         output_filename = sys.argv[4] if len(sys.argv) > 4 else None
+        language = sys.argv[5] if len(sys.argv) > 5 else "en"
         
         # Generate resume
         result = generator.generate_resume(
             user_id=user_id,
             job_description=job_description,
             job_title=job_title,
-            output_filename=output_filename
+            output_filename=output_filename,
+            language=language
         )
         
         # Save result metadata
