@@ -71,3 +71,5 @@ env.sample
 TODO.md
 *.todo
 
+# Job application worker (has its own Dockerfile)
+job-application-worker/
