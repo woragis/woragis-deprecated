@@ -73,3 +73,6 @@ TODO.md
 
 # Job application worker (has its own Dockerfile)
 job-application-worker/
+
+# Resume worker (has its own Dockerfile)
+resume-worker/
