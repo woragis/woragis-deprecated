@@ -212,8 +212,7 @@ class ResumeGenerator:
             'hard_skills': hard_skills_parsed,
             'projects': projects_to_show,
             'certifications': certifications if certifications else [],
-            'job_title': job_title,
-            'generated_date': datetime.now().strftime('%B %Y')
+            'job_title': job_title
         }
         
         # Render HTML template
