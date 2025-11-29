@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume - {{ name }}</title>
+</head>
+<body>
+    <div class="resume-container">
+        <!-- Header Section -->
+        <header class="resume-header">
+            <h1 class="name">{{ name }}</h1>
+            <div class="contact-info">
+                <span class="email">{{ email }}</span>
+            </div>
+        </header>
+
+        <hr class="divider">
+
+        <!-- Professional Summary -->
+        {% if profile %}
+        <section class="section">
+            <h2 class="section-title">Professional Summary</h2>
+            <div class="section-content">
+                <p>{{ profile }}</p>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- About Me -->
+        {% if about %}
+        <section class="section">
+            <h2 class="section-title">About Me</h2>
+            <div class="section-content">
+                <p>{{ about }}</p>
+            </div>
+        </section>
+        {% endif %}
+
+        <hr class="divider">
+
+        <!-- Technical Skills -->
+        {% if skills %}
+        <section class="section">
+            <h2 class="section-title">Technical Skills</h2>
+            <div class="section-content">
+                <div class="skills-content">{{ skills }}</div>
+            </div>
+        </section>
+        {% endif %}
+
+        <hr class="divider">
+
+        <!-- Experience / Projects -->
+        {% if experience %}
+        <section class="section">
+            <h2 class="section-title">Projects & Experience</h2>
+            <div class="section-content experience-content">
+                <pre>{{ experience }}</pre>
+            </div>
+        </section>
+        {% elif projects %}
+        <section class="section">
+            <h2 class="section-title">Projects & Experience</h2>
+            <div class="section-content">
+                {% for project in projects %}
+                <div class="project-item">
+                    <div class="project-header">
+                        <h3 class="project-name">{{ project.name }}</h3>
+                        <span class="project-status">{{ project.status }}</span>
+                    </div>
+                    {% if project.description %}
+                    <p class="project-description">{{ project.description }}</p>
+                    {% endif %}
+                    {% if project.technologies %}
+                    <div class="project-technologies">
+                        <strong>Technologies:</strong>
+                        <span class="tech-tags">
+                            {% for tech in project.technologies[:10] %}
+                            <span class="tech-tag">{{ tech.name }}{% if tech.version %} ({{ tech.version }}){% endif %}</span>
+                            {% endfor %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if not loop.last %}<hr class="project-divider">{% endif %}
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <hr class="divider">
+
+        <!-- Certifications -->
+        {% if certifications %}
+        <section class="section">
+            <h2 class="section-title">Certifications</h2>
+            <div class="section-content">
+                <div class="certifications-grid">
+                    {% for cert in certifications %}
+                    <div class="certification-item">
+                        <div class="cert-header">
+                            <h3 class="cert-name">{{ cert.name }}</h3>
+                            <span class="cert-category">{{ cert.category }}</span>
+                        </div>
+                        <p class="cert-issuer">{{ cert.issuer }}</p>
+                        <p class="cert-date">
+                            Issued: {{ cert.issue_date.strftime('%B %Y') }}
+                            {% if cert.expiry_date %}
+                            | Expires: {{ cert.expiry_date.strftime('%B %Y') }}
+                            {% endif %}
+                        </p>
+                        {% if cert.credential_id %}
+                        <p class="cert-id">Credential ID: {{ cert.credential_id }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Footer -->
+        <footer class="resume-footer">
+            <p class="footer-text">Generated on {{ generated_date }}</p>
+        </footer>
+    </div>
+</body>
+</html>
+
