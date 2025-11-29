@@ -78,7 +78,8 @@ class ResumeGenerator:
         # Fetch relevant projects
         projects = self.db.get_user_projects(
             user_id,
-            tech_categories=keywords['tech_categories']
+            tech_categories=keywords['tech_categories'],
+            skill_names=keywords.get('skill_names')
         )
         logger.info(f"Found {len(projects)} relevant projects")
         
@@ -97,15 +98,34 @@ class ResumeGenerator:
         skills = self.ai_service.generate_resume_section('skills', job_description, projects)
         
         # Prepare template context
+        # Set default social links for this user
+        website = None
+        github = None
+        linkedin = None
+        
+        user_email = user_info.get('email', '')
+        if user_email == 'masteringthecode.woragis@gmail.com':
+            website = 'www.woragis.me'
+            github = 'github.com/woragis'
+            linkedin = 'linkedin.com/in/jezreel-andrade'
+        
+        # Set the name - use hardcoded name for this user
+        display_name = "Jezreel de Andrade Galvao Veloso"
+        if user_email == 'masteringthecode.woragis@gmail.com':
+            display_name = "Jezreel de Andrade Galvao Veloso"
+        
         context = {
-            'name': user_info.get('name', 'Your Name'),
+            'name': display_name,
             'email': user_info.get('email', ''),
+            'website': website,
+            'github': github,
+            'linkedin': linkedin,
             'profile': profile,
             'about': about,
             'experience': experience,
             'skills': skills,
-            'projects': projects[:8],  # Top 8 projects
-            'certifications': certifications,
+            'projects': projects[:8] if projects else [],  # Top 8 projects
+            'certifications': certifications if certifications else [],
             'job_title': job_title,
             'generated_date': datetime.now().strftime('%B %Y')
         }

@@ -32,8 +32,8 @@ class Database:
             self.conn.close()
             logger.info("Database connection closed")
     
-    def get_user_projects(self, user_id: str, tech_categories: List[str] = None) -> List[Dict]:
-        """Get projects for a user, optionally filtered by technology categories"""
+    def get_user_projects(self, user_id: str, tech_categories: List[str] = None, skill_names: List[str] = None) -> List[Dict]:
+        """Get projects for a user, optionally filtered by technology categories or skill names"""
         try:
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 query = """
@@ -59,12 +59,18 @@ class Database:
                 """
                 
                 params = [user_id]
+                conditions = []
                 
                 if tech_categories:
-                    query += """
-                        AND s.category = ANY(%s)
-                    """
+                    conditions.append("s.category = ANY(%s)")
                     params.append(tech_categories)
+                
+                if skill_names:
+                    conditions.append("LOWER(s.name) = ANY(%s)")
+                    params.append([name.lower() for name in skill_names])
+                
+                if conditions:
+                    query += " AND (" + " OR ".join(conditions) + ")"
                 
                 query += """
                     GROUP BY p.id, p.name, p.description, p.status, p.slug
@@ -144,11 +150,16 @@ class Database:
                 user = cur.fetchone()
                 if user:
                     user_dict = dict(user)
-                    # Extract name from email if name column doesn't exist
+                    # Use default name for this user
                     email = user_dict.get('email', '')
-                    if email:
+                    if email == 'masteringthecode.woragis@gmail.com':
+                        user_dict['name'] = 'Jezreel de Andrade Galvao Veloso'
+                    elif email:
+                        # Extract name from email if name column doesn't exist
                         name = email.split('@')[0].replace('.', ' ').title()
                         user_dict['name'] = name
+                    else:
+                        user_dict['name'] = 'Your Name'
                     return user_dict
                 return None
         except Exception as e:

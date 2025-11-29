@@ -8,6 +8,13 @@ from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
+# About Me template - base structure for AI to follow
+ABOUT_ME_TEMPLATE = """Passionate Full-Stack Developer specializing in clean architecture, domain-driven design, and scalable system development.
+
+Currently pursuing a Computer Science degree with a strong focus on building robust, maintainable applications across backend, frontend, and mobile platforms. Committed to writing elegant, production-ready code that reflects real-world business domains and solves complex technical challenges.
+
+Experienced in designing and implementing distributed systems, microservices architectures, and high-performance APIs. Continuously learning and applying modern software engineering principles to deliver solutions that balance technical excellence with business value."""
+
 
 class AIService:
     """AI Service client for generating resume content"""
@@ -95,16 +102,28 @@ Requirements:
 - Focus on achievements and impact"""
     
     def _build_about_prompt(self, job_description: str, projects: List[Dict]) -> str:
-        """Build prompt for about me section"""
-        return f"""Write a brief "About Me" section (3-4 sentences) for a resume based on this job description:
+        """Build prompt for about me section - follows a specific template structure"""
+        projects_summary = ", ".join([p['name'] for p in projects[:5]])
+        
+        return f"""Write a personalized "About Me" section (3-4 sentences) for a resume based on this job description. Follow this structure and style:
 
+BASE TEMPLATE STRUCTURE:
+{ABOUT_ME_TEMPLATE}
+
+Job Description:
 {job_description}
 
-Focus on:
-- Professional background
-- Key strengths
-- Passion for the field
-- What makes you unique"""
+Relevant Projects: {projects_summary}
+
+Requirements:
+- Follow the same 3-paragraph structure as the template
+- First paragraph: Passion + specialization + key principles (match job requirements)
+- Second paragraph: Education/background + focus areas + commitment to quality
+- Third paragraph: Experience highlights + continuous learning + value delivery
+- Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
+- Keep the same professional tone and length
+- Use strong action words and technical terminology relevant to the job
+- Maintain the structure but personalize content based on job requirements"""
     
     def _build_experience_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for experience/projects section"""
