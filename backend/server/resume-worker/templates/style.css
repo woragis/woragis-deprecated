@@ -379,6 +379,279 @@ body {
     padding: 0;
 }
 
+/* Education */
+.education-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8em;
+    width: 100%;
+}
+
+.education-item {
+    display: block;
+    width: 100%;
+    margin-bottom: 0;
+    padding: 0.5em;
+    background: #f8f9fa;
+    border-left: 2px solid #27ae60;
+    border-radius: 2px;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+}
+
+.education-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.3em;
+}
+
+.education-degree {
+    font-size: 9.5pt;
+    font-weight: bold;
+    color: #2c3e50;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.education-period {
+    font-size: 7.5pt;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.education-institution {
+    font-size: 9pt;
+    color: #555;
+    margin-bottom: 0.2em;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.education-location {
+    font-size: 8pt;
+    color: #7f8c8d;
+    margin-bottom: 0.2em;
+    line-height: 1.2;
+}
+
+.education-status {
+    font-size: 7.5pt;
+    color: #7f8c8d;
+    margin-bottom: 0.3em;
+    font-style: italic;
+}
+
+.education-coursework {
+    margin-top: 0.3em;
+    font-size: 8pt;
+    line-height: 1.2;
+}
+
+.coursework-tags {
+    display: inline-block;
+    margin-left: 0.5em;
+}
+
+.coursework-tag {
+    display: inline-block;
+    color: #555;
+    font-size: 8pt;
+}
+
+/* Work Experience */
+.experience-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8em;
+    width: 100%;
+}
+
+.experience-item {
+    display: block;
+    width: 100%;
+    margin-bottom: 0;
+    padding: 0.5em;
+    background: #f8f9fa;
+    border-left: 2px solid #e74c3c;
+    border-radius: 2px;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+}
+
+.experience-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.3em;
+}
+
+.experience-title {
+    font-size: 9.5pt;
+    font-weight: bold;
+    color: #2c3e50;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.experience-period {
+    font-size: 7.5pt;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.experience-company {
+    font-size: 9pt;
+    color: #555;
+    margin-bottom: 0.2em;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.experience-location {
+    font-size: 8pt;
+    color: #7f8c8d;
+    margin-bottom: 0.3em;
+    line-height: 1.2;
+}
+
+.experience-description {
+    margin-top: 0.3em;
+    margin-left: 1.2em;
+    font-size: 8.5pt;
+    color: #555;
+    line-height: 1.4;
+}
+
+.experience-description li {
+    margin-bottom: 0.2em;
+}
+
+/* Volunteer Work */
+.volunteer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6em;
+    column-gap: 1em;
+    width: 100%;
+}
+
+.volunteer-item {
+    display: block;
+    width: 100%;
+    margin-bottom: 0;
+    padding: 0.5em;
+    background: #f8f9fa;
+    border-left: 2px solid #9b59b6;
+    border-radius: 2px;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+}
+
+.volunteer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.3em;
+}
+
+.volunteer-title {
+    font-size: 9.5pt;
+    font-weight: bold;
+    color: #2c3e50;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.volunteer-period {
+    font-size: 7pt;
+    color: #7f8c8d;
+    text-transform: capitalize;
+    font-style: italic;
+}
+
+.volunteer-organization {
+    font-size: 9pt;
+    color: #555;
+    margin-bottom: 0.2em;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.volunteer-location {
+    font-size: 8pt;
+    color: #7f8c8d;
+    margin-bottom: 0.3em;
+    line-height: 1.2;
+}
+
+.volunteer-description {
+    margin-top: 0.3em;
+    margin-left: 1.2em;
+    font-size: 8.5pt;
+    color: #555;
+    line-height: 1.4;
+}
+
+.volunteer-description li {
+    margin-bottom: 0.2em;
+}
+
+/* Publications */
+.publications-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6em;
+    column-gap: 1em;
+    width: 100%;
+}
+
+.publication-item {
+    display: block;
+    width: 100%;
+    margin-bottom: 0;
+    padding: 0.5em;
+    background: #f8f9fa;
+    border-left: 2px solid #f39c12;
+    border-radius: 2px;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+}
+
+.publication-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.3em;
+}
+
+.publication-title {
+    font-size: 9.5pt;
+    font-weight: bold;
+    color: #2c3e50;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.publication-date {
+    font-size: 7pt;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.publication-excerpt {
+    font-size: 8.5pt;
+    color: #555;
+    line-height: 1.4;
+    margin-bottom: 0.2em;
+}
+
+.publication-featured {
+    font-size: 7pt;
+    color: #f39c12;
+    font-weight: 500;
+}
+
 /* Footer */
 .resume-footer {
     margin-top: 2em;
@@ -413,11 +686,35 @@ body {
         page-break-inside: avoid;
     }
     
+    .education-item {
+        page-break-inside: avoid;
+    }
+    
+    .experience-item {
+        page-break-inside: avoid;
+    }
+    
+    .volunteer-item {
+        page-break-inside: avoid;
+    }
+    
+    .publication-item {
+        page-break-inside: avoid;
+    }
+    
     .projects-grid {
         grid-template-columns: 1fr 1fr;
     }
     
     .languages-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .volunteer-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .publications-grid {
         grid-template-columns: 1fr 1fr;
     }
 }

@@ -69,6 +69,74 @@
         </section>
         <hr class="divider">
 
+        <!-- Education -->
+        {% if education %}
+        <section class="section">
+            <h2 class="section-title">Education</h2>
+            <div class="section-content">
+                <div class="education-grid">
+                    {% for edu in education %}
+                    <div class="education-item">
+                        <div class="education-header">
+                            <h3 class="education-degree">{{ edu.degree }}</h3>
+                            <span class="education-period">{{ edu.period }}</span>
+                        </div>
+                        <p class="education-institution">{{ edu.institution }}</p>
+                        {% if edu.location %}
+                        <p class="education-location">{{ edu.location }}</p>
+                        {% endif %}
+                        {% if edu.status %}
+                        <p class="education-status">Status: {{ edu.status }}</p>
+                        {% endif %}
+                        {% if edu.relevant_coursework %}
+                        <div class="education-coursework">
+                            <strong>Relevant Coursework:</strong>
+                            <span class="coursework-tags">
+                                {% for course in edu.relevant_coursework %}
+                                <span class="coursework-tag">{{ course }}{% if not loop.last %}, {% endif %}</span>
+                                {% endfor %}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
+        <!-- Work Experience -->
+        {% if work_experience %}
+        <section class="section">
+            <h2 class="section-title">Work Experience</h2>
+            <div class="section-content">
+                <div class="experience-grid">
+                    {% for exp in work_experience %}
+                    <div class="experience-item">
+                        <div class="experience-header">
+                            <h3 class="experience-title">{{ exp.title }}</h3>
+                            <span class="experience-period">{{ exp.period }}</span>
+                        </div>
+                        <p class="experience-company">{{ exp.company }}</p>
+                        {% if exp.location %}
+                        <p class="experience-location">{{ exp.location }}</p>
+                        {% endif %}
+                        {% if exp.description %}
+                        <ul class="experience-description">
+                            {% for desc in exp.description %}
+                            <li>{{ desc }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
         <!-- Projects -->
         {% if projects %}
         <section class="section">
@@ -134,6 +202,67 @@
                         </p>
                         {% if cert.credential_id %}
                         <p class="cert-id">Credential ID: {{ cert.credential_id }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
+        <!-- Volunteer Work -->
+        {% if volunteer_work %}
+        <section class="section">
+            <h2 class="section-title">Volunteer Work</h2>
+            <div class="section-content">
+                <div class="volunteer-grid">
+                    {% for volunteer in volunteer_work %}
+                    <div class="volunteer-item">
+                        <div class="volunteer-header">
+                            <h3 class="volunteer-title">{{ volunteer.title }}</h3>
+                            <span class="volunteer-period">{{ volunteer.period }}</span>
+                        </div>
+                        <p class="volunteer-organization">{{ volunteer.organization }}</p>
+                        {% if volunteer.location %}
+                        <p class="volunteer-location">{{ volunteer.location }}</p>
+                        {% endif %}
+                        {% if volunteer.description %}
+                        <ul class="volunteer-description">
+                            {% for desc in volunteer.description %}
+                            <li>{{ desc }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
+        <!-- Publications -->
+        {% if publications %}
+        <section class="section">
+            <h2 class="section-title">Publications</h2>
+            <div class="section-content">
+                <div class="publications-grid">
+                    {% for pub in publications %}
+                    <div class="publication-item">
+                        <div class="publication-header">
+                            <h3 class="publication-title">{{ pub.title }}</h3>
+                            {% if pub.formatted_date %}
+                            <span class="publication-date">{{ pub.formatted_date }}</span>
+                            {% endif %}
+                        </div>
+                        {% if pub.excerpt %}
+                        <p class="publication-excerpt">{{ pub.excerpt }}</p>
+                        {% elif pub.content %}
+                        <p class="publication-excerpt">{{ pub.content[:200] }}{% if pub.content|length > 200 %}...{% endif %}</p>
+                        {% endif %}
+                        {% if pub.featured %}
+                        <span class="publication-featured">⭐ Featured</span>
                         {% endif %}
                     </div>
                     {% endfor %}

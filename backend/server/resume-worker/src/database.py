@@ -137,6 +137,32 @@ class Database:
             logger.error(f"Error fetching certifications: {e}")
             raise
     
+    def get_user_publications(self, user_id: str, limit: int = 10) -> List[Dict]:
+        """Get published posts/publications for a user"""
+        try:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                query = """
+                    SELECT 
+                        id,
+                        title,
+                        excerpt,
+                        content,
+                        published_at,
+                        featured,
+                        slug
+                    FROM posts
+                    WHERE user_id = %s AND status = 'published'
+                    ORDER BY published_at DESC
+                    LIMIT %s
+                """
+                cur.execute(query, [user_id, limit])
+                posts = cur.fetchall()
+                
+                return [dict(post) for post in posts]
+        except Exception as e:
+            logger.error(f"Error fetching publications: {e}")
+            return []
+    
     def get_user_info(self, user_id: str) -> Optional[Dict]:
         """Get basic user information"""
         try:

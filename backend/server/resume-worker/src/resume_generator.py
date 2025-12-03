@@ -138,6 +138,84 @@ class ResumeGenerator:
         )
         logger.info(f"Found {len(certifications)} relevant certifications")
         
+        # Fetch publications (posts)
+        publications = self.db.get_user_publications(user_id, limit=5)
+        logger.info(f"Found {len(publications)} publications")
+        
+        # Format publication dates for template
+        for pub in publications:
+            if pub.get('published_at'):
+                try:
+                    if hasattr(pub['published_at'], 'strftime'):
+                        pub['formatted_date'] = pub['published_at'].strftime('%B %Y')
+                    else:
+                        pub['formatted_date'] = str(pub['published_at'])
+                except Exception as e:
+                    logger.warning(f"Error formatting publication date: {e}")
+                    pub['formatted_date'] = str(pub.get('published_at', ''))
+            else:
+                pub['formatted_date'] = None
+        
+        # Hardcoded Education section
+        education = [
+            {
+                'degree': 'Bachelor of Science in Computer Science',
+                'institution': 'Federal University of Paraíba (UFPB)',
+                'location': 'João Pessoa, PB, Brazil',
+                'period': '2021 - Present',
+                'status': 'In Progress',
+                'relevant_coursework': [
+                    'Data Structures and Algorithms',
+                    'Software Engineering',
+                    'Database Systems',
+                    'Distributed Systems',
+                    'Computer Networks'
+                ]
+            }
+        ]
+        
+        # Hardcoded Work Experience section
+        work_experience = [
+            {
+                'title': 'Full-Stack Developer',
+                'company': 'Freelance / Self-Employed',
+                'location': 'Remote',
+                'period': '2020 - Present',
+                'description': [
+                    'Developed scalable web applications using Go, TypeScript, and modern frameworks',
+                    'Designed and implemented microservices architectures with Docker and Kubernetes',
+                    'Collaborated with clients to deliver high-quality software solutions',
+                    'Maintained and optimized database systems (PostgreSQL, MongoDB, Redis)'
+                ]
+            }
+        ]
+        
+        # Hardcoded Volunteer Work section
+        volunteer_work = [
+            {
+                'title': 'Open Source Contributor',
+                'organization': 'Various Open Source Projects',
+                'location': 'Remote',
+                'period': '2021 - Present',
+                'description': [
+                    'Contributed to open source projects on GitHub',
+                    'Helped improve documentation and fix bugs in community projects',
+                    'Shared knowledge through technical blog posts and tutorials'
+                ]
+            },
+            {
+                'title': 'Technical Mentor',
+                'organization': 'Programming Communities',
+                'location': 'Online',
+                'period': '2022 - Present',
+                'description': [
+                    'Mentored junior developers in software engineering best practices',
+                    'Conducted code reviews and provided constructive feedback',
+                    'Organized technical workshops and knowledge-sharing sessions'
+                ]
+            }
+        ]
+        
         # Generate resume sections using AI
         logger.info("Generating resume sections with AI...")
         profile = self.ai_service.generate_resume_section('profile', job_description, projects, language=language)
@@ -219,6 +297,10 @@ class ResumeGenerator:
             'hard_skills': hard_skills_parsed,
             'projects': projects_to_show,
             'certifications': certifications if certifications else [],
+            'education': education,
+            'work_experience': work_experience,
+            'volunteer_work': volunteer_work,
+            'publications': publications if publications else [],
             'job_title': job_title
         }
         
