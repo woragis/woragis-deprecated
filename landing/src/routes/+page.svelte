@@ -1,6 +1,9 @@
 <script lang="ts">
+	import AboutMeSection from './_components/AboutMeSection.svelte';
 	import HeroSection from './_components/HeroSection.svelte';
 	import AboutSection from './_components/AboutSection.svelte';
+	import ExperienceSection from './_sections/ExperienceSection.svelte';
+	import VolunteerWorkSection from './_sections/VolunteerWorkSection.svelte';
 	import SkillsSection from './_components/SkillsSection.svelte';
 	import ProjectsSection from './_sections/ProjectsSection.svelte';
 	import BlogSection from './_sections/BlogSection.svelte';
@@ -31,6 +34,7 @@
 	import { useFeaturedImpactMetricsQuery, impactMetricKeys } from '$lib/queries/impact-metrics';
 	import { useFeaturedSystemDesignsQuery, systemDesignKeys } from '$lib/queries/system-designs';
 	import { useFeaturedProblemSolutionsQuery, problemSolutionKeys } from '$lib/queries/problem-solutions';
+	import { interestKeys } from '$lib/queries/interests';
 	import { listTestimonials } from '$lib/api/testimonials';
 	import { listCaseStudies } from '$lib/api/case-studies';
 	import { onMount } from 'svelte';
@@ -64,6 +68,7 @@
 		queryClient.invalidateQueries({ queryKey: systemDesignKeys.all });
 		queryClient.invalidateQueries({ queryKey: problemSolutionKeys.all });
 		queryClient.invalidateQueries({ queryKey: skillKeys.all });
+		queryClient.invalidateQueries({ queryKey: interestKeys.all });
 	});
 
 	let projects = $derived(featuredProjectsQuery.data || []);
@@ -203,8 +208,11 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+	<AboutMeSection translations={t} />
 	<HeroSection translations={t} />
 	<AboutSection translations={t} />
+	<ExperienceSection translations={t} />
+	<VolunteerWorkSection translations={t} />
 
 	<ProjectsSection projects={projects} caseStudyMap={caseStudyMap} loading={loadingProjects} translations={t} />
 
