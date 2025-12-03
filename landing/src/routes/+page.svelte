@@ -1,7 +1,5 @@
 <script lang="ts">
 	import AboutMeSection from './_components/AboutMeSection.svelte';
-	import HeroSection from './_components/HeroSection.svelte';
-	import AboutSection from './_components/AboutSection.svelte';
 	import ExperienceSection from './_sections/ExperienceSection.svelte';
 	import VolunteerWorkSection from './_sections/VolunteerWorkSection.svelte';
 	import SkillsSection from './_components/SkillsSection.svelte';
@@ -22,6 +20,7 @@
 	import ImpactMetricsSection from './_sections/ImpactMetricsSection.svelte';
 	import ContactSection from './_sections/ContactSection.svelte';
 	import FooterSection from './_sections/FooterSection.svelte';
+	import LanguagesSection from './_sections/LanguagesSection.svelte';
 	import { translationsStore, language } from '$lib/i18n';
 	import { useProjectsQuery, projectKeys } from '$lib/queries/projects';
 	import { useSkillsWithCountsQuery, skillKeys } from '$lib/queries/skills';
@@ -208,21 +207,30 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+	<!-- 1. About Me -->
 	<AboutMeSection translations={t} />
-	<HeroSection translations={t} />
-	<AboutSection translations={t} />
+
+	<!-- 2. Experience -->
 	<ExperienceSection translations={t} />
+
+	<!-- 3. Volunteer Work -->
 	<VolunteerWorkSection translations={t} />
 
+	<!-- 4. Skills -->
+	<SkillsSection skills={popularSkills} loading={loadingSkills} />
+
+	<!-- 5. Projects -->
 	<ProjectsSection projects={projects} caseStudyMap={caseStudyMap} loading={loadingProjects} translations={t} />
 
+	<!-- 6. Posts & Writings -->
 	<BlogSection featuredPosts={featuredPosts} latestPosts={latestPosts} loading={loadingPosts} translations={t} />
-
 	<TechnicalWritingsSection technicalWritings={technicalWritings} loading={loadingTechnicalWritings} translations={t} />
 
-	<CaseStudiesSection featuredCaseStudies={featuredCaseStudies} latestCaseStudies={latestCaseStudies} loading={loadingCaseStudiesSection} translations={t} />
+	<!-- 7. Languages -->
+	<LanguagesSection translations={t} />
 
-	<SkillsSection skills={popularSkills} loading={loadingSkills} />
+	<!-- Additional sections -->
+	<CaseStudiesSection featuredCaseStudies={featuredCaseStudies} latestCaseStudies={latestCaseStudies} loading={loadingCaseStudiesSection} translations={t} />
 
 	<SkillsTimelineSection translations={t} />
 
