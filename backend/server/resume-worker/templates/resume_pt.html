@@ -7,33 +7,85 @@
 </head>
 <body>
     <div class="resume-container">
+        <!-- Name Section -->
+        <h1 class="name">{{ name }}</h1>
+        
         <!-- Header Section -->
         <header class="resume-header">
-            <h1 class="name">{{ name }}</h1>
-            {% if job_title %}
-            <div class="job-title">{{ job_title }}</div>
-            {% endif %}
-            <div class="contact-info">
-                <div class="contact-item">
-                    <span class="contact-icon">&#128205;</span>
-                    <span class="contact-value">João Pessoa - PB, Brazil</span>
+            <div class="header-info-grid">
+                <div class="contact-info">
+                    {% if job_title %}
+                    <div class="contact-item job-title-item">
+                        <span class="contact-value">{{ job_title }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="contact-item">
+                        <span class="contact-icon">&#128205;</span>
+                        <span class="contact-value">João Pessoa - PB, Brazil</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">&#128231;</span>
+                        <span class="contact-value">{{ email }}</span>
+                    </div>
+                    {% if website or github or linkedin %}
+                    <div class="contact-item">
+                        <span class="contact-icon">&#128279;</span>
+                        <span class="contact-value">
+                            {% if linkedin %}<a href="https://{{ linkedin }}" class="social-link" target="_blank">LinkedIn</a>{% endif %}
+                            {% if linkedin and (github or website) %} | {% endif %}
+                            {% if github %}<a href="https://{{ github }}" class="social-link" target="_blank">GitHub</a>{% endif %}
+                            {% if github and website %} | {% endif %}
+                            {% if website %}<a href="https://{{ website }}" class="social-link" target="_blank">Portfolio</a>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="contact-item">
-                    <span class="contact-icon">&#128231;</span>
-                    <span class="contact-value">{{ email }}</span>
+                <div class="languages-header">
+                    <div class="languages-grid">
+                        <div class="language-item">
+                            <span class="language-left">
+                                <span class="language-flag">🇧🇷</span>
+                                <span class="language-name">Português</span>
+                            </span>
+                            <span class="language-level">Nativo</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-left">
+                                <span class="language-flag">🇺🇸</span>
+                                <span class="language-name">Inglês</span>
+                            </span>
+                            <span class="language-level">Fluente</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-left">
+                                <span class="language-flag">🇫🇷</span>
+                                <span class="language-name">Francês</span>
+                            </span>
+                            <span class="language-level">Fluente</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-left">
+                                <span class="language-flag">🇪🇸</span>
+                                <span class="language-name">Espanhol</span>
+                            </span>
+                            <span class="language-level">Avançado</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-left">
+                                <span class="language-flag">🇯🇵</span>
+                                <span class="language-name">Japonês</span>
+                            </span>
+                            <span class="language-level">Intermediário</span>
+                        </div>
+                        <div class="language-item">
+                            <span class="language-left">
+                                <span class="language-flag">🇩🇪</span>
+                                <span class="language-name">Alemão</span>
+                            </span>
+                            <span class="language-level">Intermediário</span>
+                        </div>
+                    </div>
                 </div>
-                {% if website or github or linkedin %}
-                <div class="contact-item">
-                    <span class="contact-icon">&#128279;</span>
-                    <span class="contact-value">
-                        {% if linkedin %}<a href="https://{{ linkedin }}" class="social-link" target="_blank">LinkedIn</a>{% endif %}
-                        {% if linkedin and (github or website) %} | {% endif %}
-                        {% if github %}<a href="https://{{ github }}" class="social-link" target="_blank">GitHub</a>{% endif %}
-                        {% if github and website %} | {% endif %}
-                        {% if website %}<a href="https://{{ website }}" class="social-link" target="_blank">Portfolio</a>{% endif %}
-                    </span>
-                </div>
-                {% endif %}
             </div>
         </header>
 
@@ -47,26 +99,6 @@
             </div>
         </section>
 
-        <hr class="divider">
-
-        <!-- Technical Skills -->
-        <section class="section">
-            <h2 class="section-title">Habilidades Técnicas</h2>
-            <div class="section-content">
-                <div class="hard-skills-grid">
-                    {% for category in hard_skills %}
-                    <div class="skill-category">
-                        <div class="skill-category-title">{{ category.title }}</div>
-                        <div class="skill-items">
-                            {% for skill in category.skills %}
-                            <span class="skill-item">{{ skill }}{% if not loop.last %} •{% endif %}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </section>
         <hr class="divider">
 
         <!-- Education -->
@@ -154,10 +186,9 @@
                         {% endif %}
                         {% if project.technologies %}
                         <div class="project-technologies">
-                            <strong>Technologies:</strong>
                             <span class="tech-tags">
-                                {% for tech in project.technologies[:10] %}
-                                <span class="tech-tag">{{ tech.name }}{% if tech.version %} ({{ tech.version }}){% endif %}</span>
+                                {% for tech in project.technologies %}
+                                <span class="tech-tag">{{ tech.name }}</span>
                                 {% endfor %}
                             </span>
                         </div>
@@ -189,20 +220,13 @@
                 <div class="certifications-grid">
                     {% for cert in certifications %}
                     <div class="certification-item">
-                        <div class="cert-header">
-                            <h3 class="cert-name">{{ cert.name }}</h3>
+                        <div class="cert-header-line">
+                            <span class="cert-name">{{ cert.name }}</span>
                             <span class="cert-category">{{ cert.category }}</span>
                         </div>
-                        <p class="cert-issuer">{{ cert.issuer }}</p>
-                        <p class="cert-date">
-                            Emitido em: {{ cert.issue_date.strftime('%B %Y') }}
-                            {% if cert.expiry_date %}
-                            | Expira em: {{ cert.expiry_date.strftime('%B %Y') }}
-                            {% endif %}
-                        </p>
-                        {% if cert.credential_id %}
-                        <p class="cert-id">ID da Credencial: {{ cert.credential_id }}</p>
-                        {% endif %}
+                        <div class="cert-info-line">
+                            <span class="cert-issuer">{{ cert.issuer }}</span>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -271,40 +295,6 @@
         </section>
         <hr class="divider">
         {% endif %}
-
-        <!-- Languages -->
-        <section class="section">
-            <h2 class="section-title">Idiomas</h2>
-            <div class="section-content">
-                <div class="languages-grid">
-                    <div class="language-item">
-                        <span class="language-name">🇧🇷 Português</span>
-                        <span class="language-level">Nativo</span>
-                    </div>
-                    <div class="language-item">
-                        <span class="language-name">🇺🇸 Inglês</span>
-                        <span class="language-level">Fluente</span>
-                    </div>
-                    <div class="language-item">
-                        <span class="language-name">🇫🇷 Francês</span>
-                        <span class="language-level">Fluente</span>
-                    </div>
-                    <div class="language-item">
-                        <span class="language-name">🇪🇸 Espanhol</span>
-                        <span class="language-level">Avançado</span>
-                    </div>
-                    <div class="language-item">
-                        <span class="language-name">🇯🇵 Japonês</span>
-                        <span class="language-level">Intermediário</span>
-                    </div>
-                    <div class="language-item">
-                        <span class="language-name">🇩🇪 Alemão</span>
-                        <span class="language-level">Intermediário</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
 
     </div>
 </body>

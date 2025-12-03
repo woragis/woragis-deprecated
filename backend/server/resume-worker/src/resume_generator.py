@@ -139,7 +139,7 @@ class ResumeGenerator:
         logger.info(f"Found {len(certifications)} relevant certifications")
         
         # Fetch publications (posts)
-        publications = self.db.get_user_publications(user_id, limit=5)
+        publications = self.db.get_user_publications(user_id, limit=4)
         logger.info(f"Found {len(publications)} publications")
         
         # Format publication dates for template
@@ -284,6 +284,12 @@ class ResumeGenerator:
         else:
             projects_to_show = []
         
+        # Limit certifications to 6
+        certifications_to_show = certifications[:6] if certifications else []
+        
+        # Limit publications to 4
+        publications_to_show = publications[:4] if publications else []
+        
         context = {
             'name': display_name,
             'email': user_info.get('email', ''),
@@ -296,11 +302,11 @@ class ResumeGenerator:
             'skills': skills,
             'hard_skills': hard_skills_parsed,
             'projects': projects_to_show,
-            'certifications': certifications if certifications else [],
+            'certifications': certifications_to_show,
             'education': education,
             'work_experience': work_experience,
             'volunteer_work': volunteer_work,
-            'publications': publications if publications else [],
+            'publications': publications_to_show,
             'job_title': job_title
         }
         
