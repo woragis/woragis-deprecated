@@ -379,7 +379,6 @@ func (s *Service) loginWithOAuth(ctx context.Context, provider OAuthProvider, us
 	}
 
 	var user *User
-	isNewAccount := false
 
 	if account != nil {
 		user, err = s.repo.FindByID(ctx, account.UserID)
@@ -394,7 +393,6 @@ func (s *Service) loginWithOAuth(ctx context.Context, provider OAuthProvider, us
 				if err != nil {
 					return nil, err
 				}
-				isNewAccount = true
 			} else {
 				return nil, err
 			}
@@ -424,10 +422,6 @@ func (s *Service) loginWithOAuth(ctx context.Context, provider OAuthProvider, us
 		return nil, err
 	}
 	_ = s.recordAudit(ctx, &user.ID, AuditActionOAuthLinked, map[string]any{"provider": provider}, ip, userAgent)
-
-	if isNewAccount && s.monitor != nil {
-		s.monitor.RecordUserRegistration(ctx, user.ID)
-	}
 
 	if deviceName == "" {
 		deviceName = fmt.Sprintf("%s OAuth", strings.ToUpper(string(provider)))
