@@ -43,10 +43,12 @@
 					<h3 class="text-2xl font-bold text-white">Featured Posts</h3>
 				</div>
 				<div class="grid md:grid-cols-3 gap-6">
-					{#each featuredPosts as post}
+					{#each featuredPosts as post, index}
+						{@const animationDelay = index * 0.1}
 						<a
 							href={getPostUrl(post)}
-							class="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+							class="group bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.02] relative animate-fadeInUp"
+							style="animation-delay: {animationDelay}s"
 						>
 							{#if post.featuredImage}
 								<div class="relative h-48 overflow-hidden">
@@ -63,7 +65,7 @@
 									</div>
 								</div>
 							{/if}
-							<div class="p-6">
+							<div class="p-6 relative z-10">
 								<h4
 									class="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors line-clamp-2"
 								>
@@ -88,7 +90,7 @@
 									<div class="flex flex-wrap gap-2 mb-3">
 										{#each post.categories.slice(0, 2) as category}
 											<span
-												class="px-2 py-1 bg-blue-600/20 text-blue-300 text-xs rounded border border-blue-600/30 flex items-center gap-1"
+												class="px-2 py-1 bg-blue-600/20 text-blue-300 text-xs rounded-lg border border-blue-600/30 flex items-center gap-1"
 											>
 												<FolderOpen class="w-3 h-3" />
 												{category.name}
@@ -111,46 +113,52 @@
 		<div>
 			<h3 class="text-2xl font-bold text-white mb-6">Latest Posts</h3>
 			<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{#each latestPosts.slice(0, 6) as post}
+				{#each latestPosts.slice(0, 6) as post, index}
+					{@const animationDelay = index * 0.1}
 					<a
 						href={getPostUrl(post)}
-						class="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+						class="group bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.02] relative overflow-hidden animate-fadeInUp"
+						style="animation-delay: {animationDelay}s"
 					>
-						<h4
-							class="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors line-clamp-2"
-						>
-							{post.title}
-						</h4>
-						{#if post.excerpt}
-							<p class="text-gray-300 text-sm mb-4 line-clamp-2">{post.excerpt}</p>
-						{/if}
-						<div class="flex items-center gap-4 text-xs text-gray-400 mb-4">
-							{#if post.publishedAt}
+						<!-- Decorative gradient overlay -->
+						<div class="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300 pointer-events-none"></div>
+						<div class="relative z-10">
+							<h4
+								class="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors line-clamp-2"
+							>
+								{post.title}
+							</h4>
+							{#if post.excerpt}
+								<p class="text-gray-300 text-sm mb-4 line-clamp-2">{post.excerpt}</p>
+							{/if}
+							<div class="flex items-center gap-4 text-xs text-gray-400 mb-4">
+								{#if post.publishedAt}
+									<div class="flex items-center gap-1">
+										<Calendar class="w-3 h-3" />
+										<span>{formatDate(post.publishedAt)}</span>
+									</div>
+								{/if}
 								<div class="flex items-center gap-1">
-									<Calendar class="w-3 h-3" />
-									<span>{formatDate(post.publishedAt)}</span>
+									<Clock class="w-3 h-3" />
+									<span>{calculateReadingTime(post.content)} min read</span>
+								</div>
+							</div>
+							{#if post.tags && post.tags.length > 0}
+								<div class="flex flex-wrap gap-2 mb-3">
+									{#each post.tags.slice(0, 3) as tag}
+										<span
+											class="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded-lg border border-purple-600/30 flex items-center gap-1"
+										>
+											<TagIcon class="w-3 h-3" />
+											{tag.name}
+										</span>
+									{/each}
 								</div>
 							{/if}
-							<div class="flex items-center gap-1">
-								<Clock class="w-3 h-3" />
-								<span>{calculateReadingTime(post.content)} min read</span>
+							<div class="flex items-center gap-2 text-blue-400 text-sm font-medium group-hover:gap-3 transition-all">
+								<span>Read More</span>
+								<ExternalLink class="w-4 h-4" />
 							</div>
-						</div>
-						{#if post.tags && post.tags.length > 0}
-							<div class="flex flex-wrap gap-2 mb-3">
-								{#each post.tags.slice(0, 3) as tag}
-									<span
-										class="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded border border-purple-600/30 flex items-center gap-1"
-									>
-										<TagIcon class="w-3 h-3" />
-										{tag.name}
-									</span>
-								{/each}
-							</div>
-						{/if}
-						<div class="flex items-center gap-2 text-blue-400 text-sm font-medium group-hover:gap-3 transition-all">
-							<span>Read More</span>
-							<ExternalLink class="w-4 h-4" />
 						</div>
 					</a>
 				{/each}
@@ -158,4 +166,22 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	@keyframes fadeInUp {
+		from {
+			opacity: 0;
+			transform: translateY(30px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	:global(.animate-fadeInUp) {
+		animation: fadeInUp 0.6s ease-out;
+		animation-fill-mode: both;
+	}
+</style>
 

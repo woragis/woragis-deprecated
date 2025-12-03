@@ -130,7 +130,7 @@
 		<div class="space-y-8">
 			{#each groupedWritings as [type, items]}
 				{@const TypeIcon = getTypeIcon(type as WritingType)}
-				<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+				<div class="bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700 shadow-xl hover:border-blue-500/50 transition-all duration-300">
 					<!-- Type Header -->
 					<div class="flex items-center gap-3 mb-6">
 						<div
@@ -151,8 +151,11 @@
 								href={writing.url}
 								target="_blank"
 								rel="noopener noreferrer"
-								class="group bg-gray-800/50 rounded-lg p-5 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 flex flex-col"
+								class="group bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50 rounded-2xl p-5 border border-gray-700 hover:border-blue-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.02] flex flex-col relative overflow-hidden"
 							>
+								<!-- Decorative gradient overlay -->
+								<div class="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-blue-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300 pointer-events-none"></div>
+								<div class="relative z-10">
 								<!-- Cover Image or Icon -->
 								{#if writing.coverImageUrl}
 									<img
@@ -241,20 +244,21 @@
 									<div class="mt-4 pt-4 border-t border-gray-700">
 										<div class="flex flex-wrap gap-2">
 											{#each writing.topics.slice(0, 3) as topic}
-												<span
-													class="px-2 py-1 text-xs rounded bg-blue-600/20 text-blue-300 border border-blue-500/30"
-												>
-													{topic}
-												</span>
+											<span
+												class="px-2 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30"
+											>
+												{topic}
+											</span>
 											{/each}
 										</div>
 									</div>
 								{/if}
 
-								<!-- External Link Indicator -->
-								<div class="mt-4 pt-4 border-t border-gray-700 flex items-center justify-between">
-									<span class="text-xs text-gray-400">Read article</span>
-									<ExternalLink class="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors" />
+									<!-- External Link Indicator -->
+									<div class="mt-4 pt-4 border-t border-gray-700 flex items-center justify-between">
+										<span class="text-xs text-gray-400">Read article</span>
+										<ExternalLink class="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors" />
+									</div>
 								</div>
 							</a>
 						{/each}
