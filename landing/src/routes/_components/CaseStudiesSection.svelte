@@ -48,8 +48,11 @@
 					{#each featuredCaseStudies as caseStudy}
 						<a
 							href={getCaseStudyUrl(caseStudy)}
-							class="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
+							class="group bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700 hover:border-purple-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-[1.02] relative"
 						>
+							<!-- Decorative gradient overlay -->
+							<div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-pink-500/0 to-orange-500/0 group-hover:from-purple-500/5 group-hover:via-pink-500/5 group-hover:to-orange-500/5 transition-all duration-300 pointer-events-none"></div>
+							<div class="relative z-10">
 							<div class="p-6">
 								<div class="flex items-start justify-between mb-3">
 									<div
@@ -86,7 +89,7 @@
 									<div class="flex flex-wrap gap-2 mb-3">
 										{#each caseStudy.technologies.slice(0, 3) as tech}
 											<span
-												class="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded border border-purple-600/30"
+												class="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded-lg border border-purple-600/30"
 											>
 												{tech}
 											</span>
@@ -109,6 +112,7 @@
 									{/if}
 								</div>
 							</div>
+						</div>
 						</a>
 					{/each}
 				</div>
@@ -121,10 +125,13 @@
 				<h3 class="text-2xl font-bold text-white mb-6">Latest Case Studies</h3>
 				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{#each latestCaseStudies.slice(0, 6) as caseStudy}
-						<a
-							href={getCaseStudyUrl(caseStudy)}
-							class="group bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
-						>
+					<a
+						href={getCaseStudyUrl(caseStudy)}
+						class="group bg-gradient-to-br from-gray-800/50 via-gray-800/30 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700 hover:border-purple-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-[1.02] relative overflow-hidden"
+					>
+						<!-- Decorative gradient overlay -->
+						<div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-pink-500/0 to-orange-500/0 group-hover:from-purple-500/5 group-hover:via-pink-500/5 group-hover:to-orange-500/5 transition-all duration-300 pointer-events-none"></div>
+						<div class="relative z-10">
 							<div class="flex items-start gap-3 mb-3">
 								<div
 									class="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0"
