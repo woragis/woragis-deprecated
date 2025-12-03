@@ -34,7 +34,7 @@
 			>
 				{t('contact.title')}
 			</div>
-			<h2 class="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+			<h2 class="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
 				{t('contact.title')}
 			</h2>
 			<p class="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
