@@ -31,6 +31,7 @@ import (
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	casestudiesdomain "github.com/woragis/backend/server/app/internal/domains/casestudies"
 	certificationsdomain "github.com/woragis/backend/server/app/internal/domains/certifications"
+	experiencesdomain "github.com/woragis/backend/server/app/internal/domains/experiences"
 	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
 	clientsdomain "github.com/woragis/backend/server/app/internal/domains/clients"
 	financesdomain "github.com/woragis/backend/server/app/internal/domains/finances"
@@ -54,7 +55,6 @@ import (
 	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	jobapplicationsdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications"
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
-	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
@@ -80,7 +80,6 @@ func main() {
 
 	emailCfg, _ := appconfig.LoadEmailConfig()
 	whatsappCfg := appconfig.LoadWhatsAppConfig()
-	monitoringCfg := appconfig.LoadMonitoringConfig()
 	aiCfg := appconfig.LoadAIConfig()
 	redisCfg := appconfig.LoadRedisConfig()
 	corsCfg := appconfig.LoadCORSConfig()
@@ -134,64 +133,12 @@ func main() {
 	app.Use(recover.New())
 	app.Use(fiberlogger.New())
 
-	var monitoringRepo monitoring.Repository
-	if monitoringCfg.Enabled && cfg.Env == "production" && monitoringCfg.DBURL != "" {
-		if monitorDB, err := connectAuxDatabase(monitoringCfg.DBURL, slogLogger); err != nil {
-			slogLogger.Warn("monitoring database disabled", slog.Any("error", err))
-		} else {
-			if err := monitorDB.AutoMigrate(&monitoring.Event{}); err != nil {
-				slogLogger.Warn("monitoring migration failed", slog.Any("error", err))
-			} else {
-				monitoringRepo = monitoring.NewGormRepository(monitorDB)
-			}
-		}
-	}
-
-	monitoringService := monitoring.NewService(monitoringCfg, monitoringRepo, slogLogger)
-	app.Use(monitoringService.MetricsMiddleware())
-	app.Get("/metrics", adaptor.HTTPHandler(monitoringService.MetricsHandler()))
-
-	app.Use("/metrics/stream", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
-
 	app.Use("/api/chats/conversations/:id/stream", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
 			return c.Next()
 		}
 		return fiber.ErrUpgradeRequired
 	})
-
-	app.Get("/metrics/stream", websocket.New(func(conn *websocket.Conn) {
-		defer conn.Close()
-
-		sendSnapshot := func() error {
-			snapshot, err := monitoringService.MetricsSnapshot()
-			if err != nil {
-				if conn.WriteMessage(websocket.TextMessage, []byte("# error: "+err.Error())) != nil {
-					return err
-				}
-				return err
-			}
-			return conn.WriteMessage(websocket.TextMessage, []byte(snapshot))
-		}
-
-		if err := sendSnapshot(); err != nil {
-			return
-		}
-
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			if err := sendSnapshot(); err != nil {
-				return
-			}
-		}
-	}))
 
 	api := app.Group("/api")
 
@@ -239,7 +186,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	authService := authdomain.NewService(authRepo, emailSender, tokenStore, monitoringService, cfg.PublicURL, jwtManager, slogLogger)
+	authService := authdomain.NewService(authRepo, emailSender, tokenStore, cfg.PublicURL, jwtManager, slogLogger)
 	if len(oauthCfg.Providers) > 0 {
 		providerSettings := make(map[authdomain.OAuthProvider]authdomain.OAuthProviderSettings)
 		for key, providerCfg := range oauthCfg.Providers {
@@ -399,6 +346,18 @@ func main() {
 	))
 	testimonialsdomain.SetupRoutes(testimonialsGroup, testimonialHandler)
 
+	// Experiences: GET endpoints support API keys, POST/PATCH/DELETE require JWT
+	experienceRepo := experiencesdomain.NewGormRepository(db)
+	experienceService := experiencesdomain.NewService(experienceRepo, slogLogger)
+	experienceHandler := experiencesdomain.NewHandler(experienceService, slogLogger)
+	experiencesGroup := api.Group("/experiences")
+	experiencesGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
+		slogLogger,
+	))
+	experiencesdomain.SetupRoutes(experiencesGroup, experienceHandler)
+
 	// Translations: POST endpoints require JWT, GET endpoints support API keys
 	translationHandler := translationsdomain.NewHandler(translationService, db, slogLogger)
 	translationsGroup := api.Group("/translations")
@@ -512,10 +471,6 @@ func main() {
 	adminAPI.Use(authdomain.RequireAdminMiddleware(authRepo, slogLogger))
 	authdomain.SetupAdminRoutes(adminAPI, authHandler)
 
-	if monitoringRepo != nil {
-		monitoringHandler := monitoring.NewHandler(monitoringService)
-		monitoring.SetupRoutes(api, monitoringHandler)
-	}
 
 	financeRepo := financesdomain.NewGormRepository(db)
 	financeService := financesdomain.NewService(financeRepo, slogLogger)
@@ -751,6 +706,10 @@ func migrate(db *gorm.DB) error {
 		&postcommentsdomain.Comment{},
 		&testimonialsdomain.Testimonial{},
 		&testimonialsdomain.TestimonialEntityLink{},
+		&experiencesdomain.Experience{},
+		&experiencesdomain.ExperienceTechnology{},
+		&experiencesdomain.ExperienceProject{},
+		&experiencesdomain.ExperienceAchievement{},
 		&casestudiesdomain.CaseStudy{},
 		&projectcasestudiesdomain.ProjectCaseStudy{},
 		&systemdesignsdomain.SystemDesign{},

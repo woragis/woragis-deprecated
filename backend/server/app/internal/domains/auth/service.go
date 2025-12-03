@@ -15,7 +15,6 @@ import (
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/woragis/backend/server/app/internal/monitoring"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	emailtemplates "github.com/woragis/backend/server/app/internal/services/email/templates"
 )
@@ -35,7 +34,6 @@ type Service struct {
 	repo             Repository
 	emailSender      emailservice.Sender
 	tokenStore       TokenStore
-	monitor          monitoring.Tracker
 	logger           *slog.Logger
 	publicURL        string
 	passwordResetTTL time.Duration
@@ -55,7 +53,6 @@ func NewService(
 	repo Repository,
 	emailSender emailservice.Sender,
 	tokenStore TokenStore,
-	monitor monitoring.Tracker,
 	publicURL string,
 	jwtManager *JWTManager,
 	logger *slog.Logger,
@@ -68,7 +65,6 @@ func NewService(
 		repo:             repo,
 		emailSender:      emailSender,
 		tokenStore:       tokenStore,
-		monitor:          monitor,
 		logger:           logger,
 		publicURL:        strings.TrimRight(publicURL, "/"),
 		passwordResetTTL: defaultPasswordResetTTL,
@@ -243,9 +239,6 @@ func (s *Service) RegisterUser(ctx context.Context, req RegisterRequest) (*User,
 		return nil, err
 	}
 
-	if s.monitor != nil {
-		s.monitor.RecordUserRegistration(ctx, user.ID)
-	}
 	_ = s.recordAudit(ctx, &user.ID, AuditActionUserRegistered, nil, "", "")
 
 	if err := s.dispatchConfirmationEmail(ctx, user); err != nil && s.logger != nil {
