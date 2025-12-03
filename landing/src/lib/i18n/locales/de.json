@@ -8,6 +8,16 @@
 		"contact": "Kontakt",
 		"learnMore": "Mehr erfahren"
 	},
+	"aboutMe": {
+		"badge": "Backend-Entwickler",
+		"title": "Hallo, ich bin Jezreel",
+		"description1": "Ich bin ein Backend-Entwickler, der leidenschaftlich skalierbare und leistungsstarke Systeme entwickelt. Meine Reise in der Technologie hat mich dazu gebracht, mich auf Go, Microservices-Architektur und Cloud-Infrastruktur zu spezialisieren.",
+		"description2": "Ich arbeite mit Containerisierung mit Docker und Orchestrierung mit Kubernetes und suche immer nach Best Practices, um moderne, cloud-native Anwendungen zu erstellen.",
+		"description3": "Ich glaube, dass sauberer Code, durchdachte Architektur und robuste Infrastruktur die Grundlage für Systeme sind, die wirklich einen Unterschied machen.",
+		"photoAlt": "Profilfoto von Jezreel",
+		"viewProjects": "Projekte anzeigen",
+		"contactMe": "Kontaktieren Sie mich"
+	},
 	"hero": {
 		"badge": "Backend-Entwickler",
 		"title": "Hallo, ich bin ein Entwickler",
@@ -59,6 +69,21 @@
 		"subtitle": "Testimonials von Kollegen, Kunden und Mentoren, die mit mir gearbeitet haben",
 		"noTestimonials": "Keine Testimonials verfügbar",
 		"checkBack": "Schauen Sie später vorbei"
+	},
+	"experience": {
+		"title": "Berufserfahrung",
+		"subtitle": "Mein beruflicher Werdegang und Erfolge im Laufe der Jahre",
+		"fullTime": "Vollzeit",
+		"freelance": "Freiberuflich",
+		"contract": "Vertrag",
+		"internship": "Praktikum"
+	},
+	"volunteerWork": {
+		"title": "Freiwilligenarbeit",
+		"subtitle": "Freiwillige Beiträge und sozialer Impact durch Technologie",
+		"volunteer": "Freiwillig",
+		"projects": "Verwandte Projekte",
+		"achievements": "Erfolge und Impact"
 	},
 	"interests": {
 		"title": "Interessensgebiete und Expertise"

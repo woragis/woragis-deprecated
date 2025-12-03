@@ -8,6 +8,16 @@
 		"contact": "Contato",
 		"learnMore": "Saiba Mais"
 	},
+	"aboutMe": {
+		"badge": "Desenvolvedor Backend",
+		"title": "Olá, eu sou Jezreel",
+		"description1": "Sou um desenvolvedor backend apaixonado por construir sistemas escaláveis e de alta performance. Minha jornada na tecnologia me levou a especializar-me em Go, arquitetura de microsserviços e infraestrutura em nuvem.",
+		"description2": "Trabalho com containerização usando Docker e orquestração com Kubernetes, sempre buscando as melhores práticas para criar aplicações modernas e nativas da nuvem.",
+		"description3": "Acredito que código limpo, arquitetura bem pensada e infraestrutura robusta são a base para sistemas que realmente fazem a diferença.",
+		"photoAlt": "Foto de perfil de Jezreel",
+		"viewProjects": "Ver Projetos",
+		"contactMe": "Entre em Contato"
+	},
 	"hero": {
 		"badge": "Desenvolvedor Backend",
 		"title": "Olá, eu sou um Desenvolvedor",
@@ -59,6 +69,23 @@
 		"subtitle": "Depoimentos de colegas, clientes e mentores que trabalharam comigo",
 		"noTestimonials": "Nenhum depoimento disponível",
 		"checkBack": "Volte mais tarde"
+	},
+	"experience": {
+		"title": "Experiência Profissional",
+		"subtitle": "Minha jornada profissional e conquistas ao longo dos anos",
+		"fullTime": "Tempo Integral",
+		"freelance": "Freelancer",
+		"contract": "Contrato",
+		"internship": "Estágio",
+		"projects": "Projetos Relacionados",
+		"achievements": "Conquistas e Resultados"
+	},
+	"volunteerWork": {
+		"title": "Trabalho Voluntário",
+		"subtitle": "Contribuições voluntárias e impacto social através da tecnologia",
+		"volunteer": "Voluntário",
+		"projects": "Projetos Relacionados",
+		"achievements": "Conquistas e Impacto"
 	},
 	"interests": {
 		"title": "Áreas de Interesse e Expertise"

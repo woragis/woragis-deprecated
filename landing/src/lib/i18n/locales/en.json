@@ -8,6 +8,16 @@
 		"contact": "Contact",
 		"learnMore": "Learn More"
 	},
+	"aboutMe": {
+		"badge": "Backend Developer",
+		"title": "Hello, I'm Jezreel",
+		"description1": "I'm a backend developer passionate about building scalable and high-performance systems. My journey in technology has led me to specialize in Go, microservices architecture, and cloud infrastructure.",
+		"description2": "I work with containerization using Docker and orchestration with Kubernetes, always seeking best practices to create modern, cloud-native applications.",
+		"description3": "I believe that clean code, well-thought architecture, and robust infrastructure are the foundation for systems that truly make a difference.",
+		"photoAlt": "Jezreel's profile photo",
+		"viewProjects": "View Projects",
+		"contactMe": "Contact Me"
+	},
 	"hero": {
 		"badge": "Backend Developer",
 		"title": "Hello, I'm a Developer",
@@ -189,6 +199,23 @@
 			"usage": "Usage",
 			"problemsSolvedCount": "Problems Solved ({count}):"
 		}
+	},
+	"experience": {
+		"title": "Professional Experience",
+		"subtitle": "My professional journey and achievements over the years",
+		"fullTime": "Full Time",
+		"freelance": "Freelance",
+		"contract": "Contract",
+		"internship": "Internship",
+		"projects": "Related Projects",
+		"achievements": "Achievements & Results"
+	},
+	"volunteerWork": {
+		"title": "Volunteer Work",
+		"subtitle": "Voluntary contributions and social impact through technology",
+		"volunteer": "Volunteer",
+		"projects": "Related Projects",
+		"achievements": "Achievements & Impact"
 	},
 	"interests": {
 		"title": "Areas of Interest & Expertise"
