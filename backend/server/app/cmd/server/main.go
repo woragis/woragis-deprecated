@@ -45,6 +45,7 @@ import (
 	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
 	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
 	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
+	resumesdomain "github.com/woragis/backend/server/app/internal/domains/resumes"
 	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
 	interestsdomain "github.com/woragis/backend/server/app/internal/domains/interests"
@@ -565,6 +566,22 @@ func main() {
 	jobWebsitesGroup := protectedAPI.Group("/job-websites")
 	jobwebsitesdomain.SetupRoutes(jobWebsitesGroup, websiteHandler)
 
+	// Resumes: requires JWT for all operations (except public endpoints)
+	resumeRepo := resumesdomain.NewGormRepository(db)
+	resumeService := resumesdomain.NewService(resumeRepo, slogLogger)
+	// Base file path for resume files (from resume-worker output directory)
+	resumeBasePath := os.Getenv("RESUME_OUTPUT_DIR")
+	if resumeBasePath == "" {
+		resumeBasePath = "/app/output" // Default path in Docker container
+	}
+	resumeHandler := resumesdomain.NewHandler(resumeService, resumeBasePath, slogLogger)
+	resumesGroup := protectedAPI.Group("/resumes")
+	resumesdomain.SetupRoutes(resumesGroup, resumeHandler)
+
+	// Public resume endpoints (no auth required)
+	publicAPI := api.Group("/public")
+	resumesdomain.SetupPublicRoutes(publicAPI, resumeHandler)
+
 	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)
 	go schedulerRunner.Start(workerCtx)
 
@@ -720,6 +737,7 @@ func migrate(db *gorm.DB) error {
 		&aimlintegrationsdomain.AIMLIntegration{},
 		&technicalwritingsdomain.TechnicalWriting{},
 		&translationsdomain.Translation{},
+		&resumesdomain.Resume{},
 	)
 }
 

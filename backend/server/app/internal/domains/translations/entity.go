@@ -26,6 +26,7 @@ const (
 	EntityTypeTechnicalWriting EntityType = "technical_writing"
 	EntityTypeInterest         EntityType = "interest"
 	EntityTypeSkill            EntityType = "skill"
+	EntityTypeResume           EntityType = "resume"
 )
 
 // Language represents supported languages.
@@ -134,7 +135,7 @@ func (t *Translation) Validate() error {
 
 func isValidEntityType(et EntityType) bool {
 	switch et {
-	case EntityTypeTestimonial, EntityTypePost, EntityTypeProject, EntityTypeCaseStudy, EntityTypeProjectCaseStudy, EntityTypeSystemDesign, EntityTypeProblemSolution, EntityTypeCertification, EntityTypeAIMLIntegration, EntityTypeImpactMetric, EntityTypeSocialMediaPost, EntityTypeTechnicalWriting, EntityTypeInterest, EntityTypeSkill:
+	case EntityTypeTestimonial, EntityTypePost, EntityTypeProject, EntityTypeCaseStudy, EntityTypeProjectCaseStudy, EntityTypeSystemDesign, EntityTypeProblemSolution, EntityTypeCertification, EntityTypeAIMLIntegration, EntityTypeImpactMetric, EntityTypeSocialMediaPost, EntityTypeTechnicalWriting, EntityTypeInterest, EntityTypeSkill, EntityTypeResume:
 		return true
 	}
 	return false
