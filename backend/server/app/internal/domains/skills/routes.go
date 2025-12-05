@@ -17,6 +17,7 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Get("/:id", handler.GetSkill)
 	api.Get("/slug/:slug", handler.GetSkillBySlug)
 	api.Patch("/:id", handler.UpdateSkill)
+	api.Delete("/:id", handler.DeleteSkill)
 
 	// Project-Skill relationship operations
 	// These will be nested under projects in the projects routes

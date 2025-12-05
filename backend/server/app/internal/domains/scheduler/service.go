@@ -177,6 +177,11 @@ func (s *Service) Update(ctx context.Context, req UpdateRequest) (*Schedule, err
 	return schedule, nil
 }
 
+// Delete removes a schedule and its execution runs.
+func (s *Service) Delete(ctx context.Context, scheduleID, userID uuid.UUID) error {
+	return s.repo.Delete(ctx, scheduleID, userID)
+}
+
 // List returns schedules for the user.
 func (s *Service) List(ctx context.Context, userID uuid.UUID) ([]Schedule, error) {
 	return s.repo.List(ctx, userID)

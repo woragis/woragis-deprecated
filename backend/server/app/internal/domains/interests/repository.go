@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	CreateInterest(ctx context.Context, interest *Interest) error
 	UpdateInterest(ctx context.Context, interest *Interest) error
+	DeleteInterest(ctx context.Context, interestID uuid.UUID) error
 	GetInterest(ctx context.Context, interestID uuid.UUID) (*Interest, error)
 	GetInterestBySlug(ctx context.Context, slug string) (*Interest, error)
 	GetInterestByTitle(ctx context.Context, title string) (*Interest, error)
@@ -54,6 +55,18 @@ func (r *gormRepository) UpdateInterest(ctx context.Context, interest *Interest)
 			return NewDomainError(ErrCodeConflict, ErrInterestAlreadyExists)
 		}
 		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) DeleteInterest(ctx context.Context, interestID uuid.UUID) error {
+	// Verify interest exists
+	if _, err := r.GetInterest(ctx, interestID); err != nil {
+		return err
+	}
+
+	if err := r.db.WithContext(ctx).Where("id = ?", interestID).Delete(&Interest{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToDelete)
 	}
 	return nil
 }

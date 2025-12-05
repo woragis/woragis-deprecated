@@ -24,6 +24,7 @@ type Handler interface {
 	SearchProjectsBySlug(c *fiber.Ctx) error
 	UpdateStatus(c *fiber.Ctx) error
 	UpdateMetrics(c *fiber.Ctx) error
+	DeleteProject(c *fiber.Ctx) error
 	AddMilestone(c *fiber.Ctx) error
 	ToggleMilestoneCompletion(c *fiber.Ctx) error
 	ListMilestones(c *fiber.Ctx) error
@@ -552,6 +553,24 @@ func (h *handler) UpdateMetrics(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, toProjectResponse(project))
+}
+
+func (h *handler) DeleteProject(c *fiber.Ctx) error {
+	projectID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	if err := h.service.DeleteProject(c.Context(), projectID, userID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, map[string]string{"message": "Project deleted successfully"})
 }
 
 func (h *handler) AddMilestone(c *fiber.Ctx) error {

@@ -11,6 +11,7 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Get("/slug", handler.SearchProjectsBySlug)
 	api.Patch("/:id/status", handler.UpdateStatus)
 	api.Patch("/:id/metrics", handler.UpdateMetrics)
+	api.Delete("/:id", handler.DeleteProject)
 
 	api.Post("/:id/milestones", handler.AddMilestone)
 	api.Get("/:id/milestones", handler.ListMilestones)

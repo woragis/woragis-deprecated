@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, schedule *Schedule) error
 	Update(ctx context.Context, schedule *Schedule) error
+	Delete(ctx context.Context, id, userID uuid.UUID) error
 	Get(ctx context.Context, id, userID uuid.UUID) (*Schedule, error)
 	List(ctx context.Context, userID uuid.UUID) ([]Schedule, error)
 	ListDue(ctx context.Context, now time.Time) ([]Schedule, error)
@@ -58,6 +59,25 @@ func (r *gormRepository) Update(ctx context.Context, schedule *Schedule) error {
 
 	if err := r.db.WithContext(ctx).Save(schedule).Error; err != nil {
 		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+
+	return nil
+}
+
+func (r *gormRepository) Delete(ctx context.Context, id, userID uuid.UUID) error {
+	// Verify schedule exists and belongs to user
+	if _, err := r.Get(ctx, id, userID); err != nil {
+		return err
+	}
+
+	// Delete execution runs first
+	if err := r.db.WithContext(ctx).Where("schedule_id = ?", id).Delete(&ExecutionRun{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToDelete)
+	}
+
+	// Delete the schedule
+	if err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&Schedule{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToDelete)
 	}
 
 	return nil

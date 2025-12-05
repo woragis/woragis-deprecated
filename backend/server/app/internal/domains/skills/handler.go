@@ -17,6 +17,7 @@ import (
 type Handler interface {
 	CreateSkill(c *fiber.Ctx) error
 	UpdateSkill(c *fiber.Ctx) error
+	DeleteSkill(c *fiber.Ctx) error
 	GetSkill(c *fiber.Ctx) error
 	GetSkillBySlug(c *fiber.Ctx) error
 	ListSkills(c *fiber.Ctx) error
@@ -177,6 +178,29 @@ func (h *handler) UpdateSkill(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, toSkillResponse(skill))
+}
+
+func (h *handler) DeleteSkill(c *fiber.Ctx) error {
+	skillIDStr := c.Params("id")
+	if skillIDStr == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	skillID, err := uuid.Parse(skillIDStr)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID := authdomain.UserIDFromContext(c)
+	if userID == uuid.Nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, nil)
+	}
+
+	if err := h.service.DeleteSkill(c.Context(), skillID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, map[string]string{"message": "Skill deleted successfully"})
 }
 
 func (h *handler) GetSkill(c *fiber.Ctx) error {

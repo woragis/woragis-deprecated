@@ -16,6 +16,7 @@ type Service interface {
 	CreateProject(ctx context.Context, req CreateProjectRequest) (*Project, error)
 	UpdateProjectStatus(ctx context.Context, req UpdateStatusRequest) (*Project, error)
 	UpdateProjectMetrics(ctx context.Context, req UpdateMetricsRequest) (*Project, error)
+	DeleteProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) error
 	ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error)
 	GetProjectBySlug(ctx context.Context, userID uuid.UUID, slug string) (*Project, error)
 	SearchProjectsBySlug(ctx context.Context, userID uuid.UUID, slug string) ([]Project, error)
@@ -463,6 +464,15 @@ func (s *service) UpdateProjectMetrics(ctx context.Context, req UpdateMetricsReq
 	}
 
 	return project, nil
+}
+
+func (s *service) DeleteProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) error {
+	// Verify project exists and belongs to user
+	if _, err := s.repo.GetProject(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteProject(ctx, projectID, userID)
 }
 
 func (s *service) ListProjects(ctx context.Context, userID uuid.UUID) ([]Project, error) {

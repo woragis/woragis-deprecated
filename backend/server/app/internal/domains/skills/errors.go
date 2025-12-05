@@ -24,6 +24,7 @@ const (
 	ErrUnableToPersist       = "skills: unable to persist data"
 	ErrUnableToFetch         = "skills: unable to fetch data"
 	ErrUnableToUpdate        = "skills: unable to update data"
+	ErrUnableToDelete        = "skills: unable to delete data"
 )
 
 type DomainError struct {

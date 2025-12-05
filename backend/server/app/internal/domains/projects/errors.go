@@ -35,6 +35,7 @@ const (
 	ErrUnableToPersist           = "projects: unable to persist data"
 	ErrUnableToFetch             = "projects: unable to fetch data"
 	ErrUnableToUpdate            = "projects: unable to update data"
+	ErrUnableToDelete            = "projects: unable to delete data"
 	ErrNilKanbanColumn           = "projects: kanban column entity is nil"
 	ErrEmptyKanbanColumnID       = "projects: kanban column id cannot be empty"
 	ErrKanbanColumnNotFound      = "projects: kanban column not found"

@@ -11,6 +11,7 @@ import (
 type Service interface {
 	CreateInterest(ctx context.Context, req CreateInterestRequest) (*Interest, error)
 	UpdateInterest(ctx context.Context, req UpdateInterestRequest) (*Interest, error)
+	DeleteInterest(ctx context.Context, interestID uuid.UUID) error
 	GetInterest(ctx context.Context, interestID uuid.UUID) (*Interest, error)
 	GetInterestBySlug(ctx context.Context, slug string) (*Interest, error)
 	ListInterests(ctx context.Context) ([]Interest, error)
@@ -106,6 +107,15 @@ func (s *service) UpdateInterest(ctx context.Context, req UpdateInterestRequest)
 	}
 
 	return interest, nil
+}
+
+func (s *service) DeleteInterest(ctx context.Context, interestID uuid.UUID) error {
+	// Verify interest exists
+	if _, err := s.repo.GetInterest(ctx, interestID); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteInterest(ctx, interestID)
 }
 
 func (s *service) GetInterest(ctx context.Context, interestID uuid.UUID) (*Interest, error) {

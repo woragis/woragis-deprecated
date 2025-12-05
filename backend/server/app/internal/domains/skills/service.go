@@ -12,6 +12,7 @@ import (
 type Service interface {
 	CreateSkill(ctx context.Context, req CreateSkillRequest) (*Skill, error)
 	UpdateSkill(ctx context.Context, req UpdateSkillRequest) (*Skill, error)
+	DeleteSkill(ctx context.Context, skillID uuid.UUID) error
 	GetSkill(ctx context.Context, skillID uuid.UUID) (*Skill, error)
 	GetSkillBySlug(ctx context.Context, slug string) (*Skill, error)
 	ListSkills(ctx context.Context) ([]Skill, error)
@@ -123,6 +124,15 @@ func (s *service) UpdateSkill(ctx context.Context, req UpdateSkillRequest) (*Ski
 	}
 
 	return skill, nil
+}
+
+func (s *service) DeleteSkill(ctx context.Context, skillID uuid.UUID) error {
+	// Verify skill exists
+	if _, err := s.repo.GetSkill(ctx, skillID); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteSkill(ctx, skillID)
 }
 
 func (s *service) GetSkill(ctx context.Context, skillID uuid.UUID) (*Skill, error) {

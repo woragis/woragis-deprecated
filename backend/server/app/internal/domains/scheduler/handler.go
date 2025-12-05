@@ -176,6 +176,25 @@ func (h *Handler) PatchSchedule(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, toScheduleResponse(schedule))
 }
 
+// DeleteSchedule removes a schedule.
+func (h *Handler) DeleteSchedule(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
+	}
+
+	if err := h.service.Delete(c.Context(), id, userID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{"message": "Schedule deleted successfully"})
+}
+
 // GetSchedules lists schedules for the authenticated user.
 func (h *Handler) GetSchedules(c *fiber.Ctx) error {
 	userID, err := authdomain.UserIDFromContext(c)

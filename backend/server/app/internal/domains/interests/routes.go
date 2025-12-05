@@ -12,5 +12,6 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Get("/:id", handler.GetInterest)
 	api.Get("/slug/:slug", handler.GetInterestBySlug)
 	api.Patch("/:id", handler.UpdateInterest)
+	api.Delete("/:id", handler.DeleteInterest)
 }
 

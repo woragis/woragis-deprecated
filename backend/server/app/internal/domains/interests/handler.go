@@ -16,6 +16,7 @@ import (
 type Handler interface {
 	CreateInterest(c *fiber.Ctx) error
 	UpdateInterest(c *fiber.Ctx) error
+	DeleteInterest(c *fiber.Ctx) error
 	GetInterest(c *fiber.Ctx) error
 	GetInterestBySlug(c *fiber.Ctx) error
 	ListInterests(c *fiber.Ctx) error
@@ -136,6 +137,29 @@ func (h *handler) UpdateInterest(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, toInterestResponse(interest))
+}
+
+func (h *handler) DeleteInterest(c *fiber.Ctx) error {
+	interestIDStr := c.Params("id")
+	if interestIDStr == "" {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	interestID, err := uuid.Parse(interestIDStr)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID := authdomain.UserIDFromContext(c)
+	if userID == uuid.Nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, nil)
+	}
+
+	if err := h.service.DeleteInterest(c.Context(), interestID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, map[string]string{"message": "Interest deleted successfully"})
 }
 
 func (h *handler) GetInterest(c *fiber.Ctx) error {

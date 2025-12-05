@@ -14,6 +14,7 @@ import (
 type Repository interface {
 	CreateSkill(ctx context.Context, skill *Skill) error
 	UpdateSkill(ctx context.Context, skill *Skill) error
+	DeleteSkill(ctx context.Context, skillID uuid.UUID) error
 	GetSkill(ctx context.Context, skillID uuid.UUID) (*Skill, error)
 	GetSkillBySlug(ctx context.Context, slug string) (*Skill, error)
 	GetSkillByName(ctx context.Context, name string) (*Skill, error)
@@ -73,6 +74,19 @@ func (r *gormRepository) UpdateSkill(ctx context.Context, skill *Skill) error {
 			return NewDomainError(ErrCodeConflict, ErrSkillAlreadyExists)
 		}
 		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+	}
+	return nil
+}
+
+func (r *gormRepository) DeleteSkill(ctx context.Context, skillID uuid.UUID) error {
+	// First, delete all project-skill relationships
+	if err := r.db.WithContext(ctx).Where("skill_id = ?", skillID).Delete(&ProjectSkill{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToDelete)
+	}
+
+	// Then delete the skill
+	if err := r.db.WithContext(ctx).Where("id = ?", skillID).Delete(&Skill{}).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToDelete)
 	}
 	return nil
 }

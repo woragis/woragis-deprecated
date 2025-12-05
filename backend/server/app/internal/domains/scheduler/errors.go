@@ -27,6 +27,7 @@ const (
 	ErrUnableToPersist        = "scheduler: unable to persist schedule"
 	ErrUnableToFetch          = "scheduler: unable to fetch schedules"
 	ErrUnableToUpdate         = "scheduler: unable to update schedule"
+	ErrUnableToDelete         = "scheduler: unable to delete schedule"
 )
 
 type DomainError struct {
