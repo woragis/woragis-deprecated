@@ -169,6 +169,37 @@
         <hr class="divider">
         {% endif %}
 
+        <!-- Volunteer Work -->
+        {% if volunteer_work %}
+        <section class="section">
+            <h2 class="section-title">Volunteer Work</h2>
+            <div class="section-content">
+                <div class="volunteer-grid">
+                    {% for volunteer in volunteer_work %}
+                    <div class="volunteer-item">
+                        <div class="volunteer-header">
+                            <h3 class="volunteer-title">{{ volunteer.title }}</h3>
+                            <span class="volunteer-period">{{ volunteer.period }}</span>
+                        </div>
+                        <p class="volunteer-organization">{{ volunteer.organization }}</p>
+                        {% if volunteer.location %}
+                        <p class="volunteer-location">{{ volunteer.location }}</p>
+                        {% endif %}
+                        {% if volunteer.description %}
+                        <ul class="volunteer-description">
+                            {% for desc in volunteer.description %}
+                            <li>{{ desc }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        <hr class="divider">
+        {% endif %}
+
         <!-- Projects -->
         {% if projects %}
         <section class="section">
@@ -227,37 +258,6 @@
                         <div class="cert-info-line">
                             <span class="cert-issuer">{{ cert.issuer }}</span>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </section>
-        <hr class="divider">
-        {% endif %}
-
-        <!-- Volunteer Work -->
-        {% if volunteer_work %}
-        <section class="section">
-            <h2 class="section-title">Volunteer Work</h2>
-            <div class="section-content">
-                <div class="volunteer-grid">
-                    {% for volunteer in volunteer_work %}
-                    <div class="volunteer-item">
-                        <div class="volunteer-header">
-                            <h3 class="volunteer-title">{{ volunteer.title }}</h3>
-                            <span class="volunteer-period">{{ volunteer.period }}</span>
-                        </div>
-                        <p class="volunteer-organization">{{ volunteer.organization }}</p>
-                        {% if volunteer.location %}
-                        <p class="volunteer-location">{{ volunteer.location }}</p>
-                        {% endif %}
-                        {% if volunteer.description %}
-                        <ul class="volunteer-description">
-                            {% for desc in volunteer.description %}
-                            <li>{{ desc }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
