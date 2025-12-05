@@ -12,80 +12,32 @@
         
         <!-- Header Section -->
         <header class="resume-header">
-            <div class="header-info-grid">
-                <div class="contact-info">
-                    {% if job_title %}
-                    <div class="contact-item job-title-item">
-                        <span class="contact-value">{{ job_title }}</span>
-                    </div>
-                    {% endif %}
-                    <div class="contact-item">
-                        <span class="contact-icon">&#128205;</span>
-                        <span class="contact-value">João Pessoa - PB, Brazil</span>
-                    </div>
-                    <div class="contact-item">
-                        <span class="contact-icon">&#128231;</span>
-                        <span class="contact-value">{{ email }}</span>
-                    </div>
-                    {% if website or github or linkedin %}
-                    <div class="contact-item">
-                        <span class="contact-icon">&#128279;</span>
-                        <span class="contact-value">
-                            {% if linkedin %}<a href="https://{{ linkedin }}" class="social-link" target="_blank">LinkedIn</a>{% endif %}
-                            {% if linkedin and (github or website) %} | {% endif %}
-                            {% if github %}<a href="https://{{ github }}" class="social-link" target="_blank">GitHub</a>{% endif %}
-                            {% if github and website %} | {% endif %}
-                            {% if website %}<a href="https://{{ website }}" class="social-link" target="_blank">Portfolio</a>{% endif %}
-                        </span>
-                    </div>
-                    {% endif %}
+            <div class="contact-info">
+                {% if job_title %}
+                <div class="contact-item job-title-item">
+                    <span class="contact-value">{{ job_title }}</span>
                 </div>
-                <div class="languages-header">
-                    <div class="languages-grid">
-                        <div class="language-item">
-                            <span class="language-left">
-                                <span class="language-flag">🇧🇷</span>
-                                <span class="language-name">Português</span>
-                            </span>
-                            <span class="language-level">Nativo</span>
-                        </div>
-                        <div class="language-item">
-                            <span class="language-left">
-                                <span class="language-flag">🇺🇸</span>
-                                <span class="language-name">Inglês</span>
-                            </span>
-                            <span class="language-level">Fluente</span>
-                        </div>
-                        <div class="language-item">
-                            <span class="language-left">
-                                <span class="language-flag">🇫🇷</span>
-                                <span class="language-name">Francês</span>
-                            </span>
-                            <span class="language-level">Fluente</span>
-                        </div>
-                        <div class="language-item">
-                            <span class="language-left">
-                                <span class="language-flag">🇪🇸</span>
-                                <span class="language-name">Espanhol</span>
-                            </span>
-                            <span class="language-level">Avançado</span>
-                        </div>
-                        <div class="language-item">
-                            <span class="language-left">
-                                <span class="language-flag">🇯🇵</span>
-                                <span class="language-name">Japonês</span>
-                            </span>
-                            <span class="language-level">Intermediário</span>
-                        </div>
-                        <div class="language-item">
-                            <span class="language-left">
-                                <span class="language-flag">🇩🇪</span>
-                                <span class="language-name">Alemão</span>
-                            </span>
-                            <span class="language-level">Intermediário</span>
-                        </div>
-                    </div>
+                {% endif %}
+                <div class="contact-item">
+                    <span class="contact-icon">&#128205;</span>
+                    <span class="contact-value">João Pessoa - PB, Brazil</span>
                 </div>
+                <div class="contact-item">
+                    <span class="contact-icon">&#128231;</span>
+                    <span class="contact-value">{{ email }}</span>
+                </div>
+                {% if website or github or linkedin %}
+                <div class="contact-item">
+                    <span class="contact-icon">&#128279;</span>
+                    <span class="contact-value">
+                        {% if linkedin %}<a href="https://{{ linkedin }}" class="social-link" target="_blank">LinkedIn</a>{% endif %}
+                        {% if linkedin and (github or website) %} | {% endif %}
+                        {% if github %}<a href="https://{{ github }}" class="social-link" target="_blank">GitHub</a>{% endif %}
+                        {% if github and website %} | {% endif %}
+                        {% if website %}<a href="https://{{ website }}" class="social-link" target="_blank">Portfolio</a>{% endif %}
+                    </span>
+                </div>
+                {% endif %}
             </div>
         </header>
 
@@ -295,6 +247,57 @@
         </section>
         <hr class="divider">
         {% endif %}
+
+        <!-- Languages -->
+        <section class="section">
+            <h2 class="section-title">Idiomas</h2>
+            <div class="section-content">
+                <div class="languages-grid">
+                    <div class="language-item">
+                        <span class="language-left">
+                            <span class="language-flag">🇧🇷 </span>
+                            <span class="language-name">Português</span>
+                        </span>
+                        <span class="language-level">Nativo</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-left">
+                            <span class="language-flag">🇺🇸 </span>
+                            <span class="language-name">Inglês</span>
+                        </span>
+                        <span class="language-level">Fluente</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-left">
+                            <span class="language-flag">🇫🇷 </span>
+                            <span class="language-name">Francês</span>
+                        </span>
+                        <span class="language-level">Fluente</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-left">
+                            <span class="language-flag">🇪🇸 </span>
+                            <span class="language-name">Espanhol</span>
+                        </span>
+                        <span class="language-level">Avançado</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-left">
+                            <span class="language-flag">🇯🇵 </span>
+                            <span class="language-name">Japonês</span>
+                        </span>
+                        <span class="language-level">Intermediário</span>
+                    </div>
+                    <div class="language-item">
+                        <span class="language-left">
+                            <span class="language-flag">🇩🇪 </span>
+                            <span class="language-name">Alemão</span>
+                        </span>
+                        <span class="language-level">Intermediário</span>
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </div>
 </body>
