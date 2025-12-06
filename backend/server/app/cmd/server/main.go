@@ -54,6 +54,8 @@ import (
 	technicalwritingsdomain "github.com/woragis/backend/server/app/internal/domains/technicalwritings"
 	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	jobapplicationsdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications"
+	jobapplicationresponsesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/responses"
+	jobapplicationstagesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/interviewstages"
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -556,8 +558,19 @@ func main() {
 	applicationQueue := jobapplicationsdomain.NewRedisQueue(redisClient)
 	applicationService := jobapplicationsdomain.NewService(applicationRepo, applicationQueue, slogLogger)
 	applicationHandler := jobapplicationsdomain.NewHandler(applicationService, slogLogger)
+	
+	// Job Application Responses subdomain
+	responseRepo := jobapplicationresponsesdomain.NewGormRepository(db)
+	responseService := jobapplicationresponsesdomain.NewService(responseRepo, slogLogger)
+	responseHandler := jobapplicationresponsesdomain.NewHandler(responseService, slogLogger)
+	
+	// Job Application Interview Stages subdomain
+	stageRepo := jobapplicationstagesdomain.NewGormRepository(db)
+	stageService := jobapplicationstagesdomain.NewService(stageRepo, slogLogger)
+	stageHandler := jobapplicationstagesdomain.NewHandler(stageService, slogLogger)
+	
 	jobApplicationsGroup := protectedAPI.Group("/job-applications")
-	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler)
+	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
 
 	// Job Websites: requires JWT for all operations
 	websiteRepo := jobwebsitesdomain.NewGormRepository(db)
