@@ -522,11 +522,3 @@ echo "  ✓ Case Study"
 echo "  ✓ Technologies (10)"
 echo ""
 echo "View project at: $BASE_URL/projects/$PROJECT_ID"
-
-
-
-
-
-
-
-
