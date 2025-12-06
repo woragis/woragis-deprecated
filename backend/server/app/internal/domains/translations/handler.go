@@ -505,6 +505,8 @@ func (h *handler) TranslateEntity(c *fiber.Ctx) error {
 		fields = []string{"title", "description"}
 	case EntityTypeSkill:
 		fields = []string{"name", "description"}
+	case EntityTypeExperience:
+		fields = []string{"position", "description"}
 	default:
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidEntityType, fiber.Map{
 			"message": "unsupported entity type",

@@ -45,7 +45,7 @@
 
         <!-- Profile -->
         <section class="section">
-            <h2 class="section-title">Profile</h2>
+            <h2 class="section-title">{{ section_headers.profile if section_headers else 'Profile' }}</h2>
             <div class="section-content">
                 <p>{{ profile if profile else 'Passionate Full-Stack Developer specializing in clean architecture and domain-driven design principles. Currently pursuing a Computer Science degree with a strong focus on building scalable, maintainable applications across backend, frontend, and mobile platforms. Committed to writing elegant code that reflects real-world business domains and delivers measurable business value.' }}</p>
             </div>
@@ -56,7 +56,7 @@
         <!-- Education -->
         {% if education %}
         <section class="section">
-            <h2 class="section-title">Education</h2>
+            <h2 class="section-title">{{ section_headers.education if section_headers else 'Education' }}</h2>
             <div class="section-content">
                 <div class="education-grid">
                     {% for edu in education %}
@@ -70,11 +70,11 @@
                         <p class="education-location">{{ edu.location }}</p>
                         {% endif %}
                         {% if edu.status %}
-                        <p class="education-status">Status: {{ edu.status }}</p>
+                        <p class="education-status">{{ section_headers.status_label if section_headers else 'Status' }}: {{ edu.status }}</p>
                         {% endif %}
                         {% if edu.relevant_coursework %}
                         <div class="education-coursework">
-                            <strong>Relevant Coursework:</strong>
+                            <strong>{{ section_headers.relevant_coursework if section_headers else 'Relevant Coursework' }}:</strong>
                             <span class="coursework-tags">
                                 {% for course in edu.relevant_coursework %}
                                 <span class="coursework-tag">{{ course }}{% if not loop.last %}, {% endif %}</span>
@@ -93,7 +93,7 @@
         <!-- Work Experience -->
         {% if work_experience %}
         <section class="section">
-            <h2 class="section-title">Work Experience</h2>
+            <h2 class="section-title">{{ section_headers.work_experience if section_headers else 'Work Experience' }}</h2>
             <div class="section-content">
                 <div class="experience-grid">
                     {% for exp in work_experience %}
@@ -124,7 +124,7 @@
         <!-- Volunteer Work -->
         {% if volunteer_work %}
         <section class="section">
-            <h2 class="section-title">Volunteer Work</h2>
+            <h2 class="section-title">{{ section_headers.volunteer_work if section_headers else 'Volunteer Work' }}</h2>
             <div class="section-content">
                 <div class="volunteer-grid">
                     {% for volunteer in volunteer_work %}
@@ -155,7 +155,7 @@
         <!-- Projects -->
         {% if projects %}
         <section class="section">
-            <h2 class="section-title">Projects</h2>
+            <h2 class="section-title">{{ section_headers.projects if section_headers else 'Projects' }}</h2>
             <div class="section-content">
                 <div class="projects-grid">
                     {% for project in projects %}
@@ -187,7 +187,7 @@
         <!-- Experience (AI-generated) -->
         {% if experience %}
         <section class="section">
-            <h2 class="section-title">Experience</h2>
+            <h2 class="section-title">{{ section_headers.experience if section_headers else 'Experience' }}</h2>
             <div class="section-content experience-content">
                 <pre>{{ experience }}</pre>
             </div>
@@ -198,7 +198,7 @@
         <!-- Certifications -->
         {% if certifications %}
         <section class="section">
-            <h2 class="section-title">Certifications</h2>
+            <h2 class="section-title">{{ section_headers.certifications if section_headers else 'Certifications' }}</h2>
             <div class="section-content">
                 <div class="certifications-grid">
                     {% for cert in certifications %}
@@ -221,7 +221,7 @@
         <!-- Publications -->
         {% if publications %}
         <section class="section">
-            <h2 class="section-title">Publications</h2>
+            <h2 class="section-title">{{ section_headers.publications if section_headers else 'Publications' }}</h2>
             <div class="section-content">
                 <div class="publications-grid">
                     {% for pub in publications %}
@@ -250,7 +250,7 @@
 
         <!-- Languages -->
         <section class="section">
-            <h2 class="section-title">Languages</h2>
+            <h2 class="section-title">{{ section_headers.languages if section_headers else 'Languages' }}</h2>
             <div class="section-content">
                 <div class="languages-grid">
                     <div class="language-item">

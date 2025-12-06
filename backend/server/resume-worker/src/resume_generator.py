@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from database import Database
 from ai_service import AIService, PROFILE_TEMPLATE
 from keyword_extractor import extract_keywords
+from translation_helper import TranslationHelper
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,11 @@ logger = logging.getLogger(__name__)
 class ResumeGenerator:
     """Main resume generator"""
     
-    def __init__(self, db: Database, ai_service: AIService, output_dir: str = "/app/output"):
+    def __init__(self, db: Database, ai_service: AIService, output_dir: str = "/app/output", translation_helper: TranslationHelper = None):
         self.db = db
         self.ai_service = ai_service
         self.output_dir = output_dir
+        self.translation_helper = translation_helper
         
         # Try multiple possible template locations
         possible_dirs = [
@@ -131,6 +133,10 @@ class ResumeGenerator:
         )
         logger.info(f"Found {len(projects)} relevant projects")
         
+        # Apply translations to projects if available
+        if self.translation_helper:
+            projects = self.translation_helper.translate_projects(projects, language)
+        
         # Fetch relevant certifications
         certifications = self.db.get_user_certifications(
             user_id,
@@ -138,9 +144,17 @@ class ResumeGenerator:
         )
         logger.info(f"Found {len(certifications)} relevant certifications")
         
+        # Apply translations to certifications if available
+        if self.translation_helper:
+            certifications = self.translation_helper.translate_certifications(certifications, language)
+        
         # Fetch publications (posts)
         publications = self.db.get_user_publications(user_id, limit=4)
         logger.info(f"Found {len(publications)} publications")
+        
+        # Apply translations to publications if available
+        if self.translation_helper:
+            publications = self.translation_helper.translate_posts(publications, language)
         
         # Format publication dates for template
         for pub in publications:
@@ -156,7 +170,26 @@ class ResumeGenerator:
             else:
                 pub['formatted_date'] = None
         
-        # Hardcoded Education section
+        # Fetch work experiences from database
+        work_experiences_db = self.db.get_user_experiences(user_id)
+        
+        # Apply translations to experiences if available
+        if self.translation_helper and work_experiences_db:
+            work_experiences_db = self.translation_helper.translate_experiences(work_experiences_db, language)
+        
+        # Convert database experiences to template format
+        work_experience = []
+        for exp in work_experiences_db:
+            work_exp = {
+                'title': exp.get('position', ''),
+                'company': exp.get('company', ''),
+                'location': exp.get('location', ''),
+                'period': exp.get('period', ''),
+                'description': exp.get('description', [])
+            }
+            work_experience.append(work_exp)
+        
+        # Hardcoded Education section (can be moved to database later)
         education = [
             {
                 'degree': 'Bachelor of Science in Computer Science',
@@ -174,23 +207,13 @@ class ResumeGenerator:
             }
         ]
         
-        # Hardcoded Work Experience section
-        work_experience = [
-            {
-                'title': 'Full-Stack Developer',
-                'company': 'Freelance / Self-Employed',
-                'location': 'Remote',
-                'period': '2020 - Present',
-                'description': [
-                    'Developed scalable web applications using Go, TypeScript, and modern frameworks',
-                    'Designed and implemented microservices architectures with Docker and Kubernetes',
-                    'Collaborated with clients to deliver high-quality software solutions',
-                    'Maintained and optimized database systems (PostgreSQL, MongoDB, Redis)'
-                ]
-            }
-        ]
+        # Translate education status if translation helper is available
+        if self.translation_helper:
+            for edu in education:
+                if 'status' in edu:
+                    edu['status'] = self.translation_helper.translate_education_status(edu['status'], language)
         
-        # Hardcoded Volunteer Work section
+        # Hardcoded Volunteer Work section (can be moved to database later)
         volunteer_work = [
             {
                 'title': 'Open Source Contributor',
@@ -257,6 +280,24 @@ class ResumeGenerator:
             template_name = 'resume_pt.html'
         else:
             template_name = 'resume.html'
+        
+        # Translate section headers if translation helper is available
+        section_headers = {
+            'profile': 'Profile',
+            'education': 'Education',
+            'work_experience': 'Work Experience',
+            'volunteer_work': 'Volunteer Work',
+            'projects': 'Projects',
+            'experience': 'Experience',
+            'certifications': 'Certifications',
+            'publications': 'Publications',
+            'languages': 'Languages',
+            'status_label': 'Status',
+            'relevant_coursework': 'Relevant Coursework'
+        }
+        if self.translation_helper:
+            for key, header in section_headers.items():
+                section_headers[key] = self.translation_helper.translate_section_header(header, language)
 
         # Prepare template context
         # Set default social links for this user
@@ -307,7 +348,8 @@ class ResumeGenerator:
             'work_experience': work_experience,
             'volunteer_work': volunteer_work,
             'publications': publications_to_show,
-            'job_title': job_title
+            'job_title': job_title,
+            'section_headers': section_headers
         }
         
         # Render HTML template

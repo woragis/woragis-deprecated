@@ -163,6 +163,61 @@ class Database:
             logger.error(f"Error fetching publications: {e}")
             return []
     
+    def get_user_experiences(self, user_id: str) -> List[Dict]:
+        """Get work experiences for a user"""
+        try:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                query = """
+                    SELECT 
+                        id,
+                        company,
+                        position,
+                        period_start,
+                        period_end,
+                        period_text,
+                        location,
+                        description,
+                        type,
+                        is_current
+                    FROM experiences
+                    WHERE user_id = %s
+                    ORDER BY 
+                        is_current DESC,
+                        period_start DESC NULLS LAST,
+                        created_at DESC
+                """
+                cur.execute(query, [user_id])
+                experiences = cur.fetchall()
+                
+                result = []
+                for exp in experiences:
+                    exp_dict = dict(exp)
+                    # Format period
+                    if exp_dict.get('period_text'):
+                        exp_dict['period'] = exp_dict['period_text']
+                    elif exp_dict.get('period_start'):
+                        start = exp_dict['period_start'].strftime('%Y') if hasattr(exp_dict['period_start'], 'strftime') else str(exp_dict['period_start'])
+                        if exp_dict.get('is_current'):
+                            end = 'Present'
+                        elif exp_dict.get('period_end'):
+                            end = exp_dict['period_end'].strftime('%Y') if hasattr(exp_dict['period_end'], 'strftime') else str(exp_dict['period_end'])
+                        else:
+                            end = 'Present'
+                        exp_dict['period'] = f"{start} - {end}"
+                    
+                    # Format description as list if it's a string
+                    if exp_dict.get('description') and isinstance(exp_dict['description'], str):
+                        # Split by newlines or bullets
+                        desc_lines = [line.strip() for line in exp_dict['description'].replace('•', '').split('\n') if line.strip()]
+                        exp_dict['description'] = desc_lines if desc_lines else [exp_dict['description']]
+                    
+                    result.append(exp_dict)
+                
+                return result
+        except Exception as e:
+            logger.error(f"Error fetching experiences: {e}")
+            return []
+    
     def get_user_info(self, user_id: str) -> Optional[Dict]:
         """Get basic user information"""
         try:

@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from database import Database
 from ai_service import AIService
 from resume_generator import ResumeGenerator
+from translation_helper import TranslationHelper
 
 # Load environment variables
 load_dotenv()
@@ -64,10 +65,12 @@ def main():
     # Initialize components
     db = Database(DATABASE_URL)
     ai_service = AIService(AI_SERVICE_URL)
-    generator = ResumeGenerator(db, ai_service, OUTPUT_DIR)
+    translation_helper = TranslationHelper(DATABASE_URL)
+    generator = ResumeGenerator(db, ai_service, OUTPUT_DIR, translation_helper)
     
     try:
         db.connect()
+        translation_helper.connect()
         
         # Check command line arguments
         if len(sys.argv) < 3:
@@ -106,6 +109,7 @@ def main():
         sys.exit(1)
     finally:
         db.close()
+        translation_helper.close()
 
 
 if __name__ == '__main__':
