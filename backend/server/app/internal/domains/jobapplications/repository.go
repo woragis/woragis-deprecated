@@ -19,11 +19,16 @@ type Repository interface {
 
 // JobApplicationFilters represents filtering options for listing job applications.
 type JobApplicationFilters struct {
-	UserID   *uuid.UUID
-	Website  *string
-	Status   *ApplicationStatus
-	Limit    int
-	Offset   int
+	UserID           *uuid.UUID
+	Website          *string
+	Status           *ApplicationStatus
+	ResumeID         *uuid.UUID
+	InterestLevel    *string
+	Source           *string
+	ApplicationMethod *string
+	Language         *string
+	Limit            int
+	Offset           int
 }
 
 type gormRepository struct {
@@ -72,6 +77,21 @@ func (r *gormRepository) ListJobApplications(ctx context.Context, filters JobApp
 	}
 	if filters.Status != nil {
 		query = query.Where("status = ?", *filters.Status)
+	}
+	if filters.ResumeID != nil {
+		query = query.Where("resume_id = ?", *filters.ResumeID)
+	}
+	if filters.InterestLevel != nil {
+		query = query.Where("interest_level = ?", *filters.InterestLevel)
+	}
+	if filters.Source != nil {
+		query = query.Where("source = ?", *filters.Source)
+	}
+	if filters.ApplicationMethod != nil {
+		query = query.Where("application_method = ?", *filters.ApplicationMethod)
+	}
+	if filters.Language != nil {
+		query = query.Where("language = ?", *filters.Language)
 	}
 
 	if filters.Limit > 0 {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,7 +15,28 @@ type Service interface {
 	GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*JobApplication, error)
 	ListJobApplications(ctx context.Context, filters JobApplicationFilters) ([]JobApplication, error)
 	UpdateJobApplicationStatus(ctx context.Context, applicationID uuid.UUID, status ApplicationStatus) error
+	UpdateJobApplication(ctx context.Context, applicationID uuid.UUID, updates UpdateJobApplicationRequest) (*JobApplication, error)
 	ProcessJobApplicationJob(ctx context.Context, job *JobApplicationJob) error
+}
+
+// UpdateJobApplicationRequest represents fields that can be updated on a job application.
+type UpdateJobApplicationRequest struct {
+	ResumeID          *uuid.UUID
+	SalaryMin         *int
+	SalaryMax         *int
+	SalaryCurrency    *string
+	JobDescription    *string
+	Deadline          *time.Time
+	InterestLevel     *string
+	Notes             *string
+	Tags              JSONArray
+	FollowUpDate      *time.Time
+	ResponseReceivedAt *time.Time
+	RejectionReason   *string
+	NextInterviewDate *time.Time
+	Source            *string
+	ApplicationMethod *string
+	Language          *string
 }
 
 type service struct {
@@ -86,7 +108,75 @@ func (s *service) UpdateJobApplicationStatus(ctx context.Context, applicationID 
 		return err
 	}
 
-	return application.UpdateStatus(status)
+	if err := application.UpdateStatus(status); err != nil {
+		return err
+	}
+
+	return s.repo.UpdateJobApplication(ctx, application)
+}
+
+func (s *service) UpdateJobApplication(ctx context.Context, applicationID uuid.UUID, updates UpdateJobApplicationRequest) (*JobApplication, error) {
+	application, err := s.repo.GetJobApplication(ctx, applicationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if updates.ResumeID != nil {
+		application.ResumeID = updates.ResumeID
+	}
+	if updates.SalaryMin != nil {
+		application.SalaryMin = updates.SalaryMin
+	}
+	if updates.SalaryMax != nil {
+		application.SalaryMax = updates.SalaryMax
+	}
+	if updates.SalaryCurrency != nil {
+		application.SalaryCurrency = *updates.SalaryCurrency
+	}
+	if updates.JobDescription != nil {
+		application.JobDescription = *updates.JobDescription
+	}
+	if updates.Deadline != nil {
+		application.Deadline = updates.Deadline
+	}
+	if updates.InterestLevel != nil {
+		application.InterestLevel = *updates.InterestLevel
+	}
+	if updates.Notes != nil {
+		application.Notes = *updates.Notes
+	}
+	if updates.Tags != nil {
+		application.Tags = updates.Tags
+	}
+	if updates.FollowUpDate != nil {
+		application.FollowUpDate = updates.FollowUpDate
+	}
+	if updates.ResponseReceivedAt != nil {
+		application.ResponseReceivedAt = updates.ResponseReceivedAt
+	}
+	if updates.RejectionReason != nil {
+		application.RejectionReason = *updates.RejectionReason
+	}
+	if updates.NextInterviewDate != nil {
+		application.NextInterviewDate = updates.NextInterviewDate
+	}
+	if updates.Source != nil {
+		application.Source = *updates.Source
+	}
+	if updates.ApplicationMethod != nil {
+		application.ApplicationMethod = *updates.ApplicationMethod
+	}
+	if updates.Language != nil {
+		application.Language = *updates.Language
+	}
+
+	application.UpdatedAt = time.Now().UTC()
+
+	if err := s.repo.UpdateJobApplication(ctx, application); err != nil {
+		return nil, err
+	}
+
+	return application, nil
 }
 
 // ProcessJobApplicationJob is called by the worker to process a job.

@@ -2,6 +2,7 @@ package jobapplications
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -17,6 +18,7 @@ type Handler interface {
 	GetJobApplication(c *fiber.Ctx) error
 	ListJobApplications(c *fiber.Ctx) error
 	UpdateJobApplicationStatus(c *fiber.Ctx) error
+	UpdateJobApplication(c *fiber.Ctx) error
 	DeleteJobApplication(c *fiber.Ctx) error
 }
 
@@ -121,6 +123,23 @@ func (h *handler) ListJobApplications(c *fiber.Ctx) error {
 		appStatus := ApplicationStatus(status)
 		filters.Status = &appStatus
 	}
+	if resumeIDStr := c.Query("resumeId"); resumeIDStr != "" {
+		if resumeID, err := uuid.Parse(resumeIDStr); err == nil {
+			filters.ResumeID = &resumeID
+		}
+	}
+	if interestLevel := c.Query("interestLevel"); interestLevel != "" {
+		filters.InterestLevel = &interestLevel
+	}
+	if source := c.Query("source"); source != "" {
+		filters.Source = &source
+	}
+	if applicationMethod := c.Query("applicationMethod"); applicationMethod != "" {
+		filters.ApplicationMethod = &applicationMethod
+	}
+	if language := c.Query("language"); language != "" {
+		filters.Language = &language
+	}
 
 	// Pagination
 	if limit := c.QueryInt("limit", 50); limit > 0 {
@@ -161,6 +180,117 @@ func (h *handler) UpdateJobApplicationStatus(c *fiber.Ctx) error {
 	}
 
 	application, err := h.service.GetJobApplication(c.Context(), applicationID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, application)
+}
+
+type updateJobApplicationPayload struct {
+	ResumeID          *string   `json:"resumeId,omitempty"`
+	SalaryMin         *int      `json:"salaryMin,omitempty"`
+	SalaryMax         *int      `json:"salaryMax,omitempty"`
+	SalaryCurrency    *string   `json:"salaryCurrency,omitempty"`
+	JobDescription    *string   `json:"jobDescription,omitempty"`
+	Deadline          *string   `json:"deadline,omitempty"` // ISO 8601 format
+	InterestLevel     *string   `json:"interestLevel,omitempty"`
+	Notes             *string   `json:"notes,omitempty"`
+	Tags              JSONArray `json:"tags,omitempty"`
+	FollowUpDate      *string   `json:"followUpDate,omitempty"` // ISO 8601 format
+	ResponseReceivedAt *string  `json:"responseReceivedAt,omitempty"` // ISO 8601 format
+	RejectionReason   *string   `json:"rejectionReason,omitempty"`
+	NextInterviewDate *string   `json:"nextInterviewDate,omitempty"` // ISO 8601 format
+	Source            *string   `json:"source,omitempty"`
+	ApplicationMethod *string  `json:"applicationMethod,omitempty"`
+	Language          *string   `json:"language,omitempty"` // ISO 639-1 language code (2 characters)
+}
+
+func (h *handler) UpdateJobApplication(c *fiber.Ctx) error {
+	applicationID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": "invalid application id",
+		})
+	}
+
+	var payload updateJobApplicationPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": "invalid request payload",
+		})
+	}
+
+	updates := UpdateJobApplicationRequest{}
+
+	if payload.ResumeID != nil {
+		resumeID, err := uuid.Parse(*payload.ResumeID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+				"message": "invalid resume id",
+			})
+		}
+		updates.ResumeID = &resumeID
+	}
+	updates.SalaryMin = payload.SalaryMin
+	updates.SalaryMax = payload.SalaryMax
+	updates.SalaryCurrency = payload.SalaryCurrency
+	updates.JobDescription = payload.JobDescription
+	if payload.Deadline != nil {
+		deadline, err := time.Parse(time.RFC3339, *payload.Deadline)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+				"message": "invalid deadline format, use ISO 8601",
+			})
+		}
+		updates.Deadline = &deadline
+	}
+	updates.InterestLevel = payload.InterestLevel
+	updates.Notes = payload.Notes
+	if payload.Tags != nil {
+		updates.Tags = payload.Tags
+	}
+	if payload.FollowUpDate != nil {
+		followUpDate, err := time.Parse(time.RFC3339, *payload.FollowUpDate)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+				"message": "invalid follow-up date format, use ISO 8601",
+			})
+		}
+		updates.FollowUpDate = &followUpDate
+	}
+	if payload.ResponseReceivedAt != nil {
+		responseReceivedAt, err := time.Parse(time.RFC3339, *payload.ResponseReceivedAt)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+				"message": "invalid response received date format, use ISO 8601",
+			})
+		}
+		updates.ResponseReceivedAt = &responseReceivedAt
+	}
+	updates.RejectionReason = payload.RejectionReason
+	if payload.NextInterviewDate != nil {
+		nextInterviewDate, err := time.Parse(time.RFC3339, *payload.NextInterviewDate)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+				"message": "invalid next interview date format, use ISO 8601",
+			})
+		}
+		updates.NextInterviewDate = &nextInterviewDate
+	}
+	updates.Source = payload.Source
+	updates.ApplicationMethod = payload.ApplicationMethod
+	if payload.Language != nil {
+		// Validate language code is exactly 2 characters
+		if len(*payload.Language) != 2 {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+				"message": "language must be exactly 2 characters (ISO 639-1 code)",
+			})
+		}
+		updates.Language = payload.Language
+	}
+
+	application, err := h.service.UpdateJobApplication(c.Context(), applicationID, updates)
 	if err != nil {
 		return h.handleError(c, err)
 	}
