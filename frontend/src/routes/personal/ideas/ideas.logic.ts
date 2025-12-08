@@ -83,7 +83,7 @@ const toNode = (node: IdeaNode): Node<CanvasNodeData> => {
 			width: node.width ?? 200,
 			height: node.height ?? 100,
 			borderColor: node.color || '#2563eb'
-		},
+		} as any,
 		data: { node },
 		draggable: true,
 		selectable: true,
@@ -134,12 +134,12 @@ const toEdge = (conn: IdeaNodeConnection, nodes: IdeaNode[]): Edge => {
 		style: {
 			stroke: '#64748b',
 			strokeWidth: 2
-		}
+		} as any
 	};
 };
 
 // Determine connection direction based on connection handle
-function determineDirection(connection: Connection): ConnectionDirection {
+function determineDirection(connection: Connection, nodes: IdeaNode[]): ConnectionDirection {
 	const { sourceHandle, targetHandle } = connection;
 
 	// Map handle positions to directions
@@ -149,8 +149,8 @@ function determineDirection(connection: Connection): ConnectionDirection {
 	if (sourceHandle === 'left' || sourceHandle === 'Left') return 'west';
 
 	// Fallback: determine by node positions if handles aren't available
-	const sourceNode = canvasNodes.find((n) => n.id === connection.source);
-	const targetNode = canvasNodes.find((n) => n.id === connection.target);
+	const sourceNode = nodes.find((n: IdeaNode) => n.id === connection.source);
+	const targetNode = nodes.find((n: IdeaNode) => n.id === connection.target);
 
 	if (sourceNode && targetNode) {
 		const dx = targetNode.pos_x - sourceNode.pos_x;
@@ -200,7 +200,7 @@ export function createIdeasLogic() {
 	const ideasQuery = useIdeasCanvasQuery(browser);
 	let nodesQuery = useIdeaNodesQuery(null, false);
 	let connectionsQuery = useIdeaNodeConnectionsQuery(null, false);
-	let documentsQuery = useIdeaDocumentsQuery(null, false);
+	let documentsQuery = useIdeaDocumentsQuery(null, undefined, false);
 	let versionsQuery = useIdeaVersionsQuery(null, { enabled: false, limit: 15 });
 	const conversationsQuery = useConversationsQuery({ search: '', includeArchived: false, enabled: true });
 
@@ -327,22 +327,23 @@ export function createIdeasLogic() {
 
 	const buildIdeaSlug = (title: string, id: string) => `${sanitizeSlug(title)}--${id}`;
 
-	const normalizeIdea = (raw: Idea | Record<string, any>): Idea | null => {
-		const id = raw.id ?? raw.ID;
+		const normalizeIdea = (raw: Idea | Record<string, any>): Idea | null => {
+		const rawAny = raw as Record<string, any>;
+		const id = rawAny.id ?? rawAny.ID;
 		if (!id) return null;
 
-		const userId = raw.user_id ?? raw.userId ?? '';
-		const posX = raw.pos_x ?? raw.posX ?? 0;
-		const posY = raw.pos_y ?? raw.posY ?? 0;
-		const createdAt = raw.created_at ?? raw.createdAt ?? new Date().toISOString();
-		const updatedAt = raw.updated_at ?? raw.updatedAt ?? createdAt;
-		const title = raw.title ?? raw.Title ?? '';
-		const slug = raw.slug ?? raw.Slug ?? buildIdeaSlug(title, String(id));
+		const userId = rawAny.user_id ?? rawAny.userId ?? '';
+		const posX = rawAny.pos_x ?? rawAny.posX ?? 0;
+		const posY = rawAny.pos_y ?? rawAny.posY ?? 0;
+		const createdAt = rawAny.created_at ?? rawAny.createdAt ?? new Date().toISOString();
+		const updatedAt = rawAny.updated_at ?? rawAny.updatedAt ?? createdAt;
+		const title = rawAny.title ?? rawAny.Title ?? '';
+		const slug = rawAny.slug ?? rawAny.Slug ?? buildIdeaSlug(title, String(id));
 
 		return {
 			...(raw as Idea),
 			id: String(id),
-			user_id: userId ? String(userId) : undefined,
+			user_id: userId ? String(userId) : '',
 			slug,
 			pos_x: Number.isFinite(posX) ? Number(posX) : 0,
 			pos_y: Number.isFinite(posY) ? Number(posY) : 0,
@@ -449,7 +450,8 @@ export function createIdeasLogic() {
 				return;
 			}
 
-			const direction = determineDirection(connection);
+			const ideaNodes = get(nodesQuery).data ?? [];
+			const direction = determineDirection(connection, ideaNodes);
 
 			const conn = await get(createConnectionMutation).mutateAsync({
 				idea_id: currentIdea.id,

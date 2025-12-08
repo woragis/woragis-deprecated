@@ -14,6 +14,7 @@
 
 	import IdeaNodeComponent from './IdeaNode.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import IdeasHero from './_components/IdeasHero.svelte';
 	import {
 		createIdeasLogic,
 		type CanvasNodeData,
@@ -106,66 +107,32 @@
 	<title>Ideas Canvas · Woragis</title>
 </svelte:head>
 
-<div class="flex flex-col gap-6">
-	<header class="flex flex-wrap items-center justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-semibold text-slate-100">Ideas Canvas</h1>
-			<p class="text-sm text-slate-400">
-				{#if $selectedIdea}
-					Editing canvas for: <span class="font-semibold text-primary">{$selectedIdea.title}</span>
-				{:else}
-					Select an idea to view and edit its canvas with nodes and connections.
-				{/if}
-			</p>
-		</div>
-		<div class="flex items-center gap-3">
-			{#if $selectedIdea}
-				<button
-					class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
-					type="button"
-					on:click={() => showDocumentsPanel.set(!$showDocumentsPanel)}
-				>
-					{$showDocumentsPanel ? 'Hide' : 'Show'} Documents
-				</button>
-				<button
-					class="rounded-lg border border-primary/50 px-3 py-2 text-sm text-primary transition hover:border-primary hover:bg-primary/10"
-					type="button"
-					on:click={() => showCreateNodeModal.set(true)}
-				>
-					New Node
-				</button>
-			{/if}
-			<button
-				class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
-				type="button"
-				on:click={refreshCanvas}
-				disabled={$isLoading}
-			>
-				{$isLoading ? 'Refreshing…' : 'Refresh'}
-			</button>
-			<button
-				class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90"
-				type="button"
-				on:click={() => showCreateModal.set(true)}
-			>
-				New Idea
-			</button>
-		</div>
-	</header>
+<div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+	<IdeasHero
+		onRefresh={refreshCanvas}
+		onNewIdea={() => showCreateModal.set(true)}
+		onNewNode={() => showCreateNodeModal.set(true)}
+		showNewNode={!!$selectedIdea}
+	/>
 
-	{#if $uiError}
-		<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-			{$uiError}
-		</div>
-	{:else if $ideasQueryError}
-		<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-			Unable to load ideas. Please try again.
-		</div>
-	{/if}
+	<!-- Main Content -->
+	<div class="mx-auto max-w-[1920px] px-6 py-8 lg:px-8">
 
-	<div class="grid gap-6 lg:grid-cols-[280px_1fr_360px]">
-		<!-- Ideas List Sidebar -->
-		<aside class="flex flex-col gap-4 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
+		{#if $uiError}
+			<div class="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+				{$uiError}
+			</div>
+		{:else if $ideasQueryError}
+			<div class="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+				Unable to load ideas. Please try again.
+			</div>
+		{/if}
+
+		<div class="grid gap-6 lg:grid-cols-[280px_1fr_360px]">
+			<!-- Ideas List Sidebar -->
+			<aside
+				class="flex flex-col gap-4 rounded-xl border border-slate-800/50 bg-slate-900/40 p-4 shadow-xl backdrop-blur-sm"
+			>
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold text-slate-100">Ideas</h2>
 				<span class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
@@ -180,18 +147,20 @@
 				{:else}
 					{#each $ideasQuery.data ?? [] as idea}
 						<button
-							class="w-full rounded-lg border px-3 py-2 text-left text-sm transition hover:bg-slate-900/60 { $selectedIdea?.id === idea.id ? 'bg-slate-900/40' : '' }"
-							class:border-primary={$selectedIdea?.id === idea.id}
-							class:border-slate-700={$selectedIdea?.id !== idea.id}
+							class="group w-full rounded-lg border px-3 py-2 text-left text-sm transition-all hover:scale-[1.02] hover:border-violet-500/50 hover:bg-slate-900/60 hover:shadow-lg { $selectedIdea?.id === idea.id
+								? 'border-violet-500/50 bg-slate-900/40 shadow-lg'
+								: 'border-slate-800/50' }"
 							type="button"
-							on:click={() => handleSelectIdea(idea)}
+							onclick={() => handleSelectIdea(idea)}
 						>
 							<div class="flex items-center gap-2">
 								<div
-									class="h-3 w-3 rounded-full"
-									style={`background-color: ${idea.color ?? '#2563eb'}`}
+									class="h-3 w-3 rounded-full ring-2 ring-slate-700"
+									style={`background-color: ${idea.color ?? '#8b5cf6'}`}
 								></div>
-								<span class="font-medium text-slate-200">{idea.title}</span>
+								<span class="font-semibold text-slate-200 group-hover:text-violet-300 transition-colors">
+									{idea.title}
+								</span>
 							</div>
 							{#if idea.description}
 								<p class="mt-1 line-clamp-2 text-xs text-slate-400">{idea.description}</p>
@@ -202,8 +171,10 @@
 			</div>
 		</aside>
 
-		<!-- Canvas -->
-		<section class="relative min-h-[600px] overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/60">
+			<!-- Canvas -->
+			<section
+				class="relative min-h-[600px] overflow-hidden rounded-xl border border-slate-800/50 bg-slate-900/40 shadow-xl backdrop-blur-sm"
+			>
 			{#if !$selectedIdea}
 				<div class="absolute inset-0 flex items-center justify-center">
 					<div class="text-center">
@@ -245,8 +216,10 @@
 			{/if}
 		</section>
 
-		<!-- Details Panel -->
-		<aside class="flex flex-col gap-6 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-5">
+			<!-- Details Panel -->
+			<aside
+				class="flex flex-col gap-6 rounded-xl border border-slate-800/50 bg-slate-900/40 p-5 shadow-xl backdrop-blur-sm"
+			>
 			{#if $selectedNode && $nodeEditForm}
 				<!-- Node Details -->
 				<div class="flex items-center justify-between">
@@ -254,17 +227,17 @@
 					<button
 						class="rounded-lg border border-red-700/70 px-2.5 py-1 text-xs font-medium text-red-300 transition hover:border-red-500 hover:bg-red-500/10"
 						type="button"
-						on:click={() => handleDeleteNode($selectedNode.id)}
+						onclick={() => handleDeleteNode($selectedNode.id)}
 					>
 						Delete
 					</button>
 				</div>
-				<form class="flex flex-col gap-4 text-sm" on:submit|preventDefault={handleNodeSave}>
+				<form class="flex flex-col gap-4 text-sm" onsubmit={(e) => { e.preventDefault(); handleNodeSave(); }}>
 					<label class="flex flex-col gap-2">
 						<span class="text-xs uppercase tracking-wide text-slate-400">Title</span>
 						<input
 							value={$nodeEditForm.title}
-							on:input={handleNodeInput((value) => updateNodeEditFormField('title', value))}
+							oninput={handleNodeInput((value) => updateNodeEditFormField('title', value))}
 							class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="Node title"
 							required
@@ -274,7 +247,7 @@
 						<span class="text-xs uppercase tracking-wide text-slate-400">Description</span>
 						<textarea
 							value={$nodeEditForm.description}
-							on:input={handleNodeInput((value) => updateNodeEditFormField('description', value))}
+							oninput={handleNodeInput((value) => updateNodeEditFormField('description', value))}
 							class="h-24 rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="Node description…"
 						></textarea>
@@ -283,7 +256,7 @@
 						<span class="text-xs uppercase tracking-wide text-slate-400">Type</span>
 						<input
 							value={$nodeEditForm.type}
-							on:input={handleNodeInput((value) => updateNodeEditFormField('type', value))}
+							oninput={handleNodeInput((value) => updateNodeEditFormField('type', value))}
 							class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="default"
 						/>
@@ -293,7 +266,7 @@
 						<input
 							type="color"
 							value={$nodeEditForm.color}
-							on:input={handleNodeInput((value) => updateNodeEditFormField('color', value))}
+							oninput={handleNodeInput((value) => updateNodeEditFormField('color', value))}
 							class="h-10 w-20 cursor-pointer rounded border border-slate-700/70 bg-slate-900/80"
 						/>
 					</label>
@@ -346,19 +319,19 @@
 						<button
 							class="rounded-lg border border-slate-700/70 px-2.5 py-1 text-xs font-medium text-primary transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
 							type="button"
-							on:click={startIdeaChat}
+							onclick={startIdeaChat}
 							disabled={$isCreatingChat}
 						>
 							{$isCreatingChat ? 'Creating…' : 'Create chat'}
 						</button>
 					</div>
 				</div>
-				<form class="flex flex-col gap-4 text-sm" on:submit|preventDefault={handleIdeaSave}>
+				<form class="flex flex-col gap-4 text-sm" onsubmit={(e) => { e.preventDefault(); handleIdeaSave(); }}>
 					<label class="flex flex-col gap-2">
 						<span class="text-xs uppercase tracking-wide text-slate-400">Title</span>
 						<input
 							value={$editForm.title}
-							on:input={handleInput((value) => updateEditFormField('title', value))}
+							oninput={handleInput((value) => updateEditFormField('title', value))}
 							class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="Idea title"
 							required
@@ -368,7 +341,7 @@
 						<span class="text-xs uppercase tracking-wide text-slate-400">Description</span>
 						<textarea
 							value={$editForm.description}
-							on:input={handleInput((value) => updateEditFormField('description', value))}
+							oninput={handleInput((value) => updateEditFormField('description', value))}
 							class="h-24 rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 							placeholder="Describe the problem or solution…"
 						></textarea>
@@ -378,7 +351,7 @@
 						<input
 							type="color"
 							value={$editForm.color}
-							on:input={handleInput((value) => updateEditFormField('color', value))}
+							oninput={handleInput((value) => updateEditFormField('color', value))}
 							class="h-10 w-20 cursor-pointer rounded border border-slate-700/70 bg-slate-900/80"
 						/>
 					</label>
@@ -439,7 +412,8 @@
 					</p>
 				</div>
 			{/if}
-		</aside>
+			</aside>
+		</div>
 	</div>
 
 	<!-- Create Idea Modal -->
@@ -447,7 +421,7 @@
 		<div class="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur">
 			<form
 				class="w-full max-w-md space-y-4 rounded-2xl border border-slate-800/80 bg-slate-900/90 p-6 shadow-2xl"
-				on:submit|preventDefault={handleCreateIdea}
+				onsubmit={(e) => { e.preventDefault(); handleCreateIdea(); }}
 			>
 				<header class="flex items-center justify-between">
 					<div>
@@ -457,7 +431,7 @@
 					<button
 						class="rounded-full border border-slate-700/70 px-2 py-1 text-xs text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
 						type="button"
-						on:click={() => showCreateModal.set(false)}
+						onclick={() => showCreateModal.set(false)}
 					>
 						Close
 					</button>
@@ -466,7 +440,7 @@
 					<span class="text-xs uppercase tracking-wide text-slate-400">Title</span>
 					<input
 						value={$newIdea.title}
-						on:input={handleInput((value) => updateNewIdeaField('title', value))}
+						oninput={handleInput((value) => updateNewIdeaField('title', value))}
 						class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="Idea title"
 						required
@@ -476,7 +450,7 @@
 					<span class="text-xs uppercase tracking-wide text-slate-400">Description</span>
 					<textarea
 						value={$newIdea.description}
-						on:input={handleInput((value) => updateNewIdeaField('description', value))}
+						oninput={handleInput((value) => updateNewIdeaField('description', value))}
 						class="h-24 rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="Optional context"
 					></textarea>
@@ -486,7 +460,7 @@
 					<input
 						type="color"
 						value={$newIdea.color}
-						on:input={handleInput((value) => updateNewIdeaField('color', value))}
+						oninput={handleInput((value) => updateNewIdeaField('color', value))}
 						class="h-10 w-20 cursor-pointer rounded border border-slate-700/70 bg-slate-900/80"
 					/>
 				</label>
@@ -494,7 +468,7 @@
 					<button
 						class="rounded-lg border border-slate-700/70 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
 						type="button"
-						on:click={() => showCreateModal.set(false)}
+						onclick={() => showCreateModal.set(false)}
 					>
 						Cancel
 					</button>
@@ -515,7 +489,7 @@
 		<div class="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/80 backdrop-blur">
 			<form
 				class="w-full max-w-md space-y-4 rounded-2xl border border-slate-800/80 bg-slate-900/90 p-6 shadow-2xl"
-				on:submit|preventDefault={handleCreateNode}
+				onsubmit={(e) => { e.preventDefault(); handleCreateNode(); }}
 			>
 				<header class="flex items-center justify-between">
 					<div>
@@ -525,7 +499,7 @@
 					<button
 						class="rounded-full border border-slate-700/70 px-2 py-1 text-xs text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
 						type="button"
-						on:click={() => showCreateNodeModal.set(false)}
+						onclick={() => showCreateNodeModal.set(false)}
 					>
 						Close
 					</button>
@@ -534,7 +508,7 @@
 					<span class="text-xs uppercase tracking-wide text-slate-400">Title</span>
 					<input
 						value={$newNode.title}
-						on:input={handleNodeInput((value) => updateNewNodeField('title', value))}
+						oninput={handleNodeInput((value) => updateNewNodeField('title', value))}
 						class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="Node title"
 						required
@@ -544,7 +518,7 @@
 					<span class="text-xs uppercase tracking-wide text-slate-400">Description</span>
 					<textarea
 						value={$newNode.description}
-						on:input={handleNodeInput((value) => updateNewNodeField('description', value))}
+						oninput={handleNodeInput((value) => updateNewNodeField('description', value))}
 						class="h-24 rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="Optional description"
 					></textarea>
@@ -553,7 +527,7 @@
 					<span class="text-xs uppercase tracking-wide text-slate-400">Type</span>
 					<input
 						value={$newNode.type}
-						on:input={handleNodeInput((value) => updateNewNodeField('type', value))}
+						oninput={handleNodeInput((value) => updateNewNodeField('type', value))}
 						class="rounded-lg border border-slate-700/70 bg-slate-900/80 px-3 py-2 text-slate-100 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
 						placeholder="default"
 					/>
@@ -563,7 +537,7 @@
 					<input
 						type="color"
 						value={$newNode.color}
-						on:input={handleNodeInput((value) => updateNewNodeField('color', value))}
+						oninput={handleNodeInput((value) => updateNewNodeField('color', value))}
 						class="h-10 w-20 cursor-pointer rounded border border-slate-700/70 bg-slate-900/80"
 					/>
 				</label>
@@ -571,7 +545,7 @@
 					<button
 						class="rounded-lg border border-slate-700/70 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
 						type="button"
-						on:click={() => showCreateNodeModal.set(false)}
+						onclick={() => showCreateNodeModal.set(false)}
 					>
 						Cancel
 					</button>
