@@ -9,7 +9,7 @@
 	<StatCard label="Total Projects" value={projects.length} accentColor="indigo" />
 	<StatCard
 		label="Active Projects"
-		value={projects.filter((p) => p.status === 'active').length}
+		value={projects.filter((p) => p.status === 'executing').length}
 		accentColor="emerald"
 	/>
 	<StatCard

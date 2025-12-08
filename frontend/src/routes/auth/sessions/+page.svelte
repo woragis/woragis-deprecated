@@ -216,7 +216,7 @@ const fetchSessions = async (showSpinner = true) => {
 <style>
 	.session-table {
 		overflow-x: auto;
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		background: rgba(15, 23, 42, 0.75);
 	}
@@ -236,7 +236,7 @@ const fetchSessions = async (showSpinner = true) => {
 		padding: 0.85rem 1rem;
 		text-align: left;
 		vertical-align: top;
-		border-bottom: 1px solid rgba(71, 85, 105, 0.25);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	}
 
 	th {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Project, ProjectDependency, UUID } from '$lib/api/types';
-	import type { DependencyFormState } from '../projects.logic';
+	import type { DependencyFormState } from '../[slug]/project-detail.logic';
 
 	export let dependencies: ProjectDependency[] = [];
 	export let formState: DependencyFormState;

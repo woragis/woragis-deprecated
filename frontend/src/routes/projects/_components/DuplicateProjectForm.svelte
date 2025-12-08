@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DuplicateFormState } from '../projects.logic';
+	import type { DuplicateFormState } from '../[slug]/project-detail.logic';
 	import type { ProjectStatus } from '$lib/api/types';
 
 	export let formState: DuplicateFormState;

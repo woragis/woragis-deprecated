@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ProjectFormState } from '../projects.logic';
+	import type { ProjectFormState } from '../projects-list.logic';
 	import type { ProjectStatus } from '$lib/api/types';
 
 	export let formState: ProjectFormState;

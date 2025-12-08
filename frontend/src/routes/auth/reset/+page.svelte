@@ -125,7 +125,7 @@ import { getApiErrorMessage, toastError, toastSuccess } from '$lib/utils/toast';
 	.card {
 		border: 1px solid rgba(71, 85, 105, 0.45);
 		border-radius: 0.85rem;
-		background: rgba(15, 23, 42, 0.8);
+		background: rgba(15, 15, 15, 0.6);
 		padding: 1.75rem;
 		display: flex;
 		flex-direction: column;
@@ -134,7 +134,7 @@ import { getApiErrorMessage, toastError, toastSuccess } from '$lib/utils/toast';
 	}
 
 	.input {
-		border: 1px solid rgba(71, 85, 105, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.12);
 		border-radius: 0.65rem;
 		background: rgba(2, 6, 23, 0.85);
 		padding: 0.65rem 0.85rem;
@@ -142,7 +142,7 @@ import { getApiErrorMessage, toastError, toastSuccess } from '$lib/utils/toast';
 	}
 
 	.input:focus-visible {
-		outline: 2px solid rgba(59, 130, 246, 0.6);
+		outline: 2px solid rgba(255, 255, 255, 0.2);
 		outline-offset: 2px;
 	}
 
@@ -154,8 +154,8 @@ import { getApiErrorMessage, toastError, toastSuccess } from '$lib/utils/toast';
 		padding: 0.45rem 1rem;
 		border-radius: 0.65rem;
 		transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-		background: rgba(59, 130, 246, 0.2);
-		color: #60a5fa;
+		background: rgba(255, 255, 255, 0.08);
+		color: #a3a3a3;
 		border: 1px solid rgba(59, 130, 246, 0.5);
 	}
 

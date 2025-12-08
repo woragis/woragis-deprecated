@@ -356,7 +356,7 @@ export function createReportsLogic() {
 					description: form.description,
 					sections,
 					filters: reportFilters,
-					favorite: form.favorite
+					isFavorite: form.favorite
 				});
 				toastSuccess('Report definition created.');
 				closeDefinitionForm();
@@ -372,7 +372,7 @@ export function createReportsLogic() {
 						description: form.description,
 						sections,
 						filters: reportFilters,
-						favorite: form.favorite
+						isFavorite: form.favorite
 					}
 				});
 				toastSuccess('Report definition updated.');

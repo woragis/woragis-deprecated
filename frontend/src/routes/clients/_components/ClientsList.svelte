@@ -30,7 +30,7 @@
 		<div class="divide-y divide-gray-200 dark:divide-gray-700">
 			{#each clients as client (client.id)}
 				<div
-					class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {client.is_archived
+					class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {client.isArchived
 						? 'opacity-60'
 						: ''}"
 				>
@@ -38,7 +38,7 @@
 						<div class="flex-1">
 							<div class="flex items-center gap-2">
 								<h3 class="font-semibold text-gray-900 dark:text-white">{client.name}</h3>
-								{#if client.is_archived}
+								{#if client.isArchived}
 									<span
 										class="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
 									>
@@ -47,9 +47,9 @@
 								{/if}
 							</div>
 							<div class="mt-1 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-								{#if client.phone_number}
+								{#if client.phoneNumber}
 									<p>
-										<span class="font-medium">Phone:</span> {client.phone_number}
+										<span class="font-medium">Phone:</span> {client.phoneNumber}
 									</p>
 								{/if}
 								{#if client.email}
@@ -70,7 +70,7 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-2 ml-4 flex-wrap">
-							{#if client.phone_number}
+							{#if client.phoneNumber}
 								<div class="flex items-center gap-1 border-r border-gray-300 dark:border-gray-600 pr-2 mr-1">
 									<button
 										on:click={() => onSendMessage(client, 'manual')}
@@ -112,10 +112,10 @@
 								Edit
 							</button>
 							<button
-								on:click={() => onToggleArchived(client.id, !client.is_archived)}
+								on:click={() => onToggleArchived(client.id, !client.isArchived)}
 								class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded transition-colors"
 							>
-								{client.is_archived ? 'Restore' : 'Archive'}
+								{client.isArchived ? 'Restore' : 'Archive'}
 							</button>
 							<button
 								on:click={() => onDelete(client.id)}

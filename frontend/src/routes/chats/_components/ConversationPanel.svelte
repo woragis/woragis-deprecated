@@ -5,7 +5,7 @@ import type {
 	ChatMessage,
 	ChatTranscript
 } from '$lib/api/types';
-import type { SubmitEvent } from 'svelte/elements';
+// SubmitEvent is available globally in Svelte 5, no import needed
 
 	export let conversation: ChatConversation | null = null;
 	export let messages: ChatMessage[] = [];

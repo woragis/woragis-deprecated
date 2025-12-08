@@ -3,7 +3,7 @@
 	import {
 		Upload,
 		Image,
-		File,
+		File as FileIcon,
 		Trash2,
 		Edit,
 		Search,
@@ -39,7 +39,7 @@
 	let limit = $state(20);
 
 	// Upload state
-	let uploadFile: File | null = $state(null);
+	let uploadFile: globalThis.File | null = $state(null);
 	let uploadAltText = $state('');
 	let uploadCaption = $state('');
 	let uploadFolder = $state('');
@@ -296,7 +296,7 @@
 						{:else if isVideo(file.mime_type)}
 							<video src={file.url} muted></video>
 						{:else}
-							<File class="file-icon" />
+							<FileIcon class="file-icon" />
 						{/if}
 					</div>
 					<div class="media-info">
@@ -495,8 +495,8 @@
 	.search-input {
 		width: 100%;
 		padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-		background: rgba(15, 23, 42, 0.8);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.5rem;
 		color: #f8fafc;
 		font-size: 0.875rem;
@@ -504,8 +504,8 @@
 
 	.search-input:focus {
 		outline: none;
-		border-color: rgba(59, 130, 246, 0.6);
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 	}
 
 	.clear-search {
@@ -543,14 +543,14 @@
 	}
 
 	.btn-primary {
-		background: rgba(59, 130, 246, 0.15);
-		border-color: rgba(59, 130, 246, 0.4);
-		color: #93c5fd;
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
+		color: #d4d4d4;
 	}
 
 	.btn-primary:hover:not(:disabled) {
-		background: rgba(59, 130, 246, 0.25);
-		border-color: rgba(59, 130, 246, 0.6);
+		background: rgba(255, 255, 255, 0.12);
+		border-color: rgba(255, 255, 255, 0.2);
 	}
 
 	.btn-sm {
@@ -571,13 +571,13 @@
 
 	.btn-secondary {
 		background: rgba(71, 85, 105, 0.15);
-		border-color: rgba(71, 85, 105, 0.4);
+		border-color: rgba(255, 255, 255, 0.08);
 		color: #cbd5e1;
 	}
 
 	.btn-secondary:hover {
-		background: rgba(71, 85, 105, 0.25);
-		border-color: rgba(71, 85, 105, 0.6);
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
 	}
 
 	.icon {
@@ -615,8 +615,8 @@
 	.spinner {
 		width: 3rem;
 		height: 3rem;
-		border: 2px solid rgba(71, 85, 105, 0.3);
-		border-top-color: #3b82f6;
+		border: 2px solid rgba(255, 255, 255, 0.06);
+		border-top-color: #737373;
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -635,7 +635,7 @@
 	.empty-icon {
 		width: 4rem;
 		height: 4rem;
-		color: rgba(71, 85, 105, 0.6);
+		color: rgba(255, 255, 255, 0.12);
 		margin: 0 auto 1rem;
 	}
 
@@ -656,14 +656,14 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 1rem;
-		background: rgba(59, 130, 246, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.3);
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.5rem;
 	}
 
 	.bulk-count {
 		font-weight: 500;
-		color: #93c5fd;
+		color: #d4d4d4;
 	}
 
 	.bulk-buttons {
@@ -679,16 +679,16 @@
 
 	.media-card {
 		position: relative;
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		overflow: hidden;
 		transition: all 120ms ease;
 	}
 
 	.media-card:hover {
-		border-color: rgba(59, 130, 246, 0.6);
-		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: 0 4px 12px rgba(255, 255, 255, 0.08);
 	}
 
 	.media-checkbox {
@@ -700,7 +700,7 @@
 
 	.checkbox-btn {
 		background: rgba(15, 23, 42, 0.9);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.375rem;
 		cursor: pointer;
 		color: rgba(148, 163, 184, 0.8);
@@ -711,8 +711,8 @@
 	}
 
 	.checkbox-btn:hover {
-		color: #93c5fd;
-		border-color: rgba(59, 130, 246, 0.6);
+		color: #d4d4d4;
+		border-color: rgba(255, 255, 255, 0.2);
 	}
 
 	.media-preview {
@@ -721,7 +721,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(15, 23, 42, 0.8);
+		background: rgba(15, 15, 15, 0.6);
 		overflow: hidden;
 	}
 
@@ -796,7 +796,7 @@
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(2, 6, 23, 0.7);
+		background: rgba(0, 0, 0, 0.75);
 		backdrop-filter: blur(4px);
 		display: flex;
 		align-items: center;
@@ -806,13 +806,13 @@
 	}
 
 	.modal {
-		background: rgba(15, 23, 42, 0.95);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.98);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		padding: 1.5rem;
 		width: 100%;
 		max-width: 28rem;
-		box-shadow: 0 20px 45px rgba(2, 6, 23, 0.6);
+		box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8);
 		max-height: 90vh;
 		overflow-y: auto;
 	}
@@ -849,8 +849,8 @@
 	.input {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
-		background: rgba(15, 23, 42, 0.8);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.5rem;
 		color: #f8fafc;
 		font-size: 0.875rem;
@@ -859,8 +859,8 @@
 
 	.input:focus {
 		outline: none;
-		border-color: rgba(59, 130, 246, 0.6);
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 	}
 
 	.modal-actions {

@@ -96,7 +96,7 @@ export function createClientsLogic() {
 			const input: CreateClientInput = {
 				name: form.name.trim(),
 				email: form.email.trim() || undefined,
-				phone_number: form.phone_number.trim(),
+				phoneNumber: form.phone_number.trim(),
 				company: form.company.trim() || undefined,
 				notes: form.notes.trim() || undefined
 			};
@@ -124,12 +124,13 @@ export function createClientsLogic() {
 		loading.set(true);
 		error.set(null);
 		try {
+			const form = get(clientForm);
 			const input: UpdateClientInput = {
-				name: clientForm.name.trim() || undefined,
-				email: clientForm.email.trim() || undefined,
-				phone_number: clientForm.phone_number.trim() || undefined,
-				company: clientForm.company.trim() || undefined,
-				notes: clientForm.notes.trim() || undefined
+				name: form.name.trim() || undefined,
+				email: form.email.trim() || undefined,
+				phoneNumber: form.phone_number.trim() || undefined,
+				company: form.company.trim() || undefined,
+				notes: form.notes.trim() || undefined
 			};
 
 			await updateClient(client.id, input);
@@ -187,7 +188,7 @@ export function createClientsLogic() {
 		clientForm.set({
 			name: client.name,
 			email: client.email || '',
-			phone_number: client.phone_number,
+			phone_number: client.phoneNumber,
 			company: client.company || '',
 			notes: client.notes || ''
 		});

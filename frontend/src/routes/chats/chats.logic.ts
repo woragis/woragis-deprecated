@@ -300,7 +300,7 @@ export function createChatsLogic() {
 				['chats', 'conversation', conversation.id, 'transcripts'],
 				(previous: any) => [transcript, ...(previous ?? [])]
 			);
-			transcriptStatus.set(`Share code ${transcript.share_code}`);
+			transcriptStatus.set(`Share code ${(transcript as { share_code: string }).share_code}`);
 			setTimeout(() => transcriptStatus.set(''), 4000);
 			toastSuccess('Transcript generated.');
 		} catch (error) {
@@ -386,7 +386,22 @@ export function createChatsLogic() {
 				includeArchived: get(includeArchived),
 				enabled: true
 			});
-			selectedConversation.set(newConversation);
+			// Convert Conversation to ChatConversation
+			const chatConversation: ChatConversation = {
+				id: newConversation.id,
+				user_id: newConversation.userId,
+				title: newConversation.title,
+				description: newConversation.description,
+				idea_id: newConversation.ideaId,
+				project_id: newConversation.projectId,
+				assigned_agent_id: newConversation.assignedAgentId,
+				shared_transcript: newConversation.sharedTranscript,
+				archived_at: newConversation.archivedAt,
+				deleted_at: newConversation.deletedAt,
+				created_at: newConversation.createdAt,
+				updated_at: newConversation.updatedAt
+			};
+			selectedConversation.set(chatConversation);
 			connectToStream(newConversation.id);
 			await queryClient.invalidateQueries({ queryKey: ['chats', 'conversations'] });
 		} catch {

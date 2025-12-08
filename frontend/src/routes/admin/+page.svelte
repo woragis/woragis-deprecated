@@ -230,8 +230,8 @@
 		align-items: center;
 		gap: 1rem;
 		padding: 1.5rem;
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		transition: all 200ms ease;
 		cursor: pointer;
@@ -240,8 +240,8 @@
 	}
 
 	.stat-card:hover {
-		background: rgba(15, 23, 42, 0.8);
-		border-color: rgba(59, 130, 246, 0.6);
+		background: rgba(15, 15, 15, 0.6);
+		border-color: rgba(255, 255, 255, 0.2);
 		transform: translateY(-2px);
 	}
 
@@ -252,7 +252,7 @@
 
 	.stat-card-disabled:hover {
 		transform: none;
-		border-color: rgba(71, 85, 105, 0.4);
+		border-color: rgba(255, 255, 255, 0.08);
 	}
 
 	.stat-icon {
@@ -265,8 +265,8 @@
 	}
 
 	.stat-icon-users {
-		background: rgba(59, 130, 246, 0.2);
-		color: #93c5fd;
+		background: rgba(255, 255, 255, 0.08);
+		color: #d4d4d4;
 	}
 
 	.stat-icon-keys {
@@ -280,7 +280,7 @@
 	}
 
 	.stat-icon-settings {
-		background: rgba(71, 85, 105, 0.2);
+		background: rgba(255, 255, 255, 0.05);
 		color: #cbd5e1;
 	}
 
@@ -340,8 +340,8 @@
 		align-items: center;
 		gap: 1rem;
 		padding: 1.5rem;
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		transition: all 200ms ease;
 		cursor: pointer;
@@ -350,15 +350,15 @@
 	}
 
 	.action-card:hover {
-		background: rgba(15, 23, 42, 0.8);
-		border-color: rgba(59, 130, 246, 0.6);
+		background: rgba(15, 15, 15, 0.6);
+		border-color: rgba(255, 255, 255, 0.2);
 		transform: translateY(-2px);
 	}
 
 	.action-icon {
 		width: 2rem;
 		height: 2rem;
-		color: #3b82f6;
+		color: #737373;
 		flex-shrink: 0;
 	}
 
@@ -390,8 +390,8 @@
 		flex-direction: column;
 		gap: 1rem;
 		padding: 1.5rem;
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 	}
 
@@ -404,7 +404,7 @@
 	.info-icon {
 		width: 1.5rem;
 		height: 1.5rem;
-		color: #3b82f6;
+		color: #737373;
 		flex-shrink: 0;
 		margin-top: 0.125rem;
 	}

@@ -128,7 +128,9 @@ const defaultDuplicateForm = (): DuplicateFormState => ({
 	copyDependencies: false
 });
 
-type FormUpdater<T> = <K extends keyof T>(field: K, value: T[K]) => void;
+type FormUpdater<T> = {
+	<K extends keyof T>(field: K, value: T[K]): void;
+};
 
 interface AuthState {
 	isAuthenticated: boolean;
@@ -636,7 +638,9 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		try {
 			await get(bulkUpdateMilestonesMutation).mutateAsync({
 				projectId: project.id,
-				updates: [{ milestoneId: milestone.id, completed: !milestone.completed }]
+				updates: {
+					updates: [{ id: milestone.id, completed: !milestone.completed }]
+				}
 			});
 			await invalidateMilestones();
 			toastInfo('Milestone updated.');
@@ -720,7 +724,7 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 					name: form.name,
 					description: form.description,
 					status: form.status,
-					copyBoard: form.copyBoard,
+					copyKanban: form.copyBoard,
 					copyMilestones: form.copyMilestones,
 					copyDependencies: form.copyDependencies
 				}
@@ -922,7 +926,10 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		try {
 			await get(createFileStructureMutation).mutateAsync({
 				projectId: project.id,
-				payload
+				payload: {
+					...payload,
+					isDirectory: payload.is_directory
+				}
 			});
 			await invalidateFileStructures();
 			toastSuccess('File structure added.');
@@ -962,7 +969,10 @@ export function createProjectDetailLogic(slugStore: Readable<string | null>) {
 		try {
 			await get(createArchitectureDiagramMutation).mutateAsync({
 				projectId: project.id,
-				payload
+				payload: {
+					...payload,
+					format: payload.format || 'mermaid'
+				}
 			});
 			await invalidateArchitectureDiagrams();
 			toastSuccess('Diagram created.');

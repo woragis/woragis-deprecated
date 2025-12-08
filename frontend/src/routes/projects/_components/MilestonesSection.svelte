@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Milestone } from '$lib/api/types';
-	import type { MilestoneFormState } from '../projects.logic';
+	import type { MilestoneFormState } from '../[slug]/project-detail.logic';
 
 	export let milestones: Milestone[] = [];
 	export let formState: MilestoneFormState;

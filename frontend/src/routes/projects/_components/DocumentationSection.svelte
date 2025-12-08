@@ -292,7 +292,7 @@
 		<div class="flex space-x-1 p-2">
 			<button
 				on:click={() => activeTab.set('sections')}
-				class="rounded px-4 py-2 text-sm font-medium transition-colors {activeTab === 'sections'
+				class="rounded px-4 py-2 text-sm font-medium transition-colors {$activeTab === 'sections'
 					? 'bg-indigo-600 text-white'
 					: 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}"
 			>
@@ -300,7 +300,7 @@
 			</button>
 			<button
 				on:click={() => activeTab.set('technologies')}
-				class="rounded px-4 py-2 text-sm font-medium transition-colors {activeTab === 'technologies'
+				class="rounded px-4 py-2 text-sm font-medium transition-colors {$activeTab === 'technologies'
 					? 'bg-indigo-600 text-white'
 					: 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}"
 			>
@@ -308,7 +308,7 @@
 			</button>
 			<button
 				on:click={() => activeTab.set('file-structure')}
-				class="rounded px-4 py-2 text-sm font-medium transition-colors {activeTab === 'file-structure'
+				class="rounded px-4 py-2 text-sm font-medium transition-colors {$activeTab === 'file-structure'
 					? 'bg-indigo-600 text-white'
 					: 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}"
 			>
@@ -316,7 +316,7 @@
 			</button>
 			<button
 				on:click={() => activeTab.set('diagrams')}
-				class="rounded px-4 py-2 text-sm font-medium transition-colors {activeTab === 'diagrams'
+				class="rounded px-4 py-2 text-sm font-medium transition-colors {$activeTab === 'diagrams'
 					? 'bg-indigo-600 text-white'
 					: 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}"
 			>
@@ -332,7 +332,7 @@
 			</div>
 		{:else if isLoading}
 			<div class="py-8 text-center text-sm text-slate-400">Loading documentation...</div>
-		{:else if activeTab === 'sections'}
+		{:else if $activeTab === 'sections'}
 			<div class="space-y-4">
 				<div class="flex items-center justify-between">
 					<h3 class="text-base font-medium text-slate-200">Documentation Sections</h3>
@@ -427,7 +427,7 @@
 					</div>
 				{/if}
 			</div>
-		{:else if activeTab === 'technologies'}
+		{:else if $activeTab === 'technologies'}
 			<div class="space-y-4">
 				<div class="flex items-center justify-between">
 					<h3 class="text-base font-medium text-slate-200">Technology Stack</h3>
@@ -552,7 +552,7 @@
 					</div>
 				{/if}
 			</div>
-		{:else if activeTab === 'file-structure'}
+		{:else if $activeTab === 'file-structure'}
 			<div class="space-y-4">
 				<div class="flex items-center justify-between">
 					<h3 class="text-base font-medium text-slate-200">File Structure</h3>
@@ -591,7 +591,7 @@
 					</div>
 				{/if}
 			</div>
-		{:else if activeTab === 'diagrams'}
+		{:else if $activeTab === 'diagrams'}
 			<div class="space-y-4">
 				<div class="flex items-center justify-between">
 					<h3 class="text-base font-medium text-slate-200">Architecture Diagrams</h3>

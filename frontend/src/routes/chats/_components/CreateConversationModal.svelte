@@ -1,6 +1,6 @@
 <script lang="ts">
-import type { Idea } from '$lib/api/types';
-import type { SubmitEvent } from 'svelte/elements';
+import type { Idea, Project } from '$lib/api/types';
+// SubmitEvent is available globally in Svelte 5, no import needed
 import type { CreateConversationForm } from '../chats.logic';
 
 	export let open = false;

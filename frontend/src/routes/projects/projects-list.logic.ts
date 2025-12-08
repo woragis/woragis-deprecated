@@ -23,7 +23,9 @@ const defaultProjectForm = (): ProjectFormState => ({
 	healthScore: 60
 });
 
-type FormUpdater<T> = <K extends keyof T>(field: K, value: T[K]) => void;
+type FormUpdater<T> = {
+	<K extends keyof T>(field: K, value: T[K]): void;
+};
 
 interface AuthState {
 	isAuthenticated: boolean;

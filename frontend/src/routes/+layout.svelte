@@ -119,9 +119,9 @@
 		gap: 1rem;
 		padding: 1rem 1.5rem;
 		border-bottom: 1px solid rgba(15, 118, 110, 0.2);
-		background: rgba(15, 23, 42, 0.6);
+		background: rgba(15, 15, 15, 0.4);
 		backdrop-filter: blur(12px);
-		box-shadow: 0 12px 32px rgba(2, 6, 23, 0.6);
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
 	}
 
 	.topbar__trigger {

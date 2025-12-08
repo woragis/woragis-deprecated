@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Client, ClientFormState } from '../clients.logic';
+	import type { ClientFormState } from '../clients.logic';
+	import type { Client } from '$lib/api/clients';
 
 	export let formState: ClientFormState;
 	export let editingClient: Client | null = null;

@@ -1,11 +1,14 @@
-<script lang="ts">
+<script context="module" lang="ts">
 	import type { ReportSchedule, ReportDefinition } from '$lib/api/types';
-	import { goto } from '$app/navigation';
 
 	export interface ScheduleWithReport {
 		schedule: ReportSchedule;
 		report: ReportDefinition;
 	}
+</script>
+
+<script lang="ts">
+	import { goto } from '$app/navigation';
 
 	export let schedules: ScheduleWithReport[] = [];
 	export let isLoading = false;

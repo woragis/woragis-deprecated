@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { KanbanBoard, KanbanCard, Milestone, UUID } from '$lib/api/types';
-	import type { CardFormState, ColumnFormState } from '../projects.logic';
+	import type { CardFormState, ColumnFormState } from '../[slug]/project-detail.logic';
 
 	export let board: KanbanBoard | null = null;
 	export let columnForm: ColumnFormState;

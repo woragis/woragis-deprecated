@@ -187,7 +187,7 @@ import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/ut
 
 <style>
 	.card {
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		background: rgba(15, 23, 42, 0.75);
 		padding: 1.5rem;
@@ -203,7 +203,7 @@ import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/ut
 	}
 
 	.input {
-		border: 1px solid rgba(71, 85, 105, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.12);
 		border-radius: 0.65rem;
 		background: rgba(2, 6, 23, 0.85);
 		padding: 0.65rem 0.85rem;

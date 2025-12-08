@@ -97,25 +97,23 @@ export function createSchedulesLogic() {
 
 		isLoadingData.set(true);
 		try {
-			const { getReportDefinition } = await import('$lib/api/reports');
+			const { listReportSchedules } = await import('$lib/api/reports');
 			const allSchedules: ScheduleWithReport[] = [];
 
-			// Fetch details for all definitions in parallel
-			const detailPromises = defs.map((def) => getReportDefinition(def.id));
-			const details = await Promise.all(detailPromises);
-
-			// Aggregate schedules
-			defs.forEach((def, index) => {
-				const detail = details[index];
-				if (detail?.schedules) {
-					detail.schedules.forEach((schedule) => {
-						allSchedules.push({
-							schedule,
-							report: def
-						});
-					});
+			// Fetch schedules for all definitions in parallel
+			const schedulePromises = defs.map(async (def) => {
+				try {
+					const schedules = await listReportSchedules(def.id);
+					return schedules.map((schedule: ReportSchedule) => ({
+						schedule,
+						report: def
+					}));
+				} catch {
+					return [];
 				}
 			});
+			const scheduleArrays = await Promise.all(schedulePromises);
+			allSchedules.push(...scheduleArrays.flat());
 
 			// Sort by next run time, then by report name
 			allSchedules.sort((a, b) => {
