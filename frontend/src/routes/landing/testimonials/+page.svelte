@@ -144,18 +144,23 @@
 				await requestTranslation({
 					entityType: 'testimonial',
 					entityId: translatingTestimonialId,
-					language: selectedLanguage,
-					fields: ['content']
+					targetLanguages: [selectedLanguage]
 				});
 				toastSuccess(`Translation to ${SUPPORTED_LANGUAGES.find((l) => l.value === selectedLanguage)?.label} queued`);
 			} else {
 				const languages = selectedLanguages.length > 0 ? selectedLanguages : SUPPORTED_LANGUAGES.map((l) => l.value);
-				const result = await translateEntity({
-					entityType: 'testimonial',
-					entityId: translatingTestimonialId,
-					languages: languages
-				});
-				toastSuccess(`Queued ${result.queuedCount} translation(s)`);
+				// Translate to each language separately
+				const results = await Promise.all(
+					languages.map((lang) =>
+						translateEntity({
+							entityType: 'testimonial',
+							entityId: translatingTestimonialId!,
+							language: lang,
+							fields: { content: '' } // Will be filled by the API
+						})
+					)
+				);
+				toastSuccess(`Queued ${results.length} translation(s)`);
 			}
 
 			cancelTranslation();
@@ -221,7 +226,12 @@
 						<tr>
 							<td>
 								<div class="author-info">
-									<span class="font-medium">{testimonial.author_name}</span>
+									<a
+										href="/landing/testimonials/{testimonial.id}"
+										class="font-medium hover:text-pink-400 transition-colors"
+									>
+										{testimonial.author_name}
+									</a>
 									{#if testimonial.author_title || testimonial.author_company}
 										<span class="text-muted text-sm">
 											{testimonial.author_title}
@@ -472,14 +482,14 @@
 	}
 
 	.btn-primary {
-		background: rgba(59, 130, 246, 0.15);
-		border-color: rgba(59, 130, 246, 0.4);
-		color: #93c5fd;
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
+		color: #d4d4d4;
 	}
 
 	.btn-primary:hover {
-		background: rgba(59, 130, 246, 0.25);
-		border-color: rgba(59, 130, 246, 0.6);
+		background: rgba(255, 255, 255, 0.12);
+		border-color: rgba(255, 255, 255, 0.2);
 	}
 
 	.btn-sm {
@@ -500,13 +510,13 @@
 
 	.btn-secondary {
 		background: rgba(71, 85, 105, 0.15);
-		border-color: rgba(71, 85, 105, 0.4);
+		border-color: rgba(255, 255, 255, 0.08);
 		color: #cbd5e1;
 	}
 
 	.btn-secondary:hover {
-		background: rgba(71, 85, 105, 0.25);
-		border-color: rgba(71, 85, 105, 0.6);
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
 	}
 
 	.icon {
@@ -549,8 +559,8 @@
 	.spinner {
 		width: 3rem;
 		height: 3rem;
-		border: 2px solid rgba(71, 85, 105, 0.3);
-		border-top-color: #3b82f6;
+		border: 2px solid rgba(255, 255, 255, 0.06);
+		border-top-color: #737373;
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -569,7 +579,7 @@
 	.empty-icon {
 		width: 4rem;
 		height: 4rem;
-		color: rgba(71, 85, 105, 0.6);
+		color: rgba(255, 255, 255, 0.12);
 		margin: 0 auto 1rem;
 	}
 
@@ -586,8 +596,8 @@
 	}
 
 	.table-container {
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		overflow: hidden;
 	}
@@ -598,7 +608,7 @@
 	}
 
 	.table thead {
-		background: rgba(15, 23, 42, 0.8);
+		background: rgba(15, 15, 15, 0.6);
 	}
 
 	.table th {
@@ -613,11 +623,11 @@
 
 	.table td {
 		padding: 1rem 1.5rem;
-		border-top: 1px solid rgba(71, 85, 105, 0.3);
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
 	}
 
 	.table tbody tr:hover {
-		background: rgba(51, 65, 85, 0.2);
+		background: rgba(255, 255, 255, 0.03);
 	}
 
 	.text-right {
@@ -681,7 +691,7 @@
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(2, 6, 23, 0.7);
+		background: rgba(0, 0, 0, 0.75);
 		backdrop-filter: blur(4px);
 		display: flex;
 		align-items: center;
@@ -691,13 +701,13 @@
 	}
 
 	.modal {
-		background: rgba(15, 23, 42, 0.95);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.98);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		padding: 1.5rem;
 		width: 100%;
 		max-width: 28rem;
-		box-shadow: 0 20px 45px rgba(2, 6, 23, 0.6);
+		box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8);
 		max-height: 90vh;
 		overflow-y: auto;
 	}
@@ -740,8 +750,8 @@
 	.input {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
-		background: rgba(15, 23, 42, 0.8);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.5rem;
 		color: #f8fafc;
 		font-size: 0.875rem;
@@ -750,8 +760,8 @@
 
 	.input:focus {
 		outline: none;
-		border-color: rgba(59, 130, 246, 0.6);
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 	}
 
 	.textarea {
@@ -789,7 +799,7 @@
 		max-height: 200px;
 		overflow-y: auto;
 		padding: 0.5rem;
-		background: rgba(15, 23, 42, 0.4);
+		background: rgba(15, 15, 15, 0.3);
 		border-radius: 0.5rem;
 	}
 

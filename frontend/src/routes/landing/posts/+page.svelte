@@ -1,14 +1,47 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Plus, FileText, AlertCircle, Edit, Trash2, Globe, X, CheckSquare, Square } from 'lucide-svelte';
+	import {
+		Plus,
+		FileText,
+		AlertCircle,
+		Edit,
+		Trash2,
+		Globe,
+		X,
+		CheckSquare,
+		Square,
+		Link,
+		Calendar,
+		Send,
+		Clock,
+		Tag as TagIcon,
+		Folder,
+		Code
+	} from 'lucide-svelte';
 	import {
 		listPosts,
 		getPost,
 		createPost,
 		updatePost,
 		deletePost,
+		getPostSkills,
+		attachSkillToPost,
+		detachSkillFromPost,
+		listCategories,
+		createCategory,
+		getPostCategories,
+		attachCategoryToPost,
+		detachCategoryFromPost,
+		listTags,
+		getPostTags,
+		attachTagToPost,
+		detachTagFromPost,
+		listSkills,
 		type Post,
-		type CreatePostInput
+		type CreatePostInput,
+		type Category,
+		type Tag,
+		type Skill
 	} from '$lib/api/landing';
 	import { requestTranslation, translateEntity, SUPPORTED_LANGUAGES, type Language } from '$lib/api/translations';
 	import { toastSuccess, toastError } from '$lib/utils/toast';
@@ -19,9 +52,13 @@
 	let showCreateModal = $state(false);
 	let showEditModal = $state(false);
 	let showTranslationModal = $state(false);
+	let showRelationshipsModal = $state(false);
+	let showPublishModal = $state(false);
 	let showBulkActions = $state(false);
 	let editingPost: Post | null = $state(null);
 	let translatingPostId: string | null = $state(null);
+	let managingRelationshipsPostId: string | null = $state(null);
+	let publishingPostId: string | null = $state(null);
 	let selectedIds = $state<Set<string>>(new Set());
 
 	// Form state
@@ -33,6 +70,20 @@
 	let formFeaturedImage = $state('');
 	let formMetaTitle = $state('');
 	let formMetaDescription = $state('');
+	let formScheduledPublish = $state(false);
+	let formPublishDate = $state('');
+	let formPublishTime = $state('');
+
+	// Relationship state
+	let availableSkills: Skill[] = $state([]);
+	let availableCategories: Category[] = $state([]);
+	let availableTags: Tag[] = $state([]);
+	let postSkills: string[] = $state([]);
+	let postCategories: Category[] = $state([]);
+	let postTags: Tag[] = $state([]);
+	let newCategoryName = $state('');
+	let newTagName = $state('');
+	let relationshipLoading = $state(false);
 
 	// Translation state
 	let selectedLanguage: Language = $state('pt-BR');
@@ -69,7 +120,7 @@
 		showCreateModal = true;
 	}
 
-	function startEdit(post: Post) {
+	async function startEdit(post: Post) {
 		editingPost = post;
 		formTitle = post.title;
 		formContent = post.content;
@@ -79,7 +130,187 @@
 		formFeaturedImage = post.featured_image || '';
 		formMetaTitle = post.meta_title || '';
 		formMetaDescription = post.meta_description || '';
+		formScheduledPublish = false;
+		formPublishDate = '';
+		formPublishTime = '';
 		showEditModal = true;
+	}
+
+	async function startManageRelationships(postId: string) {
+		managingRelationshipsPostId = postId;
+		relationshipLoading = true;
+		try {
+			// Load all available options
+			[availableSkills, availableCategories, availableTags] = await Promise.all([
+				listSkills(),
+				listCategories(),
+				listTags()
+			]);
+
+			// Load current relationships
+			[postSkills, postCategories, postTags] = await Promise.all([
+				getPostSkills(postId),
+				getPostCategories(postId),
+				getPostTags(postId)
+			]);
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to load relationships');
+		} finally {
+			relationshipLoading = false;
+		}
+		showRelationshipsModal = true;
+	}
+
+	function cancelRelationships() {
+		showRelationshipsModal = false;
+		managingRelationshipsPostId = null;
+		postSkills = [];
+		postCategories = [];
+		postTags = [];
+	}
+
+	async function toggleSkill(skillId: string) {
+		if (!managingRelationshipsPostId) return;
+
+		const isAttached = postSkills.includes(skillId);
+		try {
+			if (isAttached) {
+				await detachSkillFromPost(managingRelationshipsPostId, skillId);
+				postSkills = postSkills.filter((id) => id !== skillId);
+			} else {
+				await attachSkillToPost(managingRelationshipsPostId, skillId);
+				postSkills = [...postSkills, skillId];
+			}
+			toastSuccess(isAttached ? 'Skill removed' : 'Skill attached');
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to update skill');
+		}
+	}
+
+	async function toggleCategory(categoryId: string) {
+		if (!managingRelationshipsPostId) return;
+
+		const isAttached = postCategories.some((c) => c.id === categoryId);
+		try {
+			if (isAttached) {
+				await detachCategoryFromPost(managingRelationshipsPostId, categoryId);
+				postCategories = postCategories.filter((c) => c.id !== categoryId);
+			} else {
+				await attachCategoryToPost(managingRelationshipsPostId, categoryId);
+				const category = availableCategories.find((c) => c.id === categoryId);
+				if (category) {
+					postCategories = [...postCategories, category];
+				}
+			}
+			toastSuccess(isAttached ? 'Category removed' : 'Category attached');
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to update category');
+		}
+	}
+
+	async function toggleTag(tagId: string) {
+		if (!managingRelationshipsPostId) return;
+
+		const isAttached = postTags.some((t) => t.id === tagId);
+		try {
+			if (isAttached) {
+				await detachTagFromPost(managingRelationshipsPostId, tagId);
+				postTags = postTags.filter((t) => t.id !== tagId);
+			} else {
+				await attachTagToPost(managingRelationshipsPostId, tagId);
+				const tag = availableTags.find((t) => t.id === tagId);
+				if (tag) {
+					postTags = [...postTags, tag];
+				}
+			}
+			toastSuccess(isAttached ? 'Tag removed' : 'Tag attached');
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to update tag');
+		}
+	}
+
+	async function createNewCategory() {
+		if (!newCategoryName.trim() || !managingRelationshipsPostId) return;
+
+		try {
+			const category = await createCategory(newCategoryName.trim());
+			availableCategories = [...availableCategories, category];
+			await attachCategoryToPost(managingRelationshipsPostId, category.id);
+			postCategories = [...postCategories, category];
+			newCategoryName = '';
+			toastSuccess('Category created and attached');
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to create category');
+		}
+	}
+
+	async function createNewTag() {
+		if (!newTagName.trim() || !managingRelationshipsPostId) return;
+
+		try {
+			// Tags are created on-the-fly when attaching, so we need to check if it exists first
+			// For now, we'll just try to attach and let the backend handle creation
+			// This is a simplified approach - in reality, you'd need a createTag endpoint
+			toastError('Tag creation not yet implemented - please use existing tags');
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to create tag');
+		}
+	}
+
+	function startPublish(post: Post) {
+		publishingPostId = post.id;
+		formStatus = post.status;
+		
+		// If post has a published_at date, pre-fill the scheduled publish fields
+		if (post.published_at) {
+			const pubDate = new Date(post.published_at);
+			formScheduledPublish = true;
+			formPublishDate = pubDate.toISOString().split('T')[0];
+			formPublishTime = pubDate.toTimeString().slice(0, 5);
+		} else {
+			formScheduledPublish = false;
+			formPublishDate = '';
+			formPublishTime = '';
+		}
+		showPublishModal = true;
+	}
+
+	function cancelPublish() {
+		showPublishModal = false;
+		publishingPostId = null;
+	}
+
+	async function handlePublish() {
+		if (!publishingPostId) return;
+
+		try {
+			const updates: Partial<CreatePostInput> = {
+				status: formStatus
+			};
+
+			// Handle scheduled publishing
+			if (formScheduledPublish && formPublishDate && formPublishTime) {
+				const publishDateTime = new Date(`${formPublishDate}T${formPublishTime}`);
+				// Format as ISO string for backend
+				// Note: Backend should handle this in the updatePost endpoint
+				// For now, we'll include it in the payload
+				updates.published_at = publishDateTime.toISOString();
+			} else if (formStatus === 'published' && !formScheduledPublish) {
+				// If publishing now, set published_at to current time
+				updates.published_at = new Date().toISOString();
+			}
+
+			await updatePost(publishingPostId, updates);
+			toastSuccess(
+				formScheduledPublish
+					? 'Post scheduled for publishing'
+					: `Post ${formStatus === 'published' ? 'published' : 'status updated'} successfully`
+			);
+			cancelPublish();
+			await fetchPosts();
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to update post status');
+		}
 	}
 
 	function cancelEdit() {
@@ -201,18 +432,23 @@
 				await requestTranslation({
 					entityType: 'post',
 					entityId: translatingPostId,
-					language: selectedLanguage,
-					fields: ['title', 'content', 'excerpt']
+					targetLanguages: [selectedLanguage]
 				});
 				toastSuccess(`Translation to ${SUPPORTED_LANGUAGES.find((l) => l.value === selectedLanguage)?.label} queued`);
 			} else {
 				const languages = selectedLanguages.length > 0 ? selectedLanguages : SUPPORTED_LANGUAGES.map((l) => l.value);
-				const result = await translateEntity({
-					entityType: 'post',
-					entityId: translatingPostId,
-					languages: languages
-				});
-				toastSuccess(`Queued ${result.queuedCount} translation(s)`);
+				// Translate to each language separately
+				const results = await Promise.all(
+					languages.map((lang) =>
+						translateEntity({
+							entityType: 'post',
+							entityId: translatingPostId!,
+							language: lang,
+							fields: { title: '', content: '', excerpt: '' } // Will be filled by the API
+						})
+					)
+				);
+				toastSuccess(`Queued ${results.length} translation(s)`);
 			}
 
 			cancelTranslation();
@@ -322,7 +558,12 @@
 							</td>
 							<td>
 								<div class="post-title">
-									<span class="font-medium">{post.title}</span>
+									<a
+										href="/landing/posts/{post.id}"
+										class="font-medium hover:text-blue-400 transition-colors"
+									>
+										{post.title}
+									</a>
 									{#if post.slug}
 										<span class="text-muted">/{post.slug}</span>
 									{/if}
@@ -341,6 +582,22 @@
 							<td class="text-muted">{formatDate(post.created_at)}</td>
 							<td class="text-right">
 								<div class="actions">
+									<button
+										type="button"
+										class="btn btn-sm btn-secondary"
+										onclick={() => startManageRelationships(post.id)}
+										title="Manage Relationships"
+									>
+										<Link class="icon-sm" />
+									</button>
+									<button
+										type="button"
+										class="btn btn-sm btn-secondary"
+										onclick={() => startPublish(post)}
+										title="Publish/Status"
+									>
+										<Send class="icon-sm" />
+									</button>
 									<button
 										type="button"
 										class="btn btn-sm btn-secondary"
@@ -523,6 +780,182 @@
 	</div>
 {/if}
 
+<!-- Relationships Management Modal -->
+{#if showRelationshipsModal && managingRelationshipsPostId}
+	<div class="modal-overlay" onclick={cancelRelationships}>
+		<div class="modal modal-large" onclick={(e) => e.stopPropagation()}>
+			<h2 class="modal-title">Manage Relationships</h2>
+			<div class="modal-content">
+				{#if relationshipLoading}
+					<div class="loading-container">
+						<div class="spinner"></div>
+					</div>
+				{:else}
+					<!-- Skills Section -->
+					<div class="relationship-section">
+						<div class="section-header">
+							<Code class="icon" />
+							<h3 class="section-title">Skills</h3>
+						</div>
+						<div class="relationship-list">
+							{#each availableSkills as skill}
+								<label class="relationship-item">
+									<input
+										type="checkbox"
+										checked={postSkills.includes(skill.id)}
+										onchange={() => toggleSkill(skill.id)}
+									/>
+									<span>{skill.name}</span>
+									{#if skill.category}
+										<span class="relationship-meta">{skill.category}</span>
+									{/if}
+								</label>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Categories Section -->
+					<div class="relationship-section">
+						<div class="section-header">
+							<Folder class="icon" />
+							<h3 class="section-title">Categories</h3>
+						</div>
+						<div class="create-new-item">
+							<input
+								type="text"
+								bind:value={newCategoryName}
+								class="input input-sm"
+								placeholder="New category name"
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										createNewCategory();
+									}
+								}}
+							/>
+							<button type="button" class="btn btn-sm btn-primary" onclick={createNewCategory}>
+								<Plus class="icon-sm" />
+								Add
+							</button>
+						</div>
+						<div class="relationship-list">
+							{#each availableCategories as category}
+								<label class="relationship-item">
+									<input
+										type="checkbox"
+										checked={postCategories.some((c) => c.id === category.id)}
+										onchange={() => toggleCategory(category.id)}
+									/>
+									<span>{category.name}</span>
+									{#if category.description}
+										<span class="relationship-meta">{category.description}</span>
+									{/if}
+								</label>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Tags Section -->
+					<div class="relationship-section">
+						<div class="section-header">
+							<TagIcon class="icon" />
+							<h3 class="section-title">Tags</h3>
+						</div>
+						<div class="relationship-list">
+							{#each availableTags as tag}
+								<label class="relationship-item">
+									<input
+										type="checkbox"
+										checked={postTags.some((t) => t.id === tag.id)}
+										onchange={() => toggleTag(tag.id)}
+									/>
+									<span>{tag.name}</span>
+								</label>
+							{/each}
+						</div>
+					</div>
+
+					<div class="modal-actions">
+						<button type="button" class="btn btn-secondary" onclick={cancelRelationships}>Done</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Publishing Workflow Modal -->
+{#if showPublishModal && publishingPostId}
+	<div class="modal-overlay" onclick={cancelPublish}>
+		<div class="modal" onclick={(e) => e.stopPropagation()}>
+			<h2 class="modal-title">Publishing Workflow</h2>
+			<div class="modal-content">
+				<div class="workflow-steps">
+					<div class="workflow-step {formStatus === 'draft' ? 'active' : formStatus === 'published' || formStatus === 'archived' ? 'completed' : ''}">
+						<div class="step-indicator"></div>
+						<div class="step-content">
+							<h4 class="step-title">Draft</h4>
+							<p class="step-description">Work in progress</p>
+						</div>
+					</div>
+					<div class="workflow-arrow">→</div>
+					<div class="workflow-step {formStatus === 'published' ? 'active' : formStatus === 'archived' ? 'completed' : ''}">
+						<div class="step-indicator"></div>
+						<div class="step-content">
+							<h4 class="step-title">Published</h4>
+							<p class="step-description">Live on site</p>
+						</div>
+					</div>
+					<div class="workflow-arrow">→</div>
+					<div class="workflow-step {formStatus === 'archived' ? 'active' : ''}">
+						<div class="step-indicator"></div>
+						<div class="step-content">
+							<h4 class="step-title">Archived</h4>
+							<p class="step-description">No longer active</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label class="form-label">Status</label>
+					<select bind:value={formStatus} class="input">
+						<option value="draft">Draft</option>
+						<option value="published">Published</option>
+						<option value="archived">Archived</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={formScheduledPublish} />
+						Schedule Publishing
+					</label>
+				</div>
+
+				{#if formScheduledPublish}
+					<div class="form-row">
+						<div class="form-group">
+							<label class="form-label">Publish Date</label>
+							<input type="date" bind:value={formPublishDate} class="input" />
+						</div>
+						<div class="form-group">
+							<label class="form-label">Publish Time</label>
+							<input type="time" bind:value={formPublishTime} class="input" />
+						</div>
+					</div>
+				{/if}
+
+				<div class="modal-actions">
+					<button type="button" class="btn btn-primary" onclick={handlePublish}>
+						<Send class="icon-sm" />
+						Update Status
+					</button>
+					<button type="button" class="btn btn-secondary" onclick={cancelPublish}>Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.page-container {
 		display: flex;
@@ -563,14 +996,15 @@
 	}
 
 	.btn-primary {
-		background: rgba(59, 130, 246, 0.15);
-		border-color: rgba(59, 130, 246, 0.4);
-		color: #93c5fd;
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
+		color: #e5e5e5;
 	}
 
 	.btn-primary:hover {
-		background: rgba(59, 130, 246, 0.25);
-		border-color: rgba(59, 130, 246, 0.6);
+		background: rgba(255, 255, 255, 0.12);
+		border-color: rgba(255, 255, 255, 0.18);
+		color: #f5f5f5;
 	}
 
 	.btn-sm {
@@ -591,13 +1025,13 @@
 
 	.btn-secondary {
 		background: rgba(71, 85, 105, 0.15);
-		border-color: rgba(71, 85, 105, 0.4);
+		border-color: rgba(255, 255, 255, 0.08);
 		color: #cbd5e1;
 	}
 
 	.btn-secondary:hover {
-		background: rgba(71, 85, 105, 0.25);
-		border-color: rgba(71, 85, 105, 0.6);
+		background: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.12);
 	}
 
 	.icon {
@@ -635,8 +1069,8 @@
 	.spinner {
 		width: 3rem;
 		height: 3rem;
-		border: 2px solid rgba(71, 85, 105, 0.3);
-		border-top-color: #3b82f6;
+		border: 2px solid rgba(255, 255, 255, 0.06);
+		border-top-color: #737373;
 		border-radius: 50%;
 		animation: spin 0.6s linear infinite;
 	}
@@ -655,7 +1089,7 @@
 	.empty-icon {
 		width: 4rem;
 		height: 4rem;
-		color: rgba(71, 85, 105, 0.6);
+		color: rgba(255, 255, 255, 0.12);
 		margin: 0 auto 1rem;
 	}
 
@@ -672,8 +1106,8 @@
 	}
 
 	.table-container {
-		background: rgba(15, 23, 42, 0.6);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 0.75rem;
 		overflow: hidden;
 	}
@@ -684,7 +1118,7 @@
 	}
 
 	.table thead {
-		background: rgba(15, 23, 42, 0.8);
+		background: rgba(15, 15, 15, 0.6);
 	}
 
 	.table th {
@@ -699,11 +1133,11 @@
 
 	.table td {
 		padding: 1rem 1.5rem;
-		border-top: 1px solid rgba(71, 85, 105, 0.3);
+		border-top: 1px solid rgba(255, 255, 255, 0.06);
 	}
 
 	.table tbody tr:hover {
-		background: rgba(51, 65, 85, 0.2);
+		background: rgba(255, 255, 255, 0.03);
 	}
 
 	.text-right {
@@ -751,14 +1185,14 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 1rem;
-		background: rgba(59, 130, 246, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.3);
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.5rem;
 	}
 
 	.bulk-count {
 		font-weight: 500;
-		color: #93c5fd;
+		color: #d4d4d4;
 	}
 
 	.bulk-buttons {
@@ -783,13 +1217,13 @@
 	}
 
 	.checkbox-btn:hover {
-		color: #93c5fd;
+		color: #d4d4d4;
 	}
 
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(2, 6, 23, 0.7);
+		background: rgba(0, 0, 0, 0.75);
 		backdrop-filter: blur(4px);
 		display: flex;
 		align-items: center;
@@ -799,13 +1233,13 @@
 	}
 
 	.modal {
-		background: rgba(15, 23, 42, 0.95);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.98);
+		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.75rem;
 		padding: 1.5rem;
 		width: 100%;
 		max-width: 28rem;
-		box-shadow: 0 20px 45px rgba(2, 6, 23, 0.6);
+		box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8);
 		max-height: 90vh;
 		overflow-y: auto;
 	}
@@ -849,8 +1283,8 @@
 	.input {
 		width: 100%;
 		padding: 0.5rem 0.75rem;
-		background: rgba(15, 23, 42, 0.8);
-		border: 1px solid rgba(71, 85, 105, 0.4);
+		background: rgba(15, 15, 15, 0.6);
+		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.5rem;
 		color: #f8fafc;
 		font-size: 0.875rem;
@@ -859,8 +1293,8 @@
 
 	.input:focus {
 		outline: none;
-		border-color: rgba(59, 130, 246, 0.6);
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+		border-color: rgba(255, 255, 255, 0.2);
+		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 	}
 
 	.textarea {
@@ -898,7 +1332,7 @@
 		max-height: 200px;
 		overflow-y: auto;
 		padding: 0.5rem;
-		background: rgba(15, 23, 42, 0.4);
+		background: rgba(15, 15, 15, 0.3);
 		border-radius: 0.5rem;
 	}
 
@@ -906,6 +1340,165 @@
 		display: flex;
 		gap: 0.75rem;
 		margin-top: 0.5rem;
+	}
+
+	.relationship-section {
+		margin-bottom: 1.5rem;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	}
+
+	.relationship-section:last-child {
+		border-bottom: none;
+		margin-bottom: 0;
+		padding-bottom: 0;
+	}
+
+	.section-header {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.section-title {
+		font-size: 1rem;
+		font-weight: 600;
+		color: #f5f5f5;
+		margin: 0;
+	}
+
+	.relationship-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		max-height: 200px;
+		overflow-y: auto;
+		padding: 0.5rem;
+		background: rgba(15, 15, 15, 0.3);
+		border-radius: 0.5rem;
+	}
+
+	.relationship-item {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		transition: background 120ms ease;
+	}
+
+	.relationship-item:hover {
+		background: rgba(255, 255, 255, 0.03);
+	}
+
+	.relationship-item input[type="checkbox"] {
+		cursor: pointer;
+	}
+
+	.relationship-item span:first-of-type {
+		flex: 1;
+		color: #e5e5e5;
+		font-size: 0.875rem;
+	}
+
+	.relationship-meta {
+		font-size: 0.75rem;
+		color: rgba(255, 255, 255, 0.4);
+		padding: 0.125rem 0.5rem;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 0.25rem;
+	}
+
+	.create-new-item {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.input-sm {
+		flex: 1;
+		padding: 0.375rem 0.5rem;
+		font-size: 0.875rem;
+	}
+
+	.workflow-steps {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1.5rem;
+		padding: 1rem;
+		background: rgba(15, 15, 15, 0.3);
+		border-radius: 0.5rem;
+	}
+
+	.workflow-step {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		opacity: 0.5;
+		transition: opacity 200ms ease;
+	}
+
+	.workflow-step.active {
+		opacity: 1;
+	}
+
+	.workflow-step.completed {
+		opacity: 0.7;
+	}
+
+	.step-indicator {
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.1);
+		border: 2px solid rgba(255, 255, 255, 0.2);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.workflow-step.active .step-indicator {
+		background: rgba(255, 255, 255, 0.15);
+		border-color: rgba(255, 255, 255, 0.3);
+	}
+
+	.workflow-step.completed .step-indicator {
+		background: rgba(34, 197, 94, 0.2);
+		border-color: rgba(34, 197, 94, 0.4);
+	}
+
+	.workflow-step.completed .step-indicator::after {
+		content: '✓';
+		color: #86efac;
+		font-size: 0.875rem;
+	}
+
+	.step-content {
+		flex: 1;
+	}
+
+	.step-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #f5f5f5;
+		margin: 0 0 0.25rem 0;
+	}
+
+	.step-description {
+		font-size: 0.75rem;
+		color: rgba(255, 255, 255, 0.5);
+		margin: 0;
+	}
+
+	.workflow-arrow {
+		color: rgba(255, 255, 255, 0.3);
+		font-size: 1.25rem;
+		margin: 0 0.5rem;
 	}
 </style>
 
