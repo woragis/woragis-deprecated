@@ -1,10 +1,12 @@
 package resumes
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -16,6 +18,7 @@ import (
 // Handler exposes resume endpoints.
 type Handler interface {
 	CreateResume(c *fiber.Ctx) error
+	UploadResume(c *fiber.Ctx) error
 	UpdateResume(c *fiber.Ctx) error
 	DeleteResume(c *fiber.Ctx) error
 	GetResume(c *fiber.Ctx) error
@@ -75,6 +78,85 @@ func (h *handler) CreateResume(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusCreated, resume)
 }
 
+// UploadResume handles file upload and creates a new resume.
+func (h *handler) UploadResume(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
+	}
+
+	// Parse multipart form
+	form, err := c.MultipartForm()
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid multipart form"})
+	}
+
+	// Get title from form
+	titleValues := form.Value["title"]
+	if len(titleValues) == 0 || titleValues[0] == "" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "title is required"})
+	}
+	title := titleValues[0]
+
+	// Get file from form
+	files := form.File["file"]
+	if len(files) == 0 {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "file is required"})
+	}
+	fileHeader := files[0]
+
+	// Validate file type (should be PDF)
+	if fileHeader.Header.Get("Content-Type") != "application/pdf" {
+		// Check extension as fallback
+		ext := filepath.Ext(fileHeader.Filename)
+		if ext != ".pdf" {
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "only PDF files are allowed"})
+		}
+	}
+
+	// Create upload directory if it doesn't exist
+	uploadDir := filepath.Join(h.baseFilePath, "uploads")
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		h.logger.Error("failed to create upload directory", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to create upload directory"})
+	}
+
+	// Generate unique filename
+	timestamp := time.Now().Unix()
+	safeFilename := fmt.Sprintf("%d_%s", timestamp, fileHeader.Filename)
+	filePath := filepath.Join("uploads", safeFilename)
+	fullPath := filepath.Join(h.baseFilePath, filePath)
+
+	// Save file
+	if err := c.SaveFile(fileHeader, fullPath); err != nil {
+		h.logger.Error("failed to save file", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to save file"})
+	}
+
+	// Get file size
+	fileInfo, err := os.Stat(fullPath)
+	if err != nil {
+		h.logger.Error("failed to get file info", slog.Any("error", err))
+		// Clean up file
+		os.Remove(fullPath)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get file info"})
+	}
+
+	// Create resume entry
+	resume, err := h.service.CreateResume(c.Context(), userID, title, filePath, fileHeader.Filename, fileInfo.Size())
+	if err != nil {
+		// Clean up file if resume creation fails
+		os.Remove(fullPath)
+		if domainErr, ok := err.(*DomainError); ok {
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
+		}
+		h.logger.Error("failed to create resume", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to create resume"})
+	}
+
+	return response.Success(c, fiber.StatusCreated, resume)
+}
+
 // UpdateResume updates an existing resume.
 func (h *handler) UpdateResume(c *fiber.Ctx) error {
 	userID, err := authdomain.UserIDFromContext(c)
@@ -122,6 +204,20 @@ func (h *handler) DeleteResume(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
+	// Get resume first to get file path for deletion
+	resume, err := h.service.GetResume(c.Context(), userID, resumeID)
+	if err != nil {
+		if domainErr, ok := err.(*DomainError); ok {
+			if domainErr.Code == ErrCodeNotFound {
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
+			}
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
+		}
+		h.logger.Error("failed to get resume for deletion", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get resume"})
+	}
+
+	// Delete the resume from database
 	if err := h.service.DeleteResume(c.Context(), userID, resumeID); err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
@@ -131,6 +227,20 @@ func (h *handler) DeleteResume(c *fiber.Ctx) error {
 		}
 		h.logger.Error("failed to delete resume", slog.Any("error", err))
 		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to delete resume"})
+	}
+
+	// Delete the file
+	fullPath := filepath.Join(h.baseFilePath, resume.FilePath)
+	if !filepath.IsAbs(resume.FilePath) {
+		fullPath = filepath.Join(h.baseFilePath, resume.FilePath)
+	} else {
+		fullPath = resume.FilePath
+	}
+
+	// Try to delete the file (ignore error if file doesn't exist)
+	if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+		h.logger.Warn("failed to delete resume file", slog.String("path", fullPath), slog.Any("error", err))
+		// Don't fail the request if file deletion fails
 	}
 
 	return response.Success(c, fiber.StatusNoContent, nil)

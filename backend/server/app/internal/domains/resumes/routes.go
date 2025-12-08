@@ -4,6 +4,7 @@ import "github.com/gofiber/fiber/v2"
 
 // SetupRoutes registers resume endpoints.
 func SetupRoutes(api fiber.Router, handler Handler) {
+	api.Post("/upload", handler.UploadResume) // File upload endpoint (must be before /:id routes)
 	api.Post("/", handler.CreateResume)
 	api.Get("/", handler.ListResumes)
 	api.Get("/:id", handler.GetResume)
