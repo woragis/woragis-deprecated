@@ -97,11 +97,11 @@ const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
 	const createdAt = pick(dto, ['CreatedAt', 'createdAt']);
 	const updatedAt = pick(dto, ['UpdatedAt', 'updatedAt']) ?? createdAt;
 	const title = dto.Title ?? dto.title ?? '';
-	const ideaId = id ?? crypto.randomUUID();
+	const ideaId = String(id ?? crypto.randomUUID());
 
 	return {
 		id: ideaId,
-		user_id: userId ?? null,
+		user_id: userId ? String(userId) : crypto.randomUUID(),
 		title,
 		description: dto.Description ?? dto.description,
 		slug: dto.Slug ?? dto.slug ?? buildIdeaSlug(title),
@@ -116,10 +116,10 @@ const mapIdea = (dto: IdeaDTO & Record<string, any>): Idea => {
 };
 
 const mapLink = (dto: IdeaLinkDTO & Record<string, any>): IdeaLink => ({
-	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
-	user_id: pick(dto, ['UserID', 'userId']) ?? null,
-	source_idea_id: pick(dto, ['SourceIdeaID', 'sourceIdeaId']) ?? '',
-	target_idea_id: pick(dto, ['TargetIdeaID', 'targetIdeaId']) ?? '',
+	id: String(pick(dto, ['ID', 'id']) ?? crypto.randomUUID()),
+	user_id: pick(dto, ['UserID', 'userId']) ? String(pick(dto, ['UserID', 'userId'])) : crypto.randomUUID(),
+	source_idea_id: String(pick(dto, ['SourceIdeaID', 'sourceIdeaId']) ?? ''),
+	target_idea_id: String(pick(dto, ['TargetIdeaID', 'targetIdeaId']) ?? ''),
 	relation: dto.Relation ?? dto.relation ?? 'relates',
 	weight: dto.Weight ?? dto.weight ?? 1,
 	bidirectional: Boolean(dto.Bidirectional ?? dto.bidirectional),
@@ -127,10 +127,10 @@ const mapLink = (dto: IdeaLinkDTO & Record<string, any>): IdeaLink => ({
 });
 
 const mapVersion = (dto: IdeaVersionDTO & Record<string, any>): IdeaVersion => ({
-	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
-	idea_id: pick(dto, ['IdeaID', 'ideaId']) ?? '',
-	user_id: pick(dto, ['UserID', 'userId']) ?? '',
-	editor_id: pick(dto, ['EditorID', 'editorId']) ?? '',
+	id: String(pick(dto, ['ID', 'id']) ?? crypto.randomUUID()),
+	idea_id: String(pick(dto, ['IdeaID', 'ideaId']) ?? ''),
+	user_id: String(pick(dto, ['UserID', 'userId']) ?? ''),
+	editor_id: String(pick(dto, ['EditorID', 'editorId']) ?? ''),
 	version: dto.Version ?? dto.version ?? 1,
 	title: dto.Title ?? dto.title ?? '',
 	description: dto.Description ?? dto.description,
@@ -376,8 +376,8 @@ type IdeaNodeConnectionDTO = {
 };
 
 const mapIdeaNode = (dto: IdeaNodeDTO & Record<string, any>): IdeaNode => ({
-	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
-	idea_id: pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? '',
+	id: String(pick(dto, ['ID', 'id']) ?? crypto.randomUUID()),
+	idea_id: String(pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? ''),
 	title: dto.Title ?? dto.title ?? '',
 	description: dto.Description ?? dto.description,
 	pos_x: Number(pick(dto, ['PosX', 'posX', 'pos_x']) ?? 0),
@@ -522,9 +522,9 @@ type IdeaDocumentDTO = {
 };
 
 const mapIdeaDocument = (dto: IdeaDocumentDTO & Record<string, any>): IdeaDocument => ({
-	id: pick(dto, ['ID', 'id']) ?? crypto.randomUUID(),
-	idea_id: pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? '',
-	node_id: pick(dto, ['NodeID', 'nodeId', 'node_id']) ?? null,
+	id: String(pick(dto, ['ID', 'id']) ?? crypto.randomUUID()),
+	idea_id: String(pick(dto, ['IdeaID', 'ideaId', 'idea_id']) ?? ''),
+	node_id: pick(dto, ['NodeID', 'nodeId', 'node_id']) ? String(pick(dto, ['NodeID', 'nodeId', 'node_id'])) : null,
 	title: dto.Title ?? dto.title ?? '',
 	content: dto.Content ?? dto.content ?? '',
 	version: dto.Version ?? dto.version ?? 1,

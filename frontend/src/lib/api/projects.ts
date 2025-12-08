@@ -1,29 +1,19 @@
 import { apiClient } from '@clients/apiClient';
-import type {
-	ArchitectureDiagramType,
-	DocumentationSection,
-	DocumentationSectionType,
-	DocumentationVisibility,
-	KanbanBoard,
-	Milestone,
-	Project,
-	ProjectArchitectureDiagram,
-	ProjectDependency,
-	ProjectFileStructure,
-	ProjectStatus,
-	ProjectTechnology,
-	TechnologyCategory,
-	UUID
-} from './types';
 
 interface ApiResponse<T> {
 	success: boolean;
 	data: T;
 }
 
+// Import types from types.ts to maintain consistency
+import type { Project, ProjectStatus } from './types';
+
+// Re-export for convenience
+export type { Project, ProjectStatus };
+
 export interface CreateProjectInput {
 	name: string;
-	description: string;
+	description?: string;
 	status?: ProjectStatus;
 	healthScore?: number;
 	mrr?: number;
@@ -32,653 +22,504 @@ export interface CreateProjectInput {
 	churnRate?: number;
 }
 
+export interface UpdateProjectStatusInput {
+	status: ProjectStatus;
+}
+
+export interface UpdateProjectMetricsInput {
+	healthScore?: number;
+	mrr?: number;
+	cac?: number;
+	ltv?: number;
+	churnRate?: number;
+}
+
+// Helper function to map API response to Project type
+const mapProject = (apiProject: any): Project => ({
+	id: apiProject.id,
+	user_id: apiProject.userId || apiProject.user_id,
+	name: apiProject.name,
+	description: apiProject.description || '',
+	slug: apiProject.slug,
+	status: apiProject.status,
+	health_score: apiProject.healthScore ?? apiProject.health_score ?? 0,
+	mrr: apiProject.mrr ?? 0,
+	cac: apiProject.cac ?? 0,
+	ltv: apiProject.ltv ?? 0,
+	churn_rate: apiProject.churnRate ?? apiProject.churn_rate ?? 0,
+	created_at: apiProject.createdAt || apiProject.created_at,
+	updated_at: apiProject.updatedAt || apiProject.updated_at
+});
+
 export async function listProjects(): Promise<Project[]> {
-	const response = await apiClient.get<ApiResponse<Project[]>>('/projects');
-	return response.data.data ?? [];
+	const response = await apiClient.get<ApiResponse<any[]>>('/projects');
+	return (response.data.data ?? []).map(mapProject);
+}
+
+export async function getProject(id: string): Promise<Project> {
+	const response = await apiClient.get<ApiResponse<any>>(`/projects/${id}`);
+	return mapProject(response.data.data);
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project> {
-	const response = await apiClient.get<ApiResponse<Project>>(`/projects/slug/${slug}`);
-	return response.data.data;
+	const response = await apiClient.get<ApiResponse<any>>(`/projects/slug/${slug}`);
+	return mapProject(response.data.data);
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
-	const response = await apiClient.post<ApiResponse<Project>>('/projects', {
-		name: input.name,
-		description: input.description,
-		status: input.status ?? 'planning',
-		health_score: input.healthScore ?? 50,
-		mrr: input.mrr ?? 0,
-		cac: input.cac ?? 0,
-		ltv: input.ltv ?? 0,
-		churn_rate: input.churnRate ?? 0
-	});
+	const response = await apiClient.post<ApiResponse<any>>('/projects', input);
+	return mapProject(response.data.data);
+}
+
+export async function updateProjectStatus(id: string, status: ProjectStatus): Promise<Project> {
+	const response = await apiClient.patch<ApiResponse<any>>(`/projects/${id}/status`, { status });
+	return mapProject(response.data.data);
+}
+
+export async function updateProjectMetrics(id: string, input: UpdateProjectMetricsInput): Promise<Project> {
+	const response = await apiClient.patch<ApiResponse<any>>(`/projects/${id}/metrics`, input);
+	return mapProject(response.data.data);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+	await apiClient.delete(`/projects/${id}`);
+}
+
+// Import types for API object
+import type {
+	KanbanBoard,
+	Milestone,
+	ProjectDependency,
+	ProjectDocumentation,
+	DocumentationSection,
+	ProjectTechnology,
+	ProjectFileStructure,
+	ProjectArchitectureDiagram,
+	DocumentationVisibility,
+	TechnologyCategory,
+	ArchitectureDiagramType,
+	UUID
+} from './types';
+
+// Kanban Board
+export async function getKanbanBoard(projectId: string): Promise<KanbanBoard> {
+	const response = await apiClient.get<ApiResponse<KanbanBoard>>(`/projects/${projectId}/board`);
 	return response.data.data;
 }
 
-export async function updateProjectStatus(
-	projectId: UUID,
-	status: ProjectStatus
-): Promise<Project> {
-	const response = await apiClient.patch<ApiResponse<Project>>(`/projects/${projectId}/status`, {
-		status
-	});
-	return response.data.data;
-}
-
-export async function updateProjectMetrics(
-	projectId: UUID,
-	payload: Partial<{
-		healthScore: number;
-		mrr: number;
-		cac: number;
-		ltv: number;
-		churnRate: number;
-	}>
-): Promise<Project> {
-	const response = await apiClient.patch<ApiResponse<Project>>(`/projects/${projectId}/metrics`, {
-		health_score: payload.healthScore,
-		mrr: payload.mrr,
-		cac: payload.cac,
-		ltv: payload.ltv,
-		churn_rate: payload.churnRate
-	});
-	return response.data.data;
-}
-
-export async function addMilestone(
-	projectId: UUID,
-	payload: { title: string; description: string; dueDate: string }
-): Promise<Milestone> {
-	const response = await apiClient.post<ApiResponse<Milestone>>(
-		`/projects/${projectId}/milestones`,
-		{
-			title: payload.title,
-			description: payload.description,
-			due_date: payload.dueDate
-		}
-	);
-	return response.data.data;
-}
-
-export async function listMilestones(projectId: UUID): Promise<Milestone[]> {
-	const response = await apiClient.get<ApiResponse<Milestone[]>>(
-		`/projects/${projectId}/milestones`
-	);
-	return response.data.data ?? [];
-}
-
-export async function bulkUpdateMilestones(
-	projectId: UUID,
-	updates: Array<{
-		milestoneId: UUID;
-		title?: string;
-		description?: string;
-		dueDate?: string;
-		completed?: boolean;
-	}>
-): Promise<Milestone[]> {
-	const payload = updates.map((item) => ({
-		milestone_id: item.milestoneId,
-		title: item.title,
-		description: item.description,
-		due_date: item.dueDate,
-		completed: item.completed
-	}));
-
-	const response = await apiClient.post<ApiResponse<Milestone[]>>(
-		`/projects/${projectId}/milestones/bulk`,
-		{
-			updates: payload
-		}
-	);
-	return response.data.data ?? [];
-}
-
-export async function toggleMilestone(milestoneId: UUID, completed: boolean): Promise<Milestone> {
-	const response = await apiClient.patch<ApiResponse<Milestone>>(
-		`/projects/milestones/${milestoneId}`,
-		{
-			completed
-		}
-	);
-	return response.data.data;
-}
-
-export async function getKanbanBoard(projectId: UUID): Promise<KanbanBoard> {
-	const response = await apiClient.get<ApiResponse<KanbanBoard>>(`/projects/${projectId}/kanban`);
-	return response.data.data;
+export interface CreateKanbanColumnInput {
+	name: string;
+	wipLimit?: number;
+	position?: number;
 }
 
 export async function createKanbanColumn(
-	projectId: UUID,
-	payload: { name: string; position?: number; wipLimit?: number }
-): Promise<KanbanBoard> {
-	const response = await apiClient.post<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/columns`,
-		{
-			name: payload.name,
-			position: payload.position,
-			wip_limit: payload.wipLimit
-		}
-	);
+	projectId: string,
+	input: CreateKanbanColumnInput
+): Promise<any> {
+	const response = await apiClient.post<ApiResponse<any>>(`/projects/${projectId}/columns`, input);
 	return response.data.data;
+}
+
+export interface UpdateKanbanColumnInput {
+	name?: string;
+	wipLimit?: number;
+	position?: number;
 }
 
 export async function updateKanbanColumn(
-	projectId: UUID,
-	columnId: UUID,
-	payload: { name?: string; wipLimit?: number }
-): Promise<KanbanBoard> {
-	const response = await apiClient.patch<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/columns/${columnId}`,
-		{
-			name: payload.name,
-			wip_limit: payload.wipLimit
-		}
+	projectId: string,
+	columnId: string,
+	input: UpdateKanbanColumnInput
+): Promise<any> {
+	const response = await apiClient.patch<ApiResponse<any>>(
+		`/projects/${projectId}/columns/${columnId}`,
+		input
 	);
 	return response.data.data;
 }
 
-export async function reorderKanbanColumns(
-	projectId: UUID,
-	columnOrder: UUID[]
-): Promise<KanbanBoard> {
-	const response = await apiClient.patch<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/columns/reorder`,
-		{
-			column_order: columnOrder
-		}
-	);
-	return response.data.data;
+export async function reorderKanbanColumns(projectId: string, columnOrder: string[]): Promise<void> {
+	await apiClient.post(`/projects/${projectId}/columns/reorder`, { columnOrder });
 }
 
-export async function deleteKanbanColumn(projectId: UUID, columnId: UUID): Promise<KanbanBoard> {
-	const response = await apiClient.delete<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/columns/${columnId}`,
-		{
-			data: {}
-		}
-	);
-	return response.data.data;
+export async function deleteKanbanColumn(projectId: string, columnId: string): Promise<void> {
+	await apiClient.delete(`/projects/${projectId}/columns/${columnId}`);
+}
+
+export interface CreateKanbanCardInput {
+	columnId: string;
+	milestoneId?: string;
+	title: string;
+	description?: string;
+	dueDate?: string;
+	position?: number;
 }
 
 export async function createKanbanCard(
-	projectId: UUID,
-	payload: {
-		columnId: UUID;
-		title: string;
-		description?: string;
-		dueDate?: string;
-		milestoneId?: UUID;
-		position?: number;
-	}
-): Promise<KanbanBoard> {
-	const response = await apiClient.post<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/cards`,
-		{
-			column_id: payload.columnId,
-			title: payload.title,
-			description: payload.description,
-			due_date: payload.dueDate,
-			milestone_id: payload.milestoneId,
-			position: payload.position
-		}
-	);
+	projectId: string,
+	input: CreateKanbanCardInput
+): Promise<any> {
+	const response = await apiClient.post<ApiResponse<any>>(`/projects/${projectId}/cards`, input);
 	return response.data.data;
 }
 
+export interface UpdateKanbanCardInput {
+	columnId?: string;
+	milestoneId?: string;
+	title?: string;
+	description?: string;
+	dueDate?: string;
+	position?: number;
+}
+
 export async function updateKanbanCard(
-	projectId: UUID,
-	cardId: UUID,
-	payload: {
-		title?: string;
-		description?: string;
-		dueDate?: string;
-		milestoneId?: UUID;
-	}
-): Promise<KanbanBoard> {
-	const response = await apiClient.patch<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/cards/${cardId}`,
-		{
-			title: payload.title,
-			description: payload.description,
-			due_date: payload.dueDate,
-			milestone_id: payload.milestoneId
-		}
+	projectId: string,
+	cardId: string,
+	input: UpdateKanbanCardInput
+): Promise<any> {
+	const response = await apiClient.patch<ApiResponse<any>>(
+		`/projects/${projectId}/cards/${cardId}`,
+		input
 	);
 	return response.data.data;
 }
 
 export async function moveKanbanCard(
-	projectId: UUID,
-	cardId: UUID,
-	targetColumnId: UUID,
+	projectId: string,
+	cardId: string,
+	targetColumnId: string,
 	targetPosition: number
-): Promise<KanbanBoard> {
-	const response = await apiClient.patch<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/cards/${cardId}/move`,
-		{
-			target_column_id: targetColumnId,
-			target_position: targetPosition
-		}
+): Promise<void> {
+	await apiClient.post(`/projects/${projectId}/cards/${cardId}/move`, {
+		targetColumnId,
+		targetPosition
+	});
+}
+
+export async function deleteKanbanCard(projectId: string, cardId: string): Promise<void> {
+	await apiClient.delete(`/projects/${projectId}/cards/${cardId}`);
+}
+
+// Milestones
+export async function listMilestones(projectId: string): Promise<Milestone[]> {
+	const response = await apiClient.get<ApiResponse<Milestone[]>>(`/projects/${projectId}/milestones`);
+	return response.data.data ?? [];
+}
+
+export interface AddMilestoneInput {
+	title: string;
+	description: string;
+	dueDate: string;
+}
+
+export async function addMilestone(projectId: string, input: AddMilestoneInput): Promise<Milestone> {
+	const response = await apiClient.post<ApiResponse<Milestone>>(
+		`/projects/${projectId}/milestones`,
+		input
 	);
 	return response.data.data;
 }
 
-export async function deleteKanbanCard(projectId: UUID, cardId: UUID): Promise<KanbanBoard> {
-	const response = await apiClient.delete<ApiResponse<KanbanBoard>>(
-		`/projects/${projectId}/kanban/cards/${cardId}`,
-		{
-			data: {}
-		}
-	);
-	return response.data.data;
+export interface BulkUpdateMilestonesInput {
+	updates: Array<{
+		id: string;
+		completed?: boolean;
+		dueDate?: string;
+		title?: string;
+		description?: string;
+	}>;
 }
 
-export async function createDependency(
-	projectId: UUID,
-	payload: { dependsOnProjectId: UUID; type: 'blocks' | 'relates' | 'supports' }
-): Promise<ProjectDependency> {
-	const response = await apiClient.post<ApiResponse<ProjectDependency>>(
-		`/projects/${projectId}/dependencies`,
-		{
-			depends_on_project_id: payload.dependsOnProjectId,
-			type: payload.type
-		}
-	);
-	return response.data.data;
+export async function bulkUpdateMilestones(
+	projectId: string,
+	input: BulkUpdateMilestonesInput
+): Promise<void> {
+	await apiClient.patch(`/projects/${projectId}/milestones/bulk`, input);
 }
 
-export async function listDependencies(projectId: UUID): Promise<ProjectDependency[]> {
+// Dependencies
+export async function listDependencies(projectId: string): Promise<ProjectDependency[]> {
 	const response = await apiClient.get<ApiResponse<ProjectDependency[]>>(
 		`/projects/${projectId}/dependencies`
 	);
 	return response.data.data ?? [];
 }
 
-export async function deleteDependency(projectId: UUID, dependencyId: UUID): Promise<void> {
-	await apiClient.delete(`/projects/${projectId}/dependencies/${dependencyId}`, {
-		data: {}
-	});
+export interface CreateDependencyInput {
+	dependsOnProjectId: string;
+	type: 'blocks' | 'relates' | 'supports';
+}
+
+export async function createDependency(
+	projectId: string,
+	input: CreateDependencyInput
+): Promise<ProjectDependency> {
+	const response = await apiClient.post<ApiResponse<ProjectDependency>>(
+		`/projects/${projectId}/dependencies`,
+		input
+	);
+	return response.data.data;
+}
+
+export async function deleteDependency(projectId: string, dependencyId: string): Promise<void> {
+	await apiClient.delete(`/projects/${projectId}/dependencies/${dependencyId}`);
+}
+
+// Duplicate Project
+export interface DuplicateProjectInput {
+	name: string;
+	description?: string;
+	status?: ProjectStatus;
+	copyMilestones?: boolean;
+	copyKanban?: boolean;
+	copyDependencies?: boolean;
 }
 
 export async function duplicateProject(
-	templateProjectId: UUID,
-	payload: {
-		name: string;
-		description?: string;
-		status?: ProjectStatus;
-		healthScore?: number;
-		mrr?: number;
-		cac?: number;
-		ltv?: number;
-		churnRate?: number;
-		copyBoard?: boolean;
-		copyMilestones?: boolean;
-		copyDependencies?: boolean;
-	}
+	templateProjectId: string,
+	input: DuplicateProjectInput
 ): Promise<Project> {
-	const response = await apiClient.post<ApiResponse<Project>>(
+	const response = await apiClient.post<ApiResponse<any>>(
 		`/projects/${templateProjectId}/duplicate`,
-		{
-			name: payload.name,
-			description: payload.description,
-			status: payload.status,
-			health_score: payload.healthScore,
-			mrr: payload.mrr,
-			cac: payload.cac,
-			ltv: payload.ltv,
-			churn_rate: payload.churnRate,
-			copy_board: payload.copyBoard ?? true,
-			copy_milestones: payload.copyMilestones ?? true,
-			copy_dependencies: payload.copyDependencies ?? false
-		}
+		input
 	);
-	return response.data.data;
+	return mapProject(response.data.data);
 }
 
-// Documentation API
-
-export async function createDocumentation(
-	projectId: UUID,
-	payload: { visibility?: DocumentationVisibility }
-): Promise<ProjectDocumentation> {
-	const response = await apiClient.post<ApiResponse<ProjectDocumentation>>(
-		`/projects/${projectId}/documentation`,
-		{
-			visibility: payload.visibility ?? 'collaborators'
-		}
-	);
-	return response.data.data;
-}
-
-export async function getDocumentation(projectId: UUID): Promise<ProjectDocumentation> {
+// Documentation
+export async function getDocumentation(projectId: string): Promise<ProjectDocumentation> {
 	const response = await apiClient.get<ApiResponse<ProjectDocumentation>>(
 		`/projects/${projectId}/documentation`
 	);
 	return response.data.data;
 }
 
-export async function getPublicDocumentation(slug: string): Promise<ProjectDocumentation> {
-	const response = await apiClient.get<ApiResponse<ProjectDocumentation>>(
-		`/projects/slug/${slug}/documentation`
+export interface CreateDocumentationInput {
+	visibility: DocumentationVisibility;
+}
+
+export async function createDocumentation(
+	projectId: string,
+	input: CreateDocumentationInput
+): Promise<ProjectDocumentation> {
+	const response = await apiClient.post<ApiResponse<ProjectDocumentation>>(
+		`/projects/${projectId}/documentation`,
+		input
 	);
 	return response.data.data;
 }
 
 export async function updateDocumentationVisibility(
-	projectId: UUID,
+	projectId: string,
 	visibility: DocumentationVisibility
 ): Promise<ProjectDocumentation> {
 	const response = await apiClient.patch<ApiResponse<ProjectDocumentation>>(
 		`/projects/${projectId}/documentation/visibility`,
-		{
-			visibility
-		}
+		{ visibility }
 	);
 	return response.data.data;
 }
 
-export async function deleteDocumentation(projectId: UUID): Promise<void> {
-	await apiClient.delete(`/projects/${projectId}/documentation`, { data: {} });
-}
-
-export async function createDocumentationSection(
-	projectId: UUID,
-	payload: {
-		type: DocumentationSectionType;
-		title: string;
-		content: string;
-		position?: number;
-	}
-): Promise<DocumentationSection> {
-	const response = await apiClient.post<ApiResponse<DocumentationSection>>(
-		`/projects/${projectId}/documentation/sections`,
-		{
-			type: payload.type,
-			title: payload.title,
-			content: payload.content,
-			position: payload.position
-		}
-	);
-	return response.data.data;
-}
-
-export async function listDocumentationSections(projectId: UUID): Promise<DocumentationSection[]> {
+export async function listDocumentationSections(projectId: string): Promise<DocumentationSection[]> {
 	const response = await apiClient.get<ApiResponse<DocumentationSection[]>>(
 		`/projects/${projectId}/documentation/sections`
 	);
 	return response.data.data ?? [];
 }
 
-export async function updateDocumentationSection(
-	sectionId: UUID,
-	payload: {
-		title?: string;
-		content?: string;
-		position?: number;
-	}
+export interface CreateDocumentationSectionInput {
+	type: string;
+	title: string;
+	content: string;
+	position?: number;
+}
+
+export async function createDocumentationSection(
+	projectId: string,
+	input: CreateDocumentationSectionInput
 ): Promise<DocumentationSection> {
-	const response = await apiClient.patch<ApiResponse<DocumentationSection>>(
-		`/projects/documentation/sections/${sectionId}`,
-		{
-			title: payload.title,
-			content: payload.content,
-			position: payload.position
-		}
+	const response = await apiClient.post<ApiResponse<DocumentationSection>>(
+		`/projects/${projectId}/documentation/sections`,
+		input
 	);
 	return response.data.data;
 }
 
-export async function deleteDocumentationSection(sectionId: UUID): Promise<void> {
-	await apiClient.delete(`/projects/documentation/sections/${sectionId}`, { data: {} });
+export interface UpdateDocumentationSectionInput {
+	type?: string;
+	title?: string;
+	content?: string;
+	position?: number;
+}
+
+export async function updateDocumentationSection(
+	sectionId: string,
+	input: UpdateDocumentationSectionInput
+): Promise<DocumentationSection> {
+	const response = await apiClient.patch<ApiResponse<DocumentationSection>>(
+		`/documentation/sections/${sectionId}`,
+		input
+	);
+	return response.data.data;
+}
+
+export async function deleteDocumentationSection(sectionId: string): Promise<void> {
+	await apiClient.delete(`/documentation/sections/${sectionId}`);
 }
 
 export async function reorderDocumentationSections(
-	projectId: UUID,
-	sectionOrder: UUID[]
-): Promise<DocumentationSection[]> {
-	const response = await apiClient.patch<ApiResponse<DocumentationSection[]>>(
-		`/projects/${projectId}/documentation/sections/reorder`,
-		{
-			section_order: sectionOrder
-		}
-	);
-	return response.data.data ?? [];
+	projectId: string,
+	sectionOrder: string[]
+): Promise<void> {
+	await apiClient.post(`/projects/${projectId}/documentation/sections/reorder`, { sectionOrder });
 }
 
-// Technology API
-
-export async function createTechnology(
-	projectId: UUID,
-	payload: {
-		name: string;
-		version: string;
-		category: TechnologyCategory;
-		purpose: string;
-		link?: string;
-	}
-): Promise<ProjectTechnology> {
-	const response = await apiClient.post<ApiResponse<ProjectTechnology>>(
-		`/projects/${projectId}/technologies`,
-		{
-			name: payload.name,
-			version: payload.version,
-			category: payload.category,
-			purpose: payload.purpose,
-			link: payload.link
-		}
-	);
-	return response.data.data;
-}
-
-export async function listTechnologies(projectId: UUID): Promise<ProjectTechnology[]> {
+// Technologies
+export async function listTechnologies(projectId: string): Promise<ProjectTechnology[]> {
 	const response = await apiClient.get<ApiResponse<ProjectTechnology[]>>(
 		`/projects/${projectId}/technologies`
 	);
 	return response.data.data ?? [];
 }
 
-export async function updateTechnology(
-	techId: UUID,
-	payload: {
-		name?: string;
-		version?: string;
-		category?: TechnologyCategory;
-		purpose?: string;
-		link?: string;
-	}
+export interface CreateTechnologyInput {
+	name: string;
+	version: string;
+	category: TechnologyCategory;
+	purpose: string;
+	link?: string;
+}
+
+export async function createTechnology(
+	projectId: string,
+	input: CreateTechnologyInput
 ): Promise<ProjectTechnology> {
-	const response = await apiClient.patch<ApiResponse<ProjectTechnology>>(
-		`/projects/technologies/${techId}`,
-		{
-			name: payload.name,
-			version: payload.version,
-			category: payload.category,
-			purpose: payload.purpose,
-			link: payload.link
-		}
+	const response = await apiClient.post<ApiResponse<ProjectTechnology>>(
+		`/projects/${projectId}/technologies`,
+		input
 	);
 	return response.data.data;
 }
 
-export async function deleteTechnology(techId: UUID): Promise<void> {
-	await apiClient.delete(`/projects/technologies/${techId}`, { data: {} });
+export interface UpdateTechnologyInput {
+	name?: string;
+	version?: string;
+	category?: TechnologyCategory;
+	purpose?: string;
+	link?: string;
+}
+
+export async function updateTechnology(
+	techId: string,
+	input: UpdateTechnologyInput
+): Promise<ProjectTechnology> {
+	const response = await apiClient.patch<ApiResponse<ProjectTechnology>>(
+		`/technologies/${techId}`,
+		input
+	);
+	return response.data.data;
+}
+
+export async function deleteTechnology(techId: string): Promise<void> {
+	await apiClient.delete(`/technologies/${techId}`);
 }
 
 export async function bulkCreateTechnologies(
-	projectId: UUID,
-	technologies: Array<{
-		name: string;
-		version: string;
-		category: TechnologyCategory;
-		purpose: string;
-		link?: string;
-	}>
+	projectId: string,
+	technologies: CreateTechnologyInput[]
 ): Promise<ProjectTechnology[]> {
 	const response = await apiClient.post<ApiResponse<ProjectTechnology[]>>(
 		`/projects/${projectId}/technologies/bulk`,
-		{
-			technologies
-		}
+		{ technologies }
 	);
 	return response.data.data ?? [];
 }
 
 export async function bulkUpdateTechnologies(
-	projectId: UUID,
-	technologies: Array<{
-		tech_id: UUID;
-		name?: string;
-		version?: string;
-		category?: TechnologyCategory;
-		purpose?: string;
-		link?: string;
-	}>
-): Promise<ProjectTechnology[]> {
-	const response = await apiClient.patch<ApiResponse<ProjectTechnology[]>>(
-		`/projects/${projectId}/technologies/bulk`,
-		{
-			technologies
-		}
-	);
-	return response.data.data ?? [];
+	projectId: string,
+	technologies: Array<{ id: string } & UpdateTechnologyInput>
+): Promise<void> {
+	await apiClient.patch(`/projects/${projectId}/technologies/bulk`, { technologies });
 }
 
-// File Structure API
-
-export async function createFileStructure(
-	projectId: UUID,
-	payload: {
-		path: string;
-		name: string;
-		is_directory: boolean;
-		parent_id?: UUID;
-		language?: string;
-		line_count?: number;
-		purpose?: string;
-		position?: number;
-	}
-): Promise<ProjectFileStructure> {
-	const response = await apiClient.post<ApiResponse<ProjectFileStructure>>(
-		`/projects/${projectId}/file-structures`,
-		{
-			path: payload.path,
-			name: payload.name,
-			is_directory: payload.is_directory,
-			parent_id: payload.parent_id,
-			language: payload.language,
-			line_count: payload.line_count ?? 0,
-			purpose: payload.purpose,
-			position: payload.position
-		}
-	);
-	return response.data.data;
-}
-
-export async function listFileStructures(projectId: UUID): Promise<ProjectFileStructure[]> {
+// File Structures
+export async function listFileStructures(projectId: string): Promise<ProjectFileStructure[]> {
 	const response = await apiClient.get<ApiResponse<ProjectFileStructure[]>>(
 		`/projects/${projectId}/file-structures`
 	);
 	return response.data.data ?? [];
 }
 
-export async function updateFileStructure(
-	fileStructureId: UUID,
-	payload: {
-		purpose?: string;
-		line_count?: number;
-		language?: string;
-		position?: number;
-	}
+export interface CreateFileStructureInput {
+	parentId?: string;
+	path: string;
+	name: string;
+	isDirectory: boolean;
+	language?: string;
+	lineCount?: number;
+	purpose?: string;
+	position?: number;
+}
+
+export async function createFileStructure(
+	projectId: string,
+	input: CreateFileStructureInput
 ): Promise<ProjectFileStructure> {
-	const response = await apiClient.patch<ApiResponse<ProjectFileStructure>>(
-		`/projects/file-structures/${fileStructureId}`,
-		{
-			purpose: payload.purpose,
-			line_count: payload.line_count,
-			language: payload.language,
-			position: payload.position
-		}
+	const response = await apiClient.post<ApiResponse<ProjectFileStructure>>(
+		`/projects/${projectId}/file-structures`,
+		input
 	);
 	return response.data.data;
 }
 
-export async function deleteFileStructure(fileStructureId: UUID): Promise<void> {
-	await apiClient.delete(`/projects/file-structures/${fileStructureId}`, { data: {} });
+export interface UpdateFileStructureInput {
+	parentId?: string;
+	path?: string;
+	name?: string;
+	isDirectory?: boolean;
+	language?: string;
+	lineCount?: number;
+	purpose?: string;
+	position?: number;
+}
+
+export async function updateFileStructure(
+	fileStructureId: string,
+	input: UpdateFileStructureInput
+): Promise<ProjectFileStructure> {
+	const response = await apiClient.patch<ApiResponse<ProjectFileStructure>>(
+		`/file-structures/${fileStructureId}`,
+		input
+	);
+	return response.data.data;
+}
+
+export async function deleteFileStructure(fileStructureId: string): Promise<void> {
+	await apiClient.delete(`/file-structures/${fileStructureId}`);
 }
 
 export async function bulkCreateFileStructures(
-	projectId: UUID,
-	structures: Array<{
-		path: string;
-		name: string;
-		is_directory: boolean;
-		parent_id?: UUID;
-		language?: string;
-		line_count?: number;
-		purpose?: string;
-		position?: number;
-	}>
+	projectId: string,
+	structures: CreateFileStructureInput[]
 ): Promise<ProjectFileStructure[]> {
 	const response = await apiClient.post<ApiResponse<ProjectFileStructure[]>>(
 		`/projects/${projectId}/file-structures/bulk`,
-		{
-			structures
-		}
+		{ structures }
 	);
 	return response.data.data ?? [];
 }
 
 export async function bulkUpdateFileStructures(
-	projectId: UUID,
-	structures: Array<{
-		file_structure_id: UUID;
-		purpose?: string;
-		line_count?: number;
-		language?: string;
-		position?: number;
-	}>
-): Promise<ProjectFileStructure[]> {
-	const response = await apiClient.patch<ApiResponse<ProjectFileStructure[]>>(
-		`/projects/${projectId}/file-structures/bulk`,
-		{
-			structures
-		}
-	);
-	return response.data.data ?? [];
+	projectId: string,
+	structures: Array<{ id: string } & UpdateFileStructureInput>
+): Promise<void> {
+	await apiClient.patch(`/projects/${projectId}/file-structures/bulk`, { structures });
 }
 
-// Architecture Diagram API
-
-export async function createArchitectureDiagram(
-	projectId: UUID,
-	payload: {
-		type: ArchitectureDiagramType;
-		title: string;
-		description: string;
-		content: string;
-		format?: string;
-		image_url?: string;
-	}
-): Promise<ProjectArchitectureDiagram> {
-	const response = await apiClient.post<ApiResponse<ProjectArchitectureDiagram>>(
-		`/projects/${projectId}/architecture-diagrams`,
-		{
-			type: payload.type,
-			title: payload.title,
-			description: payload.description,
-			content: payload.content,
-			format: payload.format ?? 'mermaid',
-			image_url: payload.image_url
-		}
-	);
-	return response.data.data;
-}
-
+// Architecture Diagrams
 export async function listArchitectureDiagrams(
-	projectId: UUID
+	projectId: string
 ): Promise<ProjectArchitectureDiagram[]> {
 	const response = await apiClient.get<ApiResponse<ProjectArchitectureDiagram[]>>(
 		`/projects/${projectId}/architecture-diagrams`
@@ -686,49 +527,59 @@ export async function listArchitectureDiagrams(
 	return response.data.data ?? [];
 }
 
-export async function getArchitectureDiagram(
-	diagramId: UUID
+export interface CreateArchitectureDiagramInput {
+	type: ArchitectureDiagramType;
+	title: string;
+	description: string;
+	content: string;
+	format: string;
+	imageUrl?: string;
+}
+
+export async function createArchitectureDiagram(
+	projectId: string,
+	input: CreateArchitectureDiagramInput
 ): Promise<ProjectArchitectureDiagram> {
-	const response = await apiClient.get<ApiResponse<ProjectArchitectureDiagram>>(
-		`/projects/architecture-diagrams/${diagramId}`
+	const response = await apiClient.post<ApiResponse<ProjectArchitectureDiagram>>(
+		`/projects/${projectId}/architecture-diagrams`,
+		input
 	);
 	return response.data.data;
+}
+
+export interface UpdateArchitectureDiagramInput {
+	type?: ArchitectureDiagramType;
+	title?: string;
+	description?: string;
+	content?: string;
+	format?: string;
+	imageUrl?: string;
 }
 
 export async function updateArchitectureDiagram(
-	diagramId: UUID,
-	payload: {
-		title?: string;
-		description?: string;
-		content?: string;
-		image_url?: string;
-	}
+	diagramId: string,
+	input: UpdateArchitectureDiagramInput
 ): Promise<ProjectArchitectureDiagram> {
 	const response = await apiClient.patch<ApiResponse<ProjectArchitectureDiagram>>(
-		`/projects/architecture-diagrams/${diagramId}`,
-		{
-			title: payload.title,
-			description: payload.description,
-			content: payload.content,
-			image_url: payload.image_url
-		}
+		`/architecture-diagrams/${diagramId}`,
+		input
 	);
 	return response.data.data;
 }
 
-export async function deleteArchitectureDiagram(diagramId: UUID): Promise<void> {
-	await apiClient.delete(`/projects/architecture-diagrams/${diagramId}`, { data: {} });
+export async function deleteArchitectureDiagram(diagramId: string): Promise<void> {
+	await apiClient.delete(`/architecture-diagrams/${diagramId}`);
 }
 
+// API Object
 export const projectsApi = {
 	listProjects,
+	getProject,
+	getProjectBySlug,
 	createProject,
 	updateProjectStatus,
 	updateProjectMetrics,
-	addMilestone,
-	listMilestones,
-	bulkUpdateMilestones,
-	toggleMilestone,
+	deleteProject,
 	getKanbanBoard,
 	createKanbanColumn,
 	updateKanbanColumn,
@@ -738,39 +589,35 @@ export const projectsApi = {
 	updateKanbanCard,
 	moveKanbanCard,
 	deleteKanbanCard,
-	createDependency,
+	listMilestones,
+	addMilestone,
+	bulkUpdateMilestones,
 	listDependencies,
+	createDependency,
 	deleteDependency,
 	duplicateProject,
-	// Documentation
-	createDocumentation,
 	getDocumentation,
-	getPublicDocumentation,
+	createDocumentation,
 	updateDocumentationVisibility,
-	deleteDocumentation,
-	createDocumentationSection,
 	listDocumentationSections,
+	createDocumentationSection,
 	updateDocumentationSection,
 	deleteDocumentationSection,
 	reorderDocumentationSections,
-	// Technology
-	createTechnology,
 	listTechnologies,
+	createTechnology,
 	updateTechnology,
 	deleteTechnology,
 	bulkCreateTechnologies,
 	bulkUpdateTechnologies,
-	// File Structure
-	createFileStructure,
 	listFileStructures,
+	createFileStructure,
 	updateFileStructure,
 	deleteFileStructure,
 	bulkCreateFileStructures,
 	bulkUpdateFileStructures,
-	// Architecture Diagrams
-	createArchitectureDiagram,
 	listArchitectureDiagrams,
-	getArchitectureDiagram,
+	createArchitectureDiagram,
 	updateArchitectureDiagram,
 	deleteArchitectureDiagram
 };

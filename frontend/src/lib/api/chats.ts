@@ -39,6 +39,10 @@ export interface CreateConversationInput {
 export interface AppendMessageInput {
 	role: string;
 	content: string;
+	generate_reply?: boolean;
+	provider?: string;
+	model?: string;
+	agent?: string;
 }
 
 export async function listConversations(): Promise<Conversation[]> {
@@ -85,3 +89,37 @@ export async function deleteConversations(ids: string[]): Promise<void> {
 export async function restoreConversations(ids: string[]): Promise<void> {
 	await apiClient.post('/chats/conversations/restore', { ids });
 }
+
+// Aliases for hooks compatibility
+export const fetchConversations = listConversations;
+export const fetchMessages = listMessages;
+
+export async function listAssignments(conversationId: string): Promise<any[]> {
+	const response = await apiClient.get<ApiResponse<any[]>>(
+		`/chats/conversations/${conversationId}/assignments`
+	);
+	return response.data.data ?? [];
+}
+
+export async function listTranscripts(conversationId: string): Promise<any[]> {
+	const response = await apiClient.get<ApiResponse<any[]>>(
+		`/chats/conversations/${conversationId}/transcripts`
+	);
+	return response.data.data ?? [];
+}
+
+export async function searchConversations(query: string, includeArchived: boolean = false): Promise<Conversation[]> {
+	const response = await apiClient.get<ApiResponse<Conversation[]>>(
+		`/chats/conversations/search?q=${encodeURIComponent(query)}&includeArchived=${includeArchived}`
+	);
+	return response.data.data ?? [];
+}
+
+export async function shareTranscript(conversationId: string): Promise<{ share_code: string }> {
+	const response = await apiClient.post<ApiResponse<{ share_code: string }>>(
+		`/chats/conversations/${conversationId}/transcripts/share`
+	);
+	return response.data.data;
+}
+
+export const CHATS_STREAM_BASE = '/chats/stream';

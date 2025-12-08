@@ -107,6 +107,7 @@ export interface ReportDefinition {
 	filters: Record<string, unknown>;
 	is_favorite: boolean;
 	archived_at?: string | null;
+	deleted_at?: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -282,6 +283,27 @@ export interface ChatAssignment {
 	assigned_at: string;
 	unassigned_at?: string | null;
 	notes?: string;
+}
+
+// Auth types
+export interface OAuthAccountPayload {
+	provider: string;
+	linked_at: string;
+	updated_at: string;
+	scopes: string[];
+}
+
+export interface SessionPayload {
+	id: string;
+	user_id: string;
+	device_fingerprint?: string;
+	device_name?: string;
+	user_agent?: string;
+	ip_address?: string;
+	created_at: string;
+	last_activity_at: string;
+	expires_at?: string;
+	is_current?: boolean;
 }
 
 // Documentation types

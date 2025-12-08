@@ -16,6 +16,7 @@ export interface Post {
 	content: string;
 	excerpt?: string;
 	status: string;
+	published_at?: string;
 	featured_image?: string;
 	meta_title?: string;
 	meta_description?: string;
@@ -33,6 +34,7 @@ export interface CreatePostInput {
 	content: string;
 	excerpt?: string;
 	status?: string;
+	published_at?: string;
 	featured_image?: string;
 	meta_title?: string;
 	meta_description?: string;
@@ -73,6 +75,78 @@ export async function updatePost(id: string, input: Partial<CreatePostInput>): P
 
 export async function deletePost(id: string): Promise<void> {
 	await apiClient.delete(`/posts/${id}`);
+}
+
+// Post Relationships
+export async function getPostSkills(postId: string): Promise<string[]> {
+	const response = await apiClient.get<ApiResponse<{ skillIds: string[] }>>(`/posts/${postId}/skills`);
+	return response.data.data.skillIds;
+}
+
+export async function attachSkillToPost(postId: string, skillId: string): Promise<void> {
+	await apiClient.post(`/posts/${postId}/skills`, { skillId });
+}
+
+export async function detachSkillFromPost(postId: string, skillId: string): Promise<void> {
+	await apiClient.delete(`/posts/${postId}/skills/${skillId}`);
+}
+
+export interface Category {
+	id: string;
+	name: string;
+	slug: string;
+	description?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export async function listCategories(): Promise<Category[]> {
+	const response = await apiClient.get<ApiResponse<Category[]>>('/posts/categories');
+	return response.data.data ?? [];
+}
+
+export async function createCategory(name: string, description?: string): Promise<Category> {
+	const response = await apiClient.post<ApiResponse<Category>>('/posts/categories', { name, description });
+	return response.data.data;
+}
+
+export async function getPostCategories(postId: string): Promise<Category[]> {
+	const response = await apiClient.get<ApiResponse<Category[]>>(`/posts/${postId}/categories`);
+	return response.data.data ?? [];
+}
+
+export async function attachCategoryToPost(postId: string, categoryId: string): Promise<void> {
+	await apiClient.post(`/posts/${postId}/categories`, { categoryId });
+}
+
+export async function detachCategoryFromPost(postId: string, categoryId: string): Promise<void> {
+	await apiClient.delete(`/posts/${postId}/categories/${categoryId}`);
+}
+
+export interface Tag {
+	id: string;
+	name: string;
+	slug: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export async function listTags(): Promise<Tag[]> {
+	const response = await apiClient.get<ApiResponse<Tag[]>>('/posts/tags');
+	return response.data.data ?? [];
+}
+
+export async function getPostTags(postId: string): Promise<Tag[]> {
+	const response = await apiClient.get<ApiResponse<Tag[]>>(`/posts/${postId}/tags`);
+	return response.data.data ?? [];
+}
+
+export async function attachTagToPost(postId: string, tagId: string): Promise<void> {
+	await apiClient.post(`/posts/${postId}/tags`, { tagId });
+}
+
+export async function detachTagFromPost(postId: string, tagId: string): Promise<void> {
+	await apiClient.delete(`/posts/${postId}/tags/${tagId}`);
 }
 
 // ============================================================================

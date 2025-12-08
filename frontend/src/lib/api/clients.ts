@@ -1,22 +1,27 @@
 import { apiClient } from '@clients/apiClient';
 
+interface ApiResponse<T> {
+	success: boolean;
+	data: T;
+}
+
 export interface Client {
 	id: string;
-	user_id: string;
+	userId: string;
 	name: string;
 	email?: string;
-	phone_number: string;
+	phoneNumber: string;
 	company?: string;
 	notes?: string;
-	is_archived: boolean;
-	created_at: string;
-	updated_at: string;
+	isArchived: boolean;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface CreateClientInput {
 	name: string;
 	email?: string;
-	phone_number: string;
+	phoneNumber: string;
 	company?: string;
 	notes?: string;
 }
@@ -24,26 +29,17 @@ export interface CreateClientInput {
 export interface UpdateClientInput {
 	name?: string;
 	email?: string;
-	phone_number?: string;
+	phoneNumber?: string;
 	company?: string;
 	notes?: string;
 }
 
-export interface ApiResponse<T> {
-	success: boolean;
-	data: T;
-}
-
-export async function fetchClients(includeArchived = false): Promise<Client[]> {
-	const response = await apiClient.get<ApiResponse<Client[]>>('/clients', {
-		params: {
-			include_archived: includeArchived
-		}
-	});
+export async function listClients(): Promise<Client[]> {
+	const response = await apiClient.get<ApiResponse<Client[]>>('/clients');
 	return response.data.data ?? [];
 }
 
-export async function fetchClient(id: string): Promise<Client> {
+export async function getClient(id: string): Promise<Client> {
 	const response = await apiClient.get<ApiResponse<Client>>(`/clients/${id}`);
 	return response.data.data;
 }
@@ -58,11 +54,28 @@ export async function updateClient(id: string, input: UpdateClientInput): Promis
 	return response.data.data;
 }
 
+export async function toggleArchiveClient(id: string): Promise<Client> {
+	const response = await apiClient.patch<ApiResponse<Client>>(`/clients/${id}/archive`);
+	return response.data.data;
+}
+
 export async function deleteClient(id: string): Promise<void> {
-	await apiClient.delete<ApiResponse<void>>(`/clients/${id}`);
+	await apiClient.delete(`/clients/${id}`);
 }
 
-export async function toggleClientArchived(id: string, archived: boolean): Promise<void> {
-	await apiClient.patch<ApiResponse<void>>(`/clients/${id}/archive`, { archived });
+// Aliases for hooks compatibility
+export async function fetchClients(includeArchived: boolean = false): Promise<Client[]> {
+	const response = await apiClient.get<ApiResponse<Client[]>>(
+		`/clients${includeArchived ? '?includeArchived=true' : ''}`
+	);
+	return response.data.data ?? [];
 }
 
+export async function toggleClientArchived(id: string, archived: boolean): Promise<Client> {
+	if (archived) {
+		return toggleArchiveClient(id);
+	} else {
+		const response = await apiClient.patch<ApiResponse<Client>>(`/clients/${id}/restore`);
+		return response.data.data;
+	}
+}

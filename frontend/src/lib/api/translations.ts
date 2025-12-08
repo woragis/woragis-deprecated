@@ -6,16 +6,20 @@ interface ApiResponse<T> {
 }
 
 export type EntityType =
+	| 'testimonial'
 	| 'post'
-	| 'skill'
 	| 'project'
 	| 'case_study'
-	| 'certification'
-	| 'testimonial'
-	| 'technical_writing'
+	| 'project_case_study'
+	| 'system_design'
 	| 'problem_solution'
+	| 'certification'
+	| 'aiml_integration'
+	| 'impact_metric'
 	| 'social_media_post'
-	| 'system_design';
+	| 'technical_writing'
+	| 'interest'
+	| 'skill';
 
 export type Language =
 	| 'en'
@@ -30,85 +34,12 @@ export type Language =
 	| 'el'
 	| 'la';
 
-export type TranslationStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-export interface Translation {
-	id: string;
-	entity_type: EntityType;
-	entity_id: string;
-	language: Language;
-	fields: Record<string, string>;
-	status: TranslationStatus;
-	error_message?: string;
-	created_at: string;
-	updated_at: string;
+export interface LanguageOption {
+	value: Language;
+	label: string;
 }
 
-export interface RequestTranslationPayload {
-	entityType: EntityType;
-	entityId: string;
-	language: Language;
-	fields?: string[];
-	sourceText?: Record<string, string>;
-}
-
-export interface TranslateEntityPayload {
-	entityType: EntityType;
-	entityId: string;
-	languages?: Language[]; // If empty, translates to all languages
-}
-
-export interface TranslationFilters {
-	entityType?: EntityType;
-	entityId?: string;
-	language?: Language;
-	status?: TranslationStatus;
-}
-
-// Request a translation for a specific entity and language
-export async function requestTranslation(payload: RequestTranslationPayload): Promise<{ message: string }> {
-	const response = await apiClient.post<ApiResponse<{ message: string }>>('/translations/request', payload);
-	return response.data.data;
-}
-
-// Translate an entity to all or specified languages
-export async function translateEntity(payload: TranslateEntityPayload): Promise<{ message: string; queuedCount: number }> {
-	const response = await apiClient.post<ApiResponse<{ message: string; queuedCount: number }>>(
-		'/translations/translate-entity',
-		payload
-	);
-	return response.data.data;
-}
-
-// Get translation for a specific entity and language
-export async function getTranslation(
-	entityType: EntityType,
-	entityId: string,
-	language: Language
-): Promise<Translation> {
-	const response = await apiClient.get<ApiResponse<Translation>>(
-		`/translations/get?entityType=${entityType}&entityId=${entityId}&language=${language}`
-	);
-	return response.data.data;
-}
-
-// List translations with optional filters
-export async function listTranslations(filters?: TranslationFilters): Promise<Translation[]> {
-	const params = new URLSearchParams();
-	if (filters?.entityType) params.append('entityType', filters.entityType);
-	if (filters?.entityId) params.append('entityId', filters.entityId);
-	if (filters?.language) params.append('language', filters.language);
-	if (filters?.status) params.append('status', filters.status);
-
-	const queryString = params.toString();
-	const url = `/translations${queryString ? `?${queryString}` : ''}`;
-
-	const response = await apiClient.get<ApiResponse<Translation[]>>(url);
-	return response.data.data ?? [];
-}
-
-// Supported languages for translation
-export const SUPPORTED_LANGUAGES: { value: Language; label: string }[] = [
+export const SUPPORTED_LANGUAGES: LanguageOption[] = [
 	{ value: 'en', label: 'English' },
 	{ value: 'pt-BR', label: 'Portuguese (Brazil)' },
 	{ value: 'fr', label: 'French' },
@@ -122,3 +53,61 @@ export const SUPPORTED_LANGUAGES: { value: Language; label: string }[] = [
 	{ value: 'la', label: 'Latin' }
 ];
 
+export type TranslationStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface Translation {
+	id: string;
+	entityType: EntityType;
+	entityId: string;
+	language: Language;
+	fields: Record<string, string>;
+	status: TranslationStatus;
+	errorMessage?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface RequestTranslationInput {
+	entityType: EntityType;
+	entityId: string;
+	targetLanguages: Language[];
+}
+
+export interface TranslateEntityInput {
+	entityType: EntityType;
+	entityId: string;
+	language: Language;
+	fields: Record<string, string>;
+}
+
+export interface GetTranslationParams {
+	entityType: EntityType;
+	entityId: string;
+	language: Language;
+}
+
+export async function listTranslations(): Promise<Translation[]> {
+	const response = await apiClient.get<ApiResponse<Translation[]>>('/translations');
+	return response.data.data ?? [];
+}
+
+export async function getTranslation(params: GetTranslationParams): Promise<Translation> {
+	const queryParams = new URLSearchParams({
+		entityType: params.entityType,
+		entityId: params.entityId,
+		language: params.language
+	});
+	const response = await apiClient.get<ApiResponse<Translation>>(
+		`/translations/get?${queryParams.toString()}`
+	);
+	return response.data.data;
+}
+
+export async function requestTranslation(input: RequestTranslationInput): Promise<void> {
+	await apiClient.post('/translations/request', input);
+}
+
+export async function translateEntity(input: TranslateEntityInput): Promise<Translation> {
+	const response = await apiClient.post<ApiResponse<Translation>>('/translations/translate-entity', input);
+	return response.data.data;
+}

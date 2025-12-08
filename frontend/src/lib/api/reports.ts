@@ -1,19 +1,44 @@
 import { apiClient } from '@clients/apiClient';
-import type {
-	ReportDefinition,
-	ReportDefinitionDetail,
-	ReportDelivery,
-	ReportRun,
-	ReportSchedule,
-	UUID
-} from './types';
+import type { ReportDefinition } from './types';
+
+// Re-export for convenience
+export type { ReportDefinition };
 
 interface ApiResponse<T> {
 	success: boolean;
 	data: T;
 }
 
-export interface ListDefinitionsParams {
+// Helper function to map API response to ReportDefinition type
+const mapReportDefinition = (apiReport: any): ReportDefinition => ({
+	id: apiReport.id,
+	name: apiReport.name,
+	description: apiReport.description || '',
+	sections: apiReport.sections || {},
+	filters: apiReport.filters || {},
+	is_favorite: apiReport.isFavorite ?? apiReport.is_favorite ?? false,
+	archived_at: apiReport.archivedAt || apiReport.archived_at || null,
+	created_at: apiReport.createdAt || apiReport.created_at,
+	updated_at: apiReport.updatedAt || apiReport.updated_at
+});
+
+export interface CreateReportDefinitionInput {
+	name: string;
+	description?: string;
+	sections?: Record<string, any>;
+	filters?: Record<string, any>;
+	isFavorite?: boolean;
+}
+
+export interface UpdateReportDefinitionInput {
+	name?: string;
+	description?: string;
+	sections?: Record<string, any>;
+	filters?: Record<string, any>;
+	isFavorite?: boolean;
+}
+
+export interface ListReportDefinitionsOptions {
 	search?: string;
 	includeArchived?: boolean;
 	favorites?: boolean;
@@ -22,244 +47,190 @@ export interface ListDefinitionsParams {
 	offset?: number;
 }
 
-const buildQueryString = (params: Record<string, string | number | boolean | undefined>) => {
-	const searchParams = new URLSearchParams();
-	for (const [key, value] of Object.entries(params)) {
-		if (value === undefined || value === null || value === '') continue;
-		searchParams.set(key, String(value));
-	}
-	return searchParams.toString() ? `?${searchParams.toString()}` : '';
-};
-
 export async function listReportDefinitions(
-	params: ListDefinitionsParams = {}
+	options?: ListReportDefinitionsOptions
 ): Promise<ReportDefinition[]> {
-	const query = buildQueryString({
-		search: params.search,
-		include_archived: params.includeArchived ? 'true' : undefined,
-		favorites: params.favorites ? 'true' : undefined,
-		channel: params.channel,
-		limit: params.limit,
-		offset: params.offset
-	});
-	const response = await apiClient.get<ApiResponse<ReportDefinition[]>>(`/reports${query}`);
-	return response.data.data ?? [];
+	const params = new URLSearchParams();
+	if (options?.search) params.append('search', options.search);
+	if (options?.includeArchived) params.append('includeArchived', 'true');
+	if (options?.favorites) params.append('favorites', 'true');
+	if (options?.channel) params.append('channel', options.channel);
+	if (options?.limit) params.append('limit', options.limit.toString());
+	if (options?.offset) params.append('offset', options.offset.toString());
+
+	const queryString = params.toString();
+	const url = queryString ? `/reports?${queryString}` : '/reports';
+	const response = await apiClient.get<ApiResponse<any[]>>(url);
+	return (response.data.data ?? []).map(mapReportDefinition);
 }
 
-export interface UpsertDefinitionInput {
-	name: string;
-	description?: string;
-	sections?: Record<string, unknown>;
-	filters?: Record<string, unknown>;
-	favorite?: boolean;
+export async function getReportDefinition(id: string): Promise<ReportDefinition> {
+	const response = await apiClient.get<ApiResponse<any>>(`/reports/${id}`);
+	return mapReportDefinition(response.data.data);
 }
 
 export async function createReportDefinition(
-	input: UpsertDefinitionInput
+	input: CreateReportDefinitionInput
 ): Promise<ReportDefinition> {
-	const response = await apiClient.post<ApiResponse<ReportDefinition>>('/reports', {
-		name: input.name,
-		description: input.description,
-		sections: input.sections ?? {},
-		filters: input.filters ?? {},
-		favorite: input.favorite ?? false
-	});
-	return response.data.data;
+	const response = await apiClient.post<ApiResponse<any>>('/reports', input);
+	return mapReportDefinition(response.data.data);
 }
 
 export async function updateReportDefinition(
-	definitionId: UUID,
-	input: UpsertDefinitionInput
+	id: string,
+	input: UpdateReportDefinitionInput
 ): Promise<ReportDefinition> {
-	const response = await apiClient.put<ApiResponse<ReportDefinition>>(
-		`/reports/${definitionId}`,
-		{
-			name: input.name,
-			description: input.description,
-			sections: input.sections ?? {},
-			filters: input.filters ?? {},
-			favorite: input.favorite ?? false
-		}
-	);
-	return response.data.data;
+	const response = await apiClient.put<ApiResponse<any>>(`/reports/${id}`, input);
+	return mapReportDefinition(response.data.data);
 }
 
-const postBulk = async (path: string, definitionIds: UUID[]): Promise<void> => {
-	if (definitionIds.length === 0) return;
-	await apiClient.post(path, {
-		definition_ids: definitionIds
-	});
-};
-
-export async function archiveReportDefinitions(definitionIds: UUID[]): Promise<void> {
-	await postBulk('/reports/archive', definitionIds);
+export async function archiveReportDefinitions(ids: string[]): Promise<void> {
+	await apiClient.post('/reports/archive', { ids });
 }
 
-export async function restoreReportDefinitions(definitionIds: UUID[]): Promise<void> {
-	await postBulk('/reports/restore', definitionIds);
+export async function restoreReportDefinitions(ids: string[]): Promise<void> {
+	await apiClient.post('/reports/restore', { ids });
 }
 
-export async function deleteReportDefinitions(definitionIds: UUID[]): Promise<void> {
-	await postBulk('/reports/delete', definitionIds);
+export async function deleteReportDefinitions(ids: string[]): Promise<void> {
+	await apiClient.post('/reports/delete', { ids });
 }
 
-export async function toggleReportFavorite(
-	definitionId: UUID,
-	favorite: boolean
-): Promise<void> {
-	await apiClient.post('/reports/favorite', {
-		definition_id: definitionId,
-		favorite
-	});
+export async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
+	await apiClient.post('/reports/favorite', { id, favorite });
 }
 
-export async function getReportDefinition(
-	definitionId: UUID
-): Promise<ReportDefinitionDetail> {
-	const response =
-		await apiClient.get<ApiResponse<ReportDefinitionDetail>>(`/reports/${definitionId}`);
-	return response.data.data;
-}
+// Import types
+import type { ReportDefinitionDetail, ReportRun, ReportSchedule, ReportDelivery, UUID } from './types';
 
-export async function listReportRuns(definitionId: UUID): Promise<ReportRun[]> {
-	const response =
-		await apiClient.get<ApiResponse<ReportRun[]>>(`/reports/${definitionId}/runs`);
+// Report Runs
+export async function listReportRuns(definitionId: string): Promise<ReportRun[]> {
+	const response = await apiClient.get<ApiResponse<ReportRun[]>>(`/reports/${definitionId}/runs`);
 	return response.data.data ?? [];
 }
 
-export async function queueReportRuns(
-	definitionIds: UUID[],
-	metadata?: Record<string, unknown>
-): Promise<void> {
-	if (definitionIds.length === 0) return;
-	await apiClient.post('/reports/runs/bulk', {
-		definition_ids: definitionIds,
-		metadata
-	});
+// Report Schedules
+export async function listReportSchedules(definitionId: string): Promise<ReportSchedule[]> {
+	const response = await apiClient.get<ApiResponse<ReportSchedule[]>>(
+		`/reports/${definitionId}/schedules`
+	);
+	return response.data.data ?? [];
 }
 
-export interface ScheduleInput {
+export interface CreateReportScheduleInput {
 	cron: string;
 	frequency: string;
 	timezone: string;
-	nextRun?: string | null;
+	nextRun?: string;
 	enabled?: boolean;
 	meta?: Record<string, unknown>;
 }
 
 export async function createReportSchedule(
-	definitionId: UUID,
-	input: ScheduleInput
+	definitionId: string,
+	input: CreateReportScheduleInput
 ): Promise<ReportSchedule> {
 	const response = await apiClient.post<ApiResponse<ReportSchedule>>(
 		`/reports/${definitionId}/schedules`,
-		{
-			cron: input.cron,
-			frequency: input.frequency,
-			timezone: input.timezone,
-			next_run: input.nextRun,
-			enabled: input.enabled,
-			meta: input.meta
-		}
+		input
 	);
 	return response.data.data;
+}
+
+export interface UpdateReportScheduleInput {
+	cron?: string;
+	frequency?: string;
+	timezone?: string;
+	nextRun?: string;
+	enabled?: boolean;
+	meta?: Record<string, unknown>;
 }
 
 export async function updateReportSchedule(
-	scheduleId: UUID,
-	input: ScheduleInput
+	scheduleId: string,
+	input: UpdateReportScheduleInput
 ): Promise<ReportSchedule> {
-	const response = await apiClient.put<ApiResponse<ReportSchedule>>(
+	const response = await apiClient.patch<ApiResponse<ReportSchedule>>(
 		`/reports/schedules/${scheduleId}`,
-		{
-			cron: input.cron,
-			frequency: input.frequency,
-			timezone: input.timezone,
-			next_run: input.nextRun,
-			enabled: input.enabled,
-			meta: input.meta
-		}
+		input
 	);
 	return response.data.data;
 }
 
-export async function toggleReportSchedule(
-	scheduleId: UUID,
-	enabled: boolean
-): Promise<void> {
-	await apiClient.post(`/reports/schedules/${scheduleId}/toggle`, {
-		enabled
-	});
+export async function toggleReportSchedule(scheduleId: string, enabled: boolean): Promise<void> {
+	await apiClient.patch(`/reports/schedules/${scheduleId}`, { enabled });
 }
 
-export async function deleteReportSchedule(scheduleId: UUID): Promise<void> {
-	await apiClient.delete(`/reports/schedules/${scheduleId}`, {
-		data: {}
-	});
+export async function deleteReportSchedule(scheduleId: string): Promise<void> {
+	await apiClient.delete(`/reports/schedules/${scheduleId}`);
 }
 
-export interface DeliveryInput {
+// Report Deliveries
+export interface CreateReportDeliveryInput {
 	channel: string;
 	target: string;
-	template?: Record<string, unknown>;
 	enabled?: boolean;
+	template?: Record<string, unknown>;
 }
 
 export async function createReportDelivery(
-	definitionId: UUID,
-	input: DeliveryInput
+	definitionId: string,
+	input: CreateReportDeliveryInput
 ): Promise<ReportDelivery> {
 	const response = await apiClient.post<ApiResponse<ReportDelivery>>(
 		`/reports/${definitionId}/deliveries`,
-		{
-			channel: input.channel,
-			target: input.target,
-			template: input.template,
-			enabled: input.enabled
-		}
+		input
 	);
 	return response.data.data;
+}
+
+export interface UpdateReportDeliveryInput {
+	channel?: string;
+	target?: string;
+	enabled?: boolean;
+	template?: Record<string, unknown>;
 }
 
 export async function updateReportDelivery(
-	deliveryId: UUID,
-	input: DeliveryInput
+	deliveryId: string,
+	input: UpdateReportDeliveryInput
 ): Promise<ReportDelivery> {
-	const response = await apiClient.put<ApiResponse<ReportDelivery>>(
+	const response = await apiClient.patch<ApiResponse<ReportDelivery>>(
 		`/reports/deliveries/${deliveryId}`,
-		{
-			channel: input.channel,
-			target: input.target,
-			template: input.template,
-			enabled: input.enabled
-		}
+		input
 	);
 	return response.data.data;
 }
 
-export async function toggleReportDelivery(deliveryId: UUID, enabled: boolean): Promise<void> {
-	await apiClient.post(`/reports/deliveries/${deliveryId}/toggle`, {
-		enabled
-	});
+export async function toggleReportDelivery(deliveryId: string, enabled: boolean): Promise<void> {
+	await apiClient.patch(`/reports/deliveries/${deliveryId}`, { enabled });
 }
 
-export async function deleteReportDelivery(deliveryId: UUID): Promise<void> {
-	await apiClient.delete(`/reports/deliveries/${deliveryId}`, {
-		data: {}
-	});
+export async function deleteReportDelivery(deliveryId: string): Promise<void> {
+	await apiClient.delete(`/reports/deliveries/${deliveryId}`);
 }
 
+// Queue Report Runs
+export async function queueReportRuns(
+	definitionIds: string[],
+	metadata?: Record<string, unknown>
+): Promise<void> {
+	await apiClient.post('/reports/queue-runs', { definitionIds, metadata });
+}
+
+// API Object
 export const reportsApi = {
 	listReportDefinitions,
+	getReportDefinition,
 	createReportDefinition,
 	updateReportDefinition,
 	archiveReportDefinitions,
 	restoreReportDefinitions,
 	deleteReportDefinitions,
-	toggleReportFavorite,
-	getReportDefinition,
+	toggleReportFavorite: toggleFavorite,
 	listReportRuns,
 	queueReportRuns,
+	listReportSchedules,
 	createReportSchedule,
 	updateReportSchedule,
 	toggleReportSchedule,
@@ -269,4 +240,3 @@ export const reportsApi = {
 	toggleReportDelivery,
 	deleteReportDelivery
 };
-
