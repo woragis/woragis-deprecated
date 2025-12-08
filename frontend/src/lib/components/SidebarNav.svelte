@@ -2,6 +2,7 @@
 	import type { NavItem } from '$lib/navigation';
 	import type { AuthUser } from '$lib';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { writable } from 'svelte/store';
 
 	export let title = 'Woragis Console';
 	export let primary: NavItem[] = [];
@@ -15,6 +16,54 @@
 	const dispatch = createEventDispatcher<{ close: void; logout: void }>();
 
 	const itemMatches = (item: NavItem) => (item.match ? item.match(currentPath) : currentPath === item.href);
+
+	// Track which collapsible sections are open
+	const collapsedSections = writable<Set<string>>(new Set());
+
+	function toggleSection(href: string) {
+		collapsedSections.update((set) => {
+			const next = new Set(set);
+			if (next.has(href)) {
+				next.delete(href);
+			} else {
+				next.add(href);
+			}
+			return next;
+		});
+	}
+
+	function isSectionCollapsed(href: string): boolean {
+		let result = false;
+		collapsedSections.subscribe((set) => {
+			result = set.has(href);
+		})();
+		return result;
+	}
+
+	// Auto-expand sections if current path matches
+	$: if (currentPath) {
+		for (const item of [...primary, ...secondary]) {
+			if (item.children && itemMatches(item)) {
+				collapsedSections.update((set) => {
+					const next = new Set(set);
+					next.delete(item.href);
+					return next;
+				});
+			}
+			// Also expand if any child matches
+			if (item.children) {
+				for (const child of item.children) {
+					if (itemMatches(child)) {
+						collapsedSections.update((set) => {
+							const next = new Set(set);
+							next.delete(item.href);
+							return next;
+						});
+					}
+				}
+			}
+		}
+	}
 
 	const handleNavigate = () => {
 		dispatch('close');
@@ -64,7 +113,7 @@
 		tabindex="-1"
 		role="button"
 		aria-hidden={!open}
-		on:click={() => dispatch('close')}
+		onclick={() => dispatch('close')}
 	>
 		<span class="sr-only">Close navigation</span>
 	</div>
@@ -86,7 +135,7 @@
 							<p class="profile-card__email">{user.email}</p>
 						</div>
 					</div>
-					<button class="profile-card__logout" type="button" on:click={() => dispatch('logout')}>
+					<button class="profile-card__logout" type="button" onclick={() => dispatch('logout')}>
 						Log out
 					</button>
 				</section>
@@ -94,15 +143,60 @@
 
 			<section class="panel__section" aria-label="Primary navigation">
 				{#each primary as item (item.href)}
-					<a
-						class="nav-link"
-						class:nav-link--active={itemMatches(item)}
-						aria-current={itemMatches(item) ? 'page' : undefined}
-						href={item.href}
-						on:click={handleNavigate}
-					>
-						{item.label}
-					</a>
+					{#if item.children && item.children.length > 0}
+						<!-- Collapsible section with children -->
+						<div class="nav-group">
+							<button
+								class="nav-group__toggle"
+								class:nav-group__toggle--active={itemMatches(item)}
+								type="button"
+								onclick={() => toggleSection(item.href)}
+								aria-expanded={!$collapsedSections.has(item.href)}
+							>
+								<span class="nav-group__label">{item.label}</span>
+								<svg
+									class="nav-group__icon"
+									class:nav-group__icon--rotated={!$collapsedSections.has(item.href)}
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 9l-7 7-7-7"
+									></path>
+								</svg>
+							</button>
+							{#if !$collapsedSections.has(item.href)}
+								<div class="nav-group__children">
+									{#each item.children as child (child.href)}
+										<a
+											class="nav-link nav-link--child"
+											class:nav-link--active={itemMatches(child)}
+											aria-current={itemMatches(child) ? 'page' : undefined}
+											href={child.href}
+											onclick={handleNavigate}
+										>
+											{child.label}
+										</a>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{:else}
+						<!-- Regular nav item -->
+						<a
+							class="nav-link"
+							class:nav-link--active={itemMatches(item)}
+							aria-current={itemMatches(item) ? 'page' : undefined}
+							href={item.href}
+							onclick={handleNavigate}
+						>
+							{item.label}
+						</a>
+					{/if}
 				{/each}
 			</section>
 
@@ -110,15 +204,60 @@
 				<section class="panel__section panel__section--secondary" aria-label="Secondary navigation">
 					<div class="panel__section-label">{secondaryLabel}</div>
 					{#each secondary as item (item.href)}
-						<a
-							class="nav-link"
-							class:nav-link--active={itemMatches(item)}
-							aria-current={itemMatches(item) ? 'page' : undefined}
-							href={item.href}
-							on:click={handleNavigate}
-						>
-							{item.label}
-						</a>
+						{#if item.children && item.children.length > 0}
+							<!-- Collapsible section with children -->
+							<div class="nav-group">
+								<button
+									class="nav-group__toggle"
+									class:nav-group__toggle--active={itemMatches(item)}
+									type="button"
+									onclick={() => toggleSection(item.href)}
+									aria-expanded={!$collapsedSections.has(item.href)}
+								>
+									<span class="nav-group__label">{item.label}</span>
+									<svg
+										class="nav-group__icon"
+										class:nav-group__icon--rotated={!$collapsedSections.has(item.href)}
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 9l-7 7-7-7"
+										></path>
+									</svg>
+								</button>
+								{#if !$collapsedSections.has(item.href)}
+									<div class="nav-group__children">
+										{#each item.children as child (child.href)}
+											<a
+												class="nav-link nav-link--child"
+												class:nav-link--active={itemMatches(child)}
+												aria-current={itemMatches(child) ? 'page' : undefined}
+												href={child.href}
+												onclick={handleNavigate}
+											>
+												{child.label}
+											</a>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<!-- Regular nav item -->
+							<a
+								class="nav-link"
+								class:nav-link--active={itemMatches(item)}
+								aria-current={itemMatches(item) ? 'page' : undefined}
+								href={item.href}
+								onclick={handleNavigate}
+							>
+								{item.label}
+							</a>
+						{/if}
 					{/each}
 				</section>
 			{/if}
@@ -245,6 +384,72 @@
 	.nav-link--active {
 		color: #38bdf8;
 		background: rgba(15, 118, 110, 0.18);
+	}
+
+	.nav-link--child {
+		padding-left: 2rem;
+		font-size: 0.8rem;
+	}
+
+	.nav-group {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.nav-group__toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.55rem 0.75rem;
+		border-radius: 0.5rem;
+		font-size: 0.85rem;
+		font-weight: 500;
+		color: rgba(203, 213, 225, 0.9);
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		transition: background-color 120ms ease-in-out, color 120ms ease-in-out, transform 120ms;
+		text-align: left;
+		width: 100%;
+	}
+
+	.nav-group__toggle:hover,
+	.nav-group__toggle:focus-visible {
+		color: #f8fafc;
+		background-color: rgba(51, 65, 85, 0.35);
+		transform: translateX(2px);
+		outline: none;
+	}
+
+	.nav-group__toggle--active {
+		color: #38bdf8;
+		background: rgba(15, 118, 110, 0.18);
+	}
+
+	.nav-group__label {
+		flex: 1;
+	}
+
+	.nav-group__icon {
+		width: 1rem;
+		height: 1rem;
+		transition: transform 150ms ease-in-out;
+		flex-shrink: 0;
+	}
+
+	.nav-group__icon--rotated {
+		transform: rotate(180deg);
+	}
+
+	.nav-group__children {
+		display: flex;
+		flex-direction: column;
+		margin-top: 0.25rem;
+		margin-left: 0.5rem;
+		padding-left: 0.5rem;
+		border-left: 1px solid rgba(71, 85, 105, 0.3);
+		gap: 0.1rem;
 	}
 
 	.profile-card {
