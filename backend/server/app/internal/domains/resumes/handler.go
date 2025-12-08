@@ -1,7 +1,6 @@
 package resumes
 
 import (
-	"context"
 	"io"
 	"log/slog"
 	"os"
@@ -48,9 +47,9 @@ func NewHandler(service Service, baseFilePath string, logger *slog.Logger) Handl
 
 // CreateResume creates a new resume.
 func (h *handler) CreateResume(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	var req struct {
@@ -61,31 +60,31 @@ func (h *handler) CreateResume(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "invalid request body")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid request body"})
 	}
 
 	resume, err := h.service.CreateResume(c.Context(), userID, req.Title, req.FilePath, req.FileName, req.FileSize)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to create resume", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to create resume")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to create resume"})
 	}
 
-	return response.Created(c, resume)
+	return response.Success(c, fiber.StatusCreated, resume)
 }
 
 // UpdateResume updates an existing resume.
 func (h *handler) UpdateResume(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	var req struct {
@@ -93,199 +92,199 @@ func (h *handler) UpdateResume(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "invalid request body")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid request body"})
 	}
 
 	resume, err := h.service.UpdateResume(c.Context(), userID, resumeID, req.Title)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to update resume", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to update resume")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to update resume"})
 	}
 
-	return response.OK(c, resume)
+	return response.Success(c, fiber.StatusOK, resume)
 }
 
 // DeleteResume deletes a resume.
 func (h *handler) DeleteResume(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	if err := h.service.DeleteResume(c.Context(), userID, resumeID); err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to delete resume", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to delete resume")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to delete resume"})
 	}
 
-	return response.NoContent(c)
+	return response.Success(c, fiber.StatusNoContent, nil)
 }
 
 // GetResume retrieves a resume by ID.
 func (h *handler) GetResume(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	resume, err := h.service.GetResume(c.Context(), userID, resumeID)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to get resume", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to get resume")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get resume"})
 	}
 
-	return response.OK(c, resume)
+	return response.Success(c, fiber.StatusOK, resume)
 }
 
 // ListResumes lists all resumes for the authenticated user.
 func (h *handler) ListResumes(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumes, err := h.service.ListResumes(c.Context(), userID)
 	if err != nil {
 		h.logger.Error("failed to list resumes", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to list resumes")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to list resumes"})
 	}
 
-	return response.OK(c, resumes)
+	return response.Success(c, fiber.StatusOK, resumes)
 }
 
 // MarkAsMain marks a resume as main.
 func (h *handler) MarkAsMain(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	resume, err := h.service.MarkAsMain(c.Context(), userID, resumeID)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to mark resume as main", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to mark resume as main")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to mark resume as main"})
 	}
 
-	return response.OK(c, resume)
+	return response.Success(c, fiber.StatusOK, resume)
 }
 
 // MarkAsFeatured marks a resume as featured.
 func (h *handler) MarkAsFeatured(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	resume, err := h.service.MarkAsFeatured(c.Context(), userID, resumeID)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to mark resume as featured", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to mark resume as featured")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to mark resume as featured"})
 	}
 
-	return response.OK(c, resume)
+	return response.Success(c, fiber.StatusOK, resume)
 }
 
 // UnmarkAsMain removes the main flag from a resume.
 func (h *handler) UnmarkAsMain(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	resume, err := h.service.UnmarkAsMain(c.Context(), userID, resumeID)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to unmark resume as main", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to unmark resume as main")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to unmark resume as main"})
 	}
 
-	return response.OK(c, resume)
+	return response.Success(c, fiber.StatusOK, resume)
 }
 
 // UnmarkAsFeatured removes the featured flag from a resume.
 func (h *handler) UnmarkAsFeatured(c *fiber.Ctx) error {
-	userID, err := authdomain.GetUserIDFromContext(c)
+	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
-		return response.Unauthorized(c, "authentication required")
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
 	resumeID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return response.BadRequest(c, "invalid resume ID")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
 	resume, err := h.service.UnmarkAsFeatured(c.Context(), userID, resumeID)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
-			return response.BadRequest(c, domainErr.Message)
+			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": domainErr.Message})
 		}
 		h.logger.Error("failed to unmark resume as featured", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to unmark resume as featured")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to unmark resume as featured"})
 	}
 
-	return response.OK(c, resume)
+	return response.Success(c, fiber.StatusOK, resume)
 }
 
 // DownloadResume downloads the best resume (public endpoint).
@@ -295,12 +294,12 @@ func (h *handler) DownloadResume(c *fiber.Ctx) error {
 	userIDStr := c.Query("userId")
 	if userIDStr == "" {
 		// Use a default user ID - you might want to configure this
-		return response.BadRequest(c, "userId query parameter is required")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "userId query parameter is required"})
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return response.BadRequest(c, "invalid userId")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid userId"})
 	}
 
 	// Get the best resume (main > featured > most recent)
@@ -308,11 +307,11 @@ func (h *handler) DownloadResume(c *fiber.Ctx) error {
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
 		}
 		h.logger.Error("failed to get resume for download", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to get resume")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get resume"})
 	}
 
 	// Build full file path
@@ -326,14 +325,14 @@ func (h *handler) DownloadResume(c *fiber.Ctx) error {
 	// Check if file exists
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		h.logger.Error("resume file not found", slog.String("path", fullPath))
-		return response.NotFound(c, ErrFileNotFound)
+		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": ErrFileNotFound})
 	}
 
 	// Open file
 	file, err := os.Open(fullPath)
 	if err != nil {
 		h.logger.Error("failed to open resume file", slog.Any("error", err))
-		return response.InternalServerError(c, ErrFileReadError)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": ErrFileReadError})
 	}
 	defer file.Close()
 
@@ -345,7 +344,7 @@ func (h *handler) DownloadResume(c *fiber.Ctx) error {
 	_, err = io.Copy(c.Response().BodyWriter(), file)
 	if err != nil {
 		h.logger.Error("failed to stream resume file", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to stream file")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to stream file"})
 	}
 
 	return nil
@@ -356,12 +355,12 @@ func (h *handler) PreviewResume(c *fiber.Ctx) error {
 	// Get user ID from query param
 	userIDStr := c.Query("userId")
 	if userIDStr == "" {
-		return response.BadRequest(c, "userId query parameter is required")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "userId query parameter is required"})
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return response.BadRequest(c, "invalid userId")
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid userId"})
 	}
 
 	// Get the best resume
@@ -369,11 +368,11 @@ func (h *handler) PreviewResume(c *fiber.Ctx) error {
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {
-				return response.NotFound(c, domainErr.Message)
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
 			}
 		}
 		h.logger.Error("failed to get resume for preview", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to get resume")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get resume"})
 	}
 
 	// Build full file path
@@ -387,14 +386,14 @@ func (h *handler) PreviewResume(c *fiber.Ctx) error {
 	// Check if file exists
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		h.logger.Error("resume file not found", slog.String("path", fullPath))
-		return response.NotFound(c, ErrFileNotFound)
+		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": ErrFileNotFound})
 	}
 
 	// Open file
 	file, err := os.Open(fullPath)
 	if err != nil {
 		h.logger.Error("failed to open resume file", slog.Any("error", err))
-		return response.InternalServerError(c, ErrFileReadError)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": ErrFileReadError})
 	}
 	defer file.Close()
 
@@ -406,7 +405,7 @@ func (h *handler) PreviewResume(c *fiber.Ctx) error {
 	_, err = io.Copy(c.Response().BodyWriter(), file)
 	if err != nil {
 		h.logger.Error("failed to stream resume file", slog.Any("error", err))
-		return response.InternalServerError(c, "failed to stream file")
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to stream file"})
 	}
 
 	return nil

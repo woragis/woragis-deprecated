@@ -122,7 +122,7 @@ func (r *gormRepository) UpdateProject(ctx context.Context, project *Project) er
 
 func (r *gormRepository) DeleteProject(ctx context.Context, projectID uuid.UUID, userID uuid.UUID) error {
 	// Verify project exists and belongs to user
-	project, err := r.GetProject(ctx, projectID, userID)
+	_, err := r.GetProject(ctx, projectID, userID)
 	if err != nil {
 		return err
 	}

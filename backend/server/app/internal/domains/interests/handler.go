@@ -150,8 +150,8 @@ func (h *handler) DeleteInterest(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	userID := authdomain.UserIDFromContext(c)
-	if userID == uuid.Nil {
+	_, err = authdomain.UserIDFromContext(c)
+	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, 0, nil)
 	}
 

@@ -59,7 +59,7 @@ services:
       MONITORING_DB_URL: ""
       METRICS_NAMESPACE: woragis
       CORS_ENABLED: ${CORS_ENABLED:-true}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
       CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
       CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key}
       CORS_EXPOSED_HEADERS: ${CORS_EXPOSED_HEADERS:-}
@@ -141,7 +141,7 @@ services:
       CIPHER_IMAGE_SIZE: ${CIPHER_IMAGE_SIZE:-1024x1024}
       CIPHER_IMAGE_N: ${CIPHER_IMAGE_N:-1}
       CORS_ENABLED: ${CORS_ENABLED:-true}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
     ports:
       - "8000:8000"
     restart: on-failure
