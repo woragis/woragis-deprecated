@@ -19,7 +19,20 @@ export const useSessionsQuery = (options: AuthQueryOptions = {}) =>
 		queryKey: ['auth', 'sessions'],
 		queryFn: async () => {
 			const response = await listSessions();
-			return response.data?.data?.sessions ?? [];
+			const sessions = response.data?.data?.sessions ?? [];
+			// Map API response to SessionPayload format
+			return sessions.map((session: any): SessionPayload => ({
+				id: session.id,
+				user_id: session.user_id || '',
+				device_fingerprint: session.device_id,
+				device_name: session.device_name,
+				user_agent: session.user_agent,
+				ip_address: session.ip,
+				created_at: session.created_at,
+				last_activity_at: session.last_seen_at,
+				expires_at: session.expires_at,
+				is_current: !session.is_revoked
+			}));
 		},
 		enabled: options.enabled ?? true,
 		placeholderData: () => []

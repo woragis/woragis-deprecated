@@ -36,18 +36,46 @@ export interface ConversationsQueryOptions {
 	enabled?: boolean;
 }
 
+// Helper to convert Conversation to ChatConversation
+const mapConversation = (conv: any): ChatConversation => ({
+	id: conv.id,
+	user_id: conv.userId || conv.user_id,
+	title: conv.title,
+	description: conv.description,
+	idea_id: conv.ideaId || conv.idea_id,
+	project_id: conv.projectId || conv.project_id,
+	assigned_agent_id: conv.assignedAgentId || conv.assigned_agent_id,
+	shared_transcript: conv.sharedTranscript || conv.shared_transcript,
+	archived_at: conv.archivedAt || conv.archived_at,
+	deleted_at: conv.deletedAt || conv.deleted_at,
+	created_at: conv.createdAt || conv.created_at,
+	updated_at: conv.updatedAt || conv.updated_at
+});
+
 export const useConversationsQuery = (options: MaybeReadable<ConversationsQueryOptions>) =>
 	createQuery<ChatConversation[]>({
 		queryKey: ['chats', 'conversations', options],
-		queryFn: () => {
+		queryFn: async () => {
 			const resolved = resolve(options);
 			const search = resolved.search?.trim() ?? '';
 			const includeArchived = resolved.includeArchived ?? false;
-			return search ? searchConversations(search, includeArchived) : fetchConversations();
+			const conversations = search
+				? await searchConversations(search, includeArchived)
+				: await fetchConversations();
+			return conversations.map(mapConversation);
 		},
 		placeholderData: (previous) => previous ?? [],
 		enabled: resolve(options).enabled ?? true
 	});
+
+// Helper to convert Message to ChatMessage
+const mapMessage = (msg: any): ChatMessage => ({
+	id: msg.id,
+	conversation_id: msg.conversationId || msg.conversation_id,
+	role: msg.role,
+	content: msg.content,
+	created_at: msg.createdAt || msg.created_at
+});
 
 export const useConversationMessagesQuery = (
 	conversationId: MaybeReadable<UUID | null>,
@@ -55,7 +83,10 @@ export const useConversationMessagesQuery = (
 ) =>
 	createQuery<ChatMessage[]>({
 		queryKey: ['chats', 'conversation', conversationId, 'messages'],
-		queryFn: () => fetchMessages(resolve(conversationId)!),
+		queryFn: async () => {
+			const messages = await fetchMessages(resolve(conversationId)!);
+			return messages.map(mapMessage);
+		},
 		enabled: Boolean(resolve(conversationId)) && (options.enabled ?? true),
 		select: (data: ChatMessage[]) =>
 			[...data].sort(

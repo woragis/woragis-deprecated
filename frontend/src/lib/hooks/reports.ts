@@ -102,8 +102,13 @@ const createDetailQueryOptions = (options: ReportDetailOptions) => ({
 			reportsApi.getReportDefinition(options.definitionId!),
 			reportsApi.listReportRuns(options.definitionId!)
 		]);
+		// Convert ReportDefinition to ReportDefinitionDetail format
 		return {
-			detail: detailResponse,
+			detail: {
+				definition: detailResponse,
+				schedules: [],
+				deliveries: []
+			},
 			runs: runsResponse
 		};
 	},
