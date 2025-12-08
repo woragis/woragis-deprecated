@@ -14,13 +14,7 @@
 	closeButton
 	toastOptions={{
 		duration,
-		style: {
-			background: 'rgba(15, 23, 42, 0.95)',
-			color: '#f8fafc',
-			border: '1px solid rgba(148, 163, 184, 0.35)',
-			boxShadow: '0 15px 35px rgba(2, 6, 23, 0.7)',
-			backdropFilter: 'blur(12px)'
-		}
+		style: 'background: rgba(15, 23, 42, 0.95); color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.35); box-shadow: 0 15px 35px rgba(2, 6, 23, 0.7); backdrop-filter: blur(12px);'
 	}}
 />
 
