@@ -136,13 +136,6 @@ func main() {
 	app.Use(recover.New())
 	app.Use(fiberlogger.New())
 
-	app.Use("/api/chats/conversations/:id/stream", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
-
 	api := app.Group("/api")
 
 	var emailSender emailservice.Sender = emailservice.NewNoopSender(slogLogger)
@@ -646,6 +639,19 @@ func main() {
 	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
 	
 	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
+	
+	// WebSocket route needs auth middleware BEFORE upgrade, so register it separately
+	// with auth middleware, then WebSocket upgrade check
+	chatsWSGroup := protectedAPI.Group("/chats/conversations/:id/stream")
+	chatsWSGroup.Use(func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	chatsWSGroup.Get("", websocket.New(chatsHandler.StreamConversation))
+	
+	// Register other chat routes normally
 	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
 
 	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)

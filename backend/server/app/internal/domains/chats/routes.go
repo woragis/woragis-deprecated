@@ -2,7 +2,6 @@ package chats
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
 )
 
 // SetupRoutes registers chat endpoints.
@@ -30,5 +29,7 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 
 	group.Get("/conversations/:id/context", handler.GetContextPreview)
 
-	group.Get("/conversations/:id/stream", websocket.New(handler.StreamConversation))
+	// Note: WebSocket stream route is registered separately in main.go
+	// with auth middleware before upgrade check
+	// group.Get("/conversations/:id/stream", websocket.New(handler.StreamConversation))
 }

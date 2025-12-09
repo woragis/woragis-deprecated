@@ -33,9 +33,9 @@ func NewHandler(service *Service, logger *slog.Logger, stream *StreamHub) *Handl
 type createConversationPayload struct {
 	Title            string `json:"title"`
 	Description      string `json:"description"`
-	IdeaID           string `json:"idea_id"`
-	ProjectID        string `json:"project_id"`
-	JobApplicationID string `json:"job_application_id"`
+	IdeaID           string `json:"ideaId"`           // Accept camelCase from frontend
+	ProjectID        string `json:"projectId"`        // Accept camelCase from frontend
+	JobApplicationID string `json:"jobApplicationId"`  // Accept camelCase from frontend
 }
 
 type appendMessagePayload struct {
@@ -209,6 +209,17 @@ func (h *Handler) SearchConversations(c *fiber.Ctx) error {
 			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 		}
 		jobApplicationID = &parsed
+		h.logger.Info("SearchConversations",
+			"user_id", userID.String(),
+			"job_application_id", jobApplicationID.String(),
+			"include_archived", includeArchived,
+			"query", params.Query)
+	} else {
+		h.logger.Info("SearchConversations",
+			"user_id", userID.String(),
+			"job_application_id", "nil",
+			"include_archived", includeArchived,
+			"query", params.Query)
 	}
 
 	conversations, err := h.service.SearchConversations(c.Context(), SearchConversationsRequest{
@@ -221,6 +232,15 @@ func (h *Handler) SearchConversations(c *fiber.Ctx) error {
 	if err != nil {
 		return h.handleError(c, err)
 	}
+
+	jobAppIDStr := "nil"
+	if jobApplicationID != nil {
+		jobAppIDStr = jobApplicationID.String()
+	}
+	h.logger.Info("SearchConversations result",
+		"user_id", userID.String(),
+		"job_application_id", jobAppIDStr,
+		"count", len(conversations))
 
 	resp := make([]conversationResponse, 0, len(conversations))
 	for _, conv := range conversations {

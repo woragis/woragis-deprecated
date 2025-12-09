@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
+	import { get } from 'svelte/store';
 	import {
 		createConversation,
 		listMessages,
@@ -8,17 +10,19 @@
 		type Message,
 		type CreateConversationInput
 	} from '$lib/api/chats';
+	import { authStore } from '$lib';
 	import { toastError, toastSuccess } from '$lib/utils/toast';
 	import { MessageSquare, Send, X } from 'lucide-svelte';
 
 	interface Props {
 		jobApplicationId?: string;
+		conversationId?: string;
 		title?: string;
 		description?: string;
 		onClose?: () => void;
 	}
 
-	let { jobApplicationId, title = 'Chat', description = '', onClose }: Props = $props();
+	let { jobApplicationId, conversationId, title = 'Chat', description = '', onClose }: Props = $props();
 
 	let conversation: Conversation | null = $state(null);
 	let messages: Message[] = $state([]);
@@ -26,24 +30,74 @@
 	let loading = $state(false);
 	let sending = $state(false);
 	let error: string | null = $state(null);
+	let lastInitializedConversationId: string | undefined = $state(undefined);
+	let lastInitializedJobApplicationId: string | undefined = $state(undefined);
 
-	onMount(async () => {
-		await initializeChat();
+	// WebSocket connection state
+	let ws: WebSocket | null = $state(null);
+	let streamingMessageId: string | null = $state(null);
+	let streamingContent: string = $state('');
+
+	onDestroy(() => {
+		disconnectStream();
+	});
+
+	// Initialize chat when component mounts or when conversationId/jobApplicationId changes
+	$effect(() => {
+		// Reference both props so Svelte tracks them as dependencies
+		const convId = conversationId;
+		const appId = jobApplicationId;
+		
+		// Only initialize if:
+		// 1. We have a jobApplicationId
+		// 2. Either conversationId or jobApplicationId has changed since last initialization
+		if (appId && (convId !== lastInitializedConversationId || appId !== lastInitializedJobApplicationId)) {
+			lastInitializedConversationId = convId;
+			lastInitializedJobApplicationId = appId;
+			initializeChat();
+		}
 	});
 
 	async function initializeChat() {
 		if (!jobApplicationId) return;
 
+		// Prevent multiple simultaneous initializations
+		if (loading) return;
+
 		loading = true;
 		error = null;
 		try {
-			// Try to find existing conversation for this job application
-			const { searchConversations } = await import('$lib/api/chats');
-			const conversations = await searchConversations(undefined, false, jobApplicationId);
-			
-			if (conversations.length > 0) {
-				conversation = conversations[0];
+			// If conversationId is provided, use it directly
+			if (conversationId) {
+				console.log('Loading conversation by ID:', conversationId);
+				const { getConversation } = await import('$lib/api/chats');
+				conversation = await getConversation(conversationId);
 				await loadMessages();
+			} else {
+				// Try to find existing conversation for this job application
+				console.log('Searching for conversations for jobApplicationId:', jobApplicationId);
+				const { searchConversations } = await import('$lib/api/chats');
+				
+				// Try without archived first
+				let conversations = await searchConversations(undefined, false, jobApplicationId);
+				console.log('Found conversations (not archived):', conversations);
+				
+				// If none found, try including archived
+				if (conversations.length === 0) {
+					conversations = await searchConversations(undefined, true, jobApplicationId);
+					console.log('Found conversations (including archived):', conversations);
+				}
+				
+				if (conversations.length > 0) {
+					// Use the most recent conversation
+					conversation = conversations.sort((a, b) => 
+						new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+					)[0];
+					console.log('Selected conversation:', conversation.id);
+					await loadMessages();
+				} else {
+					console.log('No conversations found for jobApplicationId:', jobApplicationId);
+				}
 			}
 			// Don't auto-create - let user click "Start Chat" button
 		} catch (err) {
@@ -82,11 +136,136 @@
 
 		try {
 			messages = await listMessages(conversation.id);
+			// Connect to WebSocket after loading messages
+			connectToStream(conversation.id);
 		} catch (err) {
 			console.error('Error loading messages:', err);
 			toastError('Failed to load messages');
 		}
 	}
+
+	const getWebSocketURL = (conversationId: string): string | null => {
+		if (!browser) return null;
+		
+		const { token } = get(authStore);
+		if (!token) {
+			console.warn('No auth token available for WebSocket connection');
+			return null;
+		}
+
+		// Get base URL from environment or default to localhost
+		const baseURL = (import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
+		// Convert http/https to ws/wss
+		const wsProtocol = baseURL.startsWith('https') ? 'wss' : 'ws';
+		const wsBase = baseURL.replace(/^https?/, wsProtocol);
+		
+		return `${wsBase}/api/chats/conversations/${conversationId}/stream?token=${encodeURIComponent(token)}`;
+	};
+
+	const connectToStream = (conversationId: string) => {
+		if (!browser) return;
+		
+		// Disconnect existing connection
+		disconnectStream();
+
+		const wsUrl = getWebSocketURL(conversationId);
+		if (!wsUrl) {
+			console.warn('Cannot connect to WebSocket: invalid URL or missing token');
+			return;
+		}
+
+		try {
+			ws = new WebSocket(wsUrl);
+
+			ws.onopen = () => {
+				console.log('WebSocket connected for conversation:', conversationId);
+			};
+
+			ws.onmessage = (event) => {
+				try {
+					const data = JSON.parse(event.data);
+					
+					// Handle delta events (streaming AI response)
+					if (data.type === 'delta' && data.delta) {
+						handleStreamingDelta(data.delta);
+					}
+					// Handle full message events
+					else if (data.id && data.conversation_id && data.role && data.content) {
+						handleFullMessage(data);
+					}
+				} catch (err) {
+					console.error('Error parsing WebSocket message:', err, event.data);
+				}
+			};
+
+			ws.onerror = (error) => {
+				console.error('WebSocket error:', error);
+			};
+
+			ws.onclose = () => {
+				console.log('WebSocket disconnected');
+				ws = null;
+			};
+		} catch (error) {
+			console.error('Failed to create WebSocket connection:', error);
+		}
+	};
+
+	const handleStreamingDelta = (delta: string) => {
+		// Find or create the streaming assistant message
+		let streamingMsg = messages.find(
+			(m) => m.id === streamingMessageId || (m.id?.startsWith('__streaming_') && m.role === 'assistant')
+		);
+
+		if (!streamingMsg) {
+			// Create a new streaming message
+			streamingMessageId = `__streaming_${Date.now()}`;
+			streamingContent = delta;
+			streamingMsg = {
+				id: streamingMessageId,
+				conversationId: conversation!.id,
+				role: 'assistant',
+				content: delta,
+				createdAt: new Date().toISOString()
+			};
+			messages = [...messages, streamingMsg];
+		} else {
+			// Update existing streaming message
+			streamingMessageId = streamingMsg.id;
+			streamingContent += delta;
+			streamingMsg.content = streamingContent;
+			messages = messages.map((m) => (m.id === streamingMsg.id ? streamingMsg : m));
+		}
+	};
+
+	const handleFullMessage = (message: any) => {
+		// Clear streaming state if this is the final message
+		if (streamingMessageId && message.role === 'assistant') {
+			streamingMessageId = null;
+			streamingContent = '';
+		}
+
+		// Check if message already exists
+		const exists = messages.some((m) => m.id === message.id);
+		if (exists) {
+			// Update existing message
+			messages = messages.map((m) => (m.id === message.id ? message : m));
+		} else {
+			// Add new message
+			messages = [...messages, message].sort(
+				(a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+			);
+		}
+	};
+
+	const disconnectStream = () => {
+		if (ws) {
+			ws.close();
+			ws = null;
+		}
+		streamingMessageId = null;
+		streamingContent = '';
+	};
 
 	async function handleSend() {
 		if (!conversation || !messageContent.trim() || sending) return;
@@ -96,15 +275,14 @@
 		sending = true;
 
 		try {
-			await appendMessage(conversation.id, {
-				role: 'user',
-				content,
-				generate_reply: true
-			});
+		await appendMessage(conversation.id, {
+			role: 'user',
+			content,
+			generate_reply: true
+		});
 
-			// Reload messages to get the AI response
-			await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait a bit for AI response
-			await loadMessages();
+		// Reload messages to get the user message (AI response will come via WebSocket)
+		await loadMessages();
 		} catch (err) {
 			console.error('Error sending message:', err);
 			toastError('Failed to send message');
@@ -180,9 +358,14 @@
 							: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'}"
 					>
 						<p class="text-sm whitespace-pre-wrap">{message.content}</p>
-						<p class="text-xs mt-1 opacity-70">
-							{new Date(message.createdAt).toLocaleTimeString()}
-						</p>
+						<div class="flex items-center gap-2 mt-1">
+							<p class="text-xs opacity-70">
+								{new Date(message.createdAt).toLocaleTimeString()}
+							</p>
+							{#if message.id?.startsWith('__streaming_') || message.id === streamingMessageId}
+								<span class="text-xs opacity-50 animate-pulse">●</span>
+							{/if}
+						</div>
 					</div>
 				</div>
 			{/each}

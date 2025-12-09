@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -30,12 +31,16 @@ type Repository interface {
 }
 
 type gormRepository struct {
-	db *gorm.DB
+	db     *gorm.DB
+	logger *slog.Logger
 }
 
 // NewGormRepository instantiates the repository.
 func NewGormRepository(db *gorm.DB) Repository {
-	return &gormRepository{db: db}
+	return &gormRepository{
+		db:     db,
+		logger: slog.Default(),
+	}
 }
 
 func (r *gormRepository) CreateConversation(ctx context.Context, conversation *Conversation) error {
@@ -98,6 +103,7 @@ type SearchFilters struct {
 func (r *gormRepository) SearchConversations(ctx context.Context, userID uuid.UUID, filters SearchFilters) ([]Conversation, error) {
 	var conversations []Conversation
 
+	// Build query using Model to ensure proper struct mapping
 	db := r.db.WithContext(ctx).Model(&Conversation{}).
 		Where("user_id = ? AND deleted_at IS NULL", userID)
 
@@ -106,11 +112,16 @@ func (r *gormRepository) SearchConversations(ctx context.Context, userID uuid.UU
 	}
 
 	if filters.JobApplicationID != nil {
+		r.logger.Info("SearchConversations: filtering by job_application_id",
+			"job_application_id", filters.JobApplicationID.String(),
+			"user_id", userID.String())
+		// GORM should handle UUID comparison automatically
 		db = db.Where("job_application_id = ?", *filters.JobApplicationID)
 	}
 
 	if strings.TrimSpace(filters.Query) != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(filters.Query)) + "%"
+		// Reference the conversations table in the EXISTS subquery
 		db = db.Where(`
 			LOWER(title) LIKE ? OR
 			LOWER(description) LIKE ? OR
@@ -129,6 +140,16 @@ func (r *gormRepository) SearchConversations(ctx context.Context, userID uuid.UU
 	if err := db.Order("updated_at DESC").Find(&conversations).Error; err != nil {
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
+
+	r.logger.Info("SearchConversations: query completed",
+		"user_id", userID.String(),
+		"job_application_id", func() string {
+			if filters.JobApplicationID != nil {
+				return filters.JobApplicationID.String()
+			}
+			return "nil"
+		}(),
+		"result_count", len(conversations))
 
 	return conversations, nil
 }
