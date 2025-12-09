@@ -9,6 +9,7 @@
 	import { initAuthLifecycle, performLogout, teardownAuthLifecycle } from '$lib/auth/lifecycle';
 	import { queryClient } from '@clients/queryClient';
 	import ToastProvider from '$lib/providers/ToastProvider.svelte';
+	import FloatingChatButton from '$lib/components/FloatingChatButton.svelte';
 	import '../app.css';
 
 	let sidebarOpen = false;
@@ -91,6 +92,9 @@
 				<slot />
 			</main>
 		</div>
+		{#if isAuthenticated}
+			<FloatingChatButton />
+		{/if}
 	</div>
 </QueryClientProvider>
 

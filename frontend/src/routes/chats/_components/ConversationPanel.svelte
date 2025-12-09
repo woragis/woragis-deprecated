@@ -5,6 +5,7 @@ import type {
 	ChatMessage,
 	ChatTranscript
 } from '$lib/api/types';
+import ChatContextViewer from '$lib/components/ChatContextViewer.svelte';
 // SubmitEvent is available globally in Svelte 5, no import needed
 
 	export let conversation: ChatConversation | null = null;
@@ -46,6 +47,9 @@ import type {
 			</p>
 		</div>
 	{:else}
+		{#if conversation.job_application_id}
+			<ChatContextViewer conversationId={conversation.id} />
+		{/if}
 		<header class="flex flex-wrap items-center justify-between gap-3">
 			<div>
 				<h2 class="text-lg font-semibold text-slate-100">{conversation.title}</h2>

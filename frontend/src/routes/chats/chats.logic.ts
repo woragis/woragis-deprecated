@@ -50,6 +50,7 @@ export function createChatsLogic() {
 	const conversationsFilters = writable<ConversationsQueryOptions>({
 		search: '',
 		includeArchived: false,
+		jobApplicationId: undefined,
 		enabled: browser
 	});
 
@@ -153,12 +154,13 @@ export function createChatsLogic() {
 	const setSearchInput = (value: string) => searchInput.set(value);
 	const setIncludeArchived = (value: boolean) => includeArchived.set(value);
 
-	const applyFilters = async () => {
+	const applyFilters = async (jobApplicationId?: string) => {
 		const nextSearch = get(searchInput).trim();
 		const include = get(includeArchived);
 		conversationsFilters.set({
 			search: nextSearch,
 			includeArchived: include,
+			jobApplicationId: jobApplicationId,
 			enabled: true
 		});
 		await queryClient.invalidateQueries({ queryKey: ['chats', 'conversations'] });

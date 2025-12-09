@@ -78,6 +78,15 @@ let pendingDeepLinkId: string | null = null;
 	$: selectionCount = $selectedConversationIds.size;
 	$: projectSuggestions = getFilteredProjects();
 	$: ideaSuggestions = getFilteredIdeas();
+	
+	// Handle jobApplicationId query param
+	$: {
+		const jobApplicationId = $page.url.searchParams.get('jobApplicationId');
+		if (jobApplicationId) {
+			applyFilters(jobApplicationId);
+		}
+	}
+	
 $: {
 	const target = $page.url.searchParams.get('conversation');
 	if (target && pendingDeepLinkId !== target && ($selectedConversation?.id ?? null) !== target) {

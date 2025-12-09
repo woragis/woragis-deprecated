@@ -28,22 +28,22 @@
 			post = await getPost(postId);
 			// Load relationships
 			const [categoryIds, tagIds, skillIds] = await Promise.all([
-				getPostCategories(postId).catch(() => []),
-				getPostTags(postId).catch(() => []),
-				getPostSkills(postId).catch(() => [])
+				getPostCategories(postId).catch(() => [] as Category[]),
+				getPostTags(postId).catch(() => [] as Tag[]),
+				getPostSkills(postId).catch(() => [] as string[])
 			]);
 
 			// Get full details for relationships
 			const [allCategories, allTags, allSkills] = await Promise.all([
-				listCategories().catch(() => []),
-				listTags().catch(() => []),
-				listSkills().catch(() => [])
+				listCategories().catch(() => [] as Category[]),
+				listTags().catch(() => [] as Tag[]),
+				listSkills().catch(() => [] as Skill[])
 			]);
 
 			categories = categoryIds;
 			tags = tagIds;
 			// getPostSkills returns string[], so we need to map to Skill objects
-			skills = allSkills.filter((s) => (skillIds as string[]).includes(String(s.id)));
+			skills = allSkills.filter((s) => skillIds.includes(String(s.id)));
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load post';
 		} finally {

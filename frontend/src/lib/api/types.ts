@@ -252,6 +252,7 @@ export interface ChatConversation {
 	description?: string;
 	idea_id?: UUID | null;
 	project_id?: UUID | null;
+	job_application_id?: UUID | null;
 	assigned_agent_id?: UUID | null;
 	shared_transcript?: string;
 	archived_at?: string | null;

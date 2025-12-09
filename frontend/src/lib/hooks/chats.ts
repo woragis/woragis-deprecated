@@ -33,6 +33,7 @@ const resolve = <T>(value: MaybeReadable<T>): T => (isReadable(value) ? get(valu
 export interface ConversationsQueryOptions {
 	search?: string;
 	includeArchived?: boolean;
+	jobApplicationId?: string;
 	enabled?: boolean;
 }
 
@@ -44,6 +45,7 @@ const mapConversation = (conv: any): ChatConversation => ({
 	description: conv.description,
 	idea_id: conv.ideaId || conv.idea_id,
 	project_id: conv.projectId || conv.project_id,
+	job_application_id: conv.jobApplicationId || conv.job_application_id,
 	assigned_agent_id: conv.assignedAgentId || conv.assigned_agent_id,
 	shared_transcript: conv.sharedTranscript || conv.shared_transcript,
 	archived_at: conv.archivedAt || conv.archived_at,
@@ -59,6 +61,15 @@ export const useConversationsQuery = (options: MaybeReadable<ConversationsQueryO
 			const resolved = resolve(options);
 			const search = resolved.search?.trim() ?? '';
 			const includeArchived = resolved.includeArchived ?? false;
+			const jobApplicationId = resolved.jobApplicationId;
+			
+			// If jobApplicationId is provided, use searchConversations with it
+			if (jobApplicationId) {
+				const conversations = await searchConversations(search || undefined, includeArchived, jobApplicationId);
+				return conversations.map(mapConversation);
+			}
+			
+			// Otherwise, use normal search or list
 			const conversations = search
 				? await searchConversations(search, includeArchived)
 				: await fetchConversations();

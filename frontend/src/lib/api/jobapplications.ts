@@ -83,8 +83,8 @@ export interface UpdateJobApplicationInput {
 }
 
 export async function listJobApplications(): Promise<JobApplication[]> {
-	const response = await apiClient.get<ApiResponse<JobApplication[]>>('/job-applications');
-	return response.data.data ?? [];
+	const response = await apiClient.get<ApiResponse<{ count: number; applications: JobApplication[] }>>('/job-applications');
+	return response.data.data?.applications ?? [];
 }
 
 export async function getJobApplication(id: string): Promise<JobApplication> {

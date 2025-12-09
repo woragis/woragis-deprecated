@@ -12,6 +12,7 @@ export interface Conversation {
 	description?: string;
 	ideaId?: string;
 	projectId?: string;
+	jobApplicationId?: string;
 	assignedAgentId?: string;
 	sharedTranscript?: string;
 	archivedAt?: string;
@@ -34,6 +35,7 @@ export interface CreateConversationInput {
 	description?: string;
 	ideaId?: string;
 	projectId?: string;
+	jobApplicationId?: string;
 }
 
 export interface AppendMessageInput {
@@ -108,11 +110,42 @@ export async function listTranscripts(conversationId: string): Promise<any[]> {
 	return response.data.data ?? [];
 }
 
-export async function searchConversations(query: string, includeArchived: boolean = false): Promise<Conversation[]> {
+export async function searchConversations(
+	query?: string,
+	includeArchived: boolean = false,
+	jobApplicationId?: string
+): Promise<Conversation[]> {
+	const params = new URLSearchParams();
+	if (query) params.append('q', query);
+	params.append('include_archived', includeArchived.toString());
+	if (jobApplicationId) params.append('job_application_id', jobApplicationId);
+
 	const response = await apiClient.get<ApiResponse<Conversation[]>>(
-		`/chats/conversations/search?q=${encodeURIComponent(query)}&includeArchived=${includeArchived}`
+		`/chats/conversations/search?${params.toString()}`
 	);
 	return response.data.data ?? [];
+}
+
+export interface ContextPreview {
+	context: string;
+	options: {
+		includeJobApplication: boolean;
+		includeResume: boolean;
+		includeUserProfile: boolean;
+		includeProjects: boolean;
+		includeCaseStudies: boolean;
+		includeTechnicalWritings: boolean;
+		includePosts: boolean;
+		includeProblemSolutions: boolean;
+		includeSkills: boolean;
+		includeExperiences: boolean;
+	};
+	message?: string;
+}
+
+export async function getContextPreview(conversationId: string): Promise<ContextPreview> {
+	const response = await apiClient.get<ApiResponse<ContextPreview>>(`/chats/conversations/${conversationId}/context`);
+	return response.data.data;
 }
 
 export async function shareTranscript(conversationId: string): Promise<{ share_code: string }> {

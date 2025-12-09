@@ -31,16 +31,22 @@
 		type StageOutcome
 	} from '$lib/api/jobapplicationstages';
 	import { listResumes, type Resume } from '$lib/api/resumes';
+	import { searchConversations, createConversation, type Conversation } from '$lib/api/chats';
+	import InlineChat from '$lib/components/InlineChat.svelte';
+	import { MessageSquare } from 'lucide-svelte';
 
 	let applications: JobApplication[] = $state([]);
 	let resumes: Resume[] = $state([]);
 	let loading = $state(true);
 	let error: string | null = $state(null);
 	let searchQuery = $state('');
-	let activeTab = $state<'applications' | 'details'>('applications');
+	let activeTab = $state<'applications' | 'details' | 'chat'>('applications');
 	let selectedApplication: JobApplication | null = $state(null);
 	let applicationResponses: JobApplicationResponse[] = $state([]);
 	let applicationStages: InterviewStage[] = $state([]);
+	let relatedConversations: Conversation[] = $state([]);
+	let showChat = $state(false);
+	let loadingConversations = $state(false);
 
 	// Modal states
 	let showCreateModal = $state(false);
@@ -149,8 +155,38 @@
 				listResponses(app.id),
 				listStages(app.id)
 			]);
+			await fetchRelatedConversations(app.id);
 		} catch (err) {
 			console.error('Error fetching application details:', err);
+		}
+	}
+
+	async function fetchRelatedConversations(applicationId: string) {
+		loadingConversations = true;
+		try {
+			relatedConversations = await searchConversations(undefined, false, applicationId);
+		} catch (err) {
+			console.error('Error fetching related conversations:', err);
+		} finally {
+			loadingConversations = false;
+		}
+	}
+
+	async function handleStartChat() {
+		if (!selectedApplication) return;
+
+		try {
+			const conversation = await createConversation({
+				title: `Job Application: ${selectedApplication.jobTitle} at ${selectedApplication.companyName}`,
+				description: `Chat about the ${selectedApplication.jobTitle} position at ${selectedApplication.companyName}`,
+				jobApplicationId: selectedApplication.id
+			});
+			relatedConversations = [conversation, ...relatedConversations];
+			showChat = true;
+			activeTab = 'chat';
+		} catch (err) {
+			console.error('Error creating conversation:', err);
+			alert('Failed to start chat');
 		}
 	}
 
@@ -540,6 +576,18 @@
 			>
 				Details: {selectedApplication.companyName}
 			</button>
+			<button
+				class="tab {activeTab === 'chat' ? 'active' : ''}"
+				onclick={() => {
+					activeTab = 'chat';
+					if (selectedApplication) {
+						fetchRelatedConversations(selectedApplication.id);
+					}
+				}}
+			>
+				<MessageSquare class="w-4 h-4 inline mr-1" />
+				Chat
+			</button>
 		{/if}
 	</div>
 
@@ -604,11 +652,40 @@
 			<div class="details-header">
 				<h2>{selectedApplication.companyName} - {selectedApplication.jobTitle}</h2>
 				<div class="detail-actions">
+					<button onclick={handleStartChat} class="flex items-center gap-2">
+						<MessageSquare class="w-4 h-4" />
+						Start Chat
+					</button>
 					<button onclick={() => openResponseModal()}>Add Response</button>
 					<button onclick={() => openStageModal()}>Add Interview Stage</button>
 					<button onclick={() => selectedApplication && openEditModal(selectedApplication)}>Edit Application</button>
 				</div>
 			</div>
+
+			{#if relatedConversations.length > 0}
+				<div class="detail-section mt-4">
+					<h3>Related Conversations ({relatedConversations.length})</h3>
+					<div class="list">
+						{#each relatedConversations as conv}
+							<div class="list-item">
+								<div class="list-item-header">
+									<span class="font-semibold">{conv.title}</span>
+									<span class="date">{formatDate(conv.updatedAt)}</span>
+								</div>
+								{#if conv.description}
+									<p class="list-item-text">{conv.description}</p>
+								{/if}
+								<div class="list-item-actions">
+									<button onclick={() => {
+										activeTab = 'chat';
+										showChat = true;
+									}}>Open Chat</button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 
 			<div class="details-grid">
 				<div class="detail-section">
@@ -704,6 +781,28 @@
 						</div>
 					{/if}
 				</div>
+			</div>
+		</div>
+	{:else if activeTab === 'chat' && selectedApplication}
+		<div class="details-container">
+			<div class="details-header">
+				<h2>Chat: {selectedApplication.companyName} - {selectedApplication.jobTitle}</h2>
+				<div class="detail-actions">
+					{#if relatedConversations.length === 0}
+						<button onclick={handleStartChat} class="flex items-center gap-2">
+							<MessageSquare class="w-4 h-4" />
+							Start Chat
+						</button>
+					{/if}
+				</div>
+			</div>
+
+			<div class="mt-4" style="height: 600px;">
+				<InlineChat
+					jobApplicationId={selectedApplication.id}
+					title={`${selectedApplication.jobTitle} at ${selectedApplication.companyName}`}
+					description={selectedApplication.jobDescription || `Chat about the ${selectedApplication.jobTitle} position at ${selectedApplication.companyName}`}
+				/>
 			</div>
 		</div>
 	{/if}
@@ -811,7 +910,7 @@
 					<div class="form-group">
 						<label>Language (ISO 639-1)</label>
 						<input type="text" bind:value={formLanguage} placeholder="en, pt, es" maxlength="2" pattern="[a-z]{2}" />
-						<small style="color: #666; font-size: 0.75rem;">2-character language code (e.g., "en", "pt", "es")</small>
+						<small style="color: #555; font-size: 0.75rem;">2-character language code (e.g., "en", "pt", "es")</small>
 					</div>
 					<div class="form-group">
 						<label>Tags (comma-separated)</label>
@@ -989,6 +1088,7 @@
 	.header h1 {
 		margin: 0 0 0.25rem 0;
 		font-size: 1.5rem;
+		color: #333;
 	}
 
 	.header p {
@@ -1077,6 +1177,7 @@
 		padding: 0.75rem;
 		text-align: left;
 		border-bottom: 1px solid #ddd;
+		color: #333;
 	}
 
 	.table th {
@@ -1157,6 +1258,7 @@
 		background: white;
 		border-radius: 8px;
 		padding: 1.5rem;
+		color: #333;
 	}
 
 	.details-header {
@@ -1171,6 +1273,7 @@
 	.details-header h2 {
 		margin: 0;
 		font-size: 1.5rem;
+		color: #333;
 	}
 
 	.detail-actions {
@@ -1207,11 +1310,17 @@
 	.detail-section h3 {
 		margin: 0 0 1rem 0;
 		font-size: 1.1rem;
+		color: #333;
 	}
 
 	.detail-item {
 		margin-bottom: 0.5rem;
 		font-size: 0.9rem;
+		color: #333;
+	}
+
+	.detail-item strong {
+		color: #333;
 	}
 
 	.empty-text {
@@ -1230,6 +1339,7 @@
 		padding: 0.75rem;
 		border-radius: 4px;
 		border: 1px solid #ddd;
+		color: #333;
 	}
 
 	.list-item-header {
@@ -1237,12 +1347,25 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 0.5rem;
+		color: #333;
+	}
+
+	.list-item-header span {
+		color: #333;
 	}
 
 	.list-item-text {
 		margin: 0.25rem 0;
 		font-size: 0.875rem;
-		color: #666;
+		color: #555;
+	}
+
+	.list-item-text strong {
+		color: #333;
+	}
+
+	.list-item * {
+		color: inherit;
 	}
 
 	.list-item-actions {
@@ -1267,6 +1390,8 @@
 		border-radius: 4px;
 		font-size: 0.75rem;
 		font-weight: 500;
+		color: #333;
+		background: #e9ecef;
 	}
 
 	.response-type-rejection {
@@ -1339,6 +1464,7 @@
 		width: 90%;
 		max-height: 90vh;
 		overflow-y: auto;
+		color: #333;
 	}
 
 	.modal-large {
@@ -1348,6 +1474,7 @@
 	.modal h2 {
 		margin: 0 0 1rem 0;
 		font-size: 1.25rem;
+		color: #333;
 	}
 
 	.form {
@@ -1371,6 +1498,7 @@
 	.form-group label {
 		font-weight: 500;
 		font-size: 0.875rem;
+		color: #333;
 	}
 
 	.form-group input,
@@ -1380,6 +1508,8 @@
 		border: 1px solid #ddd;
 		border-radius: 4px;
 		font-size: 0.875rem;
+		color: #333;
+		background: white;
 	}
 
 	.form-group input:disabled,
