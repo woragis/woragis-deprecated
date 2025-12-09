@@ -9,7 +9,7 @@
 	let loading = $state(true);
 	let error: string | null = $state(null);
 
-	$: applicationId = $page.params.id;
+	const applicationId = $derived($page.params.id);
 
 	onMount(async () => {
 		if (applicationId) {

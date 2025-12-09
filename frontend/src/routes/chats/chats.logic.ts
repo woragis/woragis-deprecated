@@ -4,7 +4,7 @@ import { derived, get, writable } from 'svelte/store';
 import { useQueryClient } from '@tanstack/svelte-query';
 
 import type { AppendMessageInput } from '$lib/api/chats';
-import { CHATS_STREAM_BASE } from '$lib/api/chats';
+// WebSocket implementation replaces CHATS_STREAM_BASE
 import { apiClient } from '@clients/apiClient';
 import type { ChatConversation, Idea, Project, UUID } from '$lib/api/types';
 import { getApiErrorMessage, toastError, toastInfo, toastSuccess } from '$lib/utils/toast';
@@ -96,8 +96,13 @@ export function createChatsLogic() {
 	const transcriptStatus = writable('');
 	const showCreateModal = writable(false);
 
-	// Streaming disabled: fallback to polling for assistant replies
-	let replyPoll: ReturnType<typeof setInterval> | null = null;
+	// WebSocket connection state
+	let ws: WebSocket | null = null;
+	let streamingMessageId: string | null = null;
+	let streamingContent: string = '';
+	let reconnectAttempts = 0;
+	const maxReconnectAttempts = 5;
+	const reconnectDelay = 1000;
 
 	// Per-message AI controls
 	const provider = writable<string>('openai');
@@ -123,33 +128,162 @@ export function createChatsLogic() {
 		);
 	});
 
-	// No-op placeholders to keep call sites minimal
-	const connectToStream = (_conversationId: UUID) => {};
-	const disconnectStream = () => {};
-
-	const startPollingForAssistant = (conversationId: UUID, sinceISO: string, timeoutMs = 60000, intervalMs = 1000) => {
-		if (replyPoll) {
-			clearInterval(replyPoll);
-			replyPoll = null;
+	const getWebSocketURL = (conversationId: UUID): string | null => {
+		if (!browser) return null;
+		
+		const { token } = get(authStore);
+		if (!token) {
+			console.warn('No auth token available for WebSocket connection');
+			return null;
 		}
-		const deadline = Date.now() + timeoutMs;
-		replyPoll = setInterval(async () => {
-			if (Date.now() > deadline) {
-				clearInterval(replyPoll!);
-				replyPoll = null;
-				return;
-			}
-			await queryClient.invalidateQueries({ queryKey: ['chats', 'conversation', conversationId, 'messages'] });
-			const messages = queryClient.getQueryData<any[]>(['chats', 'conversation', conversationId, 'messages']) ?? [];
-			const found = messages.some(
-				(m) => m?.role === 'assistant' && new Date(m?.created_at).getTime() >= new Date(sinceISO).getTime()
-			);
-			if (found) {
-				clearInterval(replyPoll!);
-				replyPoll = null;
-			}
-		}, intervalMs);
+
+		// Get base URL from environment or default to localhost
+		const baseURL = (import.meta.env.PUBLIC_API_BASE_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
+		// Convert http/https to ws/wss
+		const wsProtocol = baseURL.startsWith('https') ? 'wss' : 'ws';
+		const wsBase = baseURL.replace(/^https?/, wsProtocol);
+		
+		return `${wsBase}/api/chats/conversations/${conversationId}/stream?token=${encodeURIComponent(token)}`;
 	};
+
+	const connectToStream = (conversationId: UUID) => {
+		if (!browser) return;
+		
+		// Disconnect existing connection
+		disconnectStream();
+
+		const wsUrl = getWebSocketURL(conversationId);
+		if (!wsUrl) {
+			console.warn('Cannot connect to WebSocket: invalid URL or missing token');
+			return;
+		}
+
+		try {
+			ws = new WebSocket(wsUrl);
+
+			ws.onopen = () => {
+				console.log('WebSocket connected for conversation:', conversationId);
+				reconnectAttempts = 0;
+			};
+
+			ws.onmessage = (event) => {
+				try {
+					const data = JSON.parse(event.data);
+					
+					// Handle delta events (streaming AI response)
+					if (data.type === 'delta' && data.delta) {
+						handleStreamingDelta(conversationId, data.delta);
+					}
+					// Handle full message events
+					else if (data.id && data.conversation_id && data.role && data.content) {
+						handleFullMessage(conversationId, data);
+					}
+				} catch (err) {
+					console.error('Error parsing WebSocket message:', err, event.data);
+				}
+			};
+
+			ws.onerror = (error) => {
+				console.error('WebSocket error:', error);
+			};
+
+			ws.onclose = () => {
+				console.log('WebSocket disconnected');
+				ws = null;
+				
+				// Attempt reconnection if conversation is still selected
+				const current = get(selectedConversation);
+				if (current && current.id === conversationId && reconnectAttempts < maxReconnectAttempts) {
+					reconnectAttempts++;
+					setTimeout(() => {
+						console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+						connectToStream(conversationId);
+					}, reconnectDelay * reconnectAttempts);
+				}
+			};
+		} catch (error) {
+			console.error('Failed to create WebSocket connection:', error);
+		}
+	};
+
+	const handleStreamingDelta = (conversationId: UUID, delta: string) => {
+		// Create or update a streaming message in the cache
+		queryClient.setQueryData(
+			['chats', 'conversation', conversationId, 'messages'],
+			(previous: any) => {
+				const messages: any[] = Array.isArray(previous) ? previous : [];
+				
+				// Find or create the streaming assistant message
+				let streamingMsg = messages.find(
+					(m) => m.id === streamingMessageId || (m.id?.startsWith('__streaming_') && m.role === 'assistant')
+				);
+
+				if (!streamingMsg) {
+					// Create a new streaming message
+					streamingMessageId = `__streaming_${Date.now()}`;
+					streamingContent = delta;
+					streamingMsg = {
+						id: streamingMessageId,
+						conversation_id: conversationId,
+						role: 'assistant',
+						content: delta,
+						created_at: new Date().toISOString(),
+						_streaming: true
+					};
+					return [...messages, streamingMsg];
+				} else {
+					// Update existing streaming message
+					streamingMessageId = streamingMsg.id;
+					streamingContent += delta;
+					streamingMsg.content = streamingContent;
+					streamingMsg._streaming = true;
+					return messages.map((m) => (m.id === streamingMsg.id ? streamingMsg : m));
+				}
+			}
+		);
+	};
+
+	const handleFullMessage = (conversationId: UUID, message: any) => {
+		// Clear streaming state if this is the final message
+		if (streamingMessageId && message.role === 'assistant') {
+			streamingMessageId = null;
+			streamingContent = '';
+		}
+
+		queryClient.setQueryData(
+			['chats', 'conversation', conversationId, 'messages'],
+			(previous: any) => {
+				const messages: any[] = Array.isArray(previous) ? previous : [];
+				
+				// Remove any streaming placeholder
+				const withoutStreaming = messages.filter((m) => m.id !== streamingMessageId && !m._streaming);
+				
+				// Check if message already exists
+				const exists = withoutStreaming.some((m) => m.id === message.id);
+				if (exists) {
+					// Update existing message
+					return withoutStreaming.map((m) => (m.id === message.id ? { ...message, _streaming: false } : m));
+				} else {
+					// Add new message
+					return [...withoutStreaming, { ...message, _streaming: false }].sort(
+						(a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+					);
+				}
+			}
+		);
+	};
+
+	const disconnectStream = () => {
+		if (ws) {
+			ws.close();
+			ws = null;
+		}
+		streamingMessageId = null;
+		streamingContent = '';
+		reconnectAttempts = 0;
+	};
+
+	// Polling disabled - using WebSocket streaming instead
 
 	const setSearchInput = (value: string) => searchInput.set(value);
 	const setIncludeArchived = (value: boolean) => includeArchived.set(value);
@@ -282,10 +416,7 @@ export function createChatsLogic() {
 		generateReply.set(false);
 		isSending.set(false);
 
-		// If an AI reply was requested, poll until it appears or timeout
-		if (shouldReply) {
-			startPollingForAssistant(conversation.id, nowIso);
-		}
+		// AI reply will arrive via WebSocket stream - no polling needed
 	};
 
 	const handleShareTranscript = async () => {
@@ -451,10 +582,7 @@ export function createChatsLogic() {
 
 	onDestroy(() => {
 		conversationsUnsubscribe();
-		if (replyPoll) {
-			clearInterval(replyPoll);
-			replyPoll = null;
-		}
+		disconnectStream();
 	});
 
 	return {

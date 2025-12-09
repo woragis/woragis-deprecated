@@ -4,19 +4,11 @@
 		listResumes,
 		createResume,
 		uploadResume,
-		updateResume,
 		deleteResume,
-		markAsMain,
-		markAsFeatured,
-		unmarkAsMain,
-		unmarkAsFeatured,
-		getResumeDownloadUrl,
-		getResumePreviewUrl,
 		type Resume,
-		type CreateResumeInput,
-		type UpdateResumeInput
+		type CreateResumeInput
 	} from '$lib/api/resumes';
-	import { Download, Eye, Star, Trash2, Edit2, Check, X, Plus, Upload } from 'lucide-svelte';
+	import { Eye, Trash2, Plus, Upload } from 'lucide-svelte';
 	import { toastError, toastSuccess } from '$lib/utils/toast';
 	// User ID for resume downloads - should match your backend user ID
 	// You can move this to a constants file or get from environment
@@ -25,10 +17,7 @@
 	let resumes: Resume[] = $state([]);
 	let loading = $state(true);
 	let error: string | null = $state(null);
-	let showEditModal = $state(false);
 	let showCreateModal = $state(false);
-	let editingResume: Resume | null = $state(null);
-	let formTitle = $state('');
 	let createFormTitle = $state('');
 	let createFormFile: File | null = $state(null);
 	let createFormFilePath = $state('');
@@ -54,17 +43,6 @@
 		}
 	}
 
-	function openEditModal(resume: Resume) {
-		editingResume = resume;
-		formTitle = resume.title;
-		showEditModal = true;
-	}
-
-	function closeEditModal() {
-		showEditModal = false;
-		editingResume = null;
-		formTitle = '';
-	}
 
 	function openCreateModal() {
 		showCreateModal = true;
@@ -139,20 +117,6 @@
 		}
 	}
 
-	async function handleUpdate() {
-		if (!editingResume) return;
-
-		try {
-			const input: UpdateResumeInput = { title: formTitle };
-			await updateResume(editingResume.id, input);
-			toastSuccess('Resume updated successfully');
-			closeEditModal();
-			await fetchResumes();
-		} catch (err) {
-			console.error('Error updating resume:', err);
-			toastError('Failed to update resume');
-		}
-	}
 
 	async function handleDelete(resume: Resume) {
 		if (!confirm(`Are you sure you want to delete "${resume.title}"?`)) {
@@ -169,49 +133,6 @@
 		}
 	}
 
-	async function handleMarkAsMain(resume: Resume) {
-		try {
-			await markAsMain(resume.id);
-			toastSuccess('Resume marked as main');
-			await fetchResumes();
-		} catch (err) {
-			console.error('Error marking resume as main:', err);
-			toastError('Failed to mark resume as main');
-		}
-	}
-
-	async function handleUnmarkAsMain(resume: Resume) {
-		try {
-			await unmarkAsMain(resume.id);
-			toastSuccess('Resume unmarked as main');
-			await fetchResumes();
-		} catch (err) {
-			console.error('Error unmarking resume as main:', err);
-			toastError('Failed to unmark resume as main');
-		}
-	}
-
-	async function handleMarkAsFeatured(resume: Resume) {
-		try {
-			await markAsFeatured(resume.id);
-			toastSuccess('Resume marked as featured');
-			await fetchResumes();
-		} catch (err) {
-			console.error('Error marking resume as featured:', err);
-			toastError('Failed to mark resume as featured');
-		}
-	}
-
-	async function handleUnmarkAsFeatured(resume: Resume) {
-		try {
-			await unmarkAsFeatured(resume.id);
-			toastSuccess('Resume unmarked as featured');
-			await fetchResumes();
-		} catch (err) {
-			console.error('Error unmarking resume as featured:', err);
-			toastError('Failed to unmark resume as featured');
-		}
-	}
 
 	function formatFileSize(bytes: number): string {
 		if (bytes === 0) return '0 Bytes';
@@ -229,15 +150,6 @@
 		});
 	}
 
-	function handleDownload(resume: Resume, language: string = 'en') {
-		const url = getResumeDownloadUrl(userId, language);
-		window.open(url, '_blank');
-	}
-
-	function handlePreview(resume: Resume, language: string = 'en') {
-		const url = getResumePreviewUrl(userId, language);
-		window.open(url, '_blank');
-	}
 </script>
 
 <div class="container mx-auto px-4 py-8">
@@ -346,61 +258,13 @@
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
 									<div class="flex items-center justify-end gap-2">
-										<button
-											onclick={() => handlePreview(resume, 'en')}
+										<a
+											href="/resumes/{resume.id}"
 											class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-											title="Preview (EN)"
+											title="View Details"
 										>
 											<Eye class="w-4 h-4" />
-										</button>
-										<button
-											onclick={() => handleDownload(resume, 'en')}
-											class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-											title="Download (EN)"
-										>
-											<Download class="w-4 h-4" />
-										</button>
-										{#if !resume.isMain}
-											<button
-												onclick={() => handleMarkAsMain(resume)}
-												class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-												title="Mark as Main"
-											>
-												<Check class="w-4 h-4" />
-											</button>
-										{:else}
-											<button
-												onclick={() => handleUnmarkAsMain(resume)}
-												class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-												title="Unmark as Main"
-											>
-												<X class="w-4 h-4" />
-											</button>
-										{/if}
-										{#if !resume.isFeatured}
-											<button
-												onclick={() => handleMarkAsFeatured(resume)}
-												class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300"
-												title="Mark as Featured"
-											>
-												<Star class="w-4 h-4" />
-											</button>
-										{:else}
-											<button
-												onclick={() => handleUnmarkAsFeatured(resume)}
-												class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-												title="Unmark as Featured"
-											>
-												<Star class="w-4 h-4 fill-current" />
-											</button>
-										{/if}
-										<button
-											onclick={() => openEditModal(resume)}
-											class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-											title="Edit"
-										>
-											<Edit2 class="w-4 h-4" />
-										</button>
+										</a>
 										<button
 											onclick={() => handleDelete(resume)}
 											class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
@@ -419,51 +283,6 @@
 	{/if}
 </div>
 
-<!-- Edit Modal -->
-{#if showEditModal && editingResume}
-	<div
-		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-		onclick={closeEditModal}
-	>
-		<div
-			class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-		>
-			<h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Resume</h2>
-			<div class="space-y-4">
-				<div>
-					<label
-						for="title"
-						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-					>
-						Title
-					</label>
-					<input
-						id="title"
-						type="text"
-						bind:value={formTitle}
-						class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-						placeholder="Resume title"
-					/>
-				</div>
-			</div>
-			<div class="mt-6 flex justify-end gap-3">
-				<button
-					onclick={closeEditModal}
-					class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
-				>
-					Cancel
-				</button>
-				<button
-					onclick={handleUpdate}
-					class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-				>
-					Save
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
 
 <!-- Create Modal -->
 {#if showCreateModal}

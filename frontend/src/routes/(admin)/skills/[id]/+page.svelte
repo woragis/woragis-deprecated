@@ -1,23 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import {
-		listSkills,
-		createSkill,
+		getSkill,
 		updateSkill,
 		deleteSkill,
-		getSkill,
 		type Skill,
-		type CreateSkillInput,
 		type UpdateSkillInput,
 		type SkillCategory,
 		type ProficiencyLevel
 	} from '$lib/api/skills';
 
-	let skills: Skill[] = $state([]);
+	let skill: Skill | null = $state(null);
 	let loading = $state(true);
 	let error: string | null = $state(null);
-	let showCreateModal = $state(false);
-	let searchQuery = $state('');
+	let showEditModal = $state(false);
 
 	// Form state
 	let formName = $state('');
@@ -33,6 +31,8 @@
 	let formYearsOfExperience = $state<number | ''>('');
 	let formFirstUsedDate = $state('');
 	let formLastUsedDate = $state('');
+
+	const skillId = $derived($page.params.id);
 
 	const categories: SkillCategory[] = [
 		'backend',
@@ -51,51 +51,64 @@
 	const proficiencyLevels: ProficiencyLevel[] = ['expert', 'advanced', 'proficient', 'learning'];
 
 	onMount(async () => {
-		await fetchSkills();
+		if (skillId) {
+			await loadSkill();
+		}
 	});
 
-	async function fetchSkills() {
+	async function loadSkill() {
+		if (!skillId) return;
 		loading = true;
 		error = null;
 		try {
-			skills = await listSkills();
+			skill = await getSkill(skillId);
+			formName = skill.name;
+			formDescription = skill.description || '';
+			formCategory = skill.category;
+			formIcon = skill.icon || '';
+			formColor = skill.color || '';
+			formBgGradient = skill.bgGradient || '';
+			formBorderColor = skill.borderColor || '';
+			formHoverBorderColor = skill.hoverBorderColor || '';
+			formShadowColor = skill.shadowColor || '';
+			formProficiencyLevel = skill.proficiencyLevel || '';
+			formYearsOfExperience = skill.yearsOfExperience || '';
+			formFirstUsedDate = skill.firstUsedDate || '';
+			formLastUsedDate = skill.lastUsedDate || '';
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load skills';
-			console.error('Error fetching skills:', err);
+			error = err instanceof Error ? err.message : 'Failed to load skill';
+			console.error('Error loading skill:', err);
 		} finally {
 			loading = false;
 		}
 	}
 
-	function openCreateModal() {
-		resetForm();
-		showCreateModal = true;
+	function openEditModal() {
+		if (!skill) return;
+		formName = skill.name;
+		formDescription = skill.description || '';
+		formCategory = skill.category;
+		formIcon = skill.icon || '';
+		formColor = skill.color || '';
+		formBgGradient = skill.bgGradient || '';
+		formBorderColor = skill.borderColor || '';
+		formHoverBorderColor = skill.hoverBorderColor || '';
+		formShadowColor = skill.shadowColor || '';
+		formProficiencyLevel = skill.proficiencyLevel || '';
+		formYearsOfExperience = skill.yearsOfExperience || '';
+		formFirstUsedDate = skill.firstUsedDate || '';
+		formLastUsedDate = skill.lastUsedDate || '';
+		showEditModal = true;
 	}
 
-	function resetForm() {
-		formName = '';
-		formDescription = '';
-		formCategory = 'other';
-		formIcon = '';
-		formColor = '';
-		formBgGradient = '';
-		formBorderColor = '';
-		formHoverBorderColor = '';
-		formShadowColor = '';
-		formProficiencyLevel = '';
-		formYearsOfExperience = '';
-		formFirstUsedDate = '';
-		formLastUsedDate = '';
-	}
-
-	async function handleCreate() {
-		if (!formName.trim()) {
+	async function handleUpdate() {
+		if (!skill || !formName.trim()) {
 			alert('Name is required');
 			return;
 		}
 
 		try {
-			const input: CreateSkillInput = {
+			const input: UpdateSkillInput = {
 				name: formName.trim(),
 				description: formDescription.trim() || undefined,
 				category: formCategory,
@@ -111,38 +124,25 @@
 				lastUsedDate: formLastUsedDate || undefined
 			};
 
-			await createSkill(input);
-			showCreateModal = false;
-			resetForm();
-			await fetchSkills();
+			await updateSkill(skill.id, input);
+			showEditModal = false;
+			await loadSkill();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to create skill');
-			console.error('Error creating skill:', err);
+			alert(err instanceof Error ? err.message : 'Failed to update skill');
+			console.error('Error updating skill:', err);
 		}
 	}
 
-
-	async function handleDelete(id: string) {
-		if (!confirm('Are you sure you want to delete this skill?')) return;
+	async function handleDelete() {
+		if (!skill || !confirm('Are you sure you want to delete this skill?')) return;
 
 		try {
-			await deleteSkill(id);
-			await fetchSkills();
+			await deleteSkill(skill.id);
+			await goto('/skills');
 		} catch (err) {
 			alert(err instanceof Error ? err.message : 'Failed to delete skill');
 			console.error('Error deleting skill:', err);
 		}
-	}
-
-	function filteredSkills() {
-		if (!searchQuery.trim()) return skills;
-		const query = searchQuery.toLowerCase();
-		return skills.filter(
-			(s) =>
-				s.name.toLowerCase().includes(query) ||
-				s.description?.toLowerCase().includes(query) ||
-				s.category.toLowerCase().includes(query)
-		);
 	}
 
 	function formatDate(dateString?: string): string {
@@ -153,74 +153,79 @@
 
 <div class="page-container">
 	<div class="header">
-		<div>
-			<h1>Skills Management</h1>
-			<p>Manage skills and their details</p>
+		<a href="/skills" class="back-link">← Back to Skills</a>
+		<div class="header-actions">
+			{#if skill}
+				<button onclick={openEditModal}>Edit Skill</button>
+				<button onclick={handleDelete} class="delete-btn">Delete</button>
+			{/if}
 		</div>
-		<button onclick={openCreateModal}>Create Skill</button>
 	</div>
-
-	<div class="search-bar">
-		<input
-			type="text"
-			placeholder="Search skills..."
-			bind:value={searchQuery}
-			class="search-input"
-		/>
-	</div>
-
-	{#if error}
-		<div class="error">{error}</div>
-	{/if}
 
 	{#if loading}
 		<div class="loading">Loading...</div>
-	{:else if filteredSkills().length === 0}
-		<div class="empty">No skills found</div>
-	{:else}
-		<table class="table">
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Category</th>
-					<th>Proficiency</th>
-					<th>Years</th>
-					<th>First Used</th>
-					<th>Last Used</th>
-					<th>Actions</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each filteredSkills() as skill}
-					<tr>
-						<td>
-							<strong>{skill.name}</strong>
-							{#if skill.description}
-								<br />
-								<small>{skill.description}</small>
-							{/if}
-						</td>
-						<td>{skill.category}</td>
-						<td>{skill.proficiencyLevel || '—'}</td>
-						<td>{skill.yearsOfExperience || '—'}</td>
-						<td>{formatDate(skill.firstUsedDate)}</td>
-						<td>{formatDate(skill.lastUsedDate)}</td>
-						<td>
-							<a href="/skills/{skill.id}" class="view-link">View</a>
-							<button onclick={() => handleDelete(skill.id)} class="delete-btn">Delete</button>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+	{:else if error}
+		<div class="error">{error}</div>
+	{:else if skill}
+		<div class="details-container">
+			<div class="details-header">
+				<h2>{skill.name}</h2>
+			</div>
+
+			<div class="details-grid">
+				<div class="detail-section">
+					<h3>Basic Information</h3>
+					<div class="detail-item">
+						<strong>Category:</strong> {skill.category}
+					</div>
+					<div class="detail-item">
+						<strong>Description:</strong> {skill.description || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Proficiency Level:</strong> {skill.proficiencyLevel || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Years of Experience:</strong> {skill.yearsOfExperience || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>First Used:</strong> {formatDate(skill.firstUsedDate)}
+					</div>
+					<div class="detail-item">
+						<strong>Last Used:</strong> {formatDate(skill.lastUsedDate)}
+					</div>
+				</div>
+
+				<div class="detail-section">
+					<h3>Styling</h3>
+					<div class="detail-item">
+						<strong>Icon:</strong> {skill.icon || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Color:</strong> {skill.color || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Background Gradient:</strong> {skill.bgGradient || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Border Color:</strong> {skill.borderColor || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Hover Border Color:</strong> {skill.hoverBorderColor || '—'}
+					</div>
+					<div class="detail-item">
+						<strong>Shadow Color:</strong> {skill.shadowColor || '—'}
+					</div>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
-<!-- Create Modal -->
-{#if showCreateModal}
-	<div class="modal-overlay" onclick={() => (showCreateModal = false)}>
+<!-- Edit Modal -->
+{#if showEditModal && skill}
+	<div class="modal-overlay" onclick={() => (showEditModal = false)}>
 		<div class="modal" onclick={(e) => e.stopPropagation()}>
-			<h2>Create Skill</h2>
+			<h2>Edit Skill</h2>
 			<div class="form">
 				<div class="form-group">
 					<label>Name *</label>
@@ -284,19 +289,18 @@
 					<input type="text" bind:value={formShadowColor} placeholder="Tailwind classes" />
 				</div>
 				<div class="form-actions">
-					<button onclick={handleCreate}>Create</button>
-					<button onclick={() => (showCreateModal = false)}>Cancel</button>
+					<button onclick={handleUpdate}>Update</button>
+					<button onclick={() => (showEditModal = false)}>Cancel</button>
 				</div>
 			</div>
 		</div>
 	</div>
 {/if}
 
-
 <style>
 	.page-container {
 		padding: 1rem;
-		max-width: 1200px;
+		max-width: 1400px;
 		margin: 0 auto;
 	}
 
@@ -307,40 +311,50 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.header h1 {
-		margin: 0 0 0.25rem 0;
-		font-size: 1.5rem;
-	}
-
-	.header p {
-		margin: 0;
-		color: #666;
+	.back-link {
+		color: #007bff;
+		text-decoration: none;
 		font-size: 0.9rem;
+		padding: 0.5rem 0;
 	}
 
-	.header button {
+	.back-link:hover {
+		color: #0056b3;
+		text-decoration: underline;
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.header-actions button {
 		padding: 0.5rem 1rem;
 		background: #007bff;
 		color: white;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
+		font-size: 0.875rem;
 	}
 
-	.header button:hover {
+	.header-actions button:hover {
 		background: #0056b3;
 	}
 
-	.search-bar {
-		margin-bottom: 1rem;
+	.delete-btn {
+		background: #dc3545 !important;
 	}
 
-	.search-input {
-		width: 100%;
-		max-width: 400px;
-		padding: 0.5rem;
-		border: 1px solid #ddd;
-		border-radius: 4px;
+	.delete-btn:hover {
+		background: #c82333 !important;
+	}
+
+	.loading,
+	.empty {
+		padding: 2rem;
+		text-align: center;
+		color: #666;
 	}
 
 	.error {
@@ -352,78 +366,51 @@
 		margin-bottom: 1rem;
 	}
 
-	.loading,
-	.empty {
-		padding: 2rem;
-		text-align: center;
-		color: #666;
-	}
-
-	.table {
-		width: 100%;
-		border-collapse: collapse;
+	.details-container {
 		background: white;
+		border-radius: 8px;
+		padding: 1.5rem;
+		color: #333;
 	}
 
-	.table th,
-	.table td {
-		padding: 0.75rem;
-		text-align: left;
-		border-bottom: 1px solid #ddd;
+	.details-header {
+		margin-bottom: 1.5rem;
+		padding-bottom: 1rem;
+		border-bottom: 2px solid #e0e0e0;
 	}
 
-	.table th {
-		background: #f5f5f5;
-		font-weight: 600;
+	.details-header h2 {
+		margin: 0;
+		font-size: 1.5rem;
+		color: #333;
 	}
 
-	.table tbody tr:hover {
+	.details-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+	}
+
+	.detail-section {
 		background: #f9f9f9;
-	}
-
-	.table button {
-		padding: 0.25rem 0.75rem;
-		background: #28a745;
-		color: white;
-		border: none;
+		padding: 1rem;
 		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.875rem;
-		margin-right: 0.5rem;
 	}
 
-	.table button:hover {
-		background: #218838;
+	.detail-section h3 {
+		margin: 0 0 1rem 0;
+		font-size: 1.1rem;
+		color: #333;
 	}
 
-	.delete-btn {
-		background: #dc3545 !important;
+	.detail-item {
+		margin-bottom: 0.5rem;
+		font-size: 0.9rem;
+		color: #333;
 	}
 
-	.delete-btn:hover {
-		background: #c82333 !important;
-	}
-
-	.view-link {
-		padding: 0.25rem 0.75rem;
-		background: #28a745;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.875rem;
-		margin-right: 0.5rem;
-		text-decoration: none;
-		display: inline-block;
-	}
-
-	.view-link:hover {
-		background: #218838;
-	}
-
-	.table small {
-		color: #666;
-		font-size: 0.875rem;
+	.detail-item strong {
+		color: #333;
 	}
 
 	.modal-overlay {

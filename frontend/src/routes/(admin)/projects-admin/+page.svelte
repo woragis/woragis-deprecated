@@ -15,8 +15,6 @@
 	let loading = $state(true);
 	let error: string | null = $state(null);
 	let showCreateModal = $state(false);
-	let showEditModal = $state(false);
-	let editingProject: Project | null = $state(null);
 	let searchQuery = $state('');
 
 	// Form state
@@ -53,19 +51,6 @@
 		showCreateModal = true;
 	}
 
-	function openEditModal(project: Project) {
-		editingProject = project;
-		formName = project.name;
-		formDescription = project.description || '';
-		formStatus = project.status;
-		formHealthScore = project.health_score;
-		formMrr = project.mrr;
-		formCac = project.cac;
-		formLtv = project.ltv;
-		formChurnRate = project.churn_rate;
-		showEditModal = true;
-	}
-
 	function resetForm() {
 		formName = '';
 		formDescription = '';
@@ -75,7 +60,6 @@
 		formCac = 0;
 		formLtv = 0;
 		formChurnRate = 0;
-		editingProject = null;
 	}
 
 	async function handleCreate() {
@@ -106,29 +90,6 @@
 		}
 	}
 
-	async function handleUpdate() {
-		if (!editingProject) {
-			alert('No project selected');
-			return;
-		}
-
-		try {
-			await updateProjectStatus(editingProject.id, formStatus);
-			await updateProjectMetrics(editingProject.id, {
-				healthScore: formHealthScore ? Number(formHealthScore) : undefined,
-				mrr: formMrr ? Number(formMrr) : undefined,
-				cac: formCac ? Number(formCac) : undefined,
-				ltv: formLtv ? Number(formLtv) : undefined,
-				churnRate: formChurnRate ? Number(formChurnRate) : undefined
-			});
-			showEditModal = false;
-			resetForm();
-			await fetchProjects();
-		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to update project');
-			console.error('Error updating project:', err);
-		}
-	}
 
 	async function handleDelete(id: string) {
 		if (!confirm('Are you sure you want to delete this project? This will also delete all related milestones, kanban boards, dependencies, documentation, technologies, file structures, and architecture diagrams.')) return;
@@ -218,7 +179,7 @@
 						<td>{project.churn_rate.toFixed(2)}%</td>
 						<td>{formatDate(project.created_at)}</td>
 						<td>
-							<button onclick={() => openEditModal(project)}>Edit</button>
+							<a href="/projects-admin/{project.id}" class="view-link">View</a>
 							<button onclick={() => handleDelete(project.id)} class="delete-btn">Delete</button>
 						</td>
 					</tr>
@@ -279,52 +240,6 @@
 	</div>
 {/if}
 
-<!-- Edit Modal -->
-{#if showEditModal && editingProject}
-	<div class="modal-overlay" onclick={() => (showEditModal = false)}>
-		<div class="modal modal-large" onclick={(e) => e.stopPropagation()}>
-			<h2>Edit Project</h2>
-			<div class="form">
-				<div class="form-group">
-					<label>Name</label>
-					<input type="text" bind:value={formName} disabled />
-				</div>
-				<div class="form-group">
-					<label>Status</label>
-					<select bind:value={formStatus}>
-						{#each statuses as status}
-							<option value={status}>{status}</option>
-						{/each}
-					</select>
-				</div>
-				<div class="form-group">
-					<label>Health Score</label>
-					<input type="number" bind:value={formHealthScore} />
-				</div>
-				<div class="form-group">
-					<label>MRR (Monthly Recurring Revenue)</label>
-					<input type="number" step="0.01" bind:value={formMrr} />
-				</div>
-				<div class="form-group">
-					<label>CAC (Customer Acquisition Cost)</label>
-					<input type="number" step="0.01" bind:value={formCac} />
-				</div>
-				<div class="form-group">
-					<label>LTV (Lifetime Value)</label>
-					<input type="number" step="0.01" bind:value={formLtv} />
-				</div>
-				<div class="form-group">
-					<label>Churn Rate (%)</label>
-					<input type="number" step="0.01" bind:value={formChurnRate} />
-				</div>
-				<div class="form-actions">
-					<button onclick={handleUpdate}>Update</button>
-					<button onclick={() => (showEditModal = false)}>Cancel</button>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
 
 <style>
 	.page-container {
@@ -439,6 +354,23 @@
 
 	.delete-btn:hover {
 		background: #c82333 !important;
+	}
+
+	.view-link {
+		padding: 0.25rem 0.75rem;
+		background: #28a745;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.875rem;
+		margin-right: 0.5rem;
+		text-decoration: none;
+		display: inline-block;
+	}
+
+	.view-link:hover {
+		background: #218838;
 	}
 
 	.status {
