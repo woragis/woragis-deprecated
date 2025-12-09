@@ -3,6 +3,7 @@
 	import type { AuthUser } from '$lib';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { writable } from 'svelte/store';
+	import { locale } from '$lib/i18n';
 
 	export let title = 'Woragis Console';
 	export let primary: NavItem[] = [];
@@ -261,6 +262,20 @@
 					{/each}
 				</section>
 			{/if}
+
+			<section class="panel__section panel__section--language" aria-label="Language">
+				<button
+					class="lang-toggle"
+					type="button"
+					onclick={() => {
+						locale.update((l) => (l === 'en' ? 'pt' : 'en'));
+					}}
+					title="Toggle language"
+				>
+					<span class="lang-toggle__label">Language</span>
+					<span class="lang-toggle__value">{$locale === 'en' ? 'PT' : 'EN'}</span>
+				</button>
+			</section>
 		</div>
 	</nav>
 </div>
@@ -339,6 +354,12 @@
 	}
 
 	.panel__section--secondary {
+		padding-top: 1.25rem;
+		border-top: 1px solid rgba(71, 85, 105, 0.4);
+	}
+
+	.panel__section--language {
+		margin-top: auto;
 		padding-top: 1.25rem;
 		border-top: 1px solid rgba(71, 85, 105, 0.4);
 	}
@@ -513,6 +534,40 @@
 		color: #fee2e2;
 		transform: translateY(-1px);
 		outline: none;
+	}
+
+	.lang-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		padding: 0.55rem 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid rgba(148, 163, 184, 0.4);
+		background: rgba(15, 23, 42, 0.7);
+		color: rgba(203, 213, 225, 0.9);
+		font-size: 0.85rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background-color 120ms ease-in-out, color 120ms ease-in-out, border-color 120ms ease-in-out;
+	}
+
+	.lang-toggle:hover,
+	.lang-toggle:focus-visible {
+		color: #f8fafc;
+		background-color: rgba(51, 65, 85, 0.35);
+		border-color: rgba(148, 163, 184, 0.6);
+		outline: none;
+	}
+
+	.lang-toggle__label {
+		flex: 1;
+		text-align: left;
+	}
+
+	.lang-toggle__value {
+		font-weight: 600;
+		color: #38bdf8;
 	}
 
 	@media (min-width: 640px) {

@@ -8,8 +8,9 @@
 		type Resume,
 		type CreateResumeInput
 	} from '$lib/api/resumes';
-	import { Eye, Trash2, Plus, Upload } from 'lucide-svelte';
+	import { Eye, Trash2, Plus, Upload, Star } from 'lucide-svelte';
 	import { toastError, toastSuccess } from '$lib/utils/toast';
+	import { locale, t } from '$lib/i18n';
 	// User ID for resume downloads - should match your backend user ID
 	// You can move this to a constants file or get from environment
 	const userId = import.meta.env.PUBLIC_DEFAULT_USER_ID || '6ad0d828-f605-45fc-a545-3441e17a015c';
@@ -35,9 +36,9 @@
 		try {
 			resumes = await listResumes();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load resumes';
+			error = err instanceof Error ? err.message : $t('resumes.error');
 			console.error('Error fetching resumes:', err);
-			toastError('Failed to load resumes');
+			toastError($t('resumes.loadError'));
 		} finally {
 			loading = false;
 		}
@@ -77,7 +78,7 @@
 
 	async function handleCreate() {
 		if (!createFormTitle.trim()) {
-			toastError('Please enter a title');
+			toastError($t('resumes.modal.title') + ' ' + $t('resumes.modal.required'));
 			return;
 		}
 
@@ -86,7 +87,7 @@
 			// If a file is selected, use the upload endpoint
 			if (createFormFile) {
 				await uploadResume(createFormFile, createFormTitle.trim());
-				toastSuccess('Resume uploaded successfully');
+				toastSuccess($t('resumes.uploadSuccess'));
 				closeCreateModal();
 				await fetchResumes();
 				return;
@@ -94,7 +95,7 @@
 
 			// Otherwise, use the manual create endpoint (for files already on server)
 			if (!createFormFilePath) {
-				toastError('Please select a file or provide a file path');
+				toastError($t('resumes.createError'));
 				return;
 			}
 
@@ -106,12 +107,12 @@
 			};
 
 			await createResume(input);
-			toastSuccess('Resume created successfully');
+			toastSuccess($t('resumes.createSuccess'));
 			closeCreateModal();
 			await fetchResumes();
 		} catch (err) {
 			console.error('Error creating resume:', err);
-			toastError(err instanceof Error ? err.message : 'Failed to create resume');
+			toastError(err instanceof Error ? err.message : $t('resumes.createError'));
 		} finally {
 			uploading = false;
 		}
@@ -119,17 +120,17 @@
 
 
 	async function handleDelete(resume: Resume) {
-		if (!confirm(`Are you sure you want to delete "${resume.title}"?`)) {
+		if (!confirm(`${$t('resumes.deleteConfirm')} "${resume.title}"?`)) {
 			return;
 		}
 
 		try {
 			await deleteResume(resume.id);
-			toastSuccess('Resume deleted successfully');
+			toastSuccess($t('resumes.deleteSuccess'));
 			await fetchResumes();
 		} catch (err) {
 			console.error('Error deleting resume:', err);
-			toastError('Failed to delete resume');
+			toastError($t('resumes.deleteError'));
 		}
 	}
 
@@ -155,22 +156,22 @@
 <div class="container mx-auto px-4 py-8">
 	<div class="mb-6 flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-gray-900 dark:text-white">Resumes</h1>
-			<p class="text-gray-600 dark:text-gray-400 mt-1">Manage your resume files</p>
+			<h1 class="text-3xl font-bold text-gray-900 dark:text-white">{$t('resumes.title')}</h1>
+			<p class="text-gray-600 dark:text-gray-400 mt-1">{$t('resumes.subtitle')}</p>
 		</div>
 		<button
 			onclick={openCreateModal}
 			class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
 		>
 			<Plus class="w-4 h-4" />
-			Create Resume
+			{$t('resumes.createButton')}
 		</button>
 	</div>
 
 	{#if loading}
 		<div class="text-center py-12">
 			<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-			<p class="mt-4 text-gray-600 dark:text-gray-400">Loading resumes...</p>
+			<p class="mt-4 text-gray-600 dark:text-gray-400">{$t('resumes.loading')}</p>
 		</div>
 	{:else if error}
 		<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -178,9 +179,9 @@
 		</div>
 	{:else if resumes.length === 0}
 		<div class="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-			<p class="text-gray-600 dark:text-gray-400">No resumes found</p>
+			<p class="text-gray-600 dark:text-gray-400">{$t('resumes.empty')}</p>
 			<p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
-				Resumes are created when you generate them using the resume-worker
+				{$t('resumes.emptySubtext')}
 			</p>
 		</div>
 	{:else}
@@ -192,27 +193,27 @@
 							<th
 								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
-								Title
+								{$t('resumes.table.title')}
 							</th>
 							<th
 								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
-								File
+								{$t('resumes.table.file')}
 							</th>
 							<th
 								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
-								Status
+								{$t('resumes.table.status')}
 							</th>
 							<th
 								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
-								Created
+								{$t('resumes.table.created')}
 							</th>
 							<th
 								class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
-								Actions
+								{$t('resumes.table.actions')}
 							</th>
 						</tr>
 					</thead>
@@ -240,7 +241,7 @@
 											<span
 												class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
 											>
-												Main
+												{$t('resumes.table.main')}
 											</span>
 										{/if}
 										{#if resume.isFeatured}
@@ -248,7 +249,7 @@
 												class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
 											>
 												<Star class="w-3 h-3 mr-1" />
-												Featured
+												{$t('resumes.table.featured')}
 											</span>
 										{/if}
 									</div>
@@ -294,14 +295,14 @@
 			class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
 			onclick={(e) => e.stopPropagation()}
 		>
-			<h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Create Resume</h2>
+			<h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">{$t('resumes.modal.createTitle')}</h2>
 			<div class="space-y-4">
 				<div>
 					<label
 						for="create-title"
 						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
-						Title <span class="text-red-500">*</span>
+						{$t('resumes.modal.title')} <span class="text-red-500">{$t('resumes.modal.required')}</span>
 					</label>
 					<input
 						id="create-title"
@@ -316,7 +317,7 @@
 						for="create-file"
 						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
-						Resume File (PDF) <span class="text-red-500">*</span>
+						{$t('resumes.modal.file')} <span class="text-red-500">{$t('resumes.modal.required')}</span>
 					</label>
 					<div class="mt-1 flex items-center gap-4">
 						<label
@@ -324,7 +325,7 @@
 							class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
 						>
 							<Upload class="w-4 h-4" />
-							<span>Choose File</span>
+							<span>{$t('resumes.modal.chooseFile')}</span>
 						</label>
 						<input
 							id="create-file-input"
@@ -340,7 +341,7 @@
 						{/if}
 					</div>
 					<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-						Or manually enter file details below
+						{$t('resumes.modal.manualEntry')}
 					</p>
 				</div>
 				<div>
@@ -348,7 +349,7 @@
 						for="create-file-path"
 						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
-						File Path
+						{$t('resumes.modal.filePath')}
 					</label>
 					<input
 						id="create-file-path"
@@ -363,7 +364,7 @@
 						for="create-file-name"
 						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
-						File Name
+						{$t('resumes.modal.fileName')}
 					</label>
 					<input
 						id="create-file-name"
@@ -378,7 +379,7 @@
 						for="create-file-size"
 						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
-						File Size (bytes)
+						{$t('resumes.modal.fileSize')}
 					</label>
 					<input
 						id="create-file-size"
@@ -396,7 +397,7 @@
 					disabled={uploading}
 					class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
 				>
-					Cancel
+					{$t('resumes.modal.cancel')}
 				</button>
 				<button
 					onclick={handleCreate}
@@ -405,9 +406,9 @@
 				>
 					{#if uploading}
 						<div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-						Creating...
+						{$t('resumes.modal.creating')}
 					{:else}
-						Create
+						{$t('resumes.modal.create')}
 					{/if}
 				</button>
 			</div>

@@ -10,6 +10,7 @@
 		type ApplicationStatus
 	} from '$lib/api/jobapplications';
 	import { listResumes, type Resume } from '$lib/api/resumes';
+	import { locale, t } from '$lib/i18n';
 
 	let applications: JobApplication[] = $state([]);
 	let loading = $state(true);
@@ -49,7 +50,7 @@
 		try {
 			applications = await listJobApplications();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load job applications';
+			error = err instanceof Error ? err.message : $t('jobApplications.error');
 			console.error('Error fetching job applications:', err);
 		} finally {
 			loading = false;
@@ -74,7 +75,7 @@
 
 	async function handleCreate() {
 		if (!formCompanyName.trim() || !formJobTitle.trim() || !formJobUrl.trim() || !formWebsite.trim()) {
-			alert('Company name, job title, job URL, and website are required');
+			alert($t('jobApplications.modal.required') + ' ' + $t('jobApplications.modal.companyName') + ', ' + $t('jobApplications.modal.jobTitle') + ', ' + $t('jobApplications.modal.jobUrl') + ', ' + $t('jobApplications.modal.website'));
 			return;
 		}
 
@@ -95,20 +96,20 @@
 			resetForm();
 			await fetchApplications();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to create job application');
+			alert(err instanceof Error ? err.message : $t('jobApplications.createError'));
 			console.error('Error creating job application:', err);
 		}
 	}
 
 
 	async function handleDelete(id: string) {
-		if (!confirm('Are you sure you want to delete this job application?')) return;
+		if (!confirm($t('jobApplications.deleteConfirm'))) return;
 
 		try {
 			await deleteJobApplication(id);
 			await fetchApplications();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to delete job application');
+			alert(err instanceof Error ? err.message : $t('jobApplications.deleteError'));
 			console.error('Error deleting job application:', err);
 		}
 	}
@@ -133,16 +134,16 @@
 <div class="page-container">
 	<div class="header">
 		<div>
-			<h1>Job Applications Management</h1>
-			<p>Manage job applications, responses, and interview stages</p>
+			<h1>{$t('jobApplications.title')}</h1>
+			<p>{$t('jobApplications.subtitle')}</p>
 		</div>
-		<button onclick={openCreateModal}>Create Application</button>
+		<button onclick={openCreateModal}>{$t('jobApplications.createButton')}</button>
 	</div>
 
 	<div class="search-bar">
 		<input
 			type="text"
-			placeholder="Search applications..."
+			placeholder={$t('jobApplications.searchPlaceholder')}
 			bind:value={searchQuery}
 			class="search-input"
 		/>
@@ -153,22 +154,22 @@
 	{/if}
 
 	{#if loading}
-		<div class="loading">Loading...</div>
+		<div class="loading">{$t('jobApplications.loading')}</div>
 	{:else if filteredApplications().length === 0}
-		<div class="empty">No job applications found</div>
+		<div class="empty">{$t('jobApplications.empty')}</div>
 	{:else}
 		<table class="table">
 			<thead>
 				<tr>
-					<th>Company</th>
-					<th>Job Title</th>
-					<th>Location</th>
-					<th>Website</th>
-					<th>Language</th>
-					<th>Status</th>
-					<th>Interest</th>
-					<th>Applied At</th>
-					<th>Actions</th>
+					<th>{$t('jobApplications.table.company')}</th>
+					<th>{$t('jobApplications.table.jobTitle')}</th>
+					<th>{$t('jobApplications.table.location')}</th>
+					<th>{$t('jobApplications.table.website')}</th>
+					<th>{$t('jobApplications.table.language')}</th>
+					<th>{$t('jobApplications.table.status')}</th>
+					<th>{$t('jobApplications.table.interest')}</th>
+					<th>{$t('jobApplications.table.appliedAt')}</th>
+					<th>{$t('jobApplications.table.actions')}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -180,13 +181,13 @@
 						<td>{app.website}</td>
 						<td>{app.language || '—'}</td>
 						<td>
-							<span class="status status-{app.status}">{app.status}</span>
+							<span class="status status-{app.status}">{$t(`jobApplications.status.${app.status}` as any)}</span>
 						</td>
 						<td>{app.interestLevel || '—'}</td>
 						<td>{formatDate(app.appliedAt)}</td>
 						<td>
-							<a href="/job-applications-admin/{app.id}" class="view-link">View</a>
-							<button onclick={() => handleDelete(app.id)} class="delete-btn">Delete</button>
+							<a href="/job-applications-admin/{app.id}" class="view-link">{$t('jobApplications.table.view')}</a>
+							<button onclick={() => handleDelete(app.id)} class="delete-btn">{$t('jobApplications.table.delete')}</button>
 						</td>
 					</tr>
 				{/each}
@@ -202,58 +203,58 @@
 		resetForm();
 	}}>
 		<div class="modal modal-large" onclick={(e) => e.stopPropagation()}>
-			<h2>Create Job Application</h2>
+			<h2>{$t('jobApplications.modal.createTitle')}</h2>
 			<div class="form">
 				<div class="form-row">
 					<div class="form-group">
-						<label>Company Name *</label>
+						<label>{$t('jobApplications.modal.companyName')} {$t('jobApplications.modal.required')}</label>
 						<input type="text" bind:value={formCompanyName} />
 					</div>
 					<div class="form-group">
-						<label>Job Title *</label>
+						<label>{$t('jobApplications.modal.jobTitle')} {$t('jobApplications.modal.required')}</label>
 						<input type="text" bind:value={formJobTitle} />
 					</div>
 				</div>
 				<div class="form-row">
 					<div class="form-group">
-						<label>Job URL *</label>
+						<label>{$t('jobApplications.modal.jobUrl')} {$t('jobApplications.modal.required')}</label>
 						<input type="url" bind:value={formJobUrl} />
 					</div>
 					<div class="form-group">
-						<label>Website *</label>
+						<label>{$t('jobApplications.modal.website')} {$t('jobApplications.modal.required')}</label>
 						<input type="text" bind:value={formWebsite} placeholder="linkedin, glassdoor, etc." />
 					</div>
 				</div>
 				<div class="form-row">
 					<div class="form-group">
-						<label>Location</label>
+						<label>{$t('jobApplications.modal.location')}</label>
 						<input type="text" bind:value={formLocation} />
 					</div>
 					<div class="form-group">
-						<label>Status</label>
+						<label>{$t('jobApplications.modal.status')}</label>
 						<select bind:value={formStatus}>
 							{#each statuses as status}
-								<option value={status}>{status}</option>
+								<option value={status}>{$t(`jobApplications.status.${status}` as any)}</option>
 							{/each}
 						</select>
 					</div>
 				</div>
 				<div class="form-group">
-					<label>Cover Letter</label>
+					<label>{$t('jobApplications.modal.coverLetter')}</label>
 					<textarea bind:value={formCoverLetter} rows="6"></textarea>
 				</div>
 				<div class="form-group">
 					<label>
 						<input type="checkbox" bind:checked={formLinkedInContact} />
-						LinkedIn Contact
+						{$t('jobApplications.modal.linkedInContact')}
 					</label>
 				</div>
 				<div class="form-actions">
-					<button onclick={handleCreate}>Create</button>
+					<button onclick={handleCreate}>{$t('jobApplications.modal.create')}</button>
 					<button onclick={() => {
 						showCreateModal = false;
 						resetForm();
-					}}>Cancel</button>
+					}}>{$t('jobApplications.modal.cancel')}</button>
 				</div>
 			</div>
 		</div>

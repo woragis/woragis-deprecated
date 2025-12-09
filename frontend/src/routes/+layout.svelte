@@ -10,6 +10,7 @@
 	import { queryClient } from '@clients/queryClient';
 	import ToastProvider from '$lib/providers/ToastProvider.svelte';
 	import FloatingChatButton from '$lib/components/FloatingChatButton.svelte';
+	import { locale, type Locale } from '$lib/i18n';
 	import '../app.css';
 
 	let sidebarOpen = false;
@@ -81,11 +82,23 @@
 					<span aria-hidden="true">☰</span>
 				</button>
 				<h1 class="topbar__title">Woragis Console</h1>
-				{#if isAuthenticated}
-					<button class="logout" type="button" on:click={handleLogout}>
-						Sign out
+				<div class="topbar__actions">
+					<button
+						class="lang-toggle"
+						type="button"
+						on:click={() => {
+							locale.update((l) => (l === 'en' ? 'pt' : 'en'));
+						}}
+						title="Toggle language"
+					>
+						{$locale === 'en' ? 'PT' : 'EN'}
 					</button>
-				{/if}
+					{#if isAuthenticated}
+						<button class="logout" type="button" on:click={handleLogout}>
+							Sign out
+						</button>
+					{/if}
+				</div>
 			</header>
 
 			<main class="content">
@@ -157,8 +170,36 @@
 		text-transform: uppercase;
 	}
 
-	.logout {
+	.topbar__actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 		margin-left: auto;
+	}
+
+	.lang-toggle {
+		padding: 0.35rem 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid rgba(148, 163, 184, 0.4);
+		background: rgba(15, 23, 42, 0.7);
+		color: #f1f5f9;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+	}
+
+	.lang-toggle:hover,
+	.lang-toggle:focus-visible {
+		background: rgba(148, 163, 184, 0.1);
+		border-color: rgba(148, 163, 184, 0.6);
+		color: #f8fafc;
+		outline: none;
+	}
+
+	.logout {
 		padding: 0.35rem 0.75rem;
 		border-radius: 0.5rem;
 		border: 1px solid rgba(94, 234, 212, 0.4);

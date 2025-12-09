@@ -10,6 +10,7 @@
 		type CreateProjectInput,
 		type ProjectStatus
 	} from '$lib/api/projects';
+	import { locale, t } from '$lib/i18n';
 
 	let projects: Project[] = $state([]);
 	let loading = $state(true);
@@ -39,7 +40,7 @@
 		try {
 			projects = await listProjects();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load projects';
+			error = err instanceof Error ? err.message : $t('projects.error');
 			console.error('Error fetching projects:', err);
 		} finally {
 			loading = false;
@@ -64,7 +65,7 @@
 
 	async function handleCreate() {
 		if (!formName.trim()) {
-			alert('Name is required');
+			alert($t('projects.modal.name') + ' ' + $t('projects.modal.required'));
 			return;
 		}
 
@@ -85,20 +86,20 @@
 			resetForm();
 			await fetchProjects();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to create project');
+			alert(err instanceof Error ? err.message : $t('projects.createError'));
 			console.error('Error creating project:', err);
 		}
 	}
 
 
 	async function handleDelete(id: string) {
-		if (!confirm('Are you sure you want to delete this project? This will also delete all related milestones, kanban boards, dependencies, documentation, technologies, file structures, and architecture diagrams.')) return;
+		if (!confirm($t('projects.deleteConfirm'))) return;
 
 		try {
 			await deleteProject(id);
 			await fetchProjects();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to delete project');
+			alert(err instanceof Error ? err.message : $t('projects.deleteError'));
 			console.error('Error deleting project:', err);
 		}
 	}
@@ -123,16 +124,16 @@
 <div class="page-container">
 	<div class="header">
 		<div>
-			<h1>Projects Management</h1>
-			<p>Manage projects</p>
+			<h1>{$t('projects.title')}</h1>
+			<p>{$t('projects.subtitle')}</p>
 		</div>
-		<button onclick={openCreateModal}>Create Project</button>
+		<button onclick={openCreateModal}>{$t('projects.createButton')}</button>
 	</div>
 
 	<div class="search-bar">
 		<input
 			type="text"
-			placeholder="Search projects..."
+			placeholder={$t('projects.searchPlaceholder')}
 			bind:value={searchQuery}
 			class="search-input"
 		/>
@@ -143,22 +144,22 @@
 	{/if}
 
 	{#if loading}
-		<div class="loading">Loading...</div>
+		<div class="loading">{$t('projects.loading')}</div>
 	{:else if filteredProjects().length === 0}
-		<div class="empty">No projects found</div>
+		<div class="empty">{$t('projects.empty')}</div>
 	{:else}
 		<table class="table">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Status</th>
-					<th>Health Score</th>
-					<th>MRR</th>
-					<th>CAC</th>
-					<th>LTV</th>
-					<th>Churn Rate</th>
-					<th>Created</th>
-					<th>Actions</th>
+					<th>{$t('projects.table.name')}</th>
+					<th>{$t('projects.table.status')}</th>
+					<th>{$t('projects.table.healthScore')}</th>
+					<th>{$t('projects.table.mrr')}</th>
+					<th>{$t('projects.table.cac')}</th>
+					<th>{$t('projects.table.ltv')}</th>
+					<th>{$t('projects.table.churnRate')}</th>
+					<th>{$t('projects.table.created')}</th>
+					<th>{$t('projects.table.actions')}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -170,7 +171,7 @@
 							<small>{project.description || '—'}</small>
 						</td>
 						<td>
-							<span class="status status-{project.status}">{project.status}</span>
+							<span class="status status-{project.status}">{$t(`projects.status.${project.status}` as any)}</span>
 						</td>
 						<td>{project.health_score}</td>
 						<td>${project.mrr.toFixed(2)}</td>
@@ -179,8 +180,8 @@
 						<td>{project.churn_rate.toFixed(2)}%</td>
 						<td>{formatDate(project.created_at)}</td>
 						<td>
-							<a href="/projects-admin/{project.id}" class="view-link">View</a>
-							<button onclick={() => handleDelete(project.id)} class="delete-btn">Delete</button>
+							<a href="/projects-admin/{project.id}" class="view-link">{$t('projects.table.view')}</a>
+							<button onclick={() => handleDelete(project.id)} class="delete-btn">{$t('projects.table.delete')}</button>
 						</td>
 					</tr>
 				{/each}
@@ -193,47 +194,47 @@
 {#if showCreateModal}
 	<div class="modal-overlay" onclick={() => (showCreateModal = false)}>
 		<div class="modal modal-large" onclick={(e) => e.stopPropagation()}>
-			<h2>Create Project</h2>
+			<h2>{$t('projects.modal.createTitle')}</h2>
 			<div class="form">
 				<div class="form-group">
-					<label>Name *</label>
+					<label>{$t('projects.modal.name')} {$t('projects.modal.required')}</label>
 					<input type="text" bind:value={formName} />
 				</div>
 				<div class="form-group">
-					<label>Description</label>
+					<label>{$t('projects.modal.description')}</label>
 					<textarea bind:value={formDescription} rows="3"></textarea>
 				</div>
 				<div class="form-group">
-					<label>Status</label>
+					<label>{$t('projects.modal.status')}</label>
 					<select bind:value={formStatus}>
 						{#each statuses as status}
-							<option value={status}>{status}</option>
+							<option value={status}>{$t(`projects.status.${status}` as any)}</option>
 						{/each}
 					</select>
 				</div>
 				<div class="form-group">
-					<label>Health Score</label>
+					<label>{$t('projects.modal.healthScore')}</label>
 					<input type="number" bind:value={formHealthScore} />
 				</div>
 				<div class="form-group">
-					<label>MRR (Monthly Recurring Revenue)</label>
+					<label>{$t('projects.modal.mrr')}</label>
 					<input type="number" step="0.01" bind:value={formMrr} />
 				</div>
 				<div class="form-group">
-					<label>CAC (Customer Acquisition Cost)</label>
+					<label>{$t('projects.modal.cac')}</label>
 					<input type="number" step="0.01" bind:value={formCac} />
 				</div>
 				<div class="form-group">
-					<label>LTV (Lifetime Value)</label>
+					<label>{$t('projects.modal.ltv')}</label>
 					<input type="number" step="0.01" bind:value={formLtv} />
 				</div>
 				<div class="form-group">
-					<label>Churn Rate (%)</label>
+					<label>{$t('projects.modal.churnRate')}</label>
 					<input type="number" step="0.01" bind:value={formChurnRate} />
 				</div>
 				<div class="form-actions">
-					<button onclick={handleCreate}>Create</button>
-					<button onclick={() => (showCreateModal = false)}>Cancel</button>
+					<button onclick={handleCreate}>{$t('projects.modal.create')}</button>
+					<button onclick={() => (showCreateModal = false)}>{$t('projects.modal.cancel')}</button>
 				</div>
 			</div>
 		</div>
