@@ -57,6 +57,7 @@ import (
 	jobapplicationresponsesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/responses"
 	jobapplicationstagesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/interviewstages"
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
+	userprofilesdomain "github.com/woragis/backend/server/app/internal/domains/userprofiles"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
@@ -510,11 +511,11 @@ func main() {
 		defaultModel = "chatgpt"
 	}
 
+	// Create chats repo early (needed by reports service)
 	chatsRepo := chatsdomain.NewGormRepository(db)
 	chatsStream := chatsdomain.NewStreamHub()
-	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel, chatsStream)
-	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
-	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
+	// Note: Chat service will be fully initialized after all other services are created
+	// to allow context builder to access them (see below after userProfileService)
 
 	clientsRepo := clientsdomain.NewGormRepository(db)
 	clientsService := clientsdomain.NewService(clientsRepo, slogLogger)
@@ -557,7 +558,8 @@ func main() {
 	applicationRepo := jobapplicationsdomain.NewGormRepository(db)
 	applicationQueue := jobapplicationsdomain.NewRedisQueue(redisClient)
 	applicationService := jobapplicationsdomain.NewService(applicationRepo, applicationQueue, slogLogger)
-	applicationHandler := jobapplicationsdomain.NewHandler(applicationService, slogLogger)
+	// Handler will be created with conversation creator adapter after chatsService is initialized below
+	applicationHandler := jobapplicationsdomain.NewHandlerWithChatService(applicationService, nil, slogLogger)
 	
 	// Job Application Responses subdomain
 	responseRepo := jobapplicationresponsesdomain.NewGormRepository(db)
@@ -594,6 +596,57 @@ func main() {
 	// Public resume endpoints (no auth required)
 	publicAPI := api.Group("/public")
 	resumesdomain.SetupPublicRoutes(publicAPI, resumeHandler)
+
+	// User Profiles: requires JWT for all operations
+	userProfileRepo := userprofilesdomain.NewGormRepository(db)
+	userProfileService := userprofilesdomain.NewService(userProfileRepo, slogLogger)
+	userProfileHandler := userprofilesdomain.NewHandler(userProfileService, slogLogger)
+	userprofilesdomain.SetupRoutes(protectedAPI, userProfileHandler)
+
+	// Now initialize chat service with context builder (all services are available)
+	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel, chatsStream)
+	
+	// Create context builder for chat service (now all services are available)
+	contextBuilder := chatsdomain.NewContextBuilder(
+		applicationService,
+		resumeService,
+		userProfileService,
+		projectService,
+		skillService,
+		caseStudyService,
+		technicalWritingService,
+		postService,
+		problemSolutionService,
+		experienceService,
+		slogLogger,
+	)
+	chatsService.SetContextBuilder(contextBuilder)
+	
+	// Create adapter to connect chats service to job applications handler
+	// This adapter implements the ConversationCreator interface to break the import cycle
+	// between jobapplications and chats domains
+	conversationCreator := jobapplicationsdomain.ConversationCreatorFunc(func(ctx context.Context, req jobapplicationsdomain.CreateConversationRequest) (*jobapplicationsdomain.Conversation, error) {
+		chatsReq := chatsdomain.CreateConversationRequest{
+			UserID:           req.UserID,
+			Title:            req.Title,
+			Description:      req.Description,
+			JobApplicationID: req.JobApplicationID,
+		}
+		conv, err := chatsService.CreateConversation(ctx, chatsReq)
+		if err != nil {
+			return nil, err
+		}
+		return &jobapplicationsdomain.Conversation{ID: conv.ID}, nil
+	})
+	
+	// Update the application handler with the conversation creator adapter
+	// This enables auto-creation of conversations when job applications are created
+	applicationHandler = jobapplicationsdomain.NewHandlerWithChatService(applicationService, conversationCreator, slogLogger)
+	// Re-setup routes with the updated handler that now has conversation creation capability
+	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
+	
+	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
+	chatsdomain.SetupRoutes(protectedAPI, chatsHandler)
 
 	schedulerRunner := schedulerworker.NewRunner(schedulerService, slogLogger, time.Minute)
 	go schedulerRunner.Start(workerCtx)
@@ -751,6 +804,10 @@ func migrate(db *gorm.DB) error {
 		&technicalwritingsdomain.TechnicalWriting{},
 		&translationsdomain.Translation{},
 		&resumesdomain.Resume{},
+		&userprofilesdomain.UserProfile{},
+		&jobapplicationsdomain.JobApplication{},
+		&jobapplicationstagesdomain.InterviewStage{},
+		&jobapplicationresponsesdomain.Response{},
 	)
 }
 

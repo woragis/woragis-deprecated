@@ -89,9 +89,10 @@ func (r *gormRepository) ListConversations(ctx context.Context, userID uuid.UUID
 
 // SearchFilters describes conversation filtering options.
 type SearchFilters struct {
-	Query           string
-	IncludeArchived bool
-	Limit           int
+	Query            string
+	IncludeArchived  bool
+	JobApplicationID *uuid.UUID
+	Limit            int
 }
 
 func (r *gormRepository) SearchConversations(ctx context.Context, userID uuid.UUID, filters SearchFilters) ([]Conversation, error) {
@@ -102,6 +103,10 @@ func (r *gormRepository) SearchConversations(ctx context.Context, userID uuid.UU
 
 	if !filters.IncludeArchived {
 		db = db.Where("archived_at IS NULL")
+	}
+
+	if filters.JobApplicationID != nil {
+		db = db.Where("job_application_id = ?", *filters.JobApplicationID)
 	}
 
 	if strings.TrimSpace(filters.Query) != "" {

@@ -28,5 +28,7 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 	group.Post("/conversations/:id/unassign", handler.UnassignConversation)
 	group.Get("/conversations/:id/assignments", handler.ListAssignments)
 
+	group.Get("/conversations/:id/context", handler.GetContextPreview)
+
 	group.Get("/conversations/:id/stream", websocket.New(handler.StreamConversation))
 }

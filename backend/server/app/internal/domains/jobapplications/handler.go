@@ -1,6 +1,8 @@
 package jobapplications
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -11,6 +13,33 @@ import (
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
+
+// ConversationCreator is an interface for creating conversations.
+// This interface breaks the import cycle between jobapplications and chats domains.
+type ConversationCreator interface {
+	CreateConversation(ctx context.Context, req CreateConversationRequest) (*Conversation, error)
+}
+
+// ConversationCreatorFunc is a function type that implements ConversationCreator.
+type ConversationCreatorFunc func(ctx context.Context, req CreateConversationRequest) (*Conversation, error)
+
+// CreateConversation implements ConversationCreator interface.
+func (f ConversationCreatorFunc) CreateConversation(ctx context.Context, req CreateConversationRequest) (*Conversation, error) {
+	return f(ctx, req)
+}
+
+// CreateConversationRequest represents a request to create a conversation.
+type CreateConversationRequest struct {
+	UserID           uuid.UUID
+	Title            string
+	Description      string
+	JobApplicationID *uuid.UUID
+}
+
+// Conversation represents a conversation (minimal interface to avoid import cycle).
+type Conversation struct {
+	ID uuid.UUID
+}
 
 // Handler exposes job application endpoints.
 type Handler interface {
@@ -23,8 +52,9 @@ type Handler interface {
 }
 
 type handler struct {
-	service Service
-	logger  *slog.Logger
+	service          Service
+	conversationCreator ConversationCreator // Optional: for auto-creating conversations
+	logger          *slog.Logger
 }
 
 // NewHandler constructs a job application handler.
@@ -32,6 +62,15 @@ func NewHandler(service Service, logger *slog.Logger) Handler {
 	return &handler{
 		service: service,
 		logger:  logger,
+	}
+}
+
+// NewHandlerWithChatService constructs a job application handler with conversation creator.
+func NewHandlerWithChatService(service Service, conversationCreator ConversationCreator, logger *slog.Logger) Handler {
+	return &handler{
+		service:            service,
+		conversationCreator: conversationCreator,
+		logger:             logger,
 	}
 }
 
@@ -80,6 +119,26 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Auto-create conversation for this job application
+	if h.conversationCreator != nil {
+		jobAppID := application.ID
+		title := fmt.Sprintf("Job Application: %s at %s", payload.JobTitle, payload.CompanyName)
+		description := fmt.Sprintf("Chat about the %s position at %s", payload.JobTitle, payload.CompanyName)
+		
+		_, err := h.conversationCreator.CreateConversation(c.Context(), CreateConversationRequest{
+			UserID:           userID,
+			Title:            title,
+			Description:      description,
+			JobApplicationID: &jobAppID,
+		})
+		if err != nil {
+			// Log error but don't fail the request
+			h.logger.Warn("failed to auto-create conversation for job application", 
+				slog.String("application_id", jobAppID.String()),
+				slog.Any("error", err))
+		}
 	}
 
 	return response.Success(c, fiber.StatusCreated, application)

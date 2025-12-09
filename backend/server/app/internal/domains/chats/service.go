@@ -22,6 +22,7 @@ type Service struct {
 	stream           *StreamHub
 	transcriptTTL    time.Duration
 	transcriptPrefix string
+	contextBuilder   *ContextBuilder
 }
 
 // NewService creates a new chat service.
@@ -38,6 +39,21 @@ func NewService(repo Repository, llmClient *langchain.Client, logger *slog.Logge
 	}
 }
 
+// SetContextBuilder sets the context builder for the service.
+func (s *Service) SetContextBuilder(builder *ContextBuilder) {
+	s.contextBuilder = builder
+}
+
+// GetContextBuilder returns the context builder for the service.
+func (s *Service) GetContextBuilder() *ContextBuilder {
+	return s.contextBuilder
+}
+
+// GetConversation retrieves a conversation by ID.
+func (s *Service) GetConversation(ctx context.Context, conversationID, userID uuid.UUID) (*Conversation, error) {
+	return s.repo.GetConversation(ctx, conversationID, userID)
+}
+
 // SetStreamHub allows updating the stream hub after construction.
 func (s *Service) SetStreamHub(stream *StreamHub) {
 	s.stream = stream
@@ -45,19 +61,21 @@ func (s *Service) SetStreamHub(stream *StreamHub) {
 
 // CreateConversationRequest contains data to start a new conversation.
 type CreateConversationRequest struct {
-	UserID      uuid.UUID
-	Title       string
-	Description string
-	IdeaID      *uuid.UUID
-	ProjectID   *uuid.UUID
+	UserID           uuid.UUID
+	Title            string
+	Description      string
+	IdeaID           *uuid.UUID
+	ProjectID        *uuid.UUID
+	JobApplicationID *uuid.UUID
 }
 
 // SearchConversationsRequest encapsulates search parameters.
 type SearchConversationsRequest struct {
-	UserID          uuid.UUID
-	Query           string
-	IncludeArchived bool
-	Limit           int
+	UserID           uuid.UUID
+	Query            string
+	IncludeArchived  bool
+	JobApplicationID *uuid.UUID
+	Limit            int
 }
 
 // AppendMessageRequest contains data to append a user message and optionally request an AI response.
@@ -98,7 +116,7 @@ type AssignConversationRequest struct {
 
 // CreateConversation starts a new thread.
 func (s *Service) CreateConversation(ctx context.Context, req CreateConversationRequest) (*Conversation, error) {
-	conversation, err := NewConversation(req.UserID, req.Title, req.Description, req.IdeaID, req.ProjectID)
+	conversation, err := NewConversation(req.UserID, req.Title, req.Description, req.IdeaID, req.ProjectID, req.JobApplicationID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,13 +135,10 @@ func (s *Service) ListConversations(ctx context.Context, userID uuid.UUID) ([]Co
 
 // SearchConversations finds conversations by query.
 func (s *Service) SearchConversations(ctx context.Context, req SearchConversationsRequest) ([]Conversation, error) {
-	if strings.TrimSpace(req.Query) == "" {
-		return nil, NewDomainError(ErrCodeInvalidPayload, ErrInvalidSearchQuery)
-	}
-
 	return s.repo.SearchConversations(ctx, req.UserID, SearchFilters{
-		Query:           req.Query,
+		Query:            req.Query,
 		IncludeArchived: req.IncludeArchived,
+		JobApplicationID: req.JobApplicationID,
 		Limit:           req.Limit,
 	})
 }
@@ -179,12 +194,32 @@ type streamDeltaEvent struct {
 }
 
 func (s *Service) streamReply(ctx context.Context, conversationID uuid.UUID, req AppendMessageRequest) {
+	// Get conversation to check if context should be included
+	conv, err := s.repo.GetConversation(ctx, req.ConversationID, req.UserID)
+	if err != nil {
+		return
+	}
+
 	// Load full message history to build proper prompt
 	messages, err := s.repo.ListMessages(ctx, req.ConversationID, req.UserID)
 	if err != nil {
 		return
 	}
-	lcMessages := make([]langchain.ChatMessage, 0, len(messages))
+
+	lcMessages := make([]langchain.ChatMessage, 0, len(messages)+1)
+
+	// Build and inject context if this is a job application conversation and context builder is available
+	if s.contextBuilder != nil && conv.JobApplicationID != nil {
+		contextStr, err := s.contextBuilder.BuildContext(ctx, req.UserID, conv, GetDefaultContextOptions())
+		if err == nil && contextStr != "" {
+			// Inject context as system message at the beginning
+			lcMessages = append(lcMessages, langchain.ChatMessage{
+				Role:    "system",
+				Content: "You are a helpful assistant helping with job applications. Here is relevant context about the user and the job application:\n\n" + contextStr + "\n\nUse this context to provide relevant and personalized advice.",
+			})
+		}
+	}
+
 	for _, msg := range messages {
 		lcMessages = append(lcMessages, langchain.ChatMessage{
 			Role:    msg.Role,
@@ -252,12 +287,31 @@ func (s *Service) generateReply(ctx context.Context, req AppendMessageRequest) (
 		provider = s.defaultProvider
 	}
 
+	// Get conversation to check if context should be included
+	conv, err := s.repo.GetConversation(ctx, req.ConversationID, req.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	messages, err := s.repo.ListMessages(ctx, req.ConversationID, req.UserID)
 	if err != nil {
 		return nil, err
 	}
 
-	lcMessages := make([]langchain.ChatMessage, 0, len(messages))
+	lcMessages := make([]langchain.ChatMessage, 0, len(messages)+1)
+
+	// Build and inject context if this is a job application conversation and context builder is available
+	if s.contextBuilder != nil && conv.JobApplicationID != nil {
+		contextStr, err := s.contextBuilder.BuildContext(ctx, req.UserID, conv, GetDefaultContextOptions())
+		if err == nil && contextStr != "" {
+			// Inject context as system message at the beginning
+			lcMessages = append(lcMessages, langchain.ChatMessage{
+				Role:    "system",
+				Content: "You are a helpful assistant helping with job applications. Here is relevant context about the user and the job application:\n\n" + contextStr + "\n\nUse this context to provide relevant and personalized advice.",
+			})
+		}
+	}
+
 	for _, msg := range messages {
 		lcMessages = append(lcMessages, langchain.ChatMessage{
 			Role:    msg.Role,

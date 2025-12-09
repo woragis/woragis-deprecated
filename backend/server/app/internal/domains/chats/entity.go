@@ -9,19 +9,20 @@ import (
 
 // Conversation represents a chat thread persisted by Woragis.
 type Conversation struct {
-	ID               uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
-	UserID           uuid.UUID  `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
-	Title            string     `gorm:"column:title;size:120;not null" json:"title"`
-	Description      string     `gorm:"column:description;size:255" json:"description"`
-	IdeaID           *uuid.UUID `gorm:"column:idea_id;type:uuid;index" json:"ideaId,omitempty"`
-	ProjectID        *uuid.UUID `gorm:"column:project_id;type:uuid;index" json:"projectId,omitempty"`
-	AssignedAgentID  *uuid.UUID `gorm:"column:assigned_agent_id;type:uuid;index" json:"assignedAgentId,omitempty"`
-	SharedTranscript string     `gorm:"column:shared_transcript;size:255" json:"sharedTranscript"`
-	ArchivedAt       *time.Time `gorm:"column:archived_at;index" json:"archivedAt,omitempty"`
-	DeletedAt        *time.Time `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
-	LastAssignedAt   *time.Time `gorm:"column:last_assigned_at" json:"lastAssignedAt,omitempty"`
-	CreatedAt        time.Time  `gorm:"column:created_at" json:"createdAt"`
-	UpdatedAt        time.Time  `gorm:"column:updated_at" json:"updatedAt"`
+	ID                uuid.UUID  `gorm:"column:id;type:uuid;primaryKey" json:"id"`
+	UserID            uuid.UUID  `gorm:"column:user_id;type:uuid;index;not null" json:"userId"`
+	Title             string     `gorm:"column:title;size:120;not null" json:"title"`
+	Description       string     `gorm:"column:description;size:255" json:"description"`
+	IdeaID            *uuid.UUID `gorm:"column:idea_id;type:uuid;index" json:"ideaId,omitempty"`
+	ProjectID         *uuid.UUID `gorm:"column:project_id;type:uuid;index" json:"projectId,omitempty"`
+	JobApplicationID  *uuid.UUID `gorm:"column:job_application_id;type:uuid;index" json:"jobApplicationId,omitempty"`
+	AssignedAgentID   *uuid.UUID `gorm:"column:assigned_agent_id;type:uuid;index" json:"assignedAgentId,omitempty"`
+	SharedTranscript  string     `gorm:"column:shared_transcript;size:255" json:"sharedTranscript"`
+	ArchivedAt        *time.Time `gorm:"column:archived_at;index" json:"archivedAt,omitempty"`
+	DeletedAt         *time.Time `gorm:"column:deleted_at;index" json:"deletedAt,omitempty"`
+	LastAssignedAt    *time.Time `gorm:"column:last_assigned_at" json:"lastAssignedAt,omitempty"`
+	CreatedAt         time.Time  `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt         time.Time  `gorm:"column:updated_at" json:"updatedAt"`
 }
 
 // Message represents a single message in a conversation.
@@ -34,16 +35,17 @@ type Message struct {
 }
 
 // NewConversation creates a new conversation.
-func NewConversation(userID uuid.UUID, title, description string, ideaID, projectID *uuid.UUID) (*Conversation, error) {
+func NewConversation(userID uuid.UUID, title, description string, ideaID, projectID, jobApplicationID *uuid.UUID) (*Conversation, error) {
 	conv := &Conversation{
-		ID:          uuid.New(),
-		UserID:      userID,
-		Title:       strings.TrimSpace(title),
-		Description: strings.TrimSpace(description),
-		IdeaID:      ideaID,
-		ProjectID:   projectID,
-		CreatedAt:   time.Now().UTC(),
-		UpdatedAt:   time.Now().UTC(),
+		ID:               uuid.New(),
+		UserID:           userID,
+		Title:            strings.TrimSpace(title),
+		Description:      strings.TrimSpace(description),
+		IdeaID:           ideaID,
+		ProjectID:       projectID,
+		JobApplicationID: jobApplicationID,
+		CreatedAt:        time.Now().UTC(),
+		UpdatedAt:        time.Now().UTC(),
 	}
 
 	return conv, conv.Validate()

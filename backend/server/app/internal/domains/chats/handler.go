@@ -31,10 +31,11 @@ func NewHandler(service *Service, logger *slog.Logger, stream *StreamHub) *Handl
 }
 
 type createConversationPayload struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	IdeaID      string `json:"idea_id"`
-	ProjectID   string `json:"project_id"`
+	Title            string `json:"title"`
+	Description      string `json:"description"`
+	IdeaID           string `json:"idea_id"`
+	ProjectID        string `json:"project_id"`
+	JobApplicationID string `json:"job_application_id"`
 }
 
 type appendMessagePayload struct {
@@ -53,9 +54,10 @@ type bulkUpdatePayload struct {
 }
 
 type searchQueryParams struct {
-	Query           string
-	IncludeArchived bool
-	Limit           int
+	Query            string
+	IncludeArchived  bool
+	JobApplicationID string
+	Limit            int
 }
 
 type shareTranscriptPayload struct {
@@ -69,18 +71,19 @@ type assignmentPayload struct {
 }
 
 type conversationResponse struct {
-	ID               string  `json:"id"`
-	UserID           string  `json:"user_id"`
-	Title            string  `json:"title"`
-	Description      string  `json:"description"`
-	IdeaID           *string `json:"idea_id"`
-	ProjectID        *string `json:"project_id"`
-	AssignedAgentID  *string `json:"assigned_agent_id"`
-	SharedTranscript string  `json:"shared_transcript"`
-	ArchivedAt       *string `json:"archived_at"`
-	DeletedAt        *string `json:"deleted_at"`
-	CreatedAt        string  `json:"created_at"`
-	UpdatedAt        string  `json:"updated_at"`
+	ID                string  `json:"id"`
+	UserID            string  `json:"user_id"`
+	Title             string  `json:"title"`
+	Description       string  `json:"description"`
+	IdeaID            *string `json:"idea_id"`
+	ProjectID         *string `json:"project_id"`
+	JobApplicationID  *string `json:"job_application_id"`
+	AssignedAgentID   *string `json:"assigned_agent_id"`
+	SharedTranscript  string  `json:"shared_transcript"`
+	ArchivedAt        *string `json:"archived_at"`
+	DeletedAt         *string `json:"deleted_at"`
+	CreatedAt         string  `json:"created_at"`
+	UpdatedAt         string  `json:"updated_at"`
 }
 
 type messageResponse struct {
@@ -138,12 +141,22 @@ func (h *Handler) CreateConversation(c *fiber.Ctx) error {
 		projectID = &parsed
 	}
 
+	var jobApplicationID *uuid.UUID
+	if payload.JobApplicationID != "" {
+		parsed, err := uuid.Parse(payload.JobApplicationID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		jobApplicationID = &parsed
+	}
+
 	conversation, err := h.service.CreateConversation(c.Context(), CreateConversationRequest{
-		UserID:      userID,
-		Title:       payload.Title,
-		Description: payload.Description,
-		IdeaID:      ideaID,
-		ProjectID:   projectID,
+		UserID:           userID,
+		Title:            payload.Title,
+		Description:      payload.Description,
+		IdeaID:           ideaID,
+		ProjectID:        projectID,
+		JobApplicationID: jobApplicationID,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -176,7 +189,8 @@ func (h *Handler) ListConversations(c *fiber.Ctx) error {
 // SearchConversations handles GET /chats/conversations/search.
 func (h *Handler) SearchConversations(c *fiber.Ctx) error {
 	params := searchQueryParams{
-		Query: c.Query("q"),
+		Query:            c.Query("q"),
+		JobApplicationID: c.Query("job_application_id"),
 	}
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
@@ -188,11 +202,21 @@ func (h *Handler) SearchConversations(c *fiber.Ctx) error {
 		params.Limit = limit
 	}
 
+	var jobApplicationID *uuid.UUID
+	if params.JobApplicationID != "" {
+		parsed, err := uuid.Parse(params.JobApplicationID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		jobApplicationID = &parsed
+	}
+
 	conversations, err := h.service.SearchConversations(c.Context(), SearchConversationsRequest{
-		UserID:          userID,
-		Query:           params.Query,
-		IncludeArchived: params.IncludeArchived,
-		Limit:           params.Limit,
+		UserID:           userID,
+		Query:            params.Query,
+		IncludeArchived:  params.IncludeArchived,
+		JobApplicationID: jobApplicationID,
+		Limit:            params.Limit,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -475,6 +499,55 @@ func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, resp)
 }
 
+// GetContextPreview handles GET /chats/conversations/:id/context.
+func (h *Handler) GetContextPreview(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
+	}
+
+	conversationID := c.Params("id")
+	if conversationID == "" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "conversation ID is required"})
+	}
+
+	convID, err := uuid.Parse(conversationID)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid conversation ID"})
+	}
+
+	conv, err := h.service.GetConversation(c.Context(), convID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	// Build context with default options
+	if h.service.GetContextBuilder() == nil {
+		return response.Success(c, fiber.StatusOK, fiber.Map{
+			"context": "",
+			"options": GetDefaultContextOptions(),
+			"message": "Context builder not available",
+		})
+	}
+
+	contextStr, err := h.service.GetContextBuilder().BuildContext(
+		c.Context(),
+		userID,
+		conv,
+		GetDefaultContextOptions(),
+	)
+
+	if err != nil {
+		h.logger.Error("failed to build context preview", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to build context"})
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{
+		"context": contextStr,
+		"options": GetDefaultContextOptions(),
+	})
+}
+
 // StreamConversation handles websocket upgrades for streaming events.
 func (h *Handler) StreamConversation(conn *websocket.Conn) {
 	conversationIDParam := conn.Params("id")
@@ -550,6 +623,12 @@ func toConversationResponse(conv *Conversation) conversationResponse {
 		projectID = &str
 	}
 
+	var jobApplicationID *string
+	if conv.JobApplicationID != nil {
+		str := conv.JobApplicationID.String()
+		jobApplicationID = &str
+	}
+
 	var assignedAgentID *string
 	if conv.AssignedAgentID != nil {
 		str := conv.AssignedAgentID.String()
@@ -569,18 +648,19 @@ func toConversationResponse(conv *Conversation) conversationResponse {
 	}
 
 	return conversationResponse{
-		ID:               conv.ID.String(),
-		UserID:           conv.UserID.String(),
-		Title:            conv.Title,
-		Description:      conv.Description,
-		IdeaID:           ideaID,
-		ProjectID:        projectID,
-		AssignedAgentID:  assignedAgentID,
-		SharedTranscript: conv.SharedTranscript,
-		ArchivedAt:       archivedAt,
-		DeletedAt:        deletedAt,
-		CreatedAt:        conv.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:        conv.UpdatedAt.Format(time.RFC3339),
+		ID:                conv.ID.String(),
+		UserID:            conv.UserID.String(),
+		Title:             conv.Title,
+		Description:       conv.Description,
+		IdeaID:            ideaID,
+		ProjectID:         projectID,
+		JobApplicationID:  jobApplicationID,
+		AssignedAgentID:   assignedAgentID,
+		SharedTranscript:  conv.SharedTranscript,
+		ArchivedAt:        archivedAt,
+		DeletedAt:         deletedAt,
+		CreatedAt:         conv.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:         conv.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
