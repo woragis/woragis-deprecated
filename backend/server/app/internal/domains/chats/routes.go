@@ -11,6 +11,7 @@ func SetupRoutes(api fiber.Router, handler *Handler) {
 	group.Post("/conversations", handler.CreateConversation)
 	group.Get("/conversations", handler.ListConversations)
 	group.Get("/conversations/search", handler.SearchConversations)
+	group.Get("/conversations/:id", handler.GetConversation)
 
 	group.Post("/conversations/:id/messages", handler.AppendMessage)
 	group.Get("/conversations/:id/messages", handler.ListMessages)

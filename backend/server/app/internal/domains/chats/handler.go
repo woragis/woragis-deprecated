@@ -186,6 +186,26 @@ func (h *Handler) ListConversations(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, resp)
 }
 
+// GetConversation handles GET /chats/conversations/:id.
+func (h *Handler) GetConversation(c *fiber.Ctx) error {
+	convID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return err
+	}
+
+	conversation, err := h.service.GetConversation(c.Context(), convID, userID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toConversationResponse(conversation))
+}
+
 // SearchConversations handles GET /chats/conversations/search.
 func (h *Handler) SearchConversations(c *fiber.Ctx) error {
 	params := searchQueryParams{
