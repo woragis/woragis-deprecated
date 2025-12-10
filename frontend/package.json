@@ -18,8 +18,13 @@
 	},
 	"dependencies": {
 		"@tanstack/svelte-query": "^5.62.6",
+		"@types/dompurify": "^3.0.5",
+		"@types/jsdom": "^27.0.0",
 		"@xyflow/svelte": "^1.4.2",
 		"axios": "^1.7.9",
+		"dompurify": "^3.3.1",
+		"jsdom": "^27.3.0",
+		"marked": "^17.0.1",
 		"svelte-sonner": "^1.0.6"
 	},
 	"devDependencies": {
