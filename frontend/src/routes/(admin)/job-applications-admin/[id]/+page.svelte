@@ -640,7 +640,15 @@
 						<input type="text" bind:value={formJobTitle} disabled />
 					</div>
 				</div>
-				<!-- Add rest of form fields... -->
+				<div class="form-group">
+					<label>Job Description</label>
+					<textarea
+						bind:value={formJobDescription}
+						placeholder="Paste the job description from LinkedIn or other job sites here. This will be used as context for AI chat."
+						rows="10"
+					></textarea>
+					<small>This description will be available to the AI chat for context about job requirements.</small>
+				</div>
 				<div class="form-actions">
 					<Button onclick={handleUpdate} variant="primary">Update</Button>
 					<Button onclick={() => { showEditModal = false; }} variant="secondary">Cancel</Button>
