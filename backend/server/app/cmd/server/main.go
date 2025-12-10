@@ -550,7 +550,8 @@ func main() {
 	// Job Applications: requires JWT for all operations
 	applicationRepo := jobapplicationsdomain.NewGormRepository(db)
 	applicationQueue := jobapplicationsdomain.NewRedisQueue(redisClient)
-	applicationService := jobapplicationsdomain.NewService(applicationRepo, applicationQueue, slogLogger)
+	// Use NewServiceWithChats to enable cascade delete operations
+	applicationService := jobapplicationsdomain.NewServiceWithChats(applicationRepo, applicationQueue, chatsRepo, slogLogger)
 	// Handler will be created with conversation creator adapter after chatsService is initialized below
 	applicationHandler := jobapplicationsdomain.NewHandlerWithChatService(applicationService, nil, slogLogger)
 	

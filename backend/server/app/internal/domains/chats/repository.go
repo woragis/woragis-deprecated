@@ -28,6 +28,7 @@ type Repository interface {
 	CreateAssignment(ctx context.Context, assignment *ConversationAssignment) error
 	CloseAssignments(ctx context.Context, conversationID uuid.UUID) error
 	ListAssignments(ctx context.Context, conversationID uuid.UUID) ([]ConversationAssignment, error)
+	UnlinkFromJobApplication(ctx context.Context, jobApplicationID uuid.UUID) error
 }
 
 type gormRepository struct {
@@ -283,4 +284,15 @@ func (r *gormRepository) ListAssignments(ctx context.Context, conversationID uui
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return assignments, nil
+}
+
+func (r *gormRepository) UnlinkFromJobApplication(ctx context.Context, jobApplicationID uuid.UUID) error {
+	// Set job_application_id to NULL for all conversations linked to this job application
+	// This preserves chat history while unlinking from the deleted application
+	if err := r.db.WithContext(ctx).Model(&Conversation{}).
+		Where("job_application_id = ?", jobApplicationID).
+		Update("job_application_id", nil).Error; err != nil {
+		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToPersist)
+	}
+	return nil
 }

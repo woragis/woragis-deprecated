@@ -358,17 +358,39 @@ func (h *handler) UpdateJobApplication(c *fiber.Ctx) error {
 }
 
 func (h *handler) DeleteJobApplication(c *fiber.Ctx) error {
-	_, err := uuid.Parse(c.Params("id"))
+	applicationID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
 			"message": "invalid application id",
 		})
 	}
 
-	// Note: We don't have DeleteJobApplication in service, but we can add it if needed
-	// For now, just return not implemented
-	return response.Error(c, fiber.StatusNotImplemented, 501, fiber.Map{
-		"message": "delete not implemented yet",
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return err
+	}
+
+	// Verify the application belongs to the user
+	application, err := h.service.GetJobApplication(c.Context(), applicationID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	if application.UserID != userID {
+		return response.Error(c, fiber.StatusForbidden, ErrCodeAccessDenied, fiber.Map{
+			"message": "access denied",
+		})
+	}
+
+	// Delete the job application
+	// Note: Related conversations will have their job_application_id set to NULL
+	// to preserve chat history while unlinking from the deleted application
+	if err := h.service.DeleteJobApplication(c.Context(), applicationID); err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{
+		"message": "job application deleted successfully",
 	})
 }
 

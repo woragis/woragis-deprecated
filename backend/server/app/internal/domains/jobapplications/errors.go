@@ -10,6 +10,7 @@ const (
 	ErrCodeJobQueueFailure   = 10004
 	ErrCodeAIServiceFailure  = 10005
 	ErrCodePlaywrightFailure = 10006
+	ErrCodeAccessDenied      = 10007
 )
 
 const (

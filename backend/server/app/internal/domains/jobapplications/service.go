@@ -16,6 +16,7 @@ type Service interface {
 	ListJobApplications(ctx context.Context, filters JobApplicationFilters) ([]JobApplication, error)
 	UpdateJobApplicationStatus(ctx context.Context, applicationID uuid.UUID, status ApplicationStatus) error
 	UpdateJobApplication(ctx context.Context, applicationID uuid.UUID, updates UpdateJobApplicationRequest) (*JobApplication, error)
+	DeleteJobApplication(ctx context.Context, applicationID uuid.UUID) error
 	ProcessJobApplicationJob(ctx context.Context, job *JobApplicationJob) error
 }
 
@@ -40,9 +41,15 @@ type UpdateJobApplicationRequest struct {
 }
 
 type service struct {
-	repo  Repository
-	queue Queue
-	logger *slog.Logger
+	repo      Repository
+	queue     Queue
+	chatsRepo ChatsRepository // For unlinking conversations on delete
+	logger    *slog.Logger
+}
+
+// ChatsRepository defines the interface needed from chats domain for unlinking conversations.
+type ChatsRepository interface {
+	UnlinkFromJobApplication(ctx context.Context, jobApplicationID uuid.UUID) error
 }
 
 // NewService constructs a Service.
@@ -51,6 +58,16 @@ func NewService(repo Repository, queue Queue, logger *slog.Logger) Service {
 		repo:   repo,
 		queue:  queue,
 		logger: logger,
+	}
+}
+
+// NewServiceWithChats constructs a Service with chats repository for cascade operations.
+func NewServiceWithChats(repo Repository, queue Queue, chatsRepo ChatsRepository, logger *slog.Logger) Service {
+	return &service{
+		repo:      repo,
+		queue:     queue,
+		chatsRepo: chatsRepo,
+		logger:    logger,
 	}
 }
 
@@ -177,6 +194,36 @@ func (s *service) UpdateJobApplication(ctx context.Context, applicationID uuid.U
 	}
 
 	return application, nil
+}
+
+func (s *service) DeleteJobApplication(ctx context.Context, applicationID uuid.UUID) error {
+	// First, verify the application exists
+	application, err := s.repo.GetJobApplication(ctx, applicationID)
+	if err != nil {
+		return err
+	}
+
+	// Unlink conversations from this job application (preserve chat history)
+	if s.chatsRepo != nil {
+		if err := s.chatsRepo.UnlinkFromJobApplication(ctx, applicationID); err != nil {
+			s.logger.Warn("failed to unlink conversations from job application",
+				"application_id", applicationID.String(),
+				"error", err)
+			// Continue with deletion even if unlinking fails
+		}
+	}
+
+	// Delete the job application
+	if err := s.repo.DeleteJobApplication(ctx, applicationID); err != nil {
+		return err
+	}
+
+	s.logger.Info("job application deleted",
+		"application_id", applicationID.String(),
+		"company_name", application.CompanyName,
+		"job_title", application.JobTitle)
+
+	return nil
 }
 
 // ProcessJobApplicationJob is called by the worker to process a job.
