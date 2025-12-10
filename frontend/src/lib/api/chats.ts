@@ -47,19 +47,40 @@ export interface AppendMessageInput {
 	agent?: string;
 }
 
+// Helper function to transform snake_case API response to camelCase
+function transformConversation(apiConv: any): Conversation {
+	return {
+		id: apiConv.id,
+		userId: apiConv.user_id,
+		title: apiConv.title,
+		description: apiConv.description,
+		ideaId: apiConv.idea_id,
+		projectId: apiConv.project_id,
+		jobApplicationId: apiConv.job_application_id,
+		assignedAgentId: apiConv.assigned_agent_id,
+		sharedTranscript: apiConv.shared_transcript,
+		archivedAt: apiConv.archived_at,
+		deletedAt: apiConv.deleted_at,
+		lastAssignedAt: apiConv.last_assigned_at,
+		createdAt: apiConv.created_at,
+		updatedAt: apiConv.updated_at
+	};
+}
+
 export async function listConversations(): Promise<Conversation[]> {
-	const response = await apiClient.get<ApiResponse<Conversation[]>>('/chats/conversations');
-	return response.data.data ?? [];
+	const response = await apiClient.get<ApiResponse<any[]>>('/chats/conversations');
+	const conversations = response.data.data ?? [];
+	return conversations.map(transformConversation);
 }
 
 export async function getConversation(id: string): Promise<Conversation> {
-	const response = await apiClient.get<ApiResponse<Conversation>>(`/chats/conversations/${id}`);
-	return response.data.data;
+	const response = await apiClient.get<ApiResponse<any>>(`/chats/conversations/${id}`);
+	return transformConversation(response.data.data);
 }
 
 export async function createConversation(input: CreateConversationInput): Promise<Conversation> {
-	const response = await apiClient.post<ApiResponse<Conversation>>('/chats/conversations', input);
-	return response.data.data;
+	const response = await apiClient.post<ApiResponse<any>>('/chats/conversations', input);
+	return transformConversation(response.data.data);
 }
 
 export async function listMessages(conversationId: string): Promise<Message[]> {
@@ -120,10 +141,11 @@ export async function searchConversations(
 	params.append('include_archived', includeArchived.toString());
 	if (jobApplicationId) params.append('job_application_id', jobApplicationId);
 
-	const response = await apiClient.get<ApiResponse<Conversation[]>>(
+	const response = await apiClient.get<ApiResponse<any[]>>(
 		`/chats/conversations/search?${params.toString()}`
 	);
-	return response.data.data ?? [];
+	const conversations = response.data.data ?? [];
+	return conversations.map(transformConversation);
 }
 
 export interface ContextPreview {
