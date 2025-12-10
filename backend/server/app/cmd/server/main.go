@@ -58,6 +58,7 @@ import (
 	jobapplicationstagesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/interviewstages"
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 	userprofilesdomain "github.com/woragis/backend/server/app/internal/domains/userprofiles"
+	userpreferencesdomain "github.com/woragis/backend/server/app/internal/domains/userpreferences"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
@@ -548,12 +549,12 @@ func main() {
 	whatsappservice.SetupRoutes(protectedAPI, whatsappHandler)
 
 	// Job Applications: requires JWT for all operations
+	// Note: Service will be fully initialized after userPreferencesService is created below
 	applicationRepo := jobapplicationsdomain.NewGormRepository(db)
 	applicationQueue := jobapplicationsdomain.NewRedisQueue(redisClient)
-	// Use NewServiceWithChats to enable cascade delete operations
-	applicationService := jobapplicationsdomain.NewServiceWithChats(applicationRepo, applicationQueue, chatsRepo, slogLogger)
-	// Handler will be created with conversation creator adapter after chatsService is initialized below
-	applicationHandler := jobapplicationsdomain.NewHandlerWithChatService(applicationService, nil, slogLogger)
+	// Temporary service creation - will be updated after preferences service is created
+	var applicationService jobapplicationsdomain.Service
+	applicationService = jobapplicationsdomain.NewServiceWithChats(applicationRepo, applicationQueue, chatsRepo, slogLogger)
 	
 	// Job Application Responses subdomain
 	responseRepo := jobapplicationresponsesdomain.NewGormRepository(db)
@@ -565,8 +566,9 @@ func main() {
 	stageService := jobapplicationstagesdomain.NewService(stageRepo, slogLogger)
 	stageHandler := jobapplicationstagesdomain.NewHandler(stageService, slogLogger)
 	
+	// Declare handler and group - will be fully initialized later
+	var applicationHandler jobapplicationsdomain.Handler
 	jobApplicationsGroup := protectedAPI.Group("/job-applications")
-	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
 
 	// Job Websites: requires JWT for all operations
 	websiteRepo := jobwebsitesdomain.NewGormRepository(db)
@@ -596,6 +598,15 @@ func main() {
 	userProfileService := userprofilesdomain.NewService(userProfileRepo, slogLogger)
 	userProfileHandler := userprofilesdomain.NewHandler(userProfileService, slogLogger)
 	userprofilesdomain.SetupRoutes(protectedAPI, userProfileHandler)
+
+	// User Preferences: requires JWT for all operations
+	userPreferencesRepo := userpreferencesdomain.NewGormRepository(db)
+	userPreferencesService := userpreferencesdomain.NewService(userPreferencesRepo, slogLogger)
+	userPreferencesHandler := userpreferencesdomain.NewHandler(userPreferencesService, slogLogger)
+	userpreferencesdomain.SetupRoutes(protectedAPI, userPreferencesHandler)
+
+	// Now update job applications service to use preferences
+	applicationService = jobapplicationsdomain.NewServiceWithDependencies(applicationRepo, applicationQueue, chatsRepo, userPreferencesService, slogLogger)
 
 	// Now initialize chat service with context builder (all services are available)
 	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel, chatsStream)
@@ -636,7 +647,7 @@ func main() {
 	// Update the application handler with the conversation creator adapter
 	// This enables auto-creation of conversations when job applications are created
 	applicationHandler = jobapplicationsdomain.NewHandlerWithChatService(applicationService, conversationCreator, slogLogger)
-	// Re-setup routes with the updated handler that now has conversation creation capability
+	// Setup routes with the handler that now has conversation creation capability
 	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
 	
 	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
@@ -812,6 +823,7 @@ func migrate(db *gorm.DB) error {
 		&translationsdomain.Translation{},
 		&resumesdomain.Resume{},
 		&userprofilesdomain.UserProfile{},
+		&userpreferencesdomain.UserPreferences{},
 		&jobapplicationsdomain.JobApplication{},
 		&jobapplicationstagesdomain.InterviewStage{},
 		&jobapplicationresponsesdomain.Response{},

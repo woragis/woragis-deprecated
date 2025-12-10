@@ -41,15 +41,22 @@ type UpdateJobApplicationRequest struct {
 }
 
 type service struct {
-	repo      Repository
-	queue     Queue
-	chatsRepo ChatsRepository // For unlinking conversations on delete
-	logger    *slog.Logger
+	repo                Repository
+	queue               Queue
+	chatsRepo           ChatsRepository // For unlinking conversations on delete
+	preferencesService  UserPreferencesService // For getting user defaults
+	logger              *slog.Logger
 }
 
 // ChatsRepository defines the interface needed from chats domain for unlinking conversations.
 type ChatsRepository interface {
 	UnlinkFromJobApplication(ctx context.Context, jobApplicationID uuid.UUID) error
+}
+
+// UserPreferencesService defines the interface needed from userpreferences domain.
+type UserPreferencesService interface {
+	GetDefaultLanguage(ctx context.Context, userID uuid.UUID) (string, error)
+	GetDefaultCurrency(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 // NewService constructs a Service.
@@ -71,11 +78,36 @@ func NewServiceWithChats(repo Repository, queue Queue, chatsRepo ChatsRepository
 	}
 }
 
+// NewServiceWithDependencies constructs a Service with all dependencies.
+func NewServiceWithDependencies(repo Repository, queue Queue, chatsRepo ChatsRepository, preferencesService UserPreferencesService, logger *slog.Logger) Service {
+	return &service{
+		repo:               repo,
+		queue:              queue,
+		chatsRepo:          chatsRepo,
+		preferencesService: preferencesService,
+		logger:             logger,
+	}
+}
+
 func (s *service) RequestJobApplication(ctx context.Context, userID uuid.UUID, companyName, location, jobTitle, jobURL, website string) (*JobApplication, error) {
 	// Create job application record
 	application, err := NewJobApplication(userID, companyName, location, jobTitle, jobURL, website)
 	if err != nil {
 		return nil, err
+	}
+
+	// Apply user defaults if not already set
+	if s.preferencesService != nil {
+		if application.Language == "" {
+			if defaultLang, err := s.preferencesService.GetDefaultLanguage(ctx, userID); err == nil {
+				application.Language = defaultLang
+			}
+		}
+		if application.SalaryCurrency == "" {
+			if defaultCurrency, err := s.preferencesService.GetDefaultCurrency(ctx, userID); err == nil {
+				application.SalaryCurrency = defaultCurrency
+			}
+		}
 	}
 
 	// Save to database
