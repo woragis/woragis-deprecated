@@ -93,7 +93,11 @@
 	{/if}
 </div>
 
-<CreateApplicationModal bind:open={showCreateModal} onSubmit={handleCreate} />
+<CreateApplicationModal 
+	bind:open={showCreateModal} 
+	onSubmit={handleCreate}
+	existingApplications={applications}
+/>
 
 <style>
 	.page-container {

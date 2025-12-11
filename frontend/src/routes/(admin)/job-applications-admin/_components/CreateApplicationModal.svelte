@@ -5,20 +5,24 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { useTranslation } from '$lib/i18n';
-	import type { ApplicationStatus, CreateJobApplicationInput } from '$lib/api/jobapplications';
+	import type { ApplicationStatus, CreateJobApplicationInput, JobApplication } from '$lib/api/jobapplications';
 	import { getUserPreferences } from '$lib/api/userpreferences';
+	import { listResumes, type Resume } from '$lib/api/resumes';
 	
 	let {
 		open = $bindable(false),
-		onSubmit
+		onSubmit,
+		existingApplications = []
 	}: {
 		open?: boolean;
 		onSubmit?: (input: CreateJobApplicationInput) => Promise<void>;
+		existingApplications?: JobApplication[];
 	} = $props();
 	
 	const tFn = useTranslation();
 	
 	const LAST_WEBSITE_KEY = 'lastJobWebsite';
+	const LAST_RESUME_KEY_PREFIX = 'lastResume_';
 	
 	let formCompanyName = $state('');
 	let formLocation = $state('remote');
@@ -28,6 +32,10 @@
 	let formCoverLetter = $state('');
 	let formLinkedInContact = $state(false);
 	let formStatus = $state<ApplicationStatus>('pending');
+	let formResumeId = $state<string>('');
+	
+	let resumes: Resume[] = $state([]);
+	let loadingResumes = $state(false);
 	
 	/**
 	 * Normalizes a URL by adding https:// prefix if missing.
@@ -47,7 +55,70 @@
 	}
 
 	/**
-	 * Parses job URL to extract company name, job title, and location.
+	 * Detects website name from URL hostname.
+	 * Returns website name like "linkedin", "glassdoor", "indeed", etc.
+	 */
+	function detectWebsiteFromUrl(url: string): string | null {
+		if (!url || !url.trim()) return null;
+
+		try {
+			const normalized = normalizeUrl(url);
+			const urlObj = new URL(normalized);
+			const hostname = urlObj.hostname.toLowerCase();
+
+			// Remove www. prefix if present
+			const cleanHostname = hostname.replace(/^www\./, '');
+
+			// Map common job board domains to website names
+			const websiteMap: Record<string, string> = {
+				'linkedin.com': 'linkedin',
+				'glassdoor.com': 'glassdoor',
+				'indeed.com': 'indeed',
+				'monster.com': 'monster',
+				'ziprecruiter.com': 'ziprecruiter',
+				'careerbuilder.com': 'careerbuilder',
+				'simplyhired.com': 'simplyhired',
+				'angel.co': 'angel',
+				'stackoverflow.com': 'stackoverflow',
+				'github.com': 'github',
+				'remoteok.io': 'remoteok',
+				'weworkremotely.com': 'weworkremotely',
+				'flexjobs.com': 'flexjobs',
+				'upwork.com': 'upwork',
+				'freelancer.com': 'freelancer'
+			};
+
+			// Check exact match first
+			if (websiteMap[cleanHostname]) {
+				return websiteMap[cleanHostname];
+			}
+
+			// Check if hostname contains any of the known domains
+			for (const [domain, website] of Object.entries(websiteMap)) {
+				if (cleanHostname.includes(domain)) {
+					return website;
+				}
+			}
+
+			// If no match, try to extract the main domain name
+			// e.g., "jobs.example.com" -> "example"
+			const parts = cleanHostname.split('.');
+			if (parts.length >= 2) {
+				// Return the main domain (second to last part, or last if only 2 parts)
+				const mainDomain = parts.length > 2 ? parts[parts.length - 2] : parts[0];
+				return mainDomain;
+			}
+
+			return null;
+		} catch (err) {
+			// Silently fail - URL parsing is best effort
+			console.debug('Failed to detect website from URL:', err);
+			return null;
+		}
+	}
+
+	/**
+	 * Parses job URL to extract company name, job title, location, and website.
 	 * Only fills fields that are currently empty.
 	 */
 	function parseJobUrl(url: string) {
@@ -58,6 +129,16 @@
 			const urlObj = new URL(normalized);
 			const hostname = urlObj.hostname.toLowerCase();
 			const pathname = urlObj.pathname;
+
+			// Auto-detect website from URL if website field is empty
+			if (!formWebsite.trim()) {
+				const detectedWebsite = detectWebsiteFromUrl(url);
+				if (detectedWebsite) {
+					formWebsite = detectedWebsite;
+					// Load resume for the detected website
+					loadResumeForWebsite(detectedWebsite);
+				}
+			}
 
 			// LinkedIn job URL pattern: /jobs/view/{id} or /jobs/collections/{collection}/jobs/{id}
 			if (hostname.includes('linkedin.com')) {
@@ -155,15 +236,50 @@
 		'failed'
 	];
 	
+	async function loadResumes() {
+		if (loadingResumes || resumes.length > 0) return;
+		
+		loadingResumes = true;
+		try {
+			resumes = await listResumes();
+		} catch (err) {
+			console.warn('Failed to load resumes:', err);
+			resumes = [];
+		} finally {
+			loadingResumes = false;
+		}
+	}
+
+	function loadResumeForWebsite(website: string) {
+		if (!website || typeof window === 'undefined') return;
+		
+		const key = `${LAST_RESUME_KEY_PREFIX}${website.toLowerCase()}`;
+		const lastResumeId = localStorage.getItem(key);
+		
+		if (lastResumeId && resumes.some(r => r.id === lastResumeId)) {
+			formResumeId = lastResumeId;
+		} else {
+			// If no saved resume for this website, try to use main resume
+			const mainResume = resumes.find(r => r.isMain);
+			if (mainResume) {
+				formResumeId = mainResume.id;
+			}
+		}
+	}
+
 	async function loadDefaults() {
 		// Default location to "remote"
 		formLocation = 'remote';
+		
+		// Load resumes
+		await loadResumes();
 		
 		// Try to load website from localStorage first
 		if (typeof window !== 'undefined') {
 			const lastWebsite = localStorage.getItem(LAST_WEBSITE_KEY);
 			if (lastWebsite) {
 				formWebsite = lastWebsite.toLowerCase();
+				loadResumeForWebsite(lastWebsite);
 				return;
 			}
 		}
@@ -173,6 +289,7 @@
 			const preferences = await getUserPreferences();
 			if (preferences.defaultWebsite) {
 				formWebsite = preferences.defaultWebsite.toLowerCase();
+				loadResumeForWebsite(preferences.defaultWebsite);
 			}
 		} catch (err) {
 			// Silently fail - user can still enter website manually
@@ -189,6 +306,7 @@
 		formCoverLetter = '';
 		formLinkedInContact = false;
 		formStatus = 'pending';
+		formResumeId = '';
 	}
 	
 	function handleClose() {
@@ -200,6 +318,13 @@
 	$effect(() => {
 		if (open) {
 			loadDefaults();
+		}
+	});
+
+	// Load resume when website changes
+	$effect(() => {
+		if (formWebsite && resumes.length > 0) {
+			loadResumeForWebsite(formWebsite);
 		}
 	});
 
@@ -229,6 +354,15 @@
 		};
 	});
 	
+	function checkForDuplicate(jobUrl: string, website: string): JobApplication | null {
+		const normalizedUrl = normalizeUrl(jobUrl);
+		const normalizedWebsite = website.trim().toLowerCase();
+		
+		return existingApplications.find(
+			app => app.jobUrl === normalizedUrl && app.website.toLowerCase() === normalizedWebsite
+		) || null;
+	}
+
 	async function handleSubmit() {
 		if (!formCompanyName.trim() || !formJobTitle.trim() || !formJobUrl.trim() || !formWebsite.trim()) {
 			alert(tFn('jobApplications.modal.required') + ' ' + tFn('jobApplications.modal.companyName') + ', ' + tFn('jobApplications.modal.jobTitle') + ', ' + tFn('jobApplications.modal.jobUrl') + ', ' + tFn('jobApplications.modal.website'));
@@ -241,9 +375,30 @@
 		// Normalize URL (add https:// if missing)
 		const normalizedJobUrl = normalizeUrl(formJobUrl);
 		
+		// Check for duplicate
+		const duplicate = checkForDuplicate(normalizedJobUrl, normalizedWebsite);
+		if (duplicate) {
+			const message = `You've already applied to this job!\n\n` +
+				`Company: ${duplicate.companyName}\n` +
+				`Title: ${duplicate.jobTitle}\n` +
+				`Status: ${duplicate.status}\n` +
+				`Applied: ${duplicate.appliedAt ? new Date(duplicate.appliedAt).toLocaleDateString() : 'Not yet'}\n\n` +
+				`Do you still want to create a duplicate application?`;
+			
+			if (!confirm(message)) {
+				return; // User cancelled
+			}
+		}
+		
 		// Save website to localStorage for next time
 		if (typeof window !== 'undefined' && normalizedWebsite) {
 			localStorage.setItem(LAST_WEBSITE_KEY, normalizedWebsite);
+			
+			// Save resume selection for this website
+			if (formResumeId) {
+				const key = `${LAST_RESUME_KEY_PREFIX}${normalizedWebsite}`;
+				localStorage.setItem(key, formResumeId);
+			}
 		}
 		
 		if (onSubmit) {
@@ -309,6 +464,21 @@
 				bind:value={formCoverLetter}
 				rows={6}
 			/>
+			{#if resumes.length > 0}
+				<div class="form-group">
+					<Select 
+						label="Resume" 
+						bind:value={formResumeId}
+					>
+						<option value="">No resume selected</option>
+						{#each resumes as resume}
+							<option value={resume.id}>
+								{resume.title}{resume.isMain ? ' (Main)' : ''}
+							</option>
+						{/each}
+					</Select>
+				</div>
+			{/if}
 			<div class="form-group">
 				<label class="checkbox-label">
 					<input type="checkbox" bind:checked={formLinkedInContact} />
