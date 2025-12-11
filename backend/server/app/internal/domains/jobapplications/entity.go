@@ -3,6 +3,7 @@ package jobapplications
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -104,6 +105,9 @@ func (JobApplication) TableName() string {
 
 // NewJobApplication creates a new job application entity.
 func NewJobApplication(userID uuid.UUID, companyName, location, jobTitle, jobURL, website string) (*JobApplication, error) {
+	// Normalize website to lowercase
+	website = strings.ToLower(strings.TrimSpace(website))
+	
 	app := &JobApplication{
 		ID:          uuid.New(),
 		UserID:      userID,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -108,6 +109,9 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 		})
 	}
 
+	// Normalize website to lowercase
+	payload.Website = strings.ToLower(strings.TrimSpace(payload.Website))
+
 	application, err := h.service.RequestJobApplication(
 		c.Context(),
 		userID,
@@ -176,7 +180,8 @@ func (h *handler) ListJobApplications(c *fiber.Ctx) error {
 
 	// Optional query parameters
 	if website := c.Query("website"); website != "" {
-		filters.Website = &website
+		normalizedWebsite := strings.ToLower(strings.TrimSpace(website))
+		filters.Website = &normalizedWebsite
 	}
 	if status := c.Query("status"); status != "" {
 		appStatus := ApplicationStatus(status)

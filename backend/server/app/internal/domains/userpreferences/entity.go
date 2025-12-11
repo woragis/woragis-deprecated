@@ -13,6 +13,7 @@ type UserPreferences struct {
 	UserID         uuid.UUID `gorm:"column:user_id;type:uuid;uniqueIndex;not null" json:"userId"`
 	DefaultLanguage string    `gorm:"column:default_language;size:2;default:'en'" json:"defaultLanguage"` // ISO 639-1
 	DefaultCurrency string    `gorm:"column:default_currency;size:3;default:'USD'" json:"defaultCurrency"` // ISO 4217
+	DefaultWebsite  string    `gorm:"column:default_website;size:50" json:"defaultWebsite"` // e.g., "linkedin", "glassdoor"
 	CreatedAt      time.Time `gorm:"column:created_at" json:"createdAt"`
 	UpdatedAt      time.Time `gorm:"column:updated_at" json:"updatedAt"`
 }
@@ -29,6 +30,7 @@ func NewUserPreferences(userID uuid.UUID) (*UserPreferences, error) {
 		UserID:          userID,
 		DefaultLanguage: "en",
 		DefaultCurrency: "USD",
+		DefaultWebsite:  "",
 		CreatedAt:       time.Now().UTC(),
 		UpdatedAt:       time.Now().UTC(),
 	}
@@ -93,6 +95,17 @@ func (p *UserPreferences) UpdateCurrency(currency string) error {
 		return NewDomainError(ErrCodeInvalidCurrency, ErrInvalidCurrencyCode)
 	}
 	p.DefaultCurrency = currency
+	p.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// UpdateWebsite updates the default website.
+func (p *UserPreferences) UpdateWebsite(website string) error {
+	website = strings.ToLower(strings.TrimSpace(website))
+	if website != "" && len(website) > 50 {
+		return NewDomainError(ErrCodeInvalidPayload, "website name too long")
+	}
+	p.DefaultWebsite = website
 	p.UpdatedAt = time.Now().UTC()
 	return nil
 }

@@ -14,6 +14,7 @@ type Service interface {
 	UpdatePreferences(ctx context.Context, userID uuid.UUID, language, currency string) (*UserPreferences, error)
 	GetDefaultLanguage(ctx context.Context, userID uuid.UUID) (string, error)
 	GetDefaultCurrency(ctx context.Context, userID uuid.UUID) (string, error)
+	GetDefaultWebsite(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 type service struct {
@@ -97,5 +98,13 @@ func (s *service) GetDefaultCurrency(ctx context.Context, userID uuid.UUID) (str
 		return "USD", nil
 	}
 	return prefs.DefaultCurrency, nil
+}
+
+func (s *service) GetDefaultWebsite(ctx context.Context, userID uuid.UUID) (string, error) {
+	prefs, err := s.GetOrCreatePreferences(ctx, userID)
+	if err != nil {
+		return "", err // Return empty on error
+	}
+	return prefs.DefaultWebsite, nil
 }
 

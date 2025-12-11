@@ -33,6 +33,7 @@ type preferencesResponse struct {
 	UserID          string `json:"userId"`
 	DefaultLanguage string `json:"defaultLanguage"`
 	DefaultCurrency string `json:"defaultCurrency"`
+	DefaultWebsite  string `json:"defaultWebsite"`
 	CreatedAt       string `json:"createdAt"`
 	UpdatedAt       string `json:"updatedAt"`
 }
@@ -100,6 +101,7 @@ func toPreferencesResponse(prefs *UserPreferences) preferencesResponse {
 		UserID:          prefs.UserID.String(),
 		DefaultLanguage: prefs.DefaultLanguage,
 		DefaultCurrency: prefs.DefaultCurrency,
+		DefaultWebsite:  prefs.DefaultWebsite,
 		CreatedAt:       prefs.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:       prefs.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}

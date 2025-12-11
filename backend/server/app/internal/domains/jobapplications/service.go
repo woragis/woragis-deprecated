@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,6 +64,7 @@ type ChatsRepository interface {
 type UserPreferencesService interface {
 	GetDefaultLanguage(ctx context.Context, userID uuid.UUID) (string, error)
 	GetDefaultCurrency(ctx context.Context, userID uuid.UUID) (string, error)
+	GetDefaultWebsite(ctx context.Context, userID uuid.UUID) (string, error)
 }
 
 // NewService constructs a Service.
@@ -108,6 +110,16 @@ func NewServiceWithResumeMetrics(repo Repository, queue Queue, chatsRepo ChatsRe
 }
 
 func (s *service) RequestJobApplication(ctx context.Context, userID uuid.UUID, companyName, location, jobTitle, jobURL, website string) (*JobApplication, error) {
+	// Normalize website to lowercase
+	website = strings.ToLower(strings.TrimSpace(website))
+	
+	// If website is blank, try to get from user preferences
+	if website == "" && s.preferencesService != nil {
+		if defaultWebsite, err := s.preferencesService.GetDefaultWebsite(ctx, userID); err == nil && defaultWebsite != "" {
+			website = defaultWebsite
+		}
+	}
+	
 	// Create job application record
 	application, err := NewJobApplication(userID, companyName, location, jobTitle, jobURL, website)
 	if err != nil {
@@ -323,6 +335,9 @@ func (s *service) ProcessJobApplicationJob(ctx context.Context, job *JobApplicat
 	// This method will be called by the worker, but the actual application logic
 	// will be in the worker itself using Playwright.
 	// This is here for interface consistency.
+	
+	// Normalize website to lowercase
+	job.Website = strings.ToLower(strings.TrimSpace(job.Website))
 	
 	userID, err := uuid.Parse(job.UserID)
 	if err != nil {
