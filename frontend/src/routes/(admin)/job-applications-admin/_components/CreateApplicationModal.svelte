@@ -33,9 +33,18 @@
 	let formLinkedInContact = $state(false);
 	let formStatus = $state<ApplicationStatus>('pending');
 	let formResumeId = $state<string>('');
+	let formInterestLevel = $state<string>('');
 	
 	let resumes: Resume[] = $state([]);
 	let loadingResumes = $state(false);
+	
+	const interestLevels = [
+		{ value: '', label: 'Not set' },
+		{ value: 'low', label: 'Low' },
+		{ value: 'medium', label: 'Medium' },
+		{ value: 'high', label: 'High' },
+		{ value: 'very-high', label: 'Very High' }
+	];
 	
 	/**
 	 * Normalizes a URL by adding https:// prefix if missing.
@@ -307,6 +316,7 @@
 		formLinkedInContact = false;
 		formStatus = 'pending';
 		formResumeId = '';
+		formInterestLevel = '';
 	}
 	
 	function handleClose() {
@@ -410,7 +420,8 @@
 				website: normalizedWebsite,
 				coverLetter: formCoverLetter.trim() || undefined,
 				linkedInContact: formLinkedInContact,
-				status: formStatus
+				status: formStatus,
+				interestLevel: formInterestLevel.trim() || undefined
 			};
 			
 			await onSubmit(input);
@@ -456,6 +467,13 @@
 				<Select label={tFn('jobApplications.modal.status')} bind:value={formStatus}>
 					{#each statuses as status}
 						<option value={status}>{tFn(`jobApplications.status.${status}` as any)}</option>
+					{/each}
+				</Select>
+			</div>
+			<div class="form-row">
+				<Select label="Interest Level" bind:value={formInterestLevel}>
+					{#each interestLevels as level}
+						<option value={level.value}>{level.label}</option>
 					{/each}
 				</Select>
 			</div>

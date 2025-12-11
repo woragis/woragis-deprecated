@@ -10,6 +10,7 @@
 	import { useTranslation } from '$lib/i18n';
 	import PageHeader from './_sections/PageHeader.svelte';
 	import SearchBar from './_sections/SearchBar.svelte';
+	import AdvancedFilters from './_sections/AdvancedFilters.svelte';
 	import ApplicationsTable from './_sections/ApplicationsTable.svelte';
 	import CreateApplicationModal from './_components/CreateApplicationModal.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
@@ -22,6 +23,11 @@
 	let error: string | null = $state(null);
 	let searchQuery = $state('');
 	let showCreateModal = $state(false);
+	let filters = $state({
+		status: '',
+		website: '',
+		interestLevel: ''
+	});
 
 	onMount(async () => {
 		await fetchApplications();
@@ -68,14 +74,35 @@
 	}
 
 	function filteredApplications() {
-		if (!searchQuery.trim()) return applications;
-		const query = searchQuery.toLowerCase();
-		return applications.filter(
-			(a) =>
-				a.companyName.toLowerCase().includes(query) ||
-				a.jobTitle.toLowerCase().includes(query) ||
-				a.location?.toLowerCase().includes(query)
-		);
+		let filtered = applications;
+
+		// Apply text search
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			filtered = filtered.filter(
+				(a) =>
+					a.companyName.toLowerCase().includes(query) ||
+					a.jobTitle.toLowerCase().includes(query) ||
+					a.location?.toLowerCase().includes(query)
+			);
+		}
+
+		// Apply status filter
+		if (filters.status) {
+			filtered = filtered.filter(a => a.status === filters.status);
+		}
+
+		// Apply website filter
+		if (filters.website) {
+			filtered = filtered.filter(a => a.website.toLowerCase() === filters.website.toLowerCase());
+		}
+
+		// Apply interest level filter
+		if (filters.interestLevel) {
+			filtered = filtered.filter(a => a.interestLevel === filters.interestLevel);
+		}
+
+		return filtered;
 	}
 </script>
 
@@ -83,6 +110,8 @@
 	<PageHeader onCreateClick={openCreateModal} />
 
 	<SearchBar bind:searchQuery />
+	
+	<AdvancedFilters bind:filters />
 
 	{#if error}
 		<ErrorState message={error} onRetry={fetchApplications} />

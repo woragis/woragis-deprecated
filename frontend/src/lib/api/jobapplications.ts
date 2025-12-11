@@ -57,6 +57,7 @@ export interface CreateJobApplicationInput {
 	coverLetter?: string;
 	linkedInContact?: boolean;
 	status?: ApplicationStatus;
+	interestLevel?: string;
 }
 
 export interface UpdateJobApplicationStatusInput {

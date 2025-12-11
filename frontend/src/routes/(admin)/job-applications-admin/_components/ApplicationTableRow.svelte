@@ -18,6 +18,54 @@
 		if (!dateString) return '—';
 		return new Date(dateString).toLocaleDateString();
 	}
+
+	function formatDateTime(dateString?: string): string {
+		if (!dateString) return '—';
+		const date = new Date(dateString);
+		return date.toLocaleString();
+	}
+
+	function getStatusInfo(application: JobApplication): { text: string; timestamp?: string } {
+		switch (application.status) {
+			case 'processing':
+				return {
+					text: 'Processing...',
+					timestamp: application.updatedAt ? formatDateTime(application.updatedAt) : undefined
+				};
+			case 'applied':
+				return {
+					text: 'Applied',
+					timestamp: application.appliedAt ? formatDateTime(application.appliedAt) : undefined
+				};
+			case 'failed':
+				return {
+					text: 'Failed',
+					timestamp: application.updatedAt ? formatDateTime(application.updatedAt) : undefined
+				};
+			case 'contacted':
+				return {
+					text: 'Contacted',
+					timestamp: application.responseReceivedAt ? formatDateTime(application.responseReceivedAt) : undefined
+				};
+			case 'rejected':
+				return {
+					text: 'Rejected',
+					timestamp: application.updatedAt ? formatDateTime(application.updatedAt) : undefined
+				};
+			case 'accepted':
+				return {
+					text: 'Accepted',
+					timestamp: application.updatedAt ? formatDateTime(application.updatedAt) : undefined
+				};
+			default:
+				return {
+					text: 'Pending',
+					timestamp: application.createdAt ? formatDateTime(application.createdAt) : undefined
+				};
+		}
+	}
+
+	const statusInfo = $derived(getStatusInfo(application));
 </script>
 
 <tr class="table-row">
@@ -27,9 +75,16 @@
 	<td>{application.website}</td>
 	<td>{application.language || '—'}</td>
 	<td>
-		<StatusBadge status={application.status} type="status">
-			{tFn(`jobApplications.status.${application.status}` as any)}
-		</StatusBadge>
+		<div class="status-cell">
+			<StatusBadge status={application.status} type="status">
+				{statusInfo.text}
+			</StatusBadge>
+			{#if statusInfo.timestamp}
+				<span class="status-timestamp" title={statusInfo.timestamp}>
+					{statusInfo.timestamp}
+				</span>
+			{/if}
+		</div>
 	</td>
 	<td>{application.interestLevel || '—'}</td>
 	<td>{formatDate(application.appliedAt)}</td>
@@ -77,5 +132,17 @@
 	
 	.view-link:hover {
 		background-color: var(--color-success-hover);
+	}
+
+	.status-cell {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+	}
+
+	.status-timestamp {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+		margin-top: var(--spacing-xs);
 	}
 </style>
