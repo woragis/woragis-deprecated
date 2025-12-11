@@ -72,8 +72,8 @@ class AIService:
                 f"{self.base_url}/v1/chat",
                 json={
                     "agent": "auto",  # Auto-select agent based on input
-                    "provider": "anthropic",  # Use Anthropic for better resume writing
-                    "model": "claude-3-5-sonnet-latest",
+                    "provider": "openai",  # Use OpenAI for resume writing
+                    "model": "gpt-4o-mini",
                     "input": prompt,
                     "system": system_instruction,
                     "temperature": 0.3
@@ -318,8 +318,8 @@ Requirements:
                 f"{self.base_url}/v1/chat",
                 json={
                     "agent": "auto",
-                    "provider": "anthropic",
-                    "model": "claude-3-5-sonnet-latest",
+                    "provider": "openai",
+                    "model": "gpt-4o-mini",
                     "input": prompt,
                     "system": system_instruction,
                     "temperature": 0.2
