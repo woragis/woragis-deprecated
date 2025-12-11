@@ -120,6 +120,9 @@ func (s *service) RequestJobApplication(ctx context.Context, userID uuid.UUID, c
 		}
 	}
 	
+	// Normalize URL (add https:// prefix if missing)
+	jobURL = normalizeURL(jobURL)
+	
 	// Create job application record
 	application, err := NewJobApplication(userID, companyName, location, jobTitle, jobURL, website)
 	if err != nil {
@@ -329,6 +332,23 @@ func (s *service) DeleteJobApplication(ctx context.Context, applicationID uuid.U
 	return nil
 }
 
+// normalizeURL adds https:// prefix to URL if it's missing.
+// Preserves existing http:// or https:// prefixes.
+func normalizeURL(url string) string {
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return url
+	}
+	
+	// Check if URL already has a protocol
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return url
+	}
+	
+	// Add https:// prefix
+	return "https://" + url
+}
+
 // ProcessJobApplicationJob is called by the worker to process a job.
 // This is a placeholder - actual processing will be done in the worker with Playwright.
 func (s *service) ProcessJobApplicationJob(ctx context.Context, job *JobApplicationJob) error {
@@ -338,6 +358,9 @@ func (s *service) ProcessJobApplicationJob(ctx context.Context, job *JobApplicat
 	
 	// Normalize website to lowercase
 	job.Website = strings.ToLower(strings.TrimSpace(job.Website))
+	
+	// Normalize URL (add https:// prefix if missing)
+	job.JobURL = normalizeURL(job.JobURL)
 	
 	userID, err := uuid.Parse(job.UserID)
 	if err != nil {

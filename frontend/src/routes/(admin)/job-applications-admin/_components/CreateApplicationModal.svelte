@@ -29,6 +29,23 @@
 	let formLinkedInContact = $state(false);
 	let formStatus = $state<ApplicationStatus>('pending');
 	
+	/**
+	 * Normalizes a URL by adding https:// prefix if missing.
+	 * Preserves existing http:// or https:// prefixes.
+	 */
+	function normalizeUrl(url: string): string {
+		const trimmed = url.trim();
+		if (!trimmed) return trimmed;
+		
+		// Check if URL already has a protocol
+		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+			return trimmed;
+		}
+		
+		// Add https:// prefix
+		return `https://${trimmed}`;
+	}
+	
 	const statuses: ApplicationStatus[] = [
 		'pending',
 		'processing',
@@ -96,6 +113,9 @@
 		// Normalize website to lowercase
 		const normalizedWebsite = formWebsite.trim().toLowerCase();
 		
+		// Normalize URL (add https:// if missing)
+		const normalizedJobUrl = normalizeUrl(formJobUrl);
+		
 		// Save website to localStorage for next time
 		if (typeof window !== 'undefined' && normalizedWebsite) {
 			localStorage.setItem(LAST_WEBSITE_KEY, normalizedWebsite);
@@ -106,7 +126,7 @@
 				companyName: formCompanyName.trim(),
 				location: formLocation.trim() || undefined,
 				jobTitle: formJobTitle.trim(),
-				jobUrl: formJobUrl.trim(),
+				jobUrl: normalizedJobUrl,
 				website: normalizedWebsite,
 				coverLetter: formCoverLetter.trim() || undefined,
 				linkedInContact: formLinkedInContact,

@@ -111,6 +111,9 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 
 	// Normalize website to lowercase
 	payload.Website = strings.ToLower(strings.TrimSpace(payload.Website))
+	
+	// Normalize URL (add https:// prefix if missing)
+	payload.JobURL = normalizeURL(payload.JobURL)
 
 	application, err := h.service.RequestJobApplication(
 		c.Context(),
@@ -397,6 +400,23 @@ func (h *handler) DeleteJobApplication(c *fiber.Ctx) error {
 	return response.Success(c, fiber.StatusOK, fiber.Map{
 		"message": "job application deleted successfully",
 	})
+}
+
+// normalizeURL adds https:// prefix to URL if it's missing.
+// Preserves existing http:// or https:// prefixes.
+func normalizeURL(url string) string {
+	url = strings.TrimSpace(url)
+	if url == "" {
+		return url
+	}
+	
+	// Check if URL already has a protocol
+	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		return url
+	}
+	
+	// Add https:// prefix
+	return "https://" + url
 }
 
 func (h *handler) handleError(c *fiber.Ctx, err error) error {
