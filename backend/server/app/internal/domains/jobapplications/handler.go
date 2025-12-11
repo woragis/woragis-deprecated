@@ -76,11 +76,12 @@ func NewHandlerWithChatService(service Service, conversationCreator Conversation
 }
 
 type createJobApplicationPayload struct {
-	CompanyName string `json:"companyName"`
-	Location    string `json:"location"`
-	JobTitle    string `json:"jobTitle"`
-	JobURL      string `json:"jobUrl"`
-	Website     string `json:"website"`
+	CompanyName  string `json:"companyName"`
+	Location     string `json:"location"`
+	JobTitle     string `json:"jobTitle"`
+	JobURL       string `json:"jobUrl"`
+	Website      string `json:"website"`
+	InterestLevel string `json:"interestLevel,omitempty"`
 }
 
 type updateStatusPayload struct {
@@ -126,6 +127,18 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		return h.handleError(c, err)
+	}
+
+	// Update interest level if provided
+	if payload.InterestLevel != "" {
+		updates := UpdateJobApplicationRequest{
+			InterestLevel: &payload.InterestLevel,
+		}
+		application, err = h.service.UpdateJobApplication(c.Context(), application.ID, updates)
+		if err != nil {
+			// Log error but don't fail the request
+			h.logger.Warn("failed to update interest level", slog.Any("error", err))
+		}
 	}
 
 	// Auto-create conversation for this job application
