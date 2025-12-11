@@ -33,7 +33,7 @@
 		return date.toLocaleString();
 	}
 
-	function getStatusInfo(application: JobApplication): { text: string; timestamp?: string } {
+	function getStatusInfo(application: JobApplication): { text: string; timestamp?: string; error?: string } {
 		switch (application.status) {
 			case 'processing':
 				return {
@@ -48,7 +48,8 @@
 			case 'failed':
 				return {
 					text: 'Failed',
-					timestamp: application.updatedAt ? formatDateTime(application.updatedAt) : undefined
+					timestamp: application.updatedAt ? formatDateTime(application.updatedAt) : undefined,
+					error: application.errorMessage
 				};
 			case 'contacted':
 				return {
@@ -74,6 +75,38 @@
 	}
 
 	const statusInfo = $derived(getStatusInfo(application));
+	let showFullError = $state(false);
+	
+	// Reset error display when application changes
+	$effect(() => {
+		if (application.id) {
+			showFullError = false;
+		}
+	});
+
+	function getErrorSummary(error: string): string {
+		if (!error) return '';
+		
+		// Categorize errors
+		if (error.toLowerCase().includes('rate limit')) {
+			return 'Rate limit reached';
+		}
+		if (error.toLowerCase().includes('queue') || error.toLowerCase().includes('enqueue')) {
+			return 'Queue error';
+		}
+		if (error.toLowerCase().includes('network') || error.toLowerCase().includes('timeout')) {
+			return 'Network error';
+		}
+		if (error.toLowerCase().includes('authentication') || error.toLowerCase().includes('login')) {
+			return 'Authentication error';
+		}
+		if (error.toLowerCase().includes('website') || error.toLowerCase().includes('page')) {
+			return 'Website error';
+		}
+		
+		// Return first 50 characters as summary
+		return error.length > 50 ? error.substring(0, 50) + '...' : error;
+	}
 </script>
 
 <tr class="table-row" class:selected data-status={application.status}>
@@ -92,13 +125,34 @@
 	<td>{application.language || '—'}</td>
 	<td>
 		<div class="status-cell">
-			<StatusBadge status={application.status} type="status">
-				{statusInfo.text}
-			</StatusBadge>
+			<div class="status-header">
+				<StatusBadge status={application.status} type="status">
+					{statusInfo.text}
+				</StatusBadge>
+				{#if application.status === 'processing'}
+					<div class="processing-indicator" title="Application is being processed">
+						<div class="spinner"></div>
+					</div>
+				{/if}
+			</div>
 			{#if statusInfo.timestamp}
 				<span class="status-timestamp" title={statusInfo.timestamp}>
 					{statusInfo.timestamp}
 				</span>
+			{/if}
+			{#if statusInfo.error}
+				<div class="error-details" title={statusInfo.error}>
+					<span class="error-icon">⚠️</span>
+					<span class="error-text">{getErrorSummary(statusInfo.error)}</span>
+					<button class="error-toggle" onclick={() => showFullError = !showFullError}>
+						{showFullError ? 'Hide' : 'Show'} details
+					</button>
+				</div>
+				{#if showFullError}
+					<div class="error-full">
+						{statusInfo.error}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</td>
@@ -199,6 +253,81 @@
 		font-size: var(--font-size-xs);
 		color: var(--color-text-secondary);
 		margin-top: var(--spacing-xs);
+	}
+
+	.status-header {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+	}
+
+	.processing-indicator {
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.spinner {
+		width: 12px;
+		height: 12px;
+		border: 2px solid var(--color-border);
+		border-top-color: var(--color-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.error-details {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		margin-top: var(--spacing-xs);
+		padding: var(--spacing-xs);
+		background-color: var(--color-danger, #ef4444);
+		background-color: rgba(239, 68, 68, 0.1);
+		border: 1px solid var(--color-danger, #ef4444);
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-xs);
+	}
+
+	.error-icon {
+		font-size: 0.9rem;
+	}
+
+	.error-text {
+		flex: 1;
+		color: var(--color-danger, #ef4444);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.error-toggle {
+		background: none;
+		border: none;
+		color: var(--color-danger, #ef4444);
+		cursor: pointer;
+		font-size: var(--font-size-xs);
+		text-decoration: underline;
+		padding: 0;
+	}
+
+	.error-toggle:hover {
+		opacity: 0.8;
+	}
+
+	.error-full {
+		margin-top: var(--spacing-xs);
+		padding: var(--spacing-sm);
+		background-color: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-primary);
+		white-space: pre-wrap;
+		word-break: break-word;
 	}
 
 	.tags-display {

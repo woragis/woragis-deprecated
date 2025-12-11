@@ -81,10 +81,27 @@
 					<h3>Status & Interest</h3>
 					<div class="detail-item">
 						<span class="label">Status:</span>
-						<StatusBadge status={application.status} type="status">
-							{tFn(`jobApplications.status.${application.status}` as any)}
-						</StatusBadge>
+						<div class="status-detail">
+							<StatusBadge status={application.status} type="status">
+								{tFn(`jobApplications.status.${application.status}` as any)}
+							</StatusBadge>
+							{#if application.status === 'processing'}
+								<div class="processing-indicator" title="Application is being processed">
+									<div class="spinner"></div>
+									<span>Processing...</span>
+								</div>
+							{/if}
+						</div>
 					</div>
+					{#if application.errorMessage}
+						<div class="detail-item error-item">
+							<span class="label">Error:</span>
+							<div class="error-message">
+								<span class="error-icon">⚠️</span>
+								<span class="error-text">{application.errorMessage}</span>
+							</div>
+						</div>
+					{/if}
 					<div class="detail-item">
 						<span class="label">Interest Level:</span>
 						<span class="value">{application.interestLevel || '—'}</span>
@@ -227,6 +244,63 @@
 		font-size: var(--font-size-sm);
 		color: var(--color-text-primary);
 		line-height: 1.6;
+	}
+
+	.status-detail {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+	}
+
+	.processing-indicator {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+
+	.spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid var(--color-border);
+		border-top-color: var(--color-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.error-item {
+		align-items: flex-start;
+	}
+
+	.error-message {
+		flex: 1;
+		display: flex;
+		align-items: flex-start;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-sm);
+		background-color: rgba(239, 68, 68, 0.1);
+		border: 1px solid var(--color-danger, #ef4444);
+		border-radius: var(--radius-md);
+	}
+
+	.error-icon {
+		font-size: 1.2rem;
+		flex-shrink: 0;
+	}
+
+	.error-text {
+		flex: 1;
+		color: var(--color-danger, #ef4444);
+		font-size: var(--font-size-sm);
+		white-space: pre-wrap;
+		word-break: break-word;
 	}
 	
 	.modal-actions {
