@@ -76,12 +76,14 @@ func NewHandlerWithChatService(service Service, conversationCreator Conversation
 }
 
 type createJobApplicationPayload struct {
-	CompanyName  string `json:"companyName"`
-	Location     string `json:"location"`
-	JobTitle     string `json:"jobTitle"`
-	JobURL       string `json:"jobUrl"`
-	Website      string `json:"website"`
-	InterestLevel string `json:"interestLevel,omitempty"`
+	CompanyName   string   `json:"companyName"`
+	Location      string   `json:"location"`
+	JobTitle      string   `json:"jobTitle"`
+	JobURL        string   `json:"jobUrl"`
+	Website       string   `json:"website"`
+	InterestLevel string   `json:"interestLevel,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
+	FollowUpDate  string   `json:"followUpDate,omitempty"`
 }
 
 type updateStatusPayload struct {
@@ -129,15 +131,31 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
-	// Update interest level if provided
+	// Update additional fields if provided
+	updates := UpdateJobApplicationRequest{}
+	hasUpdates := false
+
 	if payload.InterestLevel != "" {
-		updates := UpdateJobApplicationRequest{
-			InterestLevel: &payload.InterestLevel,
+		updates.InterestLevel = &payload.InterestLevel
+		hasUpdates = true
+	}
+	if len(payload.Tags) > 0 {
+		updates.Tags = JSONArray(payload.Tags)
+		hasUpdates = true
+	}
+	if payload.FollowUpDate != "" {
+		followUpDate, err := time.Parse(time.RFC3339, payload.FollowUpDate)
+		if err == nil {
+			updates.FollowUpDate = &followUpDate
+			hasUpdates = true
 		}
+	}
+
+	if hasUpdates {
 		application, err = h.service.UpdateJobApplication(c.Context(), application.ID, updates)
 		if err != nil {
 			// Log error but don't fail the request
-			h.logger.Warn("failed to update interest level", slog.Any("error", err))
+			h.logger.Warn("failed to update application fields", slog.Any("error", err))
 		}
 	}
 

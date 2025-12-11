@@ -34,6 +34,9 @@
 	let formStatus = $state<ApplicationStatus>('pending');
 	let formResumeId = $state<string>('');
 	let formInterestLevel = $state<string>('');
+	let formTags = $state<string[]>([]);
+	let formTagInput = $state('');
+	let formFollowUpDate = $state('');
 	
 	let resumes: Resume[] = $state([]);
 	let loadingResumes = $state(false);
@@ -317,6 +320,28 @@
 		formStatus = 'pending';
 		formResumeId = '';
 		formInterestLevel = '';
+		formTags = [];
+		formTagInput = '';
+		formFollowUpDate = '';
+	}
+
+	function addTag() {
+		const tag = formTagInput.trim().toLowerCase();
+		if (tag && !formTags.includes(tag)) {
+			formTags = [...formTags, tag];
+			formTagInput = '';
+		}
+	}
+
+	function removeTag(tag: string) {
+		formTags = formTags.filter(t => t !== tag);
+	}
+
+	function handleTagInputKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ',') {
+			e.preventDefault();
+			addTag();
+		}
 	}
 	
 	function handleClose() {
@@ -421,7 +446,9 @@
 				coverLetter: formCoverLetter.trim() || undefined,
 				linkedInContact: formLinkedInContact,
 				status: formStatus,
-				interestLevel: formInterestLevel.trim() || undefined
+				interestLevel: formInterestLevel.trim() || undefined,
+				tags: formTags.length > 0 ? formTags : undefined,
+				followUpDate: formFollowUpDate || undefined
 			};
 			
 			await onSubmit(input);
@@ -476,6 +503,34 @@
 						<option value={level.value}>{level.label}</option>
 					{/each}
 				</Select>
+				<Input
+					label="Follow-up Date"
+					type="date"
+					bind:value={formFollowUpDate}
+				/>
+			</div>
+			<div class="form-group">
+				<label class="form-label">Tags</label>
+				<div class="tags-input-container">
+					<input
+						type="text"
+						class="tags-input"
+						placeholder="Add tags (press Enter or comma)"
+						bind:value={formTagInput}
+						onkeydown={handleTagInputKeydown}
+					/>
+					<Button variant="secondary" size="sm" onclick={addTag}>Add</Button>
+				</div>
+				{#if formTags.length > 0}
+					<div class="tags-list">
+						{#each formTags as tag}
+							<span class="tag">
+								{tag}
+								<button class="tag-remove" onclick={() => removeTag(tag)}>×</button>
+							</span>
+						{/each}
+					</div>
+				{/if}
 			</div>
 			<Textarea
 				label={tFn('jobApplications.modal.coverLetter')}
@@ -552,5 +607,61 @@
 		gap: var(--spacing-sm);
 		margin-top: var(--spacing-sm);
 		justify-content: flex-end;
+	}
+
+	.tags-input-container {
+		display: flex;
+		gap: var(--spacing-sm);
+		align-items: center;
+	}
+
+	.tags-input {
+		flex: 1;
+		padding: var(--spacing-sm);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		font-size: var(--font-size-sm);
+	}
+
+	.tags-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-xs);
+		margin-top: var(--spacing-xs);
+	}
+
+	.tag {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background-color: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-primary);
+	}
+
+	.tag-remove {
+		background: none;
+		border: none;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+		font-size: 1.2rem;
+		padding: 0;
+		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tag-remove:hover {
+		color: var(--color-danger);
+	}
+
+	.form-label {
+		font-weight: var(--font-weight-medium);
+		font-size: var(--font-size-sm);
+		margin-bottom: var(--spacing-xs);
 	}
 </style>

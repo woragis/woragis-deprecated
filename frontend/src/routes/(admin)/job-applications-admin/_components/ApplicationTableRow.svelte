@@ -99,6 +99,26 @@
 		</div>
 	</td>
 	<td>{application.interestLevel || '—'}</td>
+	<td>
+		{#if application.tags && application.tags.length > 0}
+			<div class="tags-display">
+				{#each application.tags as tag}
+					<span class="tag-badge">{tag}</span>
+				{/each}
+			</div>
+		{:else}
+			—
+		{/if}
+	</td>
+	<td>
+		{#if application.followUpDate}
+			<span class="follow-up-date" title={formatDateTime(application.followUpDate)}>
+				{formatDate(application.followUpDate)}
+			</span>
+		{:else}
+			—
+		{/if}
+	</td>
 	<td>{formatDate(application.appliedAt)}</td>
 	<td class="actions-cell">
 		<a href="/job-applications-admin/{application.id}" class="view-link">
@@ -164,5 +184,26 @@
 		font-size: var(--font-size-xs);
 		color: var(--color-text-secondary);
 		margin-top: var(--spacing-xs);
+	}
+
+	.tags-display {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-xs);
+	}
+
+	.tag-badge {
+		display: inline-block;
+		padding: 2px var(--spacing-xs);
+		background-color: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-primary);
+	}
+
+	.follow-up-date {
+		color: var(--color-primary);
+		font-weight: var(--font-weight-medium);
 	}
 </style>

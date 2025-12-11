@@ -58,6 +58,8 @@ export interface CreateJobApplicationInput {
 	linkedInContact?: boolean;
 	status?: ApplicationStatus;
 	interestLevel?: string;
+	tags?: string[];
+	followUpDate?: string;
 }
 
 export interface UpdateJobApplicationStatusInput {

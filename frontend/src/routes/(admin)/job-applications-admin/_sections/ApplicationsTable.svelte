@@ -46,6 +46,8 @@
 					<th>{tFn('jobApplications.table.language')}</th>
 					<th>{tFn('jobApplications.table.status')}</th>
 					<th>{tFn('jobApplications.table.interest')}</th>
+					<th>Tags</th>
+					<th>Follow-up</th>
 					<th>{tFn('jobApplications.table.appliedAt')}</th>
 					<th>{tFn('jobApplications.table.actions')}</th>
 				</tr>

@@ -35,6 +35,7 @@
 	let sortOrder = $state<'asc' | 'desc'>('desc');
 	let selectedApplications = $state<Set<string>>(new Set());
 	let showBatchActions = $state(false);
+	let quickFilter = $state<string>('');
 
 	onMount(async () => {
 		await fetchApplications();
@@ -140,8 +141,98 @@
 		showBatchActions = selectedApplications.size > 0;
 	}
 
+	function exportToCSV() {
+		const filtered = filteredApplications();
+		if (filtered.length === 0) {
+			showToast('No applications to export', 'warning');
+			return;
+		}
+
+		// CSV headers
+		const headers = [
+			'Company',
+			'Job Title',
+			'Location',
+			'Website',
+			'Status',
+			'Interest Level',
+			'Tags',
+			'Follow-up Date',
+			'Applied At',
+			'Created At',
+			'Job URL'
+		];
+
+		// CSV rows
+		const rows = filtered.map(app => [
+			app.companyName,
+			app.jobTitle,
+			app.location || '',
+			app.website,
+			app.status,
+			app.interestLevel || '',
+			app.tags?.join(', ') || '',
+			app.followUpDate ? new Date(app.followUpDate).toLocaleDateString() : '',
+			app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : '',
+			app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '',
+			app.jobUrl
+		]);
+
+		// Escape CSV values
+		function escapeCSV(value: string): string {
+			if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+				return `"${value.replace(/"/g, '""')}"`;
+			}
+			return value;
+		}
+
+		// Build CSV content
+		const csvContent = [
+			headers.map(escapeCSV).join(','),
+			...rows.map(row => row.map(cell => escapeCSV(String(cell || ''))).join(','))
+		].join('\n');
+
+		// Create download
+		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+		const link = document.createElement('a');
+		const url = URL.createObjectURL(blob);
+		link.setAttribute('href', url);
+		link.setAttribute('download', `job-applications-${new Date().toISOString().split('T')[0]}.csv`);
+		link.style.visibility = 'hidden';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+
+		showToast(`Exported ${filtered.length} application(s) to CSV`, 'success');
+	}
+
 	function filteredApplications() {
 		let filtered = applications;
+
+		// Apply quick filters
+		if (quickFilter === 'needs-follow-up') {
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			filtered = filtered.filter(a => {
+				if (!a.followUpDate) return false;
+				const followUp = new Date(a.followUpDate);
+				followUp.setHours(0, 0, 0, 0);
+				return followUp <= today && a.status !== 'rejected' && a.status !== 'accepted';
+			});
+		} else if (quickFilter === 'no-response') {
+			const twoWeeksAgo = new Date();
+			twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+			filtered = filtered.filter(a => {
+				if (!a.appliedAt) return false;
+				const applied = new Date(a.appliedAt);
+				return applied <= twoWeeksAgo && 
+				       a.status === 'applied' && 
+				       !a.responseReceivedAt;
+			});
+		} else if (quickFilter === 'high-interest') {
+			filtered = filtered.filter(a => a.interestLevel === 'high' || a.interestLevel === 'very-high');
+		}
 
 		// Apply text search
 		if (searchQuery.trim()) {
@@ -204,6 +295,36 @@
 	<PageHeader onCreateClick={openCreateModal} />
 
 	<SearchBar bind:searchQuery />
+	
+	<div class="quick-filters">
+		<button 
+			class="quick-filter-btn" 
+			class:active={quickFilter === 'needs-follow-up'}
+			onclick={() => quickFilter = quickFilter === 'needs-follow-up' ? '' : 'needs-follow-up'}
+		>
+			Needs Follow-up
+		</button>
+		<button 
+			class="quick-filter-btn"
+			class:active={quickFilter === 'no-response'}
+			onclick={() => quickFilter = quickFilter === 'no-response' ? '' : 'no-response'}
+		>
+			No Response (2+ weeks)
+		</button>
+		<button 
+			class="quick-filter-btn"
+			class:active={quickFilter === 'high-interest'}
+			onclick={() => quickFilter = quickFilter === 'high-interest' ? '' : 'high-interest'}
+		>
+			High Interest
+		</button>
+		<button 
+			class="quick-filter-btn export-btn"
+			onclick={exportToCSV}
+		>
+			Export CSV
+		</button>
+	</div>
 	
 	<AdvancedFilters bind:filters />
 
@@ -347,5 +468,44 @@
 		background-color: var(--color-bg-primary);
 		color: var(--color-text-primary);
 		font-size: var(--font-size-sm);
+	}
+
+	.quick-filters {
+		display: flex;
+		gap: var(--spacing-sm);
+		margin-bottom: var(--spacing-md);
+		flex-wrap: wrap;
+	}
+
+	.quick-filter-btn {
+		padding: var(--spacing-xs) var(--spacing-md);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background-color: var(--color-bg-primary);
+		color: var(--color-text-primary);
+		cursor: pointer;
+		font-size: var(--font-size-sm);
+		transition: all var(--transition-base);
+	}
+
+	.quick-filter-btn:hover {
+		background-color: var(--color-bg-hover);
+	}
+
+	.quick-filter-btn.active {
+		background-color: var(--color-primary);
+		color: white;
+		border-color: var(--color-primary);
+	}
+
+	.quick-filter-btn.export-btn {
+		background-color: var(--color-success, #10b981);
+		color: white;
+		border-color: var(--color-success, #10b981);
+		margin-left: auto;
+	}
+
+	.quick-filter-btn.export-btn:hover {
+		background-color: var(--color-success-hover, #059669);
 	}
 </style>
