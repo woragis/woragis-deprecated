@@ -6,10 +6,14 @@
 	
 	let {
 		application,
-		onDelete
+		onDelete,
+		selected = false,
+		onToggleSelection
 	}: {
 		application: JobApplication;
 		onDelete?: (id: string) => void;
+		selected?: boolean;
+		onToggleSelection?: (id: string) => void;
 	} = $props();
 	
 	const tFn = useTranslation();
@@ -68,7 +72,15 @@
 	const statusInfo = $derived(getStatusInfo(application));
 </script>
 
-<tr class="table-row">
+<tr class="table-row" class:selected>
+	<td>
+		<input
+			type="checkbox"
+			checked={selected}
+			onchange={() => onToggleSelection?.(application.id)}
+			class="row-checkbox"
+		/>
+	</td>
 	<td><strong>{application.companyName}</strong></td>
 	<td>{application.jobTitle}</td>
 	<td>{application.location || '—'}</td>
@@ -105,6 +117,14 @@
 	
 	.table-row:hover {
 		background-color: var(--color-bg-hover);
+	}
+
+	.table-row.selected {
+		background-color: var(--color-bg-secondary);
+	}
+
+	.row-checkbox {
+		cursor: pointer;
 	}
 	
 	.table-row td {

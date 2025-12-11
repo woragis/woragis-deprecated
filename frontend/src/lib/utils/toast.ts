@@ -1,48 +1,53 @@
-import { toast as sonnerToast } from 'svelte-sonner';
-import type { ExternalToast } from 'svelte-sonner';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
-type ToastOptions = ExternalToast | undefined;
+export interface Toast {
+	id: string;
+	message: string;
+	type: ToastType;
+	duration?: number;
+}
 
-const DEFAULT_OPTIONS: Partial<ExternalToast> = {
-	duration: 4500
-};
+class ToastManager {
+	private toasts: Toast[] = [];
+	private listeners: Set<(toasts: Toast[]) => void> = new Set();
 
-const mergeOptions = (options?: ExternalToast): ExternalToast =>
-	({
-		...DEFAULT_OPTIONS,
-		...(options ?? {})
-	} satisfies Partial<ExternalToast>) as ExternalToast;
-
-const extractAxiosErrorMessage = (error: unknown): string | null => {
-	if (error && typeof error === 'object' && 'response' in error) {
-		const response = (error as any).response;
-		return (
-			response?.data?.error?.details?.message ??
-			response?.data?.error?.message ??
-			response?.data?.message ??
-			null
-		);
+	subscribe(callback: (toasts: Toast[]) => void) {
+		this.listeners.add(callback);
+		callback(this.toasts);
+		return () => {
+			this.listeners.delete(callback);
+		};
 	}
-	return null;
-};
 
-export const toast = (message: string, options?: ToastOptions) => sonnerToast(message, mergeOptions(options));
+	private notify() {
+		this.listeners.forEach(callback => callback(this.toasts));
+	}
 
-export const toastSuccess = (message: string, options?: ToastOptions) =>
-	sonnerToast.success(message, mergeOptions(options));
+	show(message: string, type: ToastType = 'success', duration = 3000) {
+		const id = Math.random().toString(36).substr(2, 9);
+		const toast: Toast = { id, message, type, duration };
+		this.toasts = [...this.toasts, toast];
+		this.notify();
+		return id;
+	}
 
-export const toastError = (message: string, options?: ToastOptions) =>
-	sonnerToast.error(message, mergeOptions(options));
+	remove(id: string) {
+		this.toasts = this.toasts.filter(t => t.id !== id);
+		this.notify();
+	}
 
-export const toastInfo = (message: string, options?: ToastOptions) =>
-	sonnerToast.info(message, mergeOptions(options));
+	clear() {
+		this.toasts = [];
+		this.notify();
+	}
 
-export const getApiErrorMessage = (error: unknown, fallback = 'Something went wrong') =>
-	extractAxiosErrorMessage(error) ?? fallback;
+	getToasts(): Toast[] {
+		return this.toasts;
+	}
+}
 
-export const toastApiError = (error: unknown, fallback = 'Something went wrong', options?: ToastOptions) => {
-	const message = getApiErrorMessage(error, fallback);
-	toastError(message, options);
-	return message;
-};
+export const toastManager = new ToastManager();
 
+export function showToast(message: string, type: ToastType = 'success', duration = 3000) {
+	return toastManager.show(message, type, duration);
+}

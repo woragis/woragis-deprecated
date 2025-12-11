@@ -6,10 +6,16 @@
 	
 	let {
 		applications = [],
-		onDelete
+		onDelete,
+		selectedApplications = $bindable(new Set<string>()),
+		onToggleSelection,
+		onToggleSelectAll
 	}: {
 		applications?: JobApplication[];
 		onDelete?: (id: string) => void;
+		selectedApplications?: Set<string>;
+		onToggleSelection?: (id: string) => void;
+		onToggleSelectAll?: () => void;
 	} = $props();
 	
 	const tFn = useTranslation();
@@ -25,6 +31,14 @@
 		<table class="table">
 			<thead>
 				<tr>
+					<th>
+						<input
+							type="checkbox"
+							checked={applications.length > 0 && applications.every(a => selectedApplications.has(a.id))}
+							onchange={() => onToggleSelectAll?.()}
+							class="select-all-checkbox"
+						/>
+					</th>
 					<th>{tFn('jobApplications.table.company')}</th>
 					<th>{tFn('jobApplications.table.jobTitle')}</th>
 					<th>{tFn('jobApplications.table.location')}</th>
@@ -38,7 +52,12 @@
 			</thead>
 			<tbody>
 				{#each applications as app}
-					<ApplicationTableRow application={app} {onDelete} />
+					<ApplicationTableRow 
+						application={app} 
+						{onDelete}
+						selected={selectedApplications.has(app.id)}
+						onToggleSelection={onToggleSelection}
+					/>
 				{/each}
 			</tbody>
 		</table>
@@ -75,5 +94,9 @@
 	
 	.table tbody tr:last-child {
 		border-bottom: none;
+	}
+
+	.select-all-checkbox {
+		cursor: pointer;
 	}
 </style>
