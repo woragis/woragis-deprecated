@@ -5,8 +5,10 @@ import "github.com/gofiber/fiber/v2"
 // SetupRoutes registers resume endpoints.
 func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Post("/upload", handler.UploadResume) // File upload endpoint (must be before /:id routes)
+	api.Post("/generate", handler.GenerateResume) // Generate resume endpoint (must be before /:id routes)
 	api.Post("/", handler.CreateResume)
-	api.Get("/", handler.ListResumes)
+	api.Get("/tags", handler.ListResumeTags) // Get all tags for autocomplete (must be before /:id routes)
+	api.Get("/", handler.ListResumes) // Supports ?tags=tag1,tag2 query parameter
 	api.Get("/:id", handler.GetResume)
 	api.Patch("/:id", handler.UpdateResume)
 	api.Delete("/:id", handler.DeleteResume)
@@ -14,6 +16,7 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Patch("/:id/featured", handler.MarkAsFeatured)
 	api.Delete("/:id/main", handler.UnmarkAsMain)
 	api.Delete("/:id/featured", handler.UnmarkAsFeatured)
+	api.Post("/:id/recalculate-metrics", handler.RecalculateMetrics) // Manually recalculate metrics
 }
 
 // SetupPublicRoutes registers public resume endpoints.

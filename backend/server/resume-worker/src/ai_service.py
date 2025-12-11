@@ -51,6 +51,8 @@ class AIService:
                 prompt = self._build_skills_prompt(job_description, projects)
             elif section_type == 'hard_skills':
                 prompt = self._build_hard_skills_prompt(job_description, projects)
+            elif section_type == 'tags':
+                prompt = self._build_tags_prompt(job_description, projects)
             else:
                 prompt = f"Generate a {section_type} section for a resume based on this job description: {job_description}"
             
@@ -274,4 +276,89 @@ JavaScript/TypeScript • Python • Java • GraphQL
 
 Testing & Quality
 Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing"""
+    
+    def _build_tags_prompt(self, job_description: str, projects: List[Dict]) -> str:
+        """Build prompt for generating tags (technologies, languages, tools)"""
+        all_techs = []
+        for p in projects:
+            all_techs.extend([t.get('name', '') for t in p.get('technologies', [])])
+        
+        unique_techs = list(set(all_techs))
+        
+        return f"""Based on the job description and projects, extract and generate a list of relevant tags (technologies, programming languages, tools, frameworks, cloud services, etc.) for this resume.
+
+Job Description:
+{job_description}
+
+Technologies from Projects:
+{', '.join(unique_techs[:50])}
+
+Requirements:
+- Extract 5-10 relevant tags from the job description and projects
+- Include programming languages (e.g., golang, python, javascript, typescript)
+- Include frameworks and libraries (e.g., react, svelte, gin, echo)
+- Include cloud services and infrastructure (e.g., aws, docker, kubernetes, eks, ec2, s3)
+- Include databases (e.g., postgresql, mongodb, redis)
+- Include tools and platforms (e.g., git, github, ci/cd, terraform)
+- Use lowercase, no spaces (use hyphens if needed: e.g., "ci-cd" not "CI/CD")
+- Return ONLY a comma-separated list of tags, nothing else
+- Example format: golang, python, aws, docker, kubernetes, postgresql, react, typescript, redis, eks
+- Focus on the most relevant and commonly used technologies"""
+    
+    def generate_tags(self, job_description: str, projects: List[Dict], language: str = "en") -> List[str]:
+        """Generate tags using AI"""
+        try:
+            prompt = self._build_tags_prompt(job_description, projects)
+            
+            # Call AI service
+            response = requests.post(
+                f"{self.base_url}/api/chat/completions",
+                json={
+                    "provider": "anthropic",
+                    "model": "claude-3-5-sonnet-latest",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": (
+                                "You are a technical tag extractor. "
+                                "Extract relevant technology tags from the job description and projects. "
+                                "Return ONLY a comma-separated list of lowercase tags, nothing else.\n\n"
+                                f"{prompt}"
+                            )
+                        }
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 200
+                },
+                timeout=20
+            )
+            
+            response.raise_for_status()
+            data = response.json()
+            
+            # Extract content
+            content = ""
+            if 'message' in data and 'content' in data['message']:
+                content = data['message']['content']
+            elif 'choices' in data and len(data['choices']) > 0:
+                content = data['choices'][0]['message']['content']
+            else:
+                logger.warning(f"Unexpected AI response format for tags: {data}")
+                return []
+            
+            # Parse comma-separated tags
+            tags = [tag.strip().lower() for tag in content.split(',') if tag.strip()]
+            # Remove duplicates and limit to 10
+            unique_tags = list(dict.fromkeys(tags))[:10]
+            
+            return unique_tags
+                
+        except Exception as e:
+            logger.error(f"Error generating tags: {e}")
+            # Fallback: extract from technologies
+            all_techs = []
+            for p in projects:
+                all_techs.extend([t.get('name', '').lower() for t in p.get('technologies', [])])
+            unique_techs = list(dict.fromkeys(all_techs))[:10]
+            return unique_techs
 

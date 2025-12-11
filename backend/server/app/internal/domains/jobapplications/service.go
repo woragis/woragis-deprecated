@@ -40,11 +40,17 @@ type UpdateJobApplicationRequest struct {
 	Language          *string
 }
 
+// ResumeMetricsService is an interface to avoid circular dependencies
+type ResumeMetricsService interface {
+	RecalculateResumeMetrics(ctx context.Context, resumeID uuid.UUID) error
+}
+
 type service struct {
 	repo                Repository
 	queue               Queue
 	chatsRepo           ChatsRepository // For unlinking conversations on delete
 	preferencesService  UserPreferencesService // For getting user defaults
+	resumeMetricsService ResumeMetricsService // Optional: for updating resume metrics
 	logger              *slog.Logger
 }
 
@@ -86,6 +92,18 @@ func NewServiceWithDependencies(repo Repository, queue Queue, chatsRepo ChatsRep
 		chatsRepo:          chatsRepo,
 		preferencesService: preferencesService,
 		logger:             logger,
+	}
+}
+
+// NewServiceWithResumeMetrics constructs a Service with resume metrics service.
+func NewServiceWithResumeMetrics(repo Repository, queue Queue, chatsRepo ChatsRepository, preferencesService UserPreferencesService, resumeMetricsService ResumeMetricsService, logger *slog.Logger) Service {
+	return &service{
+		repo:                repo,
+		queue:               queue,
+		chatsRepo:           chatsRepo,
+		preferencesService:  preferencesService,
+		resumeMetricsService: resumeMetricsService,
+		logger:              logger,
 	}
 }
 
@@ -157,11 +175,26 @@ func (s *service) UpdateJobApplicationStatus(ctx context.Context, applicationID 
 		return err
 	}
 
+	oldStatus := application.Status
 	if err := application.UpdateStatus(status); err != nil {
 		return err
 	}
 
-	return s.repo.UpdateJobApplication(ctx, application)
+	if err := s.repo.UpdateJobApplication(ctx, application); err != nil {
+		return err
+	}
+
+	// Recalculate resume metrics if status changed to "accepted" or if resumeId exists
+	if (oldStatus != status && status == ApplicationStatusAccepted) || application.ResumeID != nil {
+		if s.resumeMetricsService != nil && application.ResumeID != nil {
+			if err := s.resumeMetricsService.RecalculateResumeMetrics(ctx, *application.ResumeID); err != nil {
+				s.logger.Warn("failed to recalculate resume metrics", "resume_id", application.ResumeID.String(), "error", err)
+				// Don't fail the request if metric recalculation fails
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *service) UpdateJobApplication(ctx context.Context, applicationID uuid.UUID, updates UpdateJobApplicationRequest) (*JobApplication, error) {
@@ -221,8 +254,34 @@ func (s *service) UpdateJobApplication(ctx context.Context, applicationID uuid.U
 
 	application.UpdatedAt = time.Now().UTC()
 
+	// Track if resumeId changed
+	var oldResumeID *uuid.UUID
+	if application.ResumeID != nil {
+		oldResumeIDCopy := *application.ResumeID
+		oldResumeID = &oldResumeIDCopy
+	}
+	if updates.ResumeID != nil {
+		application.ResumeID = updates.ResumeID
+	}
+
 	if err := s.repo.UpdateJobApplication(ctx, application); err != nil {
 		return nil, err
+	}
+
+	// Recalculate metrics for both old and new resume if resumeId changed
+	if s.resumeMetricsService != nil {
+		if oldResumeID != nil && (application.ResumeID == nil || *oldResumeID != *application.ResumeID) {
+			// Old resume metrics need updating
+			if err := s.resumeMetricsService.RecalculateResumeMetrics(ctx, *oldResumeID); err != nil {
+				s.logger.Warn("failed to recalculate old resume metrics", "resume_id", oldResumeID.String(), "error", err)
+			}
+		}
+		if application.ResumeID != nil {
+			// New resume metrics need updating
+			if err := s.resumeMetricsService.RecalculateResumeMetrics(ctx, *application.ResumeID); err != nil {
+				s.logger.Warn("failed to recalculate new resume metrics", "resume_id", application.ResumeID.String(), "error", err)
+			}
+		}
 	}
 
 	return application, nil

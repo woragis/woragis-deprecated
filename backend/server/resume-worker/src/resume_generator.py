@@ -247,6 +247,11 @@ class ResumeGenerator:
         skills = self.ai_service.generate_resume_section('skills', job_description, projects, language=language)
         hard_skills = self.ai_service.generate_resume_section('hard_skills', job_description, projects, language=language)
         logger.info(f"Hard skills generated: {len(hard_skills) if hard_skills else 0} characters")
+        
+        # Generate tags using AI
+        logger.info("Generating tags...")
+        tags = self.ai_service.generate_tags(job_description, projects, language=language)
+        logger.info(f"Generated {len(tags)} tags: {', '.join(tags)}")
 
         # Ensure profile is never empty - use fallback if AI returns empty
         if not profile or not profile.strip():
@@ -395,6 +400,7 @@ class ResumeGenerator:
             'projects_count': len(projects),
             'certifications_count': len(certifications),
             'generated_at': datetime.now().isoformat(),
-            'keywords': keywords
+            'keywords': keywords,
+            'tags': tags
         }
 

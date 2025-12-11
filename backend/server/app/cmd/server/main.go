@@ -16,6 +16,7 @@ import (
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -68,6 +69,67 @@ import (
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 )
+
+// resumeMetricsServiceAdapter implements ResumeMetricsService for all domains
+type resumeMetricsServiceAdapter struct {
+	service resumesdomain.Service
+}
+
+func (a *resumeMetricsServiceAdapter) RecalculateResumeMetrics(ctx context.Context, resumeID uuid.UUID) error {
+	return a.service.RecalculateResumeMetrics(ctx, resumeID)
+}
+
+// jobApplicationServiceAdapter implements resumesdomain.JobApplicationService
+type jobApplicationServiceAdapter struct {
+	service jobapplicationsdomain.Service
+}
+
+func (a *jobApplicationServiceAdapter) GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*resumesdomain.JobApplication, error) {
+	app, err := a.service.GetJobApplication(ctx, applicationID)
+	if err != nil {
+		return nil, err
+	}
+	return &resumesdomain.JobApplication{
+		ID:             app.ID,
+		UserID:         app.UserID,
+		JobTitle:       app.JobTitle,
+		JobDescription: app.JobDescription,
+		Language:       app.Language,
+		CompanyName:    app.CompanyName,
+	}, nil
+}
+
+// jobApplicationServiceForStagesAdapter implements jobapplicationstagesdomain.JobApplicationService
+type jobApplicationServiceForStagesAdapter struct {
+	service jobapplicationsdomain.Service
+}
+
+func (a *jobApplicationServiceForStagesAdapter) GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*jobapplicationstagesdomain.JobApplication, error) {
+	app, err := a.service.GetJobApplication(ctx, applicationID)
+	if err != nil {
+		return nil, err
+	}
+	return &jobapplicationstagesdomain.JobApplication{
+		ID:       app.ID,
+		ResumeID: app.ResumeID,
+	}, nil
+}
+
+// jobApplicationServiceForResponsesAdapter implements jobapplicationresponsesdomain.JobApplicationService
+type jobApplicationServiceForResponsesAdapter struct {
+	service jobapplicationsdomain.Service
+}
+
+func (a *jobApplicationServiceForResponsesAdapter) GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*jobapplicationresponsesdomain.JobApplication, error) {
+	app, err := a.service.GetJobApplication(ctx, applicationID)
+	if err != nil {
+		return nil, err
+	}
+	return &jobapplicationresponsesdomain.JobApplication{
+		ID:       app.ID,
+		ResumeID: app.ResumeID,
+	}, nil
+}
 
 func main() {
 	cfg, err := appconfig.Load()
@@ -558,13 +620,17 @@ func main() {
 	
 	// Job Application Responses subdomain
 	responseRepo := jobapplicationresponsesdomain.NewGormRepository(db)
-	responseService := jobapplicationresponsesdomain.NewService(responseRepo, slogLogger)
-	responseHandler := jobapplicationresponsesdomain.NewHandler(responseService, slogLogger)
+	var responseService jobapplicationresponsesdomain.Service
+	responseService = jobapplicationresponsesdomain.NewService(responseRepo, slogLogger)
+	var responseHandler jobapplicationresponsesdomain.Handler
+	responseHandler = jobapplicationresponsesdomain.NewHandler(responseService, slogLogger)
 	
 	// Job Application Interview Stages subdomain
 	stageRepo := jobapplicationstagesdomain.NewGormRepository(db)
-	stageService := jobapplicationstagesdomain.NewService(stageRepo, slogLogger)
-	stageHandler := jobapplicationstagesdomain.NewHandler(stageService, slogLogger)
+	var stageService jobapplicationstagesdomain.Service
+	stageService = jobapplicationstagesdomain.NewService(stageRepo, slogLogger)
+	var stageHandler jobapplicationstagesdomain.Handler
+	stageHandler = jobapplicationstagesdomain.NewHandler(stageService, slogLogger)
 	
 	// Declare handler and group - will be fully initialized later
 	var applicationHandler jobapplicationsdomain.Handler
@@ -585,13 +651,13 @@ func main() {
 	if resumeBasePath == "" {
 		resumeBasePath = "/app/output" // Default path in Docker container
 	}
-	resumeHandler := resumesdomain.NewHandler(resumeService, resumeBasePath, slogLogger)
+	// Create adapter for job application service to use in resume handler
+	// Note: applicationService is defined later, so we'll update this after it's created
+	var resumeHandler resumesdomain.Handler
 	resumesGroup := protectedAPI.Group("/resumes")
-	resumesdomain.SetupRoutes(resumesGroup, resumeHandler)
 
-	// Public resume endpoints (no auth required)
+	// Public resume endpoints (no auth required) - will be set up after handler is initialized
 	publicAPI := api.Group("/public")
-	resumesdomain.SetupPublicRoutes(publicAPI, resumeHandler)
 
 	// User Profiles: requires JWT for all operations
 	userProfileRepo := userprofilesdomain.NewGormRepository(db)
@@ -605,8 +671,29 @@ func main() {
 	userPreferencesHandler := userpreferencesdomain.NewHandler(userPreferencesService, slogLogger)
 	userpreferencesdomain.SetupRoutes(protectedAPI, userPreferencesHandler)
 
-	// Now update job applications service to use preferences
-	applicationService = jobapplicationsdomain.NewServiceWithDependencies(applicationRepo, applicationQueue, chatsRepo, userPreferencesService, slogLogger)
+	// Create resume metrics service adapter
+	resumeMetricsServiceAdapter := &resumeMetricsServiceAdapter{service: resumeService}
+	
+	// Now update job applications service to use preferences and resume metrics
+	applicationService = jobapplicationsdomain.NewServiceWithResumeMetrics(applicationRepo, applicationQueue, chatsRepo, userPreferencesService, resumeMetricsServiceAdapter, slogLogger)
+	
+	// Create job application service adapters
+	jobAppServiceAdapter := &jobApplicationServiceAdapter{service: applicationService}
+	jobAppServiceForStagesAdapter := &jobApplicationServiceForStagesAdapter{service: applicationService}
+	jobAppServiceForResponsesAdapter := &jobApplicationServiceForResponsesAdapter{service: applicationService}
+	
+	// Now update interview stages and responses services with dependencies
+	stageService = jobapplicationstagesdomain.NewServiceWithDependencies(stageRepo, jobAppServiceForStagesAdapter, resumeMetricsServiceAdapter, slogLogger)
+	stageHandler = jobapplicationstagesdomain.NewHandler(stageService, slogLogger)
+	
+	responseService = jobapplicationresponsesdomain.NewServiceWithDependencies(responseRepo, jobAppServiceForResponsesAdapter, resumeMetricsServiceAdapter, slogLogger)
+	responseHandler = jobapplicationresponsesdomain.NewHandler(responseService, slogLogger)
+	
+	// Now create resume handler with job application service
+	resumeHandler = resumesdomain.NewHandlerWithJobApplicationService(resumeService, jobAppServiceAdapter, resumeBasePath, slogLogger)
+	resumesdomain.SetupRoutes(resumesGroup, resumeHandler)
+	// Setup public resume endpoints (handler is now initialized)
+	resumesdomain.SetupPublicRoutes(publicAPI, resumeHandler)
 
 	// Now initialize chat service with context builder (all services are available)
 	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel, chatsStream)

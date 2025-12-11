@@ -30,9 +30,27 @@ type UpdateStageRequest struct {
 	Feedback         *string
 }
 
+// ResumeMetricsService is an interface to avoid circular dependencies
+type ResumeMetricsService interface {
+	RecalculateResumeMetrics(ctx context.Context, resumeID uuid.UUID) error
+}
+
+// JobApplicationService is an interface to get job application details
+type JobApplicationService interface {
+	GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*JobApplication, error)
+}
+
+// JobApplication represents a job application (minimal interface)
+type JobApplication struct {
+	ID       uuid.UUID
+	ResumeID *uuid.UUID
+}
+
 type service struct {
-	repo   Repository
-	logger *slog.Logger
+	repo                Repository
+	jobApplicationService JobApplicationService // Optional: to get resumeId
+	resumeMetricsService ResumeMetricsService   // Optional: for updating resume metrics
+	logger              *slog.Logger
 }
 
 // NewService constructs a Service.
@@ -40,6 +58,16 @@ func NewService(repo Repository, logger *slog.Logger) Service {
 	return &service{
 		repo:   repo,
 		logger: logger,
+	}
+}
+
+// NewServiceWithDependencies constructs a Service with all dependencies.
+func NewServiceWithDependencies(repo Repository, jobApplicationService JobApplicationService, resumeMetricsService ResumeMetricsService, logger *slog.Logger) Service {
+	return &service{
+		repo:                 repo,
+		jobApplicationService: jobApplicationService,
+		resumeMetricsService: resumeMetricsService,
+		logger:               logger,
 	}
 }
 
@@ -143,6 +171,17 @@ func (s *service) CompleteStage(ctx context.Context, stageID uuid.UUID, complete
 
 	if err := s.repo.UpdateStage(ctx, stage); err != nil {
 		return nil, err
+	}
+
+	// Recalculate resume metrics when an interview is completed
+	if s.resumeMetricsService != nil && s.jobApplicationService != nil {
+		application, err := s.jobApplicationService.GetJobApplication(ctx, stage.JobApplicationID)
+		if err == nil && application != nil && application.ResumeID != nil {
+			if err := s.resumeMetricsService.RecalculateResumeMetrics(ctx, *application.ResumeID); err != nil {
+				s.logger.Warn("failed to recalculate resume metrics after completing interview", "resume_id", application.ResumeID.String(), "error", err)
+				// Don't fail the request if metric recalculation fails
+			}
+		}
 	}
 
 	return stage, nil
