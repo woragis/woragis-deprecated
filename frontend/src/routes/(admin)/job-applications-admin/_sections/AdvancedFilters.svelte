@@ -10,16 +10,20 @@
 		filters = $bindable({
 			status: '',
 			website: '',
-			interestLevel: ''
+			interestLevel: '',
+			tags: ''
 		}),
-		onClear
+		onClear,
+		availableTags = []
 	}: {
 		filters?: {
 			status: string;
 			website: string;
 			interestLevel: string;
+			tags: string;
 		};
 		onClear?: () => void;
+		availableTags?: string[];
 	} = $props();
 
 	let showPresets = $state(false);
@@ -101,14 +105,15 @@
 		filters = {
 			status: '',
 			website: '',
-			interestLevel: ''
+			interestLevel: '',
+			tags: ''
 		};
 		if (onClear) {
 			onClear();
 		}
 	}
 
-	const hasActiveFilters = filters.status || filters.website || filters.interestLevel;
+	const hasActiveFilters = filters.status || filters.website || filters.interestLevel || filters.tags;
 </script>
 
 <div class="filters-container">
@@ -167,6 +172,12 @@
 		<Select label="Interest Level" bind:value={filters.interestLevel}>
 			{#each interestLevels as level}
 				<option value={level.value}>{level.label}</option>
+			{/each}
+		</Select>
+		<Select label="Tag" bind:value={filters.tags}>
+			<option value="">All</option>
+			{#each availableTags as tag}
+				<option value={tag}>{tag}</option>
 			{/each}
 		</Select>
 	</div>

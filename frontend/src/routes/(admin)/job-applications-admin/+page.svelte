@@ -32,7 +32,18 @@
 	let filters = $state({
 		status: '',
 		website: '',
-		interestLevel: ''
+		interestLevel: '',
+		tags: ''
+	});
+	
+	let availableTags = $derived(() => {
+		const tagSet = new Set<string>();
+		applications.forEach(app => {
+			if (app.tags && app.tags.length > 0) {
+				app.tags.forEach(tag => tagSet.add(tag));
+			}
+		});
+		return Array.from(tagSet).sort();
 	});
 	let sortBy = $state<'date' | 'company' | 'status' | 'interest'>('date');
 	let sortOrder = $state<'asc' | 'desc'>('desc');
@@ -294,6 +305,13 @@
 			filtered = filtered.filter(a => a.interestLevel === filters.interestLevel);
 		}
 
+		// Apply tag filter
+		if (filters.tags) {
+			filtered = filtered.filter(a => 
+				a.tags && a.tags.includes(filters.tags)
+			);
+		}
+
 		// Apply sorting
 		filtered = [...filtered].sort((a, b) => {
 			let comparison = 0;
@@ -362,7 +380,7 @@
 		</button>
 	</div>
 	
-	<AdvancedFilters bind:filters />
+	<AdvancedFilters bind:filters availableTags={availableTags()} />
 
 	{#if showBatchActions}
 		<div class="batch-actions">

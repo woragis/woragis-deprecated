@@ -8,6 +8,7 @@
 	import type { ApplicationStatus, CreateJobApplicationInput, JobApplication } from '$lib/api/jobapplications';
 	import { getUserPreferences } from '$lib/api/userpreferences';
 	import { listResumes, type Resume } from '$lib/api/resumes';
+	import ApplicationTemplates, { type ApplicationTemplate } from './ApplicationTemplates.svelte';
 	
 	let {
 		open = $bindable(false),
@@ -41,6 +42,7 @@
 	
 	let resumes: Resume[] = $state([]);
 	let loadingResumes = $state(false);
+	let showTemplatesModal = $state(false);
 	
 	const interestLevels = [
 		{ value: '', label: 'Not set' },
@@ -461,6 +463,11 @@
 </script>
 
 <Modal bind:open size="lg" title={tFn('jobApplications.modal.createTitle')}>
+	<div class="modal-header-actions">
+		<Button variant="secondary" size="sm" onclick={() => showTemplatesModal = true}>
+			Templates
+		</Button>
+	</div>
 	<div class="modal-content">
 		<div class="form">
 			<div class="form-row">
@@ -673,4 +680,13 @@
 		font-size: var(--font-size-sm);
 		margin-bottom: var(--spacing-xs);
 	}
+
+	.modal-header-actions {
+		position: absolute;
+		top: var(--spacing-md);
+		right: var(--spacing-md);
+		z-index: 10;
+	}
 </style>
+
+<ApplicationTemplates bind:open={showTemplatesModal} onLoadTemplate={loadTemplate} />
