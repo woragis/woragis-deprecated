@@ -3,6 +3,8 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import { useTranslation } from '$lib/i18n';
 	import type { JobApplication } from '$lib/api/jobapplications';
+	import { listResumes, type Resume } from '$lib/api/resumes';
+	import { onMount } from 'svelte';
 	
 	let {
 		application
@@ -11,6 +13,19 @@
 	} = $props();
 	
 	const tFn = useTranslation();
+	let resumes: Resume[] = $state([]);
+	let associatedResume: Resume | null = $state(null);
+	
+	onMount(async () => {
+		try {
+			resumes = await listResumes();
+			if (application.resumeId) {
+				associatedResume = resumes.find(r => r.id === application.resumeId) || null;
+			}
+		} catch (err) {
+			console.error('Error fetching resumes:', err);
+		}
+	});
 	
 	function formatDate(dateString?: string): string {
 		if (!dateString) return '—';
@@ -38,6 +53,19 @@
 		<div class="info-item"><strong>Source:</strong> {application.source || '—'}</div>
 		<div class="info-item"><strong>Language:</strong> {application.language || '—'}</div>
 		<div class="info-item"><strong>Applied At:</strong> {formatDate(application.appliedAt)}</div>
+		{#if associatedResume}
+			<div class="info-item">
+				<strong>Associated CV:</strong>
+				<span class="cv-link">{associatedResume.title}</span>
+				{#if associatedResume.isMain}
+					<span class="cv-badge">Main</span>
+				{/if}
+			</div>
+		{:else if application.resumeId}
+			<div class="info-item"><strong>Associated CV:</strong> <span class="cv-missing">CV ID: {application.resumeId} (not found)</span></div>
+		{:else}
+			<div class="info-item"><strong>Associated CV:</strong> <span class="cv-missing">No CV associated</span></div>
+		{/if}
 		{#if application.salaryMin || application.salaryMax}
 			<div class="info-item">
 				<strong>Salary:</strong> {application.salaryMin || '—'} - {application.salaryMax || '—'} {application.salaryCurrency || ''}
@@ -116,5 +144,26 @@
 		font-size: var(--font-size-sm);
 		line-height: 1.6;
 		color: var(--color-text-primary);
+	}
+	
+	.cv-link {
+		color: var(--color-primary);
+		font-weight: var(--font-weight-medium);
+	}
+	
+	.cv-badge {
+		display: inline-block;
+		margin-left: var(--spacing-xs);
+		padding: 2px 6px;
+		background-color: var(--color-primary);
+		color: white;
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-medium);
+	}
+	
+	.cv-missing {
+		color: var(--color-text-secondary);
+		font-style: italic;
 	}
 </style>

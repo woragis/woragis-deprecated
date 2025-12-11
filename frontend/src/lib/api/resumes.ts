@@ -14,6 +14,10 @@ export interface Resume {
 	filePath: string;
 	fileName: string;
 	fileSize: number;
+	tags?: string[];
+	applicationsUsed: number;
+	interviewRate: number; // Percentage (0-100)
+	offerRate: number;     // Percentage (0-100)
 	createdAt: string;
 	updatedAt: string;
 }
@@ -23,10 +27,12 @@ export interface CreateResumeInput {
 	filePath: string;
 	fileName: string;
 	fileSize: number;
+	tags?: string[];
 }
 
 export interface UpdateResumeInput {
 	title?: string;
+	tags?: string[];
 }
 
 // List all resumes for the authenticated user
@@ -111,5 +117,35 @@ export function getResumeDownloadUrl(userId: string, language: string = 'en'): s
 export function getResumePreviewUrl(userId: string, language: string = 'en'): string {
 	const params = new URLSearchParams({ userId, language });
 	return `${apiClient.defaults.baseURL}/public/resume/preview?${params.toString()}`;
+}
+
+// Request CV generation for a job application
+export interface RequestCVGenerationInput {
+	jobApplicationId: string;
+	language?: string;
+}
+
+export async function requestCVGeneration(input: RequestCVGenerationInput): Promise<Resume> {
+	const response = await apiClient.post<ApiResponse<Resume>>('/resumes/generate', input);
+	return response.data.data;
+}
+
+// List all unique tags from resumes (for autocomplete)
+export async function listResumeTags(): Promise<string[]> {
+	const response = await apiClient.get<ApiResponse<string[]>>('/resumes/tags');
+	return response.data.data || [];
+}
+
+// List resumes with optional tag filter
+export async function listResumesByTags(tags: string[]): Promise<Resume[]> {
+	const tagsParam = tags.join(',');
+	const response = await apiClient.get<ApiResponse<Resume[]>>(`/resumes?tags=${encodeURIComponent(tagsParam)}`);
+	return response.data.data || [];
+}
+
+// Recalculate metrics for a resume
+export async function recalculateResumeMetrics(id: string): Promise<Resume> {
+	const response = await apiClient.post<ApiResponse<Resume>>(`/resumes/${id}/recalculate-metrics`);
+	return response.data.data;
 }
 

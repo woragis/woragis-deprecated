@@ -12,9 +12,11 @@
 		unmarkAsFeatured,
 		getResumeDownloadUrl,
 		getResumePreviewUrl,
+		listResumeTags,
 		type Resume,
 		type UpdateResumeInput
 	} from '$lib/api/resumes';
+	import TagInput from '$lib/components/ui/TagInput.svelte';
 	import { Download, Eye, Star, Edit2, Check, X } from 'lucide-svelte';
 	import { toastError, toastSuccess } from '$lib/utils/toast';
 
@@ -25,6 +27,8 @@
 	let error: string | null = $state(null);
 	let showEditModal = $state(false);
 	let formTitle = $state('');
+	let formTags = $state<string[]>([]);
+	let availableTags = $state<string[]>([]);
 
 	const resumeId = $derived($page.params.id);
 
@@ -46,6 +50,10 @@
 			}
 			resume = loadedResume;
 			formTitle = resume.title;
+			formTags = resume.tags ? [...resume.tags] : [];
+			if (availableTags.length === 0) {
+				availableTags = await listResumeTags();
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load resume';
 			console.error('Error loading resume:', err);
@@ -57,14 +65,23 @@
 	function openEditModal() {
 		if (!resume) return;
 		formTitle = resume.title;
+		formTags = resume.tags ? [...resume.tags] : [];
 		showEditModal = true;
+		if (availableTags.length === 0) {
+			listResumeTags().then(tags => {
+				availableTags = tags;
+			});
+		}
 	}
 
 	async function handleUpdate() {
 		if (!resume) return;
 
 		try {
-			const input: UpdateResumeInput = { title: formTitle };
+			const input: UpdateResumeInput = { 
+				title: formTitle,
+				tags: formTags.length > 0 ? formTags : undefined
+			};
 			await updateResume(resume.id, input);
 			toastSuccess('Resume updated successfully');
 			showEditModal = false;
@@ -228,6 +245,59 @@
 				</div>
 
 				<div>
+					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tags</h2>
+					<div class="flex flex-wrap gap-2">
+						{#if resume.tags && resume.tags.length > 0}
+							{#each resume.tags as tag}
+								<span
+									class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+								>
+									{tag}
+								</span>
+							{/each}
+						{:else}
+							<span class="text-sm text-gray-500 dark:text-gray-400">No tags</span>
+						{/if}
+					</div>
+				</div>
+
+				<div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Metrics</h2>
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+							<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Applications Used
+							</div>
+							<div class="text-2xl font-bold text-gray-900 dark:text-white">
+								{resume.applicationsUsed || 0}
+							</div>
+						</div>
+						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+							<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Interview Rate
+							</div>
+							<div
+								class="text-2xl font-bold text-gray-900 dark:text-white cursor-help"
+								title="Interviews: {Math.round((resume.interviewRate || 0) / 100 * (resume.applicationsUsed || 0))} / {resume.applicationsUsed || 0}"
+							>
+								{(resume.interviewRate || 0).toFixed(1)}%
+							</div>
+						</div>
+						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+							<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Offer Rate
+							</div>
+							<div
+								class="text-2xl font-bold text-gray-900 dark:text-white cursor-help"
+								title="Offers: {Math.round((resume.offerRate || 0) / 100 * (resume.applicationsUsed || 0))} / {resume.applicationsUsed || 0}"
+							>
+								{(resume.offerRate || 0).toFixed(1)}%
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div>
 					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Status</h2>
 					<div class="flex items-center gap-4">
 						{#if resume.isMain}
@@ -331,6 +401,24 @@
 						class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 						placeholder="Resume title"
 					/>
+				</div>
+				<div>
+					<label
+						for="tags"
+						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Tags
+					</label>
+					<TagInput
+						bind:tags={formTags}
+						{availableTags}
+						onFetchTags={listResumeTags}
+						placeholder="Add tags (e.g., golang, python, aws)..."
+						maxTags={10}
+					/>
+					<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+						Add technology tags like programming languages, frameworks, tools, etc.
+					</p>
 				</div>
 			</div>
 			<div class="mt-6 flex justify-end gap-3">

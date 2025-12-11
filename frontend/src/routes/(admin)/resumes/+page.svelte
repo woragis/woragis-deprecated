@@ -2,12 +2,15 @@
 	import { onMount } from 'svelte';
 	import {
 		listResumes,
+		listResumesByTags,
+		listResumeTags,
 		createResume,
 		uploadResume,
 		deleteResume,
 		type Resume,
 		type CreateResumeInput
 	} from '$lib/api/resumes';
+	import TagInput from '$lib/components/ui/TagInput.svelte';
 	import { Eye, Trash2, Plus, Upload, Star } from 'lucide-svelte';
 	import { toastError, toastSuccess } from '$lib/utils/toast';
 	import { locale, t } from '$lib/i18n';
@@ -24,17 +27,24 @@
 	let createFormFilePath = $state('');
 	let createFormFileName = $state('');
 	let createFormFileSize = $state(0);
+	let createFormTags = $state<string[]>([]);
 	let uploading = $state(false);
+	let filterTags = $state<string[]>([]);
+	let availableTags = $state<string[]>([]);
 
 	onMount(async () => {
-		await fetchResumes();
+		await Promise.all([fetchResumes(), fetchAvailableTags()]);
 	});
 
 	async function fetchResumes() {
 		loading = true;
 		error = null;
 		try {
-			resumes = await listResumes();
+			if (filterTags.length > 0) {
+				resumes = await listResumesByTags(filterTags);
+			} else {
+				resumes = await listResumes();
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : $t('resumes.error');
 			console.error('Error fetching resumes:', err);
@@ -42,6 +52,19 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	async function fetchAvailableTags() {
+		try {
+			availableTags = await listResumeTags();
+		} catch (err) {
+			console.error('Error fetching tags:', err);
+		}
+	}
+
+	function handleFilterTagsChange(newTags: string[]) {
+		filterTags = newTags;
+		fetchResumes();
 	}
 
 
@@ -52,6 +75,10 @@
 		createFormFilePath = '';
 		createFormFileName = '';
 		createFormFileSize = 0;
+		createFormTags = [];
+		if (availableTags.length === 0) {
+			fetchAvailableTags();
+		}
 	}
 
 	function closeCreateModal() {
@@ -61,6 +88,7 @@
 		createFormFilePath = '';
 		createFormFileName = '';
 		createFormFileSize = 0;
+		createFormTags = [];
 	}
 
 	function handleFileSelect(event: Event) {
@@ -103,13 +131,14 @@
 				title: createFormTitle.trim(),
 				filePath: createFormFilePath,
 				fileName: createFormFileName || 'resume.pdf',
-				fileSize: createFormFileSize || 0
+				fileSize: createFormFileSize || 0,
+				tags: createFormTags.length > 0 ? createFormTags : undefined
 			};
 
 			await createResume(input);
 			toastSuccess($t('resumes.createSuccess'));
 			closeCreateModal();
-			await fetchResumes();
+			await Promise.all([fetchResumes(), fetchAvailableTags()]);
 		} catch (err) {
 			console.error('Error creating resume:', err);
 			toastError(err instanceof Error ? err.message : $t('resumes.createError'));
@@ -154,18 +183,32 @@
 </script>
 
 <div class="container mx-auto px-4 py-8">
-	<div class="mb-6 flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-bold text-gray-900 dark:text-white">{$t('resumes.title')}</h1>
-			<p class="text-gray-600 dark:text-gray-400 mt-1">{$t('resumes.subtitle')}</p>
+	<div class="mb-6">
+		<div class="flex items-center justify-between mb-4">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900 dark:text-white">{$t('resumes.title')}</h1>
+				<p class="text-gray-600 dark:text-gray-400 mt-1">{$t('resumes.subtitle')}</p>
+			</div>
+			<button
+				onclick={openCreateModal}
+				class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+			>
+				<Plus class="w-4 h-4" />
+				{$t('resumes.createButton')}
+			</button>
 		</div>
-		<button
-			onclick={openCreateModal}
-			class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-		>
-			<Plus class="w-4 h-4" />
-			{$t('resumes.createButton')}
-		</button>
+		<div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+			<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+				Filter by Tags
+			</label>
+			<TagInput
+				bind:tags={filterTags}
+				{availableTags}
+				onFetchTags={listResumeTags}
+				placeholder="Filter by tags..."
+				maxTags={10}
+			/>
+		</div>
 	</div>
 
 	{#if loading}
@@ -204,6 +247,26 @@
 								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
 								{$t('resumes.table.status')}
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+							>
+								Tags
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+							>
+								Applications
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+							>
+								Interview Rate
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+							>
+								Offer Rate
 							</th>
 							<th
 								class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
@@ -252,6 +315,40 @@
 												{$t('resumes.table.featured')}
 											</span>
 										{/if}
+									</div>
+								</td>
+								<td class="px-6 py-4">
+									<div class="flex flex-wrap gap-1">
+										{#if resume.tags && resume.tags.length > 0}
+											{#each resume.tags as tag}
+												<span
+													class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+												>
+													{tag}
+												</span>
+											{/each}
+										{:else}
+											<span class="text-xs text-gray-400 dark:text-gray-500">—</span>
+										{/if}
+									</div>
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+									{resume.applicationsUsed || 0}
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									<div
+										class="text-sm font-medium text-gray-900 dark:text-gray-300 cursor-help"
+										title="Interviews: {Math.round((resume.interviewRate || 0) / 100 * (resume.applicationsUsed || 0))} / {resume.applicationsUsed || 0}"
+									>
+										{(resume.interviewRate || 0).toFixed(1)}%
+									</div>
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									<div
+										class="text-sm font-medium text-gray-900 dark:text-gray-300 cursor-help"
+										title="Offers: {Math.round((resume.offerRate || 0) / 100 * (resume.applicationsUsed || 0))} / {resume.applicationsUsed || 0}"
+									>
+										{(resume.offerRate || 0).toFixed(1)}%
 									</div>
 								</td>
 								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -389,6 +486,24 @@
 						class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 						placeholder="0"
 					/>
+				</div>
+				<div>
+					<label
+						for="create-tags"
+						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Tags
+					</label>
+					<TagInput
+						bind:tags={createFormTags}
+						{availableTags}
+						onFetchTags={listResumeTags}
+						placeholder="Add tags (e.g., golang, python, aws)..."
+						maxTags={10}
+					/>
+					<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+						Add technology tags like programming languages, frameworks, tools, etc.
+					</p>
 				</div>
 			</div>
 			<div class="mt-6 flex justify-end gap-3">

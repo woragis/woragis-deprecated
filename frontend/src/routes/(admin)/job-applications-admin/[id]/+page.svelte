@@ -27,7 +27,7 @@
 		type StageType,
 		type StageOutcome
 	} from '$lib/api/jobapplicationstages';
-	import { listResumes, type Resume } from '$lib/api/resumes';
+	import { listResumes, requestCVGeneration, type Resume } from '$lib/api/resumes';
 	import { searchConversations, createConversation, type Conversation } from '$lib/api/chats';
 	import InlineChat from '$lib/components/InlineChat.svelte';
 	import { MessageSquare } from 'lucide-svelte';
@@ -81,6 +81,7 @@
 	let formSource = $state('');
 	let formApplicationMethod = $state('');
 	let formLanguage = $state('');
+	let requestingCV = $state(false);
 
 	// Response form
 	let formResponseType = $state<ResponseType>('no-response');
@@ -474,6 +475,48 @@
 			console.error('Error deleting interview stage:', err);
 		}
 	}
+
+	async function handleRequestCV() {
+		if (!application) return;
+		if (!confirm('This will generate a new CV tailored to this job application. Continue?')) return;
+		
+		requestingCV = true;
+		try {
+			const generatedResume = await requestCVGeneration({
+				jobApplicationId: application.id,
+				language: application.language || 'en'
+			});
+			
+			// Update the job application with the generated resume
+			await updateJobApplication(application.id, {
+				resumeId: generatedResume.id
+			});
+			
+			// Refresh resumes list and application
+			await Promise.all([fetchResumes(), loadApplication()]);
+			alert('CV generated successfully and associated with this job application!');
+		} catch (err) {
+			alert(err instanceof Error ? err.message : 'Failed to generate CV');
+			console.error('Error generating CV:', err);
+		} finally {
+			requestingCV = false;
+		}
+	}
+
+	async function handleSelectCV() {
+		if (!application || !formResumeId) return;
+		try {
+			await updateJobApplication(application.id, {
+				resumeId: formResumeId
+			});
+			await loadApplication();
+			showEditModal = false;
+			alert('CV associated successfully!');
+		} catch (err) {
+			alert(err instanceof Error ? err.message : 'Failed to associate CV');
+			console.error('Error associating CV:', err);
+		}
+	}
 </script>
 
 <div class="page-container">
@@ -507,6 +550,9 @@
 							<Button onclick={handleStartChat} variant="primary">
 								<MessageSquare class="icon" />
 								Start Chat
+							</Button>
+							<Button onclick={handleRequestCV} variant="primary" disabled={requestingCV}>
+								{requestingCV ? 'Generating CV...' : 'Request CV'}
 							</Button>
 							<Button onclick={openResponseModal} variant="primary">Add Response</Button>
 							<Button onclick={openStageModal} variant="primary">Add Interview Stage</Button>
@@ -560,17 +606,20 @@
 				<!-- Left: Job Application Info -->
 				<div class="desktop-left">
 					<div class="details-container">
-						<div class="details-header">
-							<h2>{application.companyName} - {application.jobTitle}</h2>
-							<div class="detail-actions">
-								<Button onclick={handleStartChat} variant="primary">
-									<MessageSquare class="icon" />
-									Start Chat
-								</Button>
-								<Button onclick={openResponseModal} variant="primary">Add Response</Button>
-								<Button onclick={openStageModal} variant="primary">Add Interview Stage</Button>
-							</div>
+					<div class="details-header">
+						<h2>{application.companyName} - {application.jobTitle}</h2>
+						<div class="detail-actions">
+							<Button onclick={handleStartChat} variant="primary">
+								<MessageSquare class="icon" />
+								Start Chat
+							</Button>
+							<Button onclick={handleRequestCV} variant="primary" disabled={requestingCV}>
+								{requestingCV ? 'Generating CV...' : 'Request CV'}
+							</Button>
+							<Button onclick={openResponseModal} variant="primary">Add Response</Button>
+							<Button onclick={openStageModal} variant="primary">Add Interview Stage</Button>
 						</div>
+					</div>
 
 						<div class="details-grid">
 							<ApplicationInfoSection {application} />
@@ -649,7 +698,18 @@
 					></textarea>
 					<small>This description will be available to the AI chat for context about job requirements.</small>
 				</div>
+				<div class="form-group">
+					<label>Associated CV</label>
+					<select bind:value={formResumeId}>
+						<option value="">-- Select a CV --</option>
+						{#each resumes as resume}
+							<option value={resume.id}>{resume.title} {resume.isMain ? '(Main)' : ''}</option>
+						{/each}
+					</select>
+					<small>Select an existing CV to associate with this job application, or use "Request CV" to generate a new one.</small>
+				</div>
 				<div class="form-actions">
+					<Button onclick={handleSelectCV} variant="primary" disabled={!formResumeId}>Associate CV</Button>
 					<Button onclick={handleUpdate} variant="primary">Update</Button>
 					<Button onclick={() => { showEditModal = false; }} variant="secondary">Cancel</Button>
 				</div>
