@@ -343,7 +343,7 @@ class Worker:
                 job["status"] = "pending"
                 job["scheduled_at"] = (
                     datetime.utcnow().timestamp() + backoff_seconds
-                ).isoformat()
+                )
 
                 # Store updated job
                 job_key = f"resumes:job:{job_id}"

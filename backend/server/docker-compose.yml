@@ -163,9 +163,14 @@ services:
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       RESUME_OUTPUT_DIR: /app/output
       RESULTS_LOG_DIR: /app/results
+      LOG_DIR: /app/logs
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      QUEUE_TIMEOUT: ${QUEUE_TIMEOUT:-5}
     volumes:
       - ./resume-worker/output:/app/output
       - ./resume-worker/results:/app/results
+      - ./resume-worker/logs:/app/logs
+    command: ["python", "/app/src/main.py", "--worker"]
     restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)

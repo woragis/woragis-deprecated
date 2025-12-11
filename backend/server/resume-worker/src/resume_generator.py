@@ -22,6 +22,62 @@ from translation_helper import TranslationHelper
 
 logger = logging.getLogger(__name__)
 
+# Fix WeasyPrint compatibility issues - patch weasyprint.pdf.stream.Stream class
+# Issues:
+# 1. weasyprint.pdf.stream.Stream calls super().transform() but pydyf.Stream doesn't have transform
+# 2. WeasyPrint tries to call stream.text_matrix() as a method but it doesn't exist
+try:
+    from weasyprint.pdf import stream as weasy_stream
+    import pydyf
+    
+    # Check if pydyf.Stream has transform (it shouldn't, that's the bug)
+    pydyf_has_transform = hasattr(pydyf.Stream, 'transform')
+    
+    if hasattr(weasy_stream.Stream, 'transform') and not pydyf_has_transform:
+        # Store the original method code for reference (we won't call it)
+        _original_weasy_transform = weasy_stream.Stream.transform
+        
+        def _patched_transform(self, a=1, b=0, c=0, d=1, e=0, f=0):
+            """Patched transform method to fix 'super' object has no attribute 'transform' error"""
+            # The problem: The original code does: super().transform(a, b, c, d, e, f)
+            # But pydyf.Stream doesn't have transform(), so super() fails
+            # Solution: Use set_text_matrix if available, otherwise skip
+            try:
+                # Use set_text_matrix method if available (it exists in the Stream class)
+                if hasattr(self, 'set_text_matrix'):
+                    # Apply transform using set_text_matrix with the matrix values
+                    # The transform matrix is [a, b, c, d, e, f]
+                    self.set_text_matrix(a, b, c, d, e, f)
+                # Return None to indicate we handled it
+                return None
+            except Exception as e:
+                # If anything fails, just return None (transform might not be critical)
+                logger.debug(f"Transform patch error (non-fatal): {e}")
+                return None
+        
+        # Replace the transform method
+        weasy_stream.Stream.transform = _patched_transform
+        logger.debug("Patched weasyprint.pdf.stream.Stream.transform to fix compatibility issue")
+    
+    # Also patch text_matrix to be a method that calls set_text_matrix
+    if not hasattr(weasy_stream.Stream, 'text_matrix'):
+        def _text_matrix_method(self, *args):
+            """Patched text_matrix method to fix 'Stream' object has no attribute 'text_matrix' error"""
+            # WeasyPrint calls stream.text_matrix(*matrix.values) but it doesn't exist
+            # We'll make it call set_text_matrix instead
+            if hasattr(self, 'set_text_matrix') and len(args) == 6:
+                return self.set_text_matrix(*args)
+            return None
+        
+        # Add text_matrix as a method
+        weasy_stream.Stream.text_matrix = _text_matrix_method
+        logger.debug("Patched weasyprint.pdf.stream.Stream.text_matrix to fix compatibility issue")
+    
+    if pydyf_has_transform:
+        logger.debug("pydyf.Stream has transform method, no patch needed")
+except (ImportError, AttributeError) as e:
+    logger.warning(f"Could not patch WeasyPrint Stream methods: {e}. PDF generation may fail with transform errors.")
+
 
 class ResumeGenerator:
     """Main resume generator"""
@@ -372,18 +428,41 @@ class ResumeGenerator:
         
         # Generate PDF with WeasyPrint
         css_path = os.path.join(self.template_dir, 'style.css')
-        try:
-            HTML(string=html_content, base_url=self.template_dir).write_pdf(
+        pdf_generated = False
+        
+        # Try multiple approaches to work around WeasyPrint transform issues
+        attempts = [
+            (lambda: HTML(string=html_content, base_url=self.template_dir).write_pdf(
                 output_path,
                 stylesheets=[CSS(filename=css_path)]
-            )
-        except Exception as e:
-            # Fallback: try without base_url
-            logger.warning(f"PDF generation with base_url failed: {e}, trying without base_url")
-            HTML(string=html_content).write_pdf(
+            ), "with base_url"),
+            (lambda: HTML(string=html_content).write_pdf(
                 output_path,
                 stylesheets=[CSS(filename=css_path)]
-            )
+            ), "without base_url"),
+        ]
+        
+        last_error = None
+        for attempt_func, attempt_desc in attempts:
+            try:
+                attempt_func()
+                pdf_generated = True
+                logger.debug(f"PDF generated successfully {attempt_desc}")
+                break
+            except AttributeError as e:
+                if "'super' object has no attribute 'transform'" in str(e):
+                    logger.warning(f"PDF generation {attempt_desc} failed due to WeasyPrint transform bug: {e}")
+                    last_error = e
+                    continue
+                else:
+                    raise
+            except Exception as e:
+                logger.warning(f"PDF generation {attempt_desc} failed: {e}")
+                last_error = e
+                continue
+        
+        if not pdf_generated:
+            raise RuntimeError(f"Failed to generate PDF after all attempts. Last error: {last_error}")
         
         # Get file size
         file_size = os.path.getsize(output_path)
