@@ -14,11 +14,13 @@
 	import ApplicationMetrics from './_sections/ApplicationMetrics.svelte';
 	import ApplicationsTable from './_sections/ApplicationsTable.svelte';
 	import CreateApplicationModal from './_components/CreateApplicationModal.svelte';
+	import EditApplicationModal from './_components/EditApplicationModal.svelte';
+	import ApplicationDetailsModal from './_components/ApplicationDetailsModal.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	import { showToast } from '$lib/utils/toast';
-	import { updateJobApplicationStatus, type ApplicationStatus } from '$lib/api/jobapplications';
+	import { updateJobApplicationStatus, updateJobApplication, type ApplicationStatus, type UpdateJobApplicationInput, type JobApplication } from '$lib/api/jobapplications';
 
 	const tFn = useTranslation();
 	
@@ -37,6 +39,9 @@
 	let selectedApplications = $state<Set<string>>(new Set());
 	let showBatchActions = $state(false);
 	let quickFilter = $state<string>('');
+	let showEditModal = $state(false);
+	let showDetailsModal = $state(false);
+	let selectedApplication: JobApplication | null = $state(null);
 
 	onMount(async () => {
 		await fetchApplications();
@@ -85,6 +90,34 @@
 			showToast(message, 'error');
 			console.error('Error deleting job application:', err);
 		}
+	}
+
+	function handleView(application: JobApplication) {
+		selectedApplication = application;
+		showDetailsModal = true;
+	}
+
+	function handleEdit(application: JobApplication) {
+		selectedApplication = application;
+		showEditModal = true;
+	}
+
+	async function handleUpdate(id: string, input: UpdateJobApplicationInput) {
+		try {
+			await updateJobApplication(id, input);
+			await fetchApplications();
+			showToast('Application updated successfully', 'success');
+		} catch (err) {
+			const message = err instanceof Error ? err.message : 'Failed to update application';
+			showToast(message, 'error');
+			console.error('Error updating job application:', err);
+			throw err;
+		}
+	}
+
+	function handleEditFromDetails() {
+		showDetailsModal = false;
+		showEditModal = true;
 	}
 
 	async function handleBatchDelete() {
@@ -384,6 +417,8 @@
 			bind:selectedApplications
 			onToggleSelection={toggleSelection}
 			onToggleSelectAll={toggleSelectAll}
+			onView={handleView}
+			onEdit={handleEdit}
 		/>
 	{/if}
 </div>
@@ -392,6 +427,19 @@
 	bind:open={showCreateModal} 
 	onSubmit={handleCreate}
 	existingApplications={applications}
+/>
+
+<EditApplicationModal 
+	bind:open={showEditModal}
+	application={selectedApplication}
+	onSubmit={handleUpdate}
+/>
+
+<ApplicationDetailsModal
+	bind:open={showDetailsModal}
+	application={selectedApplication}
+	onEdit={handleEditFromDetails}
+	onDelete={handleDelete}
 />
 
 <ToastContainer />

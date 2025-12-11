@@ -9,13 +9,17 @@
 		onDelete,
 		selectedApplications = $bindable(new Set<string>()),
 		onToggleSelection,
-		onToggleSelectAll
+		onToggleSelectAll,
+		onView,
+		onEdit
 	}: {
 		applications?: JobApplication[];
 		onDelete?: (id: string) => void;
 		selectedApplications?: Set<string>;
 		onToggleSelection?: (id: string) => void;
 		onToggleSelectAll?: () => void;
+		onView?: (application: JobApplication) => void;
+		onEdit?: (application: JobApplication) => void;
 	} = $props();
 	
 	const tFn = useTranslation();
@@ -59,6 +63,8 @@
 						{onDelete}
 						selected={selectedApplications.has(app.id)}
 						onToggleSelection={onToggleSelection}
+						onView={onView}
+						onEdit={onEdit}
 					/>
 				{/each}
 			</tbody>

@@ -8,12 +8,16 @@
 		application,
 		onDelete,
 		selected = false,
-		onToggleSelection
+		onToggleSelection,
+		onView,
+		onEdit
 	}: {
 		application: JobApplication;
 		onDelete?: (id: string) => void;
 		selected?: boolean;
 		onToggleSelection?: (id: string) => void;
+		onView?: (application: JobApplication) => void;
+		onEdit?: (application: JobApplication) => void;
 	} = $props();
 	
 	const tFn = useTranslation();
@@ -121,12 +125,17 @@
 	</td>
 	<td>{formatDate(application.appliedAt)}</td>
 	<td class="actions-cell">
-		<a href="/job-applications-admin/{application.id}" class="view-link">
-			{tFn('jobApplications.table.view')}
-		</a>
-		<Button variant="danger" size="sm" onclick={() => onDelete?.(application.id)}>
-			{tFn('jobApplications.table.delete')}
-		</Button>
+		<div class="actions">
+			<Button variant="secondary" size="sm" onclick={() => onView?.(application)}>
+				View
+			</Button>
+			<Button variant="primary" size="sm" onclick={() => onEdit?.(application)}>
+				Edit
+			</Button>
+			<Button variant="danger" size="sm" onclick={() => onDelete?.(application.id)}>
+				Delete
+			</Button>
+		</div>
 	</td>
 </tr>
 
@@ -178,21 +187,6 @@
 		display: flex;
 		gap: var(--spacing-sm);
 		align-items: center;
-	}
-	
-	.view-link {
-		padding: var(--spacing-xs) var(--spacing-sm);
-		background-color: var(--color-success);
-		color: white;
-		border-radius: var(--radius-md);
-		text-decoration: none;
-		font-size: var(--font-size-sm);
-		transition: background-color var(--transition-base);
-		display: inline-block;
-	}
-	
-	.view-link:hover {
-		background-color: var(--color-success-hover);
 	}
 
 	.status-cell {
