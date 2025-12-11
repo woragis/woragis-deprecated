@@ -37,6 +37,7 @@
 	let formTags = $state<string[]>([]);
 	let formTagInput = $state('');
 	let formFollowUpDate = $state('');
+	let formNotes = $state('');
 	
 	let resumes: Resume[] = $state([]);
 	let loadingResumes = $state(false);
@@ -323,6 +324,7 @@
 		formTags = [];
 		formTagInput = '';
 		formFollowUpDate = '';
+		formNotes = '';
 	}
 
 	function addTag() {
@@ -448,7 +450,8 @@
 				status: formStatus,
 				interestLevel: formInterestLevel.trim() || undefined,
 				tags: formTags.length > 0 ? formTags : undefined,
-				followUpDate: formFollowUpDate || undefined
+				followUpDate: formFollowUpDate || undefined,
+				notes: formNotes.trim() || undefined
 			};
 			
 			await onSubmit(input);
@@ -536,6 +539,12 @@
 				label={tFn('jobApplications.modal.coverLetter')}
 				bind:value={formCoverLetter}
 				rows={6}
+			/>
+			<Textarea
+				label="Notes"
+				bind:value={formNotes}
+				rows={4}
+				placeholder="Add any notes about this application..."
 			/>
 			{#if resumes.length > 0}
 				<div class="form-group">

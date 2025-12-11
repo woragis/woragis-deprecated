@@ -60,6 +60,7 @@ export interface CreateJobApplicationInput {
 	interestLevel?: string;
 	tags?: string[];
 	followUpDate?: string;
+	notes?: string;
 }
 
 export interface UpdateJobApplicationStatusInput {

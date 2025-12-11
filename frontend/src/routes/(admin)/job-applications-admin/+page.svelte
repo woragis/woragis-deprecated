@@ -11,6 +11,7 @@
 	import PageHeader from './_sections/PageHeader.svelte';
 	import SearchBar from './_sections/SearchBar.svelte';
 	import AdvancedFilters from './_sections/AdvancedFilters.svelte';
+	import ApplicationMetrics from './_sections/ApplicationMetrics.svelte';
 	import ApplicationsTable from './_sections/ApplicationsTable.svelte';
 	import CreateApplicationModal from './_components/CreateApplicationModal.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
@@ -293,6 +294,8 @@
 
 <div class="page-container">
 	<PageHeader onCreateClick={openCreateModal} />
+
+	<ApplicationMetrics applications={applications} />
 
 	<SearchBar bind:searchQuery />
 	

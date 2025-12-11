@@ -72,7 +72,7 @@
 	const statusInfo = $derived(getStatusInfo(application));
 </script>
 
-<tr class="table-row" class:selected>
+<tr class="table-row" class:selected data-status={application.status}>
 	<td>
 		<input
 			type="checkbox"
@@ -141,6 +141,27 @@
 
 	.table-row.selected {
 		background-color: var(--color-bg-secondary);
+	}
+
+	.table-row td:first-child {
+		width: 40px;
+	}
+
+	/* Status-based row styling */
+	.table-row[data-status="accepted"] {
+		border-left: 3px solid var(--color-success, #10b981);
+	}
+
+	.table-row[data-status="rejected"] {
+		border-left: 3px solid var(--color-danger, #ef4444);
+	}
+
+	.table-row[data-status="contacted"] {
+		border-left: 3px solid var(--color-primary, #3b82f6);
+	}
+
+	.table-row[data-status="failed"] {
+		opacity: 0.7;
 	}
 
 	.row-checkbox {

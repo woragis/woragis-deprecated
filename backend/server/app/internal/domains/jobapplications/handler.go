@@ -84,6 +84,7 @@ type createJobApplicationPayload struct {
 	InterestLevel string   `json:"interestLevel,omitempty"`
 	Tags          []string `json:"tags,omitempty"`
 	FollowUpDate  string   `json:"followUpDate,omitempty"`
+	Notes         string   `json:"notes,omitempty"`
 }
 
 type updateStatusPayload struct {
@@ -149,6 +150,10 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 			updates.FollowUpDate = &followUpDate
 			hasUpdates = true
 		}
+	}
+	if payload.Notes != "" {
+		updates.Notes = &payload.Notes
+		hasUpdates = true
 	}
 
 	if hasUpdates {
