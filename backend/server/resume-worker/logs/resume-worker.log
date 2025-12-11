@@ -1795,3 +1795,654 @@
 {"timestamp": "2025-12-11T04:17:15.122Z", "level": "DEBUG", "service": "resume-worker", "message": "PDF generated successfully with base_url"}
 {"timestamp": "2025-12-11T04:17:15.125Z", "level": "INFO", "service": "resume-worker", "message": "Resume generated: /app/output/resume_Desenvolvedor_Backend_-_Python_20251211_041713.pdf (83737 bytes)"}
 {"timestamp": "2025-12-11T04:17:15.128Z", "level": "INFO", "service": "resume-worker", "message": "Resume generation completed", "context": {"job_id": "e978a8a4-fe6c-4182-9b7b-9d271d84c20b", "user_id": "6ad0d828-f605-45fc-a545-3441e17a015c", "duration_ms": 2015, "file_size": 83737, "output_path": "/app/output/resume_Desenvolvedor_Backend_-_Python_20251211_041713.pdf"}}
+{"timestamp": "2025-12-11T04:24:33.700Z", "level": "INFO", "service": "resume-worker", "message": "Starting resume generation worker"}
+{"timestamp": "2025-12-11T04:24:33.716Z", "level": "INFO", "service": "resume-worker", "message": "Connected to Redis", "context": {"redis_url": "redis://redis:6379/0"}}
+{"timestamp": "2025-12-11T04:24:33.783Z", "level": "INFO", "service": "resume-worker", "message": "Database connection established"}
+{"timestamp": "2025-12-11T04:24:33.828Z", "level": "INFO", "service": "resume-worker", "message": "Translation helper database connection established"}
+{"timestamp": "2025-12-11T04:24:33.831Z", "level": "INFO", "service": "resume-worker", "message": "Resume generation worker started"}
+{"timestamp": "2025-12-11T04:24:39.086Z", "level": "INFO", "service": "resume-worker", "message": "Processing resume generation job", "context": {"job_id": "822df913-7d66-494e-849e-cb0200c336ff", "user_id": "6ad0d828-f605-45fc-a545-3441e17a015c", "job_application_id": "23039927-0434-430c-bcf6-42502251a23b"}}
+{"timestamp": "2025-12-11T04:24:39.089Z", "level": "INFO", "service": "resume-worker", "message": "Generating resume for user 6ad0d828-f605-45fc-a545-3441e17a015c, job: Desenvolvedor Backend - Python"}
+{"timestamp": "2025-12-11T04:24:39.101Z", "level": "INFO", "service": "resume-worker", "message": "Extracted keywords: {'tech_categories': ['backend', 'language'], 'cert_categories': ['programming'], 'skill_names': ['Python']}"}
+{"timestamp": "2025-12-11T04:24:39.131Z", "level": "INFO", "service": "resume-worker", "message": "Found 13 relevant projects"}
+{"timestamp": "2025-12-11T04:24:39.151Z", "level": "INFO", "service": "resume-worker", "message": "Found 1 relevant certifications"}
+{"timestamp": "2025-12-11T04:24:39.157Z", "level": "INFO", "service": "resume-worker", "message": "Found 4 publications"}
+{"timestamp": "2025-12-11T04:24:39.164Z", "level": "INFO", "service": "resume-worker", "message": "Generating resume sections with AI..."}
+{"timestamp": "2025-12-11T04:24:39.171Z", "level": "DEBUG", "service": "resume-worker", "message": "Starting new HTTP connection (1): ai-service:8000"}
+{"timestamp": "2025-12-11T04:24:41.744Z", "level": "DEBUG", "service": "resume-worker", "message": "http://ai-service:8000 \"POST /v1/chat HTTP/1.1\" 200 967"}
+{"timestamp": "2025-12-11T04:24:41.747Z", "level": "DEBUG", "service": "resume-worker", "message": "Starting new HTTP connection (1): ai-service:8000"}
+{"timestamp": "2025-12-11T04:24:45.549Z", "level": "DEBUG", "service": "resume-worker", "message": "http://ai-service:8000 \"POST /v1/chat HTTP/1.1\" 200 747"}
+{"timestamp": "2025-12-11T04:24:45.551Z", "level": "DEBUG", "service": "resume-worker", "message": "Starting new HTTP connection (1): ai-service:8000"}
+{"timestamp": "2025-12-11T04:24:56.152Z", "level": "DEBUG", "service": "resume-worker", "message": "http://ai-service:8000 \"POST /v1/chat HTTP/1.1\" 200 2926"}
+{"timestamp": "2025-12-11T04:24:56.155Z", "level": "DEBUG", "service": "resume-worker", "message": "Starting new HTTP connection (1): ai-service:8000"}
+{"timestamp": "2025-12-11T04:25:00.535Z", "level": "DEBUG", "service": "resume-worker", "message": "http://ai-service:8000 \"POST /v1/chat HTTP/1.1\" 200 710"}
+{"timestamp": "2025-12-11T04:25:00.537Z", "level": "DEBUG", "service": "resume-worker", "message": "Starting new HTTP connection (1): ai-service:8000"}
+{"timestamp": "2025-12-11T04:25:06.800Z", "level": "DEBUG", "service": "resume-worker", "message": "http://ai-service:8000 \"POST /v1/chat HTTP/1.1\" 200 1212"}
+{"timestamp": "2025-12-11T04:25:06.802Z", "level": "INFO", "service": "resume-worker", "message": "Hard skills generated: 1087 characters"}
+{"timestamp": "2025-12-11T04:25:06.803Z", "level": "INFO", "service": "resume-worker", "message": "Generating tags..."}
+{"timestamp": "2025-12-11T04:25:06.805Z", "level": "DEBUG", "service": "resume-worker", "message": "Starting new HTTP connection (1): ai-service:8000"}
+{"timestamp": "2025-12-11T04:25:09.743Z", "level": "DEBUG", "service": "resume-worker", "message": "http://ai-service:8000 \"POST /v1/chat HTTP/1.1\" 200 82"}
+{"timestamp": "2025-12-11T04:25:09.744Z", "level": "INFO", "service": "resume-worker", "message": "Generated 7 tags: python, golang, docker, aws, git, postgresql, ci-cd"}
+{"timestamp": "2025-12-11T04:25:09.828Z", "level": "WARNING", "service": "resume-worker", "message": "Ignored `filter: grayscale(0.7)` at 397:5, unknown property."}
+{"timestamp": "2025-12-11T04:25:10.658Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.659Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 87"}
+{"timestamp": "2025-12-11T04:25:10.659Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 140 29"}
+{"timestamp": "2025-12-11T04:25:10.660Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 181 539"}
+{"timestamp": "2025-12-11T04:25:10.665Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.666Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 84"}
+{"timestamp": "2025-12-11T04:25:10.667Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 137 13"}
+{"timestamp": "2025-12-11T04:25:10.667Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 162 865"}
+{"timestamp": "2025-12-11T04:25:10.671Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.672Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 117"}
+{"timestamp": "2025-12-11T04:25:10.673Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 170 38"}
+{"timestamp": "2025-12-11T04:25:10.673Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 220 1330"}
+{"timestamp": "2025-12-11T04:25:10.716Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.718Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 66"}
+{"timestamp": "2025-12-11T04:25:10.718Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 119 18"}
+{"timestamp": "2025-12-11T04:25:10.719Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 149 854"}
+{"timestamp": "2025-12-11T04:25:10.727Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.729Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 699"}
+{"timestamp": "2025-12-11T04:25:10.729Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 752 233"}
+{"timestamp": "2025-12-11T04:25:10.730Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 997 3340"}
+{"timestamp": "2025-12-11T04:25:10.735Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.735Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 684"}
+{"timestamp": "2025-12-11T04:25:10.736Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 737 228"}
+{"timestamp": "2025-12-11T04:25:10.737Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 977 4822"}
+{"timestamp": "2025-12-11T04:25:10.743Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.744Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 402"}
+{"timestamp": "2025-12-11T04:25:10.745Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 455 134"}
+{"timestamp": "2025-12-11T04:25:10.745Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 601 1574"}
+{"timestamp": "2025-12-11T04:25:10.750Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.751Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 714"}
+{"timestamp": "2025-12-11T04:25:10.751Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 767 238"}
+{"timestamp": "2025-12-11T04:25:10.752Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 1017 2940"}
+{"timestamp": "2025-12-11T04:25:10.758Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.759Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 270"}
+{"timestamp": "2025-12-11T04:25:10.760Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 323 90"}
+{"timestamp": "2025-12-11T04:25:10.761Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 425 1504"}
+{"timestamp": "2025-12-11T04:25:10.764Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:10.765Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'PLTE' 41 276"}
+{"timestamp": "2025-12-11T04:25:10.766Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'tRNS' 329 92"}
+{"timestamp": "2025-12-11T04:25:10.766Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 433 1343"}
+{"timestamp": "2025-12-11T04:25:10.789Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'maxp' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.791Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:10.794Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.005s to load 'maxp'"}
+{"timestamp": "2025-12-11T04:25:10.795Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'maxp'"}
+{"timestamp": "2025-12-11T04:25:10.796Z", "level": "INFO", "service": "resume-worker", "message": "maxp pruned"}
+{"timestamp": "2025-12-11T04:25:10.798Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'cmap' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.799Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:10.803Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'post' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.804Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:10.812Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.014s to load 'cmap'"}
+{"timestamp": "2025-12-11T04:25:10.813Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'cmap'"}
+{"timestamp": "2025-12-11T04:25:10.814Z", "level": "INFO", "service": "resume-worker", "message": "cmap pruned"}
+{"timestamp": "2025-12-11T04:25:10.814Z", "level": "INFO", "service": "resume-worker", "message": "fpgm dropped"}
+{"timestamp": "2025-12-11T04:25:10.815Z", "level": "INFO", "service": "resume-worker", "message": "prep dropped"}
+{"timestamp": "2025-12-11T04:25:10.816Z", "level": "INFO", "service": "resume-worker", "message": "cvt  dropped"}
+{"timestamp": "2025-12-11T04:25:10.817Z", "level": "INFO", "service": "resume-worker", "message": "kern dropped"}
+{"timestamp": "2025-12-11T04:25:10.817Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to load 'post'"}
+{"timestamp": "2025-12-11T04:25:10.818Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'post'"}
+{"timestamp": "2025-12-11T04:25:10.818Z", "level": "INFO", "service": "resume-worker", "message": "post pruned"}
+{"timestamp": "2025-12-11T04:25:10.820Z", "level": "INFO", "service": "resume-worker", "message": "GPOS dropped"}
+{"timestamp": "2025-12-11T04:25:10.820Z", "level": "INFO", "service": "resume-worker", "message": "GSUB dropped"}
+{"timestamp": "2025-12-11T04:25:10.820Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'glyf' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.821Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:10.822Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'loca' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.822Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:10.823Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'head' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.823Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:10.831Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.011s to load 'glyf'"}
+{"timestamp": "2025-12-11T04:25:10.832Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:10.833Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:10.834Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to close glyph list over 'cmap'"}
+{"timestamp": "2025-12-11T04:25:10.835Z", "level": "INFO", "service": "resume-worker", "message": "Added gid0 to subset"}
+{"timestamp": "2025-12-11T04:25:10.836Z", "level": "INFO", "service": "resume-worker", "message": "Closing glyph list over 'glyf': 49 glyphs before"}
+{"timestamp": "2025-12-11T04:25:10.836Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'A', 'B', 'C', 'D', 'E', 'G', 'H', 'J', 'K', 'L', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'a', 'b', 'c', 'colon', 'd', 'e', 'f', 'fi', 'g', 'h', 'hyphen', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 'space', 't', 'u', 'v', 'w', 'x', 'y', 'z']"}
+{"timestamp": "2025-12-11T04:25:10.838Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 16, 29, 36, 37, 38, 39, 40, 42, 43, 45, 46, 47, 48, 50, 51, 52, 53, 54, 55, 57, 58, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 85, 86, 87, 88, 89, 90, 91, 92, 93, 5038]"}
+{"timestamp": "2025-12-11T04:25:10.839Z", "level": "INFO", "service": "resume-worker", "message": "Closed glyph list over 'glyf': 49 glyphs after"}
+{"timestamp": "2025-12-11T04:25:10.840Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'A', 'B', 'C', 'D', 'E', 'G', 'H', 'J', 'K', 'L', 'M', 'O', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'a', 'b', 'c', 'colon', 'd', 'e', 'f', 'fi', 'g', 'h', 'hyphen', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 'space', 't', 'u', 'v', 'w', 'x', 'y', 'z']"}
+{"timestamp": "2025-12-11T04:25:10.840Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 16, 29, 36, 37, 38, 39, 40, 42, 43, 45, 46, 47, 48, 50, 51, 52, 53, 54, 55, 57, 58, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 85, 86, 87, 88, 89, 90, 91, 92, 93, 5038]"}
+{"timestamp": "2025-12-11T04:25:10.841Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.006s to close glyph list over 'glyf'"}
+{"timestamp": "2025-12-11T04:25:10.845Z", "level": "INFO", "service": "resume-worker", "message": "Retaining 49 glyphs"}
+{"timestamp": "2025-12-11T04:25:10.847Z", "level": "INFO", "service": "resume-worker", "message": "head subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.848Z", "level": "INFO", "service": "resume-worker", "message": "hhea subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.848Z", "level": "INFO", "service": "resume-worker", "message": "maxp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.849Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.849Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hmtx' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.849Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:10.850Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hhea' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.851Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:10.888Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.039s to subset 'hmtx'"}
+{"timestamp": "2025-12-11T04:25:10.890Z", "level": "INFO", "service": "resume-worker", "message": "hmtx subsetted"}
+{"timestamp": "2025-12-11T04:25:10.892Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to subset 'cmap'"}
+{"timestamp": "2025-12-11T04:25:10.893Z", "level": "INFO", "service": "resume-worker", "message": "cmap subsetted"}
+{"timestamp": "2025-12-11T04:25:10.894Z", "level": "INFO", "service": "resume-worker", "message": "loca subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.896Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'post'"}
+{"timestamp": "2025-12-11T04:25:10.897Z", "level": "INFO", "service": "resume-worker", "message": "post subsetted"}
+{"timestamp": "2025-12-11T04:25:10.898Z", "level": "INFO", "service": "resume-worker", "message": "gasp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.898Z", "level": "INFO", "service": "resume-worker", "message": "FFTM NOT subset; don't know how to subset"}
+{"timestamp": "2025-12-11T04:25:10.899Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'GDEF' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.900Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:10.902Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.003s to subset 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:10.903Z", "level": "INFO", "service": "resume-worker", "message": "GDEF subsetted"}
+{"timestamp": "2025-12-11T04:25:10.904Z", "level": "INFO", "service": "resume-worker", "message": "name subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:10.907Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to subset 'glyf'"}
+{"timestamp": "2025-12-11T04:25:10.908Z", "level": "INFO", "service": "resume-worker", "message": "glyf subsetted"}
+{"timestamp": "2025-12-11T04:25:10.909Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset GlyphOrder"}
+{"timestamp": "2025-12-11T04:25:10.910Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'head'"}
+{"timestamp": "2025-12-11T04:25:10.910Z", "level": "INFO", "service": "resume-worker", "message": "head pruned"}
+{"timestamp": "2025-12-11T04:25:10.912Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'OS/2' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.913Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:10.917Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 Unicode ranges pruned: [0, 62]"}
+{"timestamp": "2025-12-11T04:25:10.918Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 CodePage ranges pruned: [0]"}
+{"timestamp": "2025-12-11T04:25:10.919Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:10.920Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:10.921Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:10.923Z", "level": "INFO", "service": "resume-worker", "message": "GDEF pruned"}
+{"timestamp": "2025-12-11T04:25:10.924Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'name' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.924Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:10.925Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'gasp' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.926Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:10.927Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'FFTM' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.927Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:10.928Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.005s to prune 'name'"}
+{"timestamp": "2025-12-11T04:25:10.929Z", "level": "INFO", "service": "resume-worker", "message": "name pruned"}
+{"timestamp": "2025-12-11T04:25:10.931Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:10.940Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'glyf' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.941Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:10.943Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'maxp' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.944Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:10.946Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'loca' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.947Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:10.948Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'head' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.949Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:10.954Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.955Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:10.957Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.958Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:10.959Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'OS/2' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.960Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:10.962Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'cmap' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.963Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:10.964Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'name' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.964Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:10.965Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'post' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.966Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:10.967Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'gasp' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.968Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:10.969Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'FFTM' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.970Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:10.971Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'GDEF' table to disk"}
+{"timestamp": "2025-12-11T04:25:10.973Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'maxp' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.974Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:10.974Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to load 'maxp'"}
+{"timestamp": "2025-12-11T04:25:10.975Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'maxp'"}
+{"timestamp": "2025-12-11T04:25:10.976Z", "level": "INFO", "service": "resume-worker", "message": "maxp pruned"}
+{"timestamp": "2025-12-11T04:25:10.976Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'cmap' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.977Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:10.979Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'post' table from disk"}
+{"timestamp": "2025-12-11T04:25:10.980Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:10.988Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.011s to load 'cmap'"}
+{"timestamp": "2025-12-11T04:25:10.988Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'cmap'"}
+{"timestamp": "2025-12-11T04:25:10.989Z", "level": "INFO", "service": "resume-worker", "message": "cmap pruned"}
+{"timestamp": "2025-12-11T04:25:10.990Z", "level": "INFO", "service": "resume-worker", "message": "fpgm dropped"}
+{"timestamp": "2025-12-11T04:25:10.991Z", "level": "INFO", "service": "resume-worker", "message": "prep dropped"}
+{"timestamp": "2025-12-11T04:25:10.992Z", "level": "INFO", "service": "resume-worker", "message": "cvt  dropped"}
+{"timestamp": "2025-12-11T04:25:10.994Z", "level": "INFO", "service": "resume-worker", "message": "kern dropped"}
+{"timestamp": "2025-12-11T04:25:10.994Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to load 'post'"}
+{"timestamp": "2025-12-11T04:25:10.995Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'post'"}
+{"timestamp": "2025-12-11T04:25:10.996Z", "level": "INFO", "service": "resume-worker", "message": "post pruned"}
+{"timestamp": "2025-12-11T04:25:10.996Z", "level": "INFO", "service": "resume-worker", "message": "GPOS dropped"}
+{"timestamp": "2025-12-11T04:25:10.997Z", "level": "INFO", "service": "resume-worker", "message": "GSUB dropped"}
+{"timestamp": "2025-12-11T04:25:10.998Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'glyf' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.001Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:11.002Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'loca' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.003Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:11.004Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'head' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.004Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:11.010Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.012s to load 'glyf'"}
+{"timestamp": "2025-12-11T04:25:11.011Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:11.012Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:11.015Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to close glyph list over 'cmap'"}
+{"timestamp": "2025-12-11T04:25:11.015Z", "level": "INFO", "service": "resume-worker", "message": "Added gid0 to subset"}
+{"timestamp": "2025-12-11T04:25:11.016Z", "level": "INFO", "service": "resume-worker", "message": "Closing glyph list over 'MATH': 74 glyphs before"}
+{"timestamp": "2025-12-11T04:25:11.017Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'a', 'asterisk', 'at', 'atilde', 'b', 'bar', 'bullet', 'c', 'comma', 'd', 'e', 'eight', 'f', 'fi', 'five', 'four', 'g', 'h', 'hyphen', 'i', 'iacute', 'j', 'k', 'l', 'm', 'n', 'nine', 'o', 'one', 'p', 'parenleft', 'parenright', 'percent', 'period', 'plus', 'q', 'r', 's', 'space', 't', 'three', 'two', 'u', 'uniFB03', 'v', 'w', 'x', 'y', 'z', 'zero']"}
+{"timestamp": "2025-12-11T04:25:11.019Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 8, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 27, 28, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 95, 165, 175, 2821, 5042, 5044]"}
+{"timestamp": "2025-12-11T04:25:11.020Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'MATH' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.020Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'MATH' table"}
+{"timestamp": "2025-12-11T04:25:11.025Z", "level": "INFO", "service": "resume-worker", "message": "Closed glyph list over 'MATH': 80 glyphs after"}
+{"timestamp": "2025-12-11T04:25:11.026Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'a', 'asterisk', 'at', 'atilde', 'b', 'bar', 'bullet', 'c', 'comma', 'd', 'e', 'eight', 'f', 'fi', 'five', 'four', 'g', 'h', 'hyphen', 'i', 'iacute', 'j', 'k', 'l', 'm', 'n', 'nine', 'o', 'one', 'p', 'parenleft', 'parenright', 'percent', 'period', 'plus', 'q', 'r', 's', 'space', 't', 'three', 'two', 'u', 'uni239B', 'uni239C', 'uni239D', 'uni239E', 'uni239F', 'uni23A0', 'uniFB03', 'v', 'w', 'x', 'y', 'z', 'zero']"}
+{"timestamp": "2025-12-11T04:25:11.027Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 8, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 27, 28, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 95, 165, 175, 2821, 3507, 3508, 3509, 3510, 3511, 3512, 5042, 5044]"}
+{"timestamp": "2025-12-11T04:25:11.028Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.012s to close glyph list over 'MATH'"}
+{"timestamp": "2025-12-11T04:25:11.029Z", "level": "INFO", "service": "resume-worker", "message": "Closing glyph list over 'glyf': 80 glyphs before"}
+{"timestamp": "2025-12-11T04:25:11.030Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'a', 'asterisk', 'at', 'atilde', 'b', 'bar', 'bullet', 'c', 'comma', 'd', 'e', 'eight', 'f', 'fi', 'five', 'four', 'g', 'h', 'hyphen', 'i', 'iacute', 'j', 'k', 'l', 'm', 'n', 'nine', 'o', 'one', 'p', 'parenleft', 'parenright', 'percent', 'period', 'plus', 'q', 'r', 's', 'space', 't', 'three', 'two', 'u', 'uni239B', 'uni239C', 'uni239D', 'uni239E', 'uni239F', 'uni23A0', 'uniFB03', 'v', 'w', 'x', 'y', 'z', 'zero']"}
+{"timestamp": "2025-12-11T04:25:11.031Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 8, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 27, 28, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 95, 165, 175, 2821, 3507, 3508, 3509, 3510, 3511, 3512, 5042, 5044]"}
+{"timestamp": "2025-12-11T04:25:11.031Z", "level": "INFO", "service": "resume-worker", "message": "Closed glyph list over 'glyf': 83 glyphs after"}
+{"timestamp": "2025-12-11T04:25:11.032Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'a', 'acute', 'asterisk', 'at', 'atilde', 'b', 'bar', 'bullet', 'c', 'comma', 'd', 'dotlessi', 'e', 'eight', 'f', 'fi', 'five', 'four', 'g', 'h', 'hyphen', 'i', 'iacute', 'j', 'k', 'l', 'm', 'n', 'nine', 'o', 'one', 'p', 'parenleft', 'parenright', 'percent', 'period', 'plus', 'q', 'r', 's', 'space', 't', 'three', 'tilde', 'two', 'u', 'uni239B', 'uni239C', 'uni239D', 'uni239E', 'uni239F', 'uni23A0', 'uniFB03', 'v', 'w', 'x', 'y', 'z', 'zero']"}
+{"timestamp": "2025-12-11T04:25:11.033Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 8, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 27, 28, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 95, 118, 165, 175, 243, 670, 2821, 3507, 3508, 3509, 3510, 3511, 3512, 5042, 5044]"}
+{"timestamp": "2025-12-11T04:25:11.034Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.005s to close glyph list over 'glyf'"}
+{"timestamp": "2025-12-11T04:25:11.041Z", "level": "INFO", "service": "resume-worker", "message": "Retaining 83 glyphs"}
+{"timestamp": "2025-12-11T04:25:11.042Z", "level": "INFO", "service": "resume-worker", "message": "head subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.043Z", "level": "INFO", "service": "resume-worker", "message": "hhea subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.045Z", "level": "INFO", "service": "resume-worker", "message": "maxp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.046Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.047Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hmtx' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.048Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:11.049Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hhea' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.050Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:11.058Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.011s to subset 'hmtx'"}
+{"timestamp": "2025-12-11T04:25:11.060Z", "level": "INFO", "service": "resume-worker", "message": "hmtx subsetted"}
+{"timestamp": "2025-12-11T04:25:11.063Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to subset 'cmap'"}
+{"timestamp": "2025-12-11T04:25:11.063Z", "level": "INFO", "service": "resume-worker", "message": "cmap subsetted"}
+{"timestamp": "2025-12-11T04:25:11.065Z", "level": "INFO", "service": "resume-worker", "message": "loca subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.065Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'post'"}
+{"timestamp": "2025-12-11T04:25:11.068Z", "level": "INFO", "service": "resume-worker", "message": "post subsetted"}
+{"timestamp": "2025-12-11T04:25:11.071Z", "level": "INFO", "service": "resume-worker", "message": "gasp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.072Z", "level": "INFO", "service": "resume-worker", "message": "FFTM NOT subset; don't know how to subset"}
+{"timestamp": "2025-12-11T04:25:11.079Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'MATH'"}
+{"timestamp": "2025-12-11T04:25:11.080Z", "level": "INFO", "service": "resume-worker", "message": "MATH subsetted"}
+{"timestamp": "2025-12-11T04:25:11.081Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'GDEF' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.081Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:11.083Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.003s to subset 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:11.084Z", "level": "INFO", "service": "resume-worker", "message": "GDEF subsetted"}
+{"timestamp": "2025-12-11T04:25:11.085Z", "level": "INFO", "service": "resume-worker", "message": "name subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.088Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to subset 'glyf'"}
+{"timestamp": "2025-12-11T04:25:11.089Z", "level": "INFO", "service": "resume-worker", "message": "glyf subsetted"}
+{"timestamp": "2025-12-11T04:25:11.090Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset GlyphOrder"}
+{"timestamp": "2025-12-11T04:25:11.092Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'head'"}
+{"timestamp": "2025-12-11T04:25:11.094Z", "level": "INFO", "service": "resume-worker", "message": "head pruned"}
+{"timestamp": "2025-12-11T04:25:11.095Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'OS/2' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.096Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:11.097Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 Unicode ranges pruned: [0, 1, 31, 62]"}
+{"timestamp": "2025-12-11T04:25:11.097Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 CodePage ranges pruned: [0]"}
+{"timestamp": "2025-12-11T04:25:11.101Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:11.102Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:11.103Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:11.103Z", "level": "INFO", "service": "resume-worker", "message": "GDEF pruned"}
+{"timestamp": "2025-12-11T04:25:11.104Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'name' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.104Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:11.108Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'gasp' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.108Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:11.109Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'FFTM' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.109Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:11.110Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.006s to prune 'name'"}
+{"timestamp": "2025-12-11T04:25:11.110Z", "level": "INFO", "service": "resume-worker", "message": "name pruned"}
+{"timestamp": "2025-12-11T04:25:11.111Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:11.125Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'glyf' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.126Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:11.130Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'maxp' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.131Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:11.133Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'loca' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.134Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:11.134Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'head' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.135Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:11.141Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.142Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:11.145Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.146Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:11.147Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'OS/2' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.148Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:11.149Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'cmap' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.150Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:11.614Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'name' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.615Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:11.616Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'post' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.617Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:11.621Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'gasp' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.621Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:11.622Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'FFTM' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.623Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:11.624Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'GDEF' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.624Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'MATH' table"}
+{"timestamp": "2025-12-11T04:25:11.626Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'MATH' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.628Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'maxp' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.628Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:11.629Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to load 'maxp'"}
+{"timestamp": "2025-12-11T04:25:11.630Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'maxp'"}
+{"timestamp": "2025-12-11T04:25:11.630Z", "level": "INFO", "service": "resume-worker", "message": "maxp pruned"}
+{"timestamp": "2025-12-11T04:25:11.631Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'cmap' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.632Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:11.632Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to load 'cmap'"}
+{"timestamp": "2025-12-11T04:25:11.633Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'cmap'"}
+{"timestamp": "2025-12-11T04:25:11.634Z", "level": "INFO", "service": "resume-worker", "message": "cmap pruned"}
+{"timestamp": "2025-12-11T04:25:11.635Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'post' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.637Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:11.637Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.003s to load 'post'"}
+{"timestamp": "2025-12-11T04:25:11.638Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'post'"}
+{"timestamp": "2025-12-11T04:25:11.639Z", "level": "INFO", "service": "resume-worker", "message": "post pruned"}
+{"timestamp": "2025-12-11T04:25:11.652Z", "level": "INFO", "service": "resume-worker", "message": "GSUB dropped"}
+{"timestamp": "2025-12-11T04:25:11.654Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'cmap' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.655Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:11.672Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to close glyph list over 'cmap'"}
+{"timestamp": "2025-12-11T04:25:11.674Z", "level": "INFO", "service": "resume-worker", "message": "Added .notdef to subset"}
+{"timestamp": "2025-12-11T04:25:11.677Z", "level": "INFO", "service": "resume-worker", "message": "Retaining 11 glyphs"}
+{"timestamp": "2025-12-11T04:25:11.678Z", "level": "INFO", "service": "resume-worker", "message": "head subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.679Z", "level": "INFO", "service": "resume-worker", "message": "hhea subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.680Z", "level": "INFO", "service": "resume-worker", "message": "maxp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.681Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.682Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hmtx' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.684Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:11.685Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hhea' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.686Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:11.689Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.006s to subset 'hmtx'"}
+{"timestamp": "2025-12-11T04:25:11.690Z", "level": "INFO", "service": "resume-worker", "message": "hmtx subsetted"}
+{"timestamp": "2025-12-11T04:25:11.691Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'cmap'"}
+{"timestamp": "2025-12-11T04:25:11.692Z", "level": "INFO", "service": "resume-worker", "message": "cmap subsetted"}
+{"timestamp": "2025-12-11T04:25:11.693Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'post'"}
+{"timestamp": "2025-12-11T04:25:11.694Z", "level": "INFO", "service": "resume-worker", "message": "post subsetted"}
+{"timestamp": "2025-12-11T04:25:11.694Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'CBDT' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.718Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'CBDT' table"}
+{"timestamp": "2025-12-11T04:25:11.734Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'CBLC' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.735Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'CBLC' table"}
+{"timestamp": "2025-12-11T04:25:11.759Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.065s to subset 'CBDT'"}
+{"timestamp": "2025-12-11T04:25:11.760Z", "level": "INFO", "service": "resume-worker", "message": "CBDT subsetted"}
+{"timestamp": "2025-12-11T04:25:11.762Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'CBLC'"}
+{"timestamp": "2025-12-11T04:25:11.763Z", "level": "INFO", "service": "resume-worker", "message": "CBLC subsetted"}
+{"timestamp": "2025-12-11T04:25:11.765Z", "level": "INFO", "service": "resume-worker", "message": "vhea subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.766Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'vmtx' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.767Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'vmtx' table"}
+{"timestamp": "2025-12-11T04:25:11.767Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'vhea' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.769Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'vhea' table"}
+{"timestamp": "2025-12-11T04:25:11.771Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.005s to subset 'vmtx'"}
+{"timestamp": "2025-12-11T04:25:11.772Z", "level": "INFO", "service": "resume-worker", "message": "vmtx subsetted"}
+{"timestamp": "2025-12-11T04:25:11.773Z", "level": "INFO", "service": "resume-worker", "message": "name subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:11.774Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset GlyphOrder"}
+{"timestamp": "2025-12-11T04:25:11.775Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'head' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.775Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:11.777Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to prune 'head'"}
+{"timestamp": "2025-12-11T04:25:11.777Z", "level": "INFO", "service": "resume-worker", "message": "head pruned"}
+{"timestamp": "2025-12-11T04:25:11.778Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'OS/2' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.779Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:11.780Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 Unicode ranges pruned: []"}
+{"timestamp": "2025-12-11T04:25:11.781Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'name' table from disk"}
+{"timestamp": "2025-12-11T04:25:11.782Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:11.782Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to prune 'name'"}
+{"timestamp": "2025-12-11T04:25:11.783Z", "level": "INFO", "service": "resume-worker", "message": "name pruned"}
+{"timestamp": "2025-12-11T04:25:11.784Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:11.785Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'maxp' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.785Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:11.786Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'head' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.787Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:11.789Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.790Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:11.791Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.791Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:11.792Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'OS/2' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.792Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:11.793Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'cmap' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.794Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:11.794Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'name' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.795Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:11.795Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'post' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.796Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'CBDT' table"}
+{"timestamp": "2025-12-11T04:25:11.797Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'CBDT' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.798Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'CBLC' table"}
+{"timestamp": "2025-12-11T04:25:11.800Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'CBLC' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.801Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'vmtx' table"}
+{"timestamp": "2025-12-11T04:25:11.803Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'vmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:11.803Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'vhea' table"}
+{"timestamp": "2025-12-11T04:25:11.804Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'vhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.634Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:08.636Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'glyf' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.636Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:08.637Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'maxp' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.638Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:08.639Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'loca' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.640Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:08.641Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'head' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.642Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:08.643Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.644Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:08.645Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.646Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:08.646Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'OS/2' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.648Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:08.648Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'cmap' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.650Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:08.651Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'name' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.652Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:08.653Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'post' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.654Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'vmtx' table"}
+{"timestamp": "2025-12-11T04:25:08.655Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'vmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.656Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'vhea' table"}
+{"timestamp": "2025-12-11T04:25:08.658Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'vhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.660Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'maxp' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.660Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:08.661Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to load 'maxp'"}
+{"timestamp": "2025-12-11T04:25:08.662Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'maxp'"}
+{"timestamp": "2025-12-11T04:25:08.663Z", "level": "INFO", "service": "resume-worker", "message": "maxp pruned"}
+{"timestamp": "2025-12-11T04:25:08.664Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'cmap' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.665Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:08.666Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'post' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.668Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:08.676Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.012s to load 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.677Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.678Z", "level": "INFO", "service": "resume-worker", "message": "cmap pruned"}
+{"timestamp": "2025-12-11T04:25:08.679Z", "level": "INFO", "service": "resume-worker", "message": "fpgm dropped"}
+{"timestamp": "2025-12-11T04:25:08.680Z", "level": "INFO", "service": "resume-worker", "message": "prep dropped"}
+{"timestamp": "2025-12-11T04:25:08.682Z", "level": "INFO", "service": "resume-worker", "message": "cvt  dropped"}
+{"timestamp": "2025-12-11T04:25:08.683Z", "level": "INFO", "service": "resume-worker", "message": "kern dropped"}
+{"timestamp": "2025-12-11T04:25:08.684Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to load 'post'"}
+{"timestamp": "2025-12-11T04:25:08.685Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'post'"}
+{"timestamp": "2025-12-11T04:25:08.686Z", "level": "INFO", "service": "resume-worker", "message": "post pruned"}
+{"timestamp": "2025-12-11T04:25:08.687Z", "level": "INFO", "service": "resume-worker", "message": "GPOS dropped"}
+{"timestamp": "2025-12-11T04:25:08.688Z", "level": "INFO", "service": "resume-worker", "message": "GSUB dropped"}
+{"timestamp": "2025-12-11T04:25:08.688Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'glyf' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.689Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:08.690Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'loca' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.691Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:08.691Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'head' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.692Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:08.698Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.009s to load 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.699Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.699Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:08.701Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to close glyph list over 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.702Z", "level": "INFO", "service": "resume-worker", "message": "Added gid0 to subset"}
+{"timestamp": "2025-12-11T04:25:08.703Z", "level": "INFO", "service": "resume-worker", "message": "Closing glyph list over 'glyf': 28 glyphs before"}
+{"timestamp": "2025-12-11T04:25:08.706Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'C', 'I', 'N', 'P', 'S', 'a', 'b', 'colon', 'd', 'e', 'five', 'g', 'hyphen', 'l', 'm', 'n', 'o', 'one', 'p', 'r', 's', 'space', 't', 'two', 'u', 'v', 'zero']"}
+{"timestamp": "2025-12-11T04:25:08.707Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 16, 19, 20, 21, 24, 29, 38, 44, 49, 51, 54, 68, 69, 71, 72, 74, 79, 80, 81, 82, 83, 85, 86, 87, 88, 89]"}
+{"timestamp": "2025-12-11T04:25:08.708Z", "level": "INFO", "service": "resume-worker", "message": "Closed glyph list over 'glyf': 28 glyphs after"}
+{"timestamp": "2025-12-11T04:25:08.710Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'C', 'I', 'N', 'P', 'S', 'a', 'b', 'colon', 'd', 'e', 'five', 'g', 'hyphen', 'l', 'm', 'n', 'o', 'one', 'p', 'r', 's', 'space', 't', 'two', 'u', 'v', 'zero']"}
+{"timestamp": "2025-12-11T04:25:08.711Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 3, 16, 19, 20, 21, 24, 29, 38, 44, 49, 51, 54, 68, 69, 71, 72, 74, 79, 80, 81, 82, 83, 85, 86, 87, 88, 89]"}
+{"timestamp": "2025-12-11T04:25:08.712Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.009s to close glyph list over 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.714Z", "level": "INFO", "service": "resume-worker", "message": "Retaining 28 glyphs"}
+{"timestamp": "2025-12-11T04:25:08.716Z", "level": "INFO", "service": "resume-worker", "message": "head subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.717Z", "level": "INFO", "service": "resume-worker", "message": "hhea subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.719Z", "level": "INFO", "service": "resume-worker", "message": "maxp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.719Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.720Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hmtx' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.721Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:08.721Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hhea' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.722Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:08.725Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.005s to subset 'hmtx'"}
+{"timestamp": "2025-12-11T04:25:08.726Z", "level": "INFO", "service": "resume-worker", "message": "hmtx subsetted"}
+{"timestamp": "2025-12-11T04:25:08.728Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to subset 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.729Z", "level": "INFO", "service": "resume-worker", "message": "cmap subsetted"}
+{"timestamp": "2025-12-11T04:25:08.729Z", "level": "INFO", "service": "resume-worker", "message": "loca subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.730Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'post'"}
+{"timestamp": "2025-12-11T04:25:08.731Z", "level": "INFO", "service": "resume-worker", "message": "post subsetted"}
+{"timestamp": "2025-12-11T04:25:08.732Z", "level": "INFO", "service": "resume-worker", "message": "gasp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.734Z", "level": "INFO", "service": "resume-worker", "message": "FFTM NOT subset; don't know how to subset"}
+{"timestamp": "2025-12-11T04:25:08.735Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'GDEF' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.736Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:08.738Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.003s to subset 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:08.739Z", "level": "INFO", "service": "resume-worker", "message": "GDEF subsetted"}
+{"timestamp": "2025-12-11T04:25:08.740Z", "level": "INFO", "service": "resume-worker", "message": "name subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.742Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to subset 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.743Z", "level": "INFO", "service": "resume-worker", "message": "glyf subsetted"}
+{"timestamp": "2025-12-11T04:25:08.743Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset GlyphOrder"}
+{"timestamp": "2025-12-11T04:25:08.744Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'head'"}
+{"timestamp": "2025-12-11T04:25:08.745Z", "level": "INFO", "service": "resume-worker", "message": "head pruned"}
+{"timestamp": "2025-12-11T04:25:08.745Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'OS/2' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.746Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:08.747Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 Unicode ranges pruned: [0]"}
+{"timestamp": "2025-12-11T04:25:08.748Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 CodePage ranges pruned: [0]"}
+{"timestamp": "2025-12-11T04:25:08.751Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.751Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:08.752Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:08.753Z", "level": "INFO", "service": "resume-worker", "message": "GDEF pruned"}
+{"timestamp": "2025-12-11T04:25:08.754Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'name' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.755Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:08.755Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'gasp' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.756Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:08.757Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'FFTM' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.758Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:08.758Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.004s to prune 'name'"}
+{"timestamp": "2025-12-11T04:25:08.759Z", "level": "INFO", "service": "resume-worker", "message": "name pruned"}
+{"timestamp": "2025-12-11T04:25:08.760Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:08.765Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'glyf' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.766Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:08.767Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'maxp' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.767Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:08.768Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'loca' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.768Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:08.769Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'head' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.770Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:08.771Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.772Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:08.772Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.773Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:08.774Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'OS/2' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.775Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:08.776Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'cmap' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.776Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:08.777Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'name' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.778Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:08.778Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'post' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.779Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:08.780Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'gasp' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.781Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:08.782Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'FFTM' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.783Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:08.784Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'GDEF' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.785Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'maxp' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.786Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:08.787Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to load 'maxp'"}
+{"timestamp": "2025-12-11T04:25:08.787Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'maxp'"}
+{"timestamp": "2025-12-11T04:25:08.788Z", "level": "INFO", "service": "resume-worker", "message": "maxp pruned"}
+{"timestamp": "2025-12-11T04:25:08.788Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'cmap' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.789Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:08.790Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'post' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.791Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:08.794Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.006s to load 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.795Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.795Z", "level": "INFO", "service": "resume-worker", "message": "cmap pruned"}
+{"timestamp": "2025-12-11T04:25:08.796Z", "level": "INFO", "service": "resume-worker", "message": "fpgm dropped"}
+{"timestamp": "2025-12-11T04:25:08.796Z", "level": "INFO", "service": "resume-worker", "message": "prep dropped"}
+{"timestamp": "2025-12-11T04:25:08.797Z", "level": "INFO", "service": "resume-worker", "message": "cvt  dropped"}
+{"timestamp": "2025-12-11T04:25:08.797Z", "level": "INFO", "service": "resume-worker", "message": "kern dropped"}
+{"timestamp": "2025-12-11T04:25:08.798Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to load 'post'"}
+{"timestamp": "2025-12-11T04:25:08.798Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'post'"}
+{"timestamp": "2025-12-11T04:25:08.798Z", "level": "INFO", "service": "resume-worker", "message": "post pruned"}
+{"timestamp": "2025-12-11T04:25:08.799Z", "level": "INFO", "service": "resume-worker", "message": "GPOS dropped"}
+{"timestamp": "2025-12-11T04:25:08.799Z", "level": "INFO", "service": "resume-worker", "message": "GSUB dropped"}
+{"timestamp": "2025-12-11T04:25:08.800Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'glyf' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.801Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:08.801Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'loca' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.802Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:08.802Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'head' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.803Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:08.805Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.005s to load 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.806Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.806Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:08.807Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to close glyph list over 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.808Z", "level": "INFO", "service": "resume-worker", "message": "Added gid0 to subset"}
+{"timestamp": "2025-12-11T04:25:08.809Z", "level": "INFO", "service": "resume-worker", "message": "Closing glyph list over 'glyf': 7 glyphs before"}
+{"timestamp": "2025-12-11T04:25:08.809Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'G', 'a', 'g', 'l', 'n', 'o']"}
+{"timestamp": "2025-12-11T04:25:08.809Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 42, 68, 74, 79, 81, 82]"}
+{"timestamp": "2025-12-11T04:25:08.810Z", "level": "INFO", "service": "resume-worker", "message": "Closed glyph list over 'glyf': 7 glyphs after"}
+{"timestamp": "2025-12-11T04:25:08.810Z", "level": "INFO", "service": "resume-worker", "message": "Glyph names: ['.notdef', 'G', 'a', 'g', 'l', 'n', 'o']"}
+{"timestamp": "2025-12-11T04:25:08.811Z", "level": "INFO", "service": "resume-worker", "message": "Glyph IDs:   [0, 42, 68, 74, 79, 81, 82]"}
+{"timestamp": "2025-12-11T04:25:08.811Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.002s to close glyph list over 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.812Z", "level": "INFO", "service": "resume-worker", "message": "Retaining 7 glyphs"}
+{"timestamp": "2025-12-11T04:25:08.812Z", "level": "INFO", "service": "resume-worker", "message": "head subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.812Z", "level": "INFO", "service": "resume-worker", "message": "hhea subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.813Z", "level": "INFO", "service": "resume-worker", "message": "maxp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.813Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.814Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hmtx' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.814Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:08.814Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'hhea' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.815Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:08.816Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.003s to subset 'hmtx'"}
+{"timestamp": "2025-12-11T04:25:08.817Z", "level": "INFO", "service": "resume-worker", "message": "hmtx subsetted"}
+{"timestamp": "2025-12-11T04:25:08.818Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'cmap'"}
+{"timestamp": "2025-12-11T04:25:08.818Z", "level": "INFO", "service": "resume-worker", "message": "cmap subsetted"}
+{"timestamp": "2025-12-11T04:25:08.819Z", "level": "INFO", "service": "resume-worker", "message": "loca subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.819Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'post'"}
+{"timestamp": "2025-12-11T04:25:08.819Z", "level": "INFO", "service": "resume-worker", "message": "post subsetted"}
+{"timestamp": "2025-12-11T04:25:08.820Z", "level": "INFO", "service": "resume-worker", "message": "gasp subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.820Z", "level": "INFO", "service": "resume-worker", "message": "FFTM NOT subset; don't know how to subset"}
+{"timestamp": "2025-12-11T04:25:08.820Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'GDEF' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.821Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:08.821Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.001s to subset 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:08.826Z", "level": "INFO", "service": "resume-worker", "message": "GDEF subsetted"}
+{"timestamp": "2025-12-11T04:25:08.827Z", "level": "INFO", "service": "resume-worker", "message": "name subsetting not needed"}
+{"timestamp": "2025-12-11T04:25:08.828Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.828Z", "level": "INFO", "service": "resume-worker", "message": "glyf subsetted"}
+{"timestamp": "2025-12-11T04:25:08.828Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to subset GlyphOrder"}
+{"timestamp": "2025-12-11T04:25:08.829Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'head'"}
+{"timestamp": "2025-12-11T04:25:08.829Z", "level": "INFO", "service": "resume-worker", "message": "head pruned"}
+{"timestamp": "2025-12-11T04:25:08.829Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'OS/2' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.830Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:08.830Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 Unicode ranges pruned: [0]"}
+{"timestamp": "2025-12-11T04:25:08.831Z", "level": "INFO", "service": "resume-worker", "message": "OS/2 CodePage ranges pruned: [0]"}
+{"timestamp": "2025-12-11T04:25:08.832Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'glyf'"}
+{"timestamp": "2025-12-11T04:25:08.833Z", "level": "INFO", "service": "resume-worker", "message": "glyf pruned"}
+{"timestamp": "2025-12-11T04:25:08.833Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.000s to prune 'GDEF'"}
+{"timestamp": "2025-12-11T04:25:08.834Z", "level": "INFO", "service": "resume-worker", "message": "GDEF pruned"}
+{"timestamp": "2025-12-11T04:25:08.834Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'name' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.835Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:08.835Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'gasp' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.836Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:08.836Z", "level": "DEBUG", "service": "resume-worker", "message": "Reading 'FFTM' table from disk"}
+{"timestamp": "2025-12-11T04:25:08.837Z", "level": "DEBUG", "service": "resume-worker", "message": "Decompiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:08.837Z", "level": "DEBUG", "service": "resume-worker", "message": "Took 0.003s to prune 'name'"}
+{"timestamp": "2025-12-11T04:25:08.838Z", "level": "INFO", "service": "resume-worker", "message": "name pruned"}
+{"timestamp": "2025-12-11T04:25:08.839Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'glyf' table"}
+{"timestamp": "2025-12-11T04:25:08.840Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'glyf' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.840Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'maxp' table"}
+{"timestamp": "2025-12-11T04:25:08.841Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'maxp' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.841Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'loca' table"}
+{"timestamp": "2025-12-11T04:25:08.842Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'loca' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.842Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'head' table"}
+{"timestamp": "2025-12-11T04:25:08.842Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'head' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.843Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hmtx' table"}
+{"timestamp": "2025-12-11T04:25:08.843Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hmtx' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.843Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'hhea' table"}
+{"timestamp": "2025-12-11T04:25:08.843Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'hhea' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.844Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'OS/2' table"}
+{"timestamp": "2025-12-11T04:25:08.844Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'OS/2' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.844Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'cmap' table"}
+{"timestamp": "2025-12-11T04:25:08.845Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'cmap' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.845Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'name' table"}
+{"timestamp": "2025-12-11T04:25:08.845Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'name' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.846Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'post' table"}
+{"timestamp": "2025-12-11T04:25:08.847Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'post' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.847Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'gasp' table"}
+{"timestamp": "2025-12-11T04:25:08.848Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'gasp' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.848Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'FFTM' table"}
+{"timestamp": "2025-12-11T04:25:08.849Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'FFTM' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.849Z", "level": "DEBUG", "service": "resume-worker", "message": "Compiling 'GDEF' table"}
+{"timestamp": "2025-12-11T04:25:08.850Z", "level": "DEBUG", "service": "resume-worker", "message": "Writing 'GDEF' table to disk"}
+{"timestamp": "2025-12-11T04:25:08.851Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.851Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 1696"}
+{"timestamp": "2025-12-11T04:25:08.854Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.855Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 2552"}
+{"timestamp": "2025-12-11T04:25:08.857Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.857Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 4072"}
+{"timestamp": "2025-12-11T04:25:08.859Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.860Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 2475"}
+{"timestamp": "2025-12-11T04:25:08.863Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.863Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 9077"}
+{"timestamp": "2025-12-11T04:25:08.866Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.866Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 14505"}
+{"timestamp": "2025-12-11T04:25:08.870Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.870Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 3693"}
+{"timestamp": "2025-12-11T04:25:08.872Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.872Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 7820"}
+{"timestamp": "2025-12-11T04:25:08.875Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.875Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 4518"}
+{"timestamp": "2025-12-11T04:25:08.877Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IHDR' 16 13"}
+{"timestamp": "2025-12-11T04:25:08.878Z", "level": "DEBUG", "service": "resume-worker", "message": "STREAM b'IDAT' 41 3407"}
+{"timestamp": "2025-12-11T04:25:08.939Z", "level": "DEBUG", "service": "resume-worker", "message": "PDF generated successfully with base_url"}
+{"timestamp": "2025-12-11T04:25:08.942Z", "level": "INFO", "service": "resume-worker", "message": "Resume generated: /app/output/resume_Desenvolvedor_Backend_-_Python_20251211_042509.pdf (87792 bytes)"}
+{"timestamp": "2025-12-11T04:25:08.947Z", "level": "INFO", "service": "resume-worker", "message": "Resume generation completed", "context": {"job_id": "822df913-7d66-494e-849e-cb0200c336ff", "user_id": "6ad0d828-f605-45fc-a545-3441e17a015c", "duration_ms": 29854, "file_size": 87792, "output_path": "/app/output/resume_Desenvolvedor_Backend_-_Python_20251211_042509.pdf"}}
