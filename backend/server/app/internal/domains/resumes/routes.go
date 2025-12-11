@@ -17,6 +17,9 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Delete("/:id/main", handler.UnmarkAsMain)
 	api.Delete("/:id/featured", handler.UnmarkAsFeatured)
 	api.Post("/:id/recalculate-metrics", handler.RecalculateMetrics) // Manually recalculate metrics
+	api.Get("/jobs/:id", handler.GetJobStatus) // Get job status
+	api.Post("/jobs/:id/retry", handler.RetryJob) // Retry failed job
+	api.Post("/jobs/:id/cancel", handler.CancelJob) // Cancel pending/processing job
 }
 
 // SetupPublicRoutes registers public resume endpoints.

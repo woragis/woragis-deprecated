@@ -2,12 +2,10 @@ package resumes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -36,6 +34,9 @@ type Handler interface {
 	UnmarkAsMain(c *fiber.Ctx) error
 	UnmarkAsFeatured(c *fiber.Ctx) error
 	RecalculateMetrics(c *fiber.Ctx) error
+	GetJobStatus(c *fiber.Ctx) error
+	RetryJob(c *fiber.Ctx) error
+	CancelJob(c *fiber.Ctx) error
 }
 
 // JobApplicationService is an interface to avoid circular dependencies
@@ -56,31 +57,31 @@ type JobApplication struct {
 type handler struct {
 	service              Service
 	jobApplicationService JobApplicationService // Optional: for generating resumes
+	queue                Queue                  // Redis queue for resume generation jobs
 	logger               *slog.Logger
 	baseFilePath         string                 // Base path where resume files are stored
-	resumeWorkerPath     string                 // Path to resume worker script or Docker container
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a resume handler.
-func NewHandler(service Service, baseFilePath string, logger *slog.Logger) Handler {
+func NewHandler(service Service, queue Queue, baseFilePath string, logger *slog.Logger) Handler {
 	return &handler{
 		service:      service,
+		queue:        queue,
 		logger:       logger,
 		baseFilePath: baseFilePath,
-		resumeWorkerPath: "woragis-resume-worker", // Docker container name
 	}
 }
 
 // NewHandlerWithJobApplicationService constructs a resume handler with job application service.
-func NewHandlerWithJobApplicationService(service Service, jobApplicationService JobApplicationService, baseFilePath string, logger *slog.Logger) Handler {
+func NewHandlerWithJobApplicationService(service Service, jobApplicationService JobApplicationService, queue Queue, baseFilePath string, logger *slog.Logger) Handler {
 	return &handler{
 		service:              service,
 		jobApplicationService: jobApplicationService,
+		queue:                queue,
 		logger:               logger,
 		baseFilePath:         baseFilePath,
-		resumeWorkerPath:     "woragis-resume-worker", // Docker container name
 	}
 }
 
@@ -617,7 +618,7 @@ func (h *handler) PreviewResume(c *fiber.Ctx) error {
 	return nil
 }
 
-// GenerateResume generates a resume for a job application using the resume worker.
+// GenerateResume enqueues a resume generation job and returns immediately.
 func (h *handler) GenerateResume(c *fiber.Ctx) error {
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
@@ -651,7 +652,7 @@ func (h *handler) GenerateResume(c *fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": "job application not found"})
 	}
-	
+
 	// Verify the job application belongs to the user
 	if jobApp.UserID != userID {
 		return response.Error(c, fiber.StatusForbidden, 0, fiber.Map{"message": "access denied"})
@@ -671,150 +672,37 @@ func (h *handler) GenerateResume(c *fiber.Ctx) error {
 		language = "en"
 	}
 
-	// Execute resume worker via Docker
-	// Format: python main.py <user_id> <job_description> [job_title] [output_filename] [language]
-	cmd := exec.Command("docker", "exec", h.resumeWorkerPath, "python", "/app/src/main.py",
-		userID.String(),
-		jobDescription,
-		jobApp.JobTitle,
-		"", // output_filename - let worker generate it
-		language,
+	// Create job
+	job := &ResumeJob{
+		UserID:          userID,
+		JobApplicationID: jobAppID,
+		JobDescription:  jobDescription,
+		JobTitle:        jobApp.JobTitle,
+		Language:        language,
+		MaxRetries:      3,
+	}
+
+	// Enqueue job
+	if err := h.queue.EnqueueJob(c.Context(), job); err != nil {
+		h.logger.Error("failed to enqueue resume generation job",
+			slog.String("user_id", userID.String()),
+			slog.String("job_application_id", jobAppID.String()),
+			slog.Any("error", err),
+		)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to enqueue job"})
+	}
+
+	h.logger.Info("Resume generation job enqueued",
+		slog.String("job_id", job.ID),
+		slog.String("user_id", userID.String()),
+		slog.String("job_application_id", jobAppID.String()),
 	)
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		h.logger.Error("failed to execute resume worker", slog.Any("error", err), slog.String("output", string(output)))
-		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{
-			"message": "failed to generate resume",
-			"error":   err.Error(),
-		})
-	}
-
-	// Parse output to get the generated file path
-	// The worker prints: "Resume generated: <path>"
-	outputStr := string(output)
-	lines := strings.Split(outputStr, "\n")
-	var generatedPath string
-	for _, line := range lines {
-		if strings.HasPrefix(line, "Resume generated:") {
-			parts := strings.Split(line, ":")
-			if len(parts) > 1 {
-				generatedPath = strings.TrimSpace(parts[1])
-				break
-			}
-		}
-	}
-
-	if generatedPath == "" {
-		// Try to find the latest result JSON file
-		resultsDir := filepath.Join(h.baseFilePath, "../results")
-		if resultsDir == "" {
-			resultsDir = "/app/results" // Default in Docker
-		}
-		
-		// Look for the most recent result file
-		files, err := filepath.Glob(filepath.Join(resultsDir, fmt.Sprintf("resume_result_%s_*.json", userID.String())))
-		if err == nil && len(files) > 0 {
-			// Get the most recent file
-			var latestFile string
-			var latestTime time.Time
-			for _, file := range files {
-				info, err := os.Stat(file)
-				if err == nil && info.ModTime().After(latestTime) {
-					latestTime = info.ModTime()
-					latestFile = file
-				}
-			}
-			
-			if latestFile != "" {
-				// Read the JSON to get the output path
-				data, err := os.ReadFile(latestFile)
-				if err == nil {
-					var result struct {
-						OutputPath string `json:"output_path"`
-						FileName   string `json:"file_name"`
-						FileSize   int64  `json:"file_size"`
-					}
-					if json.Unmarshal(data, &result) == nil && result.OutputPath != "" {
-						generatedPath = result.OutputPath
-					}
-				}
-			}
-		}
-	}
-
-	if generatedPath == "" {
-		h.logger.Error("could not determine generated resume path", slog.String("output", outputStr))
-		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to determine generated resume path"})
-	}
-
-	// Extract relative path from absolute path
-	// The path from worker is like /app/output/resume_Backend_Engineer_20241129_120000.pdf
-	// We need to convert it to a relative path like "output/resume_Backend_Engineer_20241129_120000.pdf"
-	relativePath := generatedPath
-	if strings.HasPrefix(generatedPath, "/app/") {
-		relativePath = strings.TrimPrefix(generatedPath, "/app/")
-	} else if strings.HasPrefix(generatedPath, h.baseFilePath) {
-		relativePath, _ = filepath.Rel(h.baseFilePath, generatedPath)
-	}
-
-	// Get file info
-	fileInfo, err := os.Stat(generatedPath)
-	if err != nil {
-		// Try with base path
-		fullPath := filepath.Join(h.baseFilePath, relativePath)
-		fileInfo, err = os.Stat(fullPath)
-		if err != nil {
-			h.logger.Error("failed to get file info", slog.String("path", generatedPath), slog.Any("error", err))
-			return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "generated resume file not found"})
-		}
-		generatedPath = fullPath
-	}
-
-	fileName := filepath.Base(generatedPath)
-	title := fmt.Sprintf("%s - %s", jobApp.JobTitle, jobApp.CompanyName)
-
-	// Extract tags from result JSON if available
-	var tags JSONArray
-	if generatedPath != "" {
-		// Try to read tags from the result file
-		resultsDir := filepath.Join(h.baseFilePath, "../results")
-		if resultsDir == "" {
-			resultsDir = "/app/results"
-		}
-		files, err := filepath.Glob(filepath.Join(resultsDir, fmt.Sprintf("resume_result_%s_*.json", userID.String())))
-		if err == nil && len(files) > 0 {
-			var latestFile string
-			var latestTime time.Time
-			for _, file := range files {
-				info, err := os.Stat(file)
-				if err == nil && info.ModTime().After(latestTime) {
-					latestTime = info.ModTime()
-					latestFile = file
-				}
-			}
-			if latestFile != "" {
-				data, err := os.ReadFile(latestFile)
-				if err == nil {
-					var result struct {
-						Tags []string `json:"tags"`
-					}
-					if json.Unmarshal(data, &result) == nil && len(result.Tags) > 0 {
-						tags = JSONArray(result.Tags)
-					}
-				}
-			}
-		}
-	}
-
-	// Create resume entry with tags
-	resume, err := h.service.CreateResume(c.Context(), userID, title, relativePath, fileName, fileInfo.Size(), tags)
-	if err != nil {
-		h.logger.Error("failed to create resume entry", slog.Any("error", err))
-		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to create resume entry"})
-	}
-
-	return response.Success(c, fiber.StatusCreated, resume)
+	return response.Success(c, fiber.StatusAccepted, fiber.Map{
+		"jobId":  job.ID,
+		"status": "pending",
+		"message": "Resume generation job enqueued",
+	})
 }
 
 // RecalculateMetrics manually recalculates metrics for a resume.
@@ -853,5 +741,153 @@ func (h *handler) RecalculateMetrics(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, resume)
+}
+
+// GetJobStatus returns the status of a resume generation job.
+func (h *handler) GetJobStatus(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
+	}
+
+	jobID := c.Params("id")
+	if jobID == "" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "job ID is required"})
+	}
+
+	job, err := h.queue.GetJob(c.Context(), jobID)
+	if err != nil {
+		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": "job not found"})
+	}
+
+	// Verify job belongs to user
+	if job.UserID != userID {
+		return response.Error(c, fiber.StatusForbidden, 0, fiber.Map{"message": "access denied"})
+	}
+
+	responseData := fiber.Map{
+		"id":         job.ID,
+		"status":     job.Status,
+		"retryCount": job.RetryCount,
+		"maxRetries": job.MaxRetries,
+		"createdAt":  job.CreatedAt,
+		"updatedAt":  job.UpdatedAt,
+	}
+
+	if job.LastError != "" {
+		responseData["error"] = job.LastError
+		responseData["errorType"] = job.LastErrorType
+		responseData["errorAt"] = job.LastErrorAt
+	}
+
+	if job.Result != nil {
+		responseData["result"] = job.Result
+	}
+
+	return response.Success(c, fiber.StatusOK, responseData)
+}
+
+// RetryJob retries a failed resume generation job.
+func (h *handler) RetryJob(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
+	}
+
+	jobID := c.Params("id")
+	if jobID == "" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "job ID is required"})
+	}
+
+	job, err := h.queue.GetJob(c.Context(), jobID)
+	if err != nil {
+		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": "job not found"})
+	}
+
+	// Verify job belongs to user
+	if job.UserID != userID {
+		return response.Error(c, fiber.StatusForbidden, 0, fiber.Map{"message": "access denied"})
+	}
+
+	// Only allow retry for failed or dead_letter jobs
+	if job.Status != "failed" && job.Status != "dead_letter" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "job cannot be retried in current status"})
+	}
+
+	// Reset job and re-enqueue
+	job.Status = "pending"
+	job.RetryCount = 0
+	job.LastError = ""
+	job.LastErrorType = ""
+	job.Result = nil
+
+	if err := h.queue.EnqueueJob(c.Context(), job); err != nil {
+		h.logger.Error("failed to retry job",
+			slog.String("job_id", jobID),
+			slog.Any("error", err),
+		)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to retry job"})
+	}
+
+	h.logger.Info("Job retried",
+		slog.String("job_id", jobID),
+		slog.String("user_id", userID.String()),
+	)
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{
+		"jobId":  job.ID,
+		"status": "pending",
+		"message": "Job retried",
+	})
+}
+
+// CancelJob cancels a pending or processing job.
+func (h *handler) CancelJob(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
+	}
+
+	jobID := c.Params("id")
+	if jobID == "" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "job ID is required"})
+	}
+
+	job, err := h.queue.GetJob(c.Context(), jobID)
+	if err != nil {
+		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": "job not found"})
+	}
+
+	// Verify job belongs to user
+	if job.UserID != userID {
+		return response.Error(c, fiber.StatusForbidden, 0, fiber.Map{"message": "access denied"})
+	}
+
+	// Only allow cancel for pending or processing jobs
+	if job.Status != "pending" && job.Status != "processing" {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "job cannot be cancelled in current status"})
+	}
+
+	// Update status to cancelled (we'll use "failed" with a specific error)
+	errorMsg := "Job cancelled by user"
+	errorType := "permanent"
+	if err := h.queue.UpdateJobStatus(c.Context(), jobID, "failed", &errorMsg, &errorType, nil, nil); err != nil {
+		h.logger.Error("failed to cancel job",
+			slog.String("job_id", jobID),
+			slog.Any("error", err),
+		)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to cancel job"})
+	}
+
+	h.logger.Info("Job cancelled",
+		slog.String("job_id", jobID),
+		slog.String("user_id", userID.String()),
+	)
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{
+		"jobId":  job.ID,
+		"status": "failed",
+		"message": "Job cancelled",
+	})
 }
 

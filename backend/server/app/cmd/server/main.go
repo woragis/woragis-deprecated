@@ -646,6 +646,7 @@ func main() {
 	// Resumes: requires JWT for all operations (except public endpoints)
 	resumeRepo := resumesdomain.NewGormRepository(db)
 	resumeService := resumesdomain.NewService(resumeRepo, slogLogger)
+	resumeQueue := resumesdomain.NewRedisQueue(redisClient)
 	// Base file path for resume files (from resume-worker output directory)
 	resumeBasePath := os.Getenv("RESUME_OUTPUT_DIR")
 	if resumeBasePath == "" {
@@ -689,8 +690,8 @@ func main() {
 	responseService = jobapplicationresponsesdomain.NewServiceWithDependencies(responseRepo, jobAppServiceForResponsesAdapter, resumeMetricsServiceAdapter, slogLogger)
 	responseHandler = jobapplicationresponsesdomain.NewHandler(responseService, slogLogger)
 	
-	// Now create resume handler with job application service
-	resumeHandler = resumesdomain.NewHandlerWithJobApplicationService(resumeService, jobAppServiceAdapter, resumeBasePath, slogLogger)
+	// Now create resume handler with job application service and queue
+	resumeHandler = resumesdomain.NewHandlerWithJobApplicationService(resumeService, jobAppServiceAdapter, resumeQueue, resumeBasePath, slogLogger)
 	resumesdomain.SetupRoutes(resumesGroup, resumeHandler)
 	// Setup public resume endpoints (handler is now initialized)
 	resumesdomain.SetupPublicRoutes(publicAPI, resumeHandler)
