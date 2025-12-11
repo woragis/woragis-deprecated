@@ -6,6 +6,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { useTranslation } from '$lib/i18n';
 	import type { ApplicationStatus, CreateJobApplicationInput } from '$lib/api/jobapplications';
+	import { getUserPreferences } from '$lib/api/userpreferences';
 	
 	let {
 		open = $bindable(false),
@@ -17,8 +18,10 @@
 	
 	const tFn = useTranslation();
 	
+	const LAST_WEBSITE_KEY = 'lastJobWebsite';
+	
 	let formCompanyName = $state('');
-	let formLocation = $state('');
+	let formLocation = $state('remote');
 	let formJobTitle = $state('');
 	let formJobUrl = $state('');
 	let formWebsite = $state('');
@@ -36,9 +39,34 @@
 		'failed'
 	];
 	
+	async function loadDefaults() {
+		// Default location to "remote"
+		formLocation = 'remote';
+		
+		// Try to load website from localStorage first
+		if (typeof window !== 'undefined') {
+			const lastWebsite = localStorage.getItem(LAST_WEBSITE_KEY);
+			if (lastWebsite) {
+				formWebsite = lastWebsite.toLowerCase();
+				return;
+			}
+		}
+		
+		// If localStorage is empty, try to fetch from backend preferences
+		try {
+			const preferences = await getUserPreferences();
+			if (preferences.defaultWebsite) {
+				formWebsite = preferences.defaultWebsite.toLowerCase();
+			}
+		} catch (err) {
+			// Silently fail - user can still enter website manually
+			console.warn('Failed to load default website from preferences:', err);
+		}
+	}
+	
 	function resetForm() {
 		formCompanyName = '';
-		formLocation = '';
+		formLocation = 'remote';
 		formJobTitle = '';
 		formJobUrl = '';
 		formWebsite = '';
@@ -52,10 +80,25 @@
 		resetForm();
 	}
 	
+	// Load defaults when modal opens
+	$effect(() => {
+		if (open) {
+			loadDefaults();
+		}
+	});
+	
 	async function handleSubmit() {
 		if (!formCompanyName.trim() || !formJobTitle.trim() || !formJobUrl.trim() || !formWebsite.trim()) {
 			alert(tFn('jobApplications.modal.required') + ' ' + tFn('jobApplications.modal.companyName') + ', ' + tFn('jobApplications.modal.jobTitle') + ', ' + tFn('jobApplications.modal.jobUrl') + ', ' + tFn('jobApplications.modal.website'));
 			return;
+		}
+		
+		// Normalize website to lowercase
+		const normalizedWebsite = formWebsite.trim().toLowerCase();
+		
+		// Save website to localStorage for next time
+		if (typeof window !== 'undefined' && normalizedWebsite) {
+			localStorage.setItem(LAST_WEBSITE_KEY, normalizedWebsite);
 		}
 		
 		if (onSubmit) {
@@ -64,7 +107,7 @@
 				location: formLocation.trim() || undefined,
 				jobTitle: formJobTitle.trim(),
 				jobUrl: formJobUrl.trim(),
-				website: formWebsite.trim(),
+				website: normalizedWebsite,
 				coverLetter: formCoverLetter.trim() || undefined,
 				linkedInContact: formLinkedInContact,
 				status: formStatus

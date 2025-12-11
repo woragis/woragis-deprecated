@@ -10,6 +10,7 @@ export interface UserPreferences {
 	userId: string;
 	defaultLanguage: string;
 	defaultCurrency: string;
+	defaultWebsite?: string;
 	createdAt: string;
 	updatedAt: string;
 }
