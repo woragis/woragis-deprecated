@@ -45,6 +45,105 @@
 		// Add https:// prefix
 		return `https://${trimmed}`;
 	}
+
+	/**
+	 * Parses job URL to extract company name, job title, and location.
+	 * Only fills fields that are currently empty.
+	 */
+	function parseJobUrl(url: string) {
+		if (!url || !url.trim()) return;
+
+		try {
+			const normalized = normalizeUrl(url);
+			const urlObj = new URL(normalized);
+			const hostname = urlObj.hostname.toLowerCase();
+			const pathname = urlObj.pathname;
+
+			// LinkedIn job URL pattern: /jobs/view/{id} or /jobs/collections/{collection}/jobs/{id}
+			if (hostname.includes('linkedin.com')) {
+				// Try to extract from URL path
+				// LinkedIn URLs often have job title and company in the path or query params
+				const pathParts = pathname.split('/').filter(p => p);
+				
+				// Check query params for title/company
+				const titleParam = urlObj.searchParams.get('title');
+				const companyParam = urlObj.searchParams.get('company');
+				
+				// Only fill if field is empty
+				if (titleParam && !formJobTitle.trim()) {
+					formJobTitle = decodeURIComponent(titleParam).replace(/-/g, ' ');
+				}
+				if (companyParam && !formCompanyName.trim()) {
+					formCompanyName = decodeURIComponent(companyParam).replace(/-/g, ' ');
+				}
+			}
+			// Glassdoor job URL pattern: /Job/{location}-{job-title}-{company}-{id}.htm
+			else if (hostname.includes('glassdoor.com')) {
+				const pathParts = pathname.split('/').filter(p => p);
+				if (pathParts.length >= 2 && pathParts[0] === 'Job') {
+					const jobPart = pathParts[1].replace('.htm', '').replace('.html', '');
+					const segments = jobPart.split('-');
+					
+					// Glassdoor format: location-job-title-company-id
+					// Try to extract location (first segment if it looks like a location)
+					if (segments.length > 0 && !formLocation.trim() || formLocation === 'remote') {
+						// First segment might be location
+						const possibleLocation = segments[0];
+						if (possibleLocation && possibleLocation.length > 2) {
+							formLocation = possibleLocation.replace(/_/g, ' ');
+						}
+					}
+					
+					// Last segment before .htm is usually ID, second to last might be company
+					// This is heuristic-based
+					if (segments.length >= 3 && !formCompanyName.trim()) {
+						// Try to extract company name (usually one of the middle segments)
+						const companySegment = segments[segments.length - 2];
+						if (companySegment && companySegment.length > 2) {
+							formCompanyName = companySegment.replace(/_/g, ' ');
+						}
+					}
+					
+					if (segments.length >= 2 && !formJobTitle.trim()) {
+						// Job title is usually in the middle segments
+						const titleSegments = segments.slice(1, -2); // Skip location and company/id
+						if (titleSegments.length > 0) {
+							formJobTitle = titleSegments.join(' ').replace(/_/g, ' ');
+						}
+					}
+				}
+			}
+			// Indeed job URL pattern: /viewjob?jk={id}
+			else if (hostname.includes('indeed.com')) {
+				const jk = urlObj.searchParams.get('jk');
+				// Indeed URLs don't typically have title/company in URL, but we can try
+				const pathParts = pathname.split('/').filter(p => p);
+				// Indeed sometimes has job title in path
+				if (pathParts.length > 0 && !formJobTitle.trim()) {
+					const lastPart = pathParts[pathParts.length - 1];
+					if (lastPart && lastPart !== 'viewjob') {
+						formJobTitle = lastPart.replace(/-/g, ' ');
+					}
+				}
+			}
+			// Generic pattern: try to extract from URL path segments
+			else {
+				const pathParts = pathname.split('/').filter(p => p && p !== 'jobs' && p !== 'job');
+				
+				// Try to find job title in path (usually a descriptive segment)
+				if (pathParts.length > 0 && !formJobTitle.trim()) {
+					const possibleTitle = pathParts[pathParts.length - 1];
+					if (possibleTitle && possibleTitle.length > 3 && !possibleTitle.match(/^\d+$/)) {
+						formJobTitle = possibleTitle.replace(/-/g, ' ').replace(/_/g, ' ');
+					}
+				}
+			}
+		} catch (err) {
+			// Silently fail - URL parsing is best effort
+			console.debug('Failed to parse job URL:', err);
+		}
+	}
+
 	
 	const statuses: ApplicationStatus[] = [
 		'pending',
@@ -102,6 +201,32 @@
 		if (open) {
 			loadDefaults();
 		}
+	});
+
+	// Parse URL when it changes (debounced to avoid parsing on every keystroke)
+	let urlParseTimeout: ReturnType<typeof setTimeout> | null = null;
+	$effect(() => {
+		if (formJobUrl && formJobUrl.trim()) {
+			// Clear previous timeout
+			if (urlParseTimeout) {
+				clearTimeout(urlParseTimeout);
+			}
+			
+			// Debounce parsing - wait 500ms after user stops typing
+			urlParseTimeout = setTimeout(() => {
+				// Only parse if URL looks complete (has protocol or is a valid domain)
+				if (formJobUrl.includes('://') || (formJobUrl.includes('.') && formJobUrl.length > 10)) {
+					parseJobUrl(formJobUrl);
+				}
+			}, 500);
+		}
+		
+		// Cleanup
+		return () => {
+			if (urlParseTimeout) {
+				clearTimeout(urlParseTimeout);
+			}
+		};
 	});
 	
 	async function handleSubmit() {
