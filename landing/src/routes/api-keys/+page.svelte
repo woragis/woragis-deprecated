@@ -281,7 +281,7 @@
 	>
 		<div
 			class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700"
-			onclick|stopPropagation
+			onclick={(e) => e.stopPropagation()}
 		>
 			<h2 class="text-2xl font-bold mb-4">Create API Key</h2>
 			<div class="space-y-4">
@@ -332,7 +332,7 @@
 	>
 		<div
 			class="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700"
-			onclick|stopPropagation
+			onclick={(e) => e.stopPropagation()}
 		>
 			<h2 class="text-2xl font-bold mb-2">API Key Created</h2>
 			<p class="text-gray-400 text-sm mb-4">

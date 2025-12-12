@@ -4,6 +4,7 @@
 	import { Search, Filter, X, ChevronDown, ExternalLink, Calendar, TrendingUp } from 'lucide-svelte';
 	import type { Project, ProjectFilters, ProjectStatus, ProjectTechnology } from '$lib/types/project';
 	import { useProjectsQuery } from '$lib/queries/projects';
+	import { language } from '$lib/i18n';
 
 	// Filters
 	let searchQuery = $state('');
@@ -14,7 +15,7 @@
 	let showFilters = $state(false);
 
 	// Fetch all projects using TanStack Query (we'll filter client-side)
-	const projectsQuery = useProjectsQuery();
+	const projectsQuery = useProjectsQuery({}, $language);
 
 	let projects = $derived(projectsQuery.data || []);
 	let filteredProjects: Project[] = $state([]);

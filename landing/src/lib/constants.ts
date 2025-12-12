@@ -10,6 +10,9 @@ export const contact = {
 	location: 'João Pessoa, Brazil'
 } as const;
 
+// User ID for resume downloads (from backend)
+export const userId = '6ad0d828-f605-45fc-a545-3441e17a015c';
+
 export const api = {
 	baseURL: PUBLIC_API_BASE_URL || 'http://localhost:8080/api',
 	timeout: 10000,

@@ -1,10 +1,26 @@
 <script lang="ts">
 	import LanguageSwitcher from './LanguageSwitcher.svelte';
-	import { Menu, X } from 'lucide-svelte';
+	import { Menu, X, Download } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { downloadResume } from '$lib/api/resumes';
+	import { userId } from '$lib/constants';
+	import { language, translationsStore } from '$lib/i18n';
 
 	let mobileMenuOpen = $state(false);
 	let scrolled = $state(false);
+	
+	// Reactive translation helper
+	let t = $derived($translationsStore);
+
+	async function handleDownloadResume() {
+		try {
+			// Map language to backend format (en, pt-BR -> en, pt)
+			const backendLang = $language === 'pt-BR' ? 'pt' : $language === 'en' ? 'en' : 'en';
+			await downloadResume(userId, backendLang);
+		} catch (error) {
+			console.error('Failed to download resume:', error);
+		}
+	}
 
 	const navLinks = [
 		{ href: '#about-me', label: 'About' },
@@ -80,6 +96,16 @@
 
 			<!-- Right side actions -->
 			<div class="flex items-center gap-4">
+				<!-- Download Resume Button (Desktop) -->
+				<button
+					onclick={handleDownloadResume}
+					class="hidden md:flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium text-sm transition-colors duration-200 shadow-lg shadow-green-500/50"
+					title={t('aboutMe.downloadResume')}
+				>
+					<Download class="w-4 h-4" />
+					<span class="hidden lg:inline">{t('aboutMe.downloadResume')}</span>
+				</button>
+				
 				<LanguageSwitcher />
 				
 				<!-- Mobile menu button -->
@@ -118,6 +144,17 @@
 							{link.label}
 						</a>
 					{/each}
+					<!-- Download Resume Button (Mobile) -->
+					<button
+						onclick={() => {
+							handleDownloadResume();
+							closeMobileMenu();
+						}}
+						class="px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200 flex items-center gap-3 group bg-green-600/20 border border-green-500/30"
+					>
+						<Download class="w-5 h-5" />
+						{t('aboutMe.downloadResume')}
+					</button>
 				</div>
 			</div>
 		{/if}

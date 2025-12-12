@@ -14,7 +14,7 @@
 	}
 
 	// Close dropdown when clicking outside
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	onMount(() => {
 		function handleClickOutside(event: MouseEvent) {

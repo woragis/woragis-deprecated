@@ -1,6 +1,8 @@
 import { apiClient } from './client';
 import type { Interest } from '$lib/types/interest';
 
+export type { Interest };
+
 // List all interests
 export async function listInterests(): Promise<Interest[]> {
 	try {
