@@ -51,3 +51,32 @@ export const toastManager = new ToastManager();
 export function showToast(message: string, type: ToastType = 'success', duration = 3000) {
 	return toastManager.show(message, type, duration);
 }
+
+export function toastSuccess(message: string, duration = 3000) {
+	return showToast(message, 'success', duration);
+}
+
+export function toastError(message: string, duration = 3000) {
+	return showToast(message, 'error', duration);
+}
+
+export function toastInfo(message: string, duration = 3000) {
+	return showToast(message, 'info', duration);
+}
+
+export function toastWarning(message: string, duration = 3000) {
+	return showToast(message, 'warning', duration);
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	if (typeof error === 'string') {
+		return error;
+	}
+	if (error && typeof error === 'object' && 'message' in error) {
+		return String(error.message);
+	}
+	return fallback;
+}

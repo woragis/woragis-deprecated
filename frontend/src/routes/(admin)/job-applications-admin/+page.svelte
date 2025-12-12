@@ -4,8 +4,12 @@
 		listJobApplications,
 		createJobApplication,
 		deleteJobApplication,
+		updateJobApplicationStatus,
+		updateJobApplication,
 		type JobApplication,
-		type CreateJobApplicationInput
+		type CreateJobApplicationInput,
+		type ApplicationStatus,
+		type UpdateJobApplicationInput
 	} from '$lib/api/jobapplications';
 	import { useTranslation } from '$lib/i18n';
 	import PageHeader from './_sections/PageHeader.svelte';
@@ -20,7 +24,6 @@
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
 	import { showToast } from '$lib/utils/toast';
-	import { updateJobApplicationStatus, updateJobApplication, type ApplicationStatus, type UpdateJobApplicationInput, type JobApplication } from '$lib/api/jobapplications';
 
 	const tFn = useTranslation();
 	
