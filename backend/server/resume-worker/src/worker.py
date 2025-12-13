@@ -10,6 +10,7 @@ import time
 import logging
 import logging.handlers
 import json
+import requests
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -111,6 +112,7 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgres://postgres:postgres@database:5432/woragis?sslmode=disable"
 )
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai-service:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://app:8080")
 OUTPUT_DIR = os.getenv("RESUME_OUTPUT_DIR", "/app/output")
 RESULTS_LOG_DIR = os.getenv("RESULTS_LOG_DIR", "/app/results")
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
@@ -248,6 +250,77 @@ class Worker:
                 # Continue processing other jobs
                 time.sleep(1)
 
+    def _save_resume_to_backend(self, job: Dict[str, Any], result: Dict[str, Any]):
+        """
+        Save generated resume to backend API (database and file storage).
+
+        Args:
+            job: Job data dictionary
+            result: Generation result dictionary with output_path, file_name, file_size, tags
+        """
+        job_id = job.get("id")
+        user_id = job.get("user_id")
+        job_application_id = job.get("job_application_id")
+        job_title = job.get("job_title", "Software Engineer")
+
+        if not job_application_id:
+            logger.warning("No job_application_id in job, skipping backend save", extra={"job_id": job_id})
+            return
+
+        output_path = result.get("output_path")
+        if not output_path or not os.path.exists(output_path):
+            logger.error("Generated file not found", extra={"job_id": job_id, "output_path": output_path})
+            return
+
+        # Prepare multipart form data
+        files = {
+            "file": (os.path.basename(output_path), open(output_path, "rb"), "application/pdf")
+        }
+        data = {
+            "jobId": job_id,
+            "jobApplicationId": str(job_application_id),
+            "userId": str(user_id),
+            "title": job_title,
+            "tags": ",".join(result.get("tags", []))
+        }
+
+        # Call backend API (internal endpoint for service-to-service communication)
+        # Using /internal path (not /api/internal) to avoid JWT middleware
+        callback_url = f"{BACKEND_URL}/internal/resumes/complete"
+        
+        # Get API key from environment
+        api_key = os.getenv("PUBLIC_API_KEY", "")
+        headers = {}
+        if api_key:
+            headers["X-API-Key"] = api_key
+        
+        try:
+            response = requests.post(callback_url, files=files, data=data, headers=headers, timeout=30)
+            response.raise_for_status()
+            logger.info(
+                "Resume saved to backend successfully",
+                extra={
+                    "job_id": job_id,
+                    "job_application_id": str(job_application_id),
+                    "status_code": response.status_code,
+                }
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Failed to save resume to backend",
+                extra={
+                    "job_id": job_id,
+                    "job_application_id": str(job_application_id),
+                    "error": str(e),
+                    "status_code": getattr(e.response, "status_code", None),
+                }
+            )
+            raise
+        finally:
+            # Close file
+            if "file" in files:
+                files["file"][1].close()
+
     def process_job(self, job: Dict[str, Any]):
         """
         Process a resume generation job.
@@ -298,6 +371,20 @@ class Worker:
                     "output_path": result.get("output_path"),
                 },
             )
+
+            # Call backend API to save resume to database
+            try:
+                self._save_resume_to_backend(job, result)
+            except Exception as callback_error:
+                logger.error(
+                    "Failed to save resume to backend",
+                    extra={
+                        "job_id": job_id,
+                        "error": str(callback_error),
+                    },
+                    exc_info=True,
+                )
+                # Don't fail the job - resume is generated, just not saved to DB
 
         except Exception as e:
             error_type = classify_error(e)
