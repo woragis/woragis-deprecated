@@ -53,7 +53,7 @@ type JobApplication struct {
 	CompanyName         string            `gorm:"column:company_name;size:255;not null" json:"companyName"`
 	Location            string            `gorm:"column:location;size:255" json:"location"`
 	JobTitle            string            `gorm:"column:job_title;size:255;not null" json:"jobTitle"`
-	JobURL              string            `gorm:"column:job_url;size:512;not null" json:"jobUrl"`
+	JobURL              string            `gorm:"column:job_url;type:text;not null" json:"jobUrl"`
 	Website             string            `gorm:"column:website;size:50;not null;index" json:"website"` // "linkedin", "glassdoor", etc.
 	AppliedAt           *time.Time        `gorm:"column:applied_at" json:"appliedAt,omitempty"`
 	CoverLetter         string            `gorm:"column:cover_letter;type:text" json:"coverLetter"`

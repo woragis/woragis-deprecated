@@ -549,6 +549,12 @@ func (h *handler) handleError(c *fiber.Ctx, err error) error {
 			statusCode = fiber.StatusBadRequest
 		case ErrCodeJobQueueFailure, ErrCodeAIServiceFailure, ErrCodePlaywrightFailure:
 			statusCode = fiber.StatusServiceUnavailable
+		case ErrCodeDatabaseConstraint, ErrCodeDatabaseValueTooLong, ErrCodeDatabaseUniqueViolation, ErrCodeDatabaseForeignKeyViolation:
+			statusCode = fiber.StatusBadRequest
+		case ErrCodeDatabaseConnection:
+			statusCode = fiber.StatusServiceUnavailable
+		case ErrCodeAccessDenied:
+			statusCode = fiber.StatusForbidden
 		}
 
 		return response.Error(c, statusCode, domainErr.Code, fiber.Map{

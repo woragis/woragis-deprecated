@@ -44,14 +44,20 @@ func (r *gormRepository) CreateJobApplication(ctx context.Context, application *
 	if err := application.Validate(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Create(application).Error
+	if err := r.db.WithContext(ctx).Create(application).Error; err != nil {
+		return handleDatabaseError(err)
+	}
+	return nil
 }
 
 func (r *gormRepository) UpdateJobApplication(ctx context.Context, application *JobApplication) error {
 	if err := application.Validate(); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Save(application).Error
+	if err := r.db.WithContext(ctx).Save(application).Error; err != nil {
+		return handleDatabaseError(err)
+	}
+	return nil
 }
 
 func (r *gormRepository) GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*JobApplication, error) {
@@ -104,7 +110,7 @@ func (r *gormRepository) ListJobApplications(ctx context.Context, filters JobApp
 	query = query.Order("created_at DESC")
 
 	if err := query.Find(&applications).Error; err != nil {
-		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
+		return nil, handleDatabaseError(err)
 	}
 
 	return applications, nil
@@ -113,7 +119,7 @@ func (r *gormRepository) ListJobApplications(ctx context.Context, filters JobApp
 func (r *gormRepository) DeleteJobApplication(ctx context.Context, applicationID uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&JobApplication{}, applicationID)
 	if result.Error != nil {
-		return NewDomainError(ErrCodeRepositoryFailure, ErrUnableToUpdate)
+		return handleDatabaseError(result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return NewDomainError(ErrCodeNotFound, ErrApplicationNotFound)
