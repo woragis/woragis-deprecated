@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
+from pypdf import PdfReader, PdfWriter, Transformation
 
 import sys
 import os
@@ -30,52 +31,64 @@ try:
     from weasyprint.pdf import stream as weasy_stream
     import pydyf
     
-    # Check if pydyf.Stream has transform (it shouldn't, that's the bug)
+    # Check if pydyf.Stream has transform method
     pydyf_has_transform = hasattr(pydyf.Stream, 'transform')
     
-    if hasattr(weasy_stream.Stream, 'transform') and not pydyf_has_transform:
-        # Store the original method code for reference (we won't call it)
+    if hasattr(weasy_stream.Stream, 'transform'):
+        # Store the original method
         _original_weasy_transform = weasy_stream.Stream.transform
         
         def _patched_transform(self, a=1, b=0, c=0, d=1, e=0, f=0):
-            """Patched transform method to fix 'super' object has no attribute 'transform' error"""
-            # The problem: The original code does: super().transform(a, b, c, d, e, f)
-            # But pydyf.Stream doesn't have transform(), so super() fails
-            # 
-            # IMPORTANT: transform() modifies the CTM (Current Transformation Matrix), not the text matrix.
-            # Using set_text_matrix() is incorrect and can cause coordinate system issues like vertical inversion.
+            """Patched transform method to fix coordinate system issues"""
+            # The problem: WeasyPrint's Stream.transform() calls super().transform()
+            # If pydyf.Stream doesn't have transform(), this fails.
+            # If it does, we need to call it correctly to avoid vertical inversion.
             #
-            # The issue: WeasyPrint calls transform() to set up coordinate systems (e.g., Y-axis flip with d=-1).
-            # When we incorrectly apply this via set_text_matrix(), it causes the entire content to be inverted.
-            #
-            # Solution: Skip applying transforms via set_text_matrix() since:
-            # 1. transform() should modify CTM, not text matrix
-            # 2. pydyf handles coordinate system setup internally
-            # 3. Applying coordinate transforms via set_text_matrix() causes vertical inversion
-            #
-            # We'll skip all transform() calls to avoid the inversion issue.
-            # The coordinate system should be set up correctly by pydyf/WeasyPrint without our intervention.
+            # CRITICAL FIX: The vertical inversion is caused by incorrectly applying
+            # coordinate system transforms. We need to call pydyf's transform directly
+            # on the underlying stream object, not via set_text_matrix().
             try:
-                # Detect coordinate system setup transforms (common cause of vertical inversion)
-                # Pattern: [1, 0, 0, -1, 0, height] is a Y-axis flip (vertical inversion)
+                # Check if this is a vertical flip transform (Y-axis inversion)
+                # Pattern: [1, 0, 0, -1, 0, height] flips Y-axis
                 is_vertical_flip = (a == 1 and b == 0 and c == 0 and d == -1)
                 
                 if is_vertical_flip:
-                    logger.debug(f"Skipping vertical flip transform to prevent content inversion")
+                    # This is a coordinate system setup transform that causes vertical inversion
+                    # when incorrectly applied. We need to skip it and let pydyf handle
+                    # the coordinate system setup naturally (PDF uses bottom-left origin).
+                    logger.debug(f"Skipping vertical flip transform [{a}, {b}, {c}, {d}, {e}, {f}] to prevent inversion")
                     return None
                 
-                # Skip all transforms to avoid coordinate system issues
-                # pydyf and WeasyPrint handle coordinate system setup internally
-                logger.debug(f"Skipping transform matrix [{a}, {b}, {c}, {d}, {e}, {f}] - handled by pydyf internally")
+                # For other transforms, try to call pydyf's transform if available
+                if pydyf_has_transform:
+                    # Get the underlying pydyf.Stream instance
+                    # WeasyPrint's Stream wraps a pydyf.Stream
+                    if hasattr(self, '_stream') or hasattr(self, 'stream'):
+                        stream_obj = getattr(self, '_stream', getattr(self, 'stream', None))
+                        if stream_obj and hasattr(stream_obj, 'transform'):
+                            stream_obj.transform(a, b, c, d, e, f)
+                            return None
+                    
+                    # Try calling on self if it's actually a pydyf.Stream instance
+                    if isinstance(self, pydyf.Stream):
+                        self.transform(a, b, c, d, e, f)
+                        return None
+                
+                # If we can't call pydyf's transform, skip it
+                # The coordinate system should be handled correctly by pydyf/WeasyPrint
+                logger.debug(f"Skipping transform [{a}, {b}, {c}, {d}, {e}, {f}] - coordinate system handled internally")
                 return None
             except Exception as e:
-                # If anything fails, just return None (transform might not be critical)
+                # If anything fails, skip the transform (might not be critical)
                 logger.debug(f"Transform patch error (non-fatal): {e}")
                 return None
         
         # Replace the transform method
         weasy_stream.Stream.transform = _patched_transform
-        logger.debug("Patched weasyprint.pdf.stream.Stream.transform to fix compatibility issue and prevent vertical inversion")
+        if pydyf_has_transform:
+            logger.debug("Patched weasyprint.pdf.stream.Stream.transform to prevent vertical inversion")
+        else:
+            logger.debug("Patched weasyprint.pdf.stream.Stream.transform to fix compatibility and prevent vertical inversion")
     
     # Also patch text_matrix to be a method that calls set_text_matrix
     if not hasattr(weasy_stream.Stream, 'text_matrix'):
@@ -481,6 +494,39 @@ class ResumeGenerator:
         
         if not pdf_generated:
             raise RuntimeError(f"Failed to generate PDF after all attempts. Last error: {last_error}")
+        
+        # Fix vertical and horizontal inversion
+        try:
+            logger.info("Fixing PDF vertical and horizontal inversion...")
+            reader = PdfReader(output_path)
+            writer = PdfWriter()
+            
+            for page in reader.pages:
+                # Get page dimensions (need to get before any transformations)
+                page_width = float(page.mediabox.width)
+                page_height = float(page.mediabox.height)
+                
+                # Apply transformations to fix both vertical and horizontal inversion
+                # After 180 rotation, coordinate system is rotated, so we use page_height for horizontal translation
+                # Rotate 180 degrees to fix vertical inversion
+                page.rotate(180)
+                
+                # Flip horizontally: scale x by -1, then translate to correct position
+                # After 180 rotation, we need to translate by page_width to position correctly
+                # (not page_height, as the rotation doesn't swap the coordinate system in the way we need)
+                horizontal_flip = Transformation().scale(sx=-1, sy=1).translate(tx=page_width, ty=0)
+                page.add_transformation(horizontal_flip)
+                
+                writer.add_page(page)
+            
+            # Write the fixed PDF
+            with open(output_path, 'wb') as output_file:
+                writer.write(output_file)
+            
+            logger.info("PDF vertical and horizontal inversion fixed successfully")
+        except Exception as e:
+            logger.error(f"Failed to fix PDF rotation/flip: {e}", exc_info=True)
+            # Continue anyway - PDF was generated, just might be inverted
         
         # Get file size
         file_size = os.path.getsize(output_path)
