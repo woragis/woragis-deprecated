@@ -41,14 +41,32 @@ try:
             """Patched transform method to fix 'super' object has no attribute 'transform' error"""
             # The problem: The original code does: super().transform(a, b, c, d, e, f)
             # But pydyf.Stream doesn't have transform(), so super() fails
-            # Solution: Use set_text_matrix if available, otherwise skip
+            # 
+            # IMPORTANT: transform() modifies the CTM (Current Transformation Matrix), not the text matrix.
+            # Using set_text_matrix() is incorrect and can cause coordinate system issues like vertical inversion.
+            #
+            # The issue: WeasyPrint calls transform() to set up coordinate systems (e.g., Y-axis flip with d=-1).
+            # When we incorrectly apply this via set_text_matrix(), it causes the entire content to be inverted.
+            #
+            # Solution: Skip applying transforms via set_text_matrix() since:
+            # 1. transform() should modify CTM, not text matrix
+            # 2. pydyf handles coordinate system setup internally
+            # 3. Applying coordinate transforms via set_text_matrix() causes vertical inversion
+            #
+            # We'll skip all transform() calls to avoid the inversion issue.
+            # The coordinate system should be set up correctly by pydyf/WeasyPrint without our intervention.
             try:
-                # Use set_text_matrix method if available (it exists in the Stream class)
-                if hasattr(self, 'set_text_matrix'):
-                    # Apply transform using set_text_matrix with the matrix values
-                    # The transform matrix is [a, b, c, d, e, f]
-                    self.set_text_matrix(a, b, c, d, e, f)
-                # Return None to indicate we handled it
+                # Detect coordinate system setup transforms (common cause of vertical inversion)
+                # Pattern: [1, 0, 0, -1, 0, height] is a Y-axis flip (vertical inversion)
+                is_vertical_flip = (a == 1 and b == 0 and c == 0 and d == -1)
+                
+                if is_vertical_flip:
+                    logger.debug(f"Skipping vertical flip transform to prevent content inversion")
+                    return None
+                
+                # Skip all transforms to avoid coordinate system issues
+                # pydyf and WeasyPrint handle coordinate system setup internally
+                logger.debug(f"Skipping transform matrix [{a}, {b}, {c}, {d}, {e}, {f}] - handled by pydyf internally")
                 return None
             except Exception as e:
                 # If anything fails, just return None (transform might not be critical)
@@ -57,7 +75,7 @@ try:
         
         # Replace the transform method
         weasy_stream.Stream.transform = _patched_transform
-        logger.debug("Patched weasyprint.pdf.stream.Stream.transform to fix compatibility issue")
+        logger.debug("Patched weasyprint.pdf.stream.Stream.transform to fix compatibility issue and prevent vertical inversion")
     
     # Also patch text_matrix to be a method that calls set_text_matrix
     if not hasattr(weasy_stream.Stream, 'text_matrix'):
