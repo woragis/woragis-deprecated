@@ -49,6 +49,7 @@ services:
       AUTH_JWT_TTL: ${AUTH_JWT_TTL:-24h}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
       REDIS_URL: redis://redis:6379/0
+      PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
@@ -68,8 +69,12 @@ services:
       WHATSAPP_SESSION_PATH: ${WHATSAPP_SESSION_PATH:-./whatsapp-session}
       WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-false}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
+      CREATIVE_SERVICE_URL: ${CREATIVE_SERVICE_URL:-http://creative-service:8000}
+      RESUME_OUTPUT_DIR: /app/output
     ports:
       - "8080:8080"
+    volumes:
+      - ./resume-worker/output:/app/output
     restart: on-failure
   translation-worker:
     build:
@@ -145,6 +150,37 @@ services:
     ports:
       - "8000:8000"
     restart: on-failure
+  creative-service:
+    build:
+      context: ../creative-service
+      dockerfile: Dockerfile
+    container_name: woragis-creative-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DALL_E_MODEL: ${DALL_E_MODEL:-dall-e-3}
+      DALL_E_QUALITY: ${DALL_E_QUALITY:-standard}
+      DALL_E_SIZE: ${DALL_E_SIZE:-1024x1024}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-3-5-sonnet-latest}
+      REPLICATE_API_KEY: ${REPLICATE_API_KEY:-}
+      STABLE_DIFFUSION_MODEL: ${STABLE_DIFFUSION_MODEL:-stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b}
+      REPLICATE_VIDEO_MODEL: ${REPLICATE_VIDEO_MODEL:-stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438}
+      CIPHER_API_KEY: ${CIPHER_API_KEY:-}
+      CIPHER_IMAGE_URL: ${CIPHER_IMAGE_URL:-https://api.nofiltergpt.com/v1/images/generations}
+      CIPHER_IMAGE_SIZE: ${CIPHER_IMAGE_SIZE:-1024x1024}
+      CIPHER_IMAGE_N: ${CIPHER_IMAGE_N:-1}
+      RUNWAY_API_KEY: ${RUNWAY_API_KEY:-}
+      DEFAULT_IMAGE_FORMAT: ${DEFAULT_IMAGE_FORMAT:-png}
+      DEFAULT_DIAGRAM_FORMAT: ${DEFAULT_DIAGRAM_FORMAT:-png}
+    ports:
+      - "8001:8000"
+    restart: on-failure
   resume-worker:
     build:
       context: ./resume-worker
@@ -161,6 +197,8 @@ services:
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
+      BACKEND_URL: ${BACKEND_URL:-http://app:8080}
+      PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
       RESUME_OUTPUT_DIR: /app/output
       RESULTS_LOG_DIR: /app/results
       LOG_DIR: /app/logs
