@@ -63,6 +63,11 @@ type JobInfo struct {
 
 // GenerateCoverLetter generates a personalized cover letter.
 func (cls *CoverLetterService) GenerateCoverLetter(ctx context.Context, profile UserProfile, job JobInfo) (string, error) {
+	return cls.GenerateCoverLetterWithContext(ctx, profile, job, "")
+}
+
+// GenerateCoverLetterWithContext generates a personalized cover letter with additional context.
+func (cls *CoverLetterService) GenerateCoverLetterWithContext(ctx context.Context, profile UserProfile, job JobInfo, additionalContext string) (string, error) {
 	cls.logger.Info("generating cover letter",
 		slog.String("company", job.CompanyName),
 		slog.String("jobTitle", job.JobTitle),
@@ -70,6 +75,11 @@ func (cls *CoverLetterService) GenerateCoverLetter(ctx context.Context, profile 
 
 	// Build prompt
 	prompt := cls.buildPrompt(profile, job)
+	
+	// Add additional context if provided (e.g., from chat message)
+	if additionalContext != "" {
+		prompt += fmt.Sprintf("\n\nAdditional Context from Conversation:\n%s\n\nUse this context to further personalize the cover letter.", additionalContext)
+	}
 
 	// Call AI service
 	req := langchainservice.ChatCompletionRequest{

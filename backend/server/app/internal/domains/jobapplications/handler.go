@@ -12,6 +12,7 @@ import (
 
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	aiservice "github.com/woragis/backend/server/app/internal/services/ai"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -62,6 +63,11 @@ type Resume struct {
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
+// CoverLetterGenerator is an interface for generating cover letters.
+type CoverLetterGenerator interface {
+	GenerateCoverLetterWithContext(ctx context.Context, profile aiservice.UserProfile, job aiservice.JobInfo, additionalContext string) (string, error)
+}
+
 // Handler exposes job application endpoints.
 type Handler interface {
 	CreateJobApplication(c *fiber.Ctx) error
@@ -70,12 +76,14 @@ type Handler interface {
 	UpdateJobApplicationStatus(c *fiber.Ctx) error
 	UpdateJobApplication(c *fiber.Ctx) error
 	DeleteJobApplication(c *fiber.Ctx) error
+	GenerateCoverLetter(c *fiber.Ctx) error
 }
 
 type handler struct {
 	service          Service
 	conversationCreator ConversationCreator // Optional: for auto-creating conversations
 	resumeService    ResumeService          // Optional: for including resume data in responses
+	coverLetterGenerator CoverLetterGenerator // Optional: for generating cover letters
 	logger          *slog.Logger
 }
 
@@ -97,11 +105,12 @@ func NewHandlerWithChatService(service Service, conversationCreator Conversation
 }
 
 // NewHandlerWithDependencies constructs a job application handler with all dependencies.
-func NewHandlerWithDependencies(service Service, conversationCreator ConversationCreator, resumeService ResumeService, logger *slog.Logger) Handler {
+func NewHandlerWithDependencies(service Service, conversationCreator ConversationCreator, resumeService ResumeService, coverLetterGenerator CoverLetterGenerator, logger *slog.Logger) Handler {
 	return &handler{
 		service:            service,
 		conversationCreator: conversationCreator,
 		resumeService:      resumeService,
+		coverLetterGenerator: coverLetterGenerator,
 		logger:             logger,
 	}
 }

@@ -28,6 +28,7 @@ type UpdateJobApplicationRequest struct {
 	SalaryMax         *int
 	SalaryCurrency    *string
 	JobDescription    *string
+	CoverLetter       *string
 	Deadline          *time.Time
 	InterestLevel     *string
 	Notes             *string
@@ -232,6 +233,9 @@ func (s *service) UpdateJobApplication(ctx context.Context, applicationID uuid.U
 	}
 	if updates.JobDescription != nil {
 		application.JobDescription = *updates.JobDescription
+	}
+	if updates.CoverLetter != nil {
+		application.CoverLetter = *updates.CoverLetter
 	}
 	if updates.Deadline != nil {
 		application.Deadline = updates.Deadline

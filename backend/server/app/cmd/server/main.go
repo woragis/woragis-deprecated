@@ -63,6 +63,7 @@ import (
 	userpreferencesdomain "github.com/woragis/backend/server/app/internal/domains/userpreferences"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
+	aiservice "github.com/woragis/backend/server/app/internal/services/ai"
 	creativeservice "github.com/woragis/backend/server/app/internal/services/creative"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
 	notifications "github.com/woragis/backend/server/app/internal/workers/notifications"
@@ -781,10 +782,13 @@ func main() {
 	// Create resume service adapter for job applications handler
 	resumeServiceAdapter := &resumeServiceAdapter{service: resumeService}
 	
-	// Update the application handler with the conversation creator adapter and resume service
-	// This enables auto-creation of conversations when job applications are created
-	// and includes full resume data in job application responses
-	applicationHandler = jobapplicationsdomain.NewHandlerWithDependencies(applicationService, conversationCreator, resumeServiceAdapter, slogLogger)
+	// Create cover letter service for generating cover letters
+	coverLetterService := aiservice.NewCoverLetterService(langchainClient, slogLogger)
+	
+	// Update the application handler with the conversation creator adapter, resume service, and cover letter generator
+	// This enables auto-creation of conversations when job applications are created,
+	// includes full resume data in job application responses, and allows cover letter generation
+	applicationHandler = jobapplicationsdomain.NewHandlerWithDependencies(applicationService, conversationCreator, resumeServiceAdapter, coverLetterService, slogLogger)
 	// Setup routes with the handler that now has conversation creation capability and resume data
 	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
 	

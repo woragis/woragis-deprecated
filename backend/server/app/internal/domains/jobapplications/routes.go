@@ -16,6 +16,7 @@ func SetupRoutes(api fiber.Router, handler Handler, responseHandler responses.Ha
 	api.Patch("/:id/status", handler.UpdateJobApplicationStatus)
 	api.Patch("/:id", handler.UpdateJobApplication)
 	api.Delete("/:id", handler.DeleteJobApplication)
+	api.Post("/:id/generate-cover-letter", handler.GenerateCoverLetter)
 	
 	// Subdomain routes
 	responses.SetupRoutes(api.Group("/:applicationId/responses"), responseHandler)
