@@ -35,7 +35,10 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
-import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+	import ToastContainer from '$lib/components/ToastContainer.svelte';
+	import { toastSuccess, toastError, getApiErrorMessage } from '$lib/utils/toast';
 	import ApplicationInfoSection from './_sections/ApplicationInfoSection.svelte';
 	import ResponsesList from './_sections/ResponsesList.svelte';
 	import StagesList from './_sections/StagesList.svelte';
@@ -213,7 +216,7 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			;
 		} catch (err) {
 			console.error('Error creating conversation:', err);
-			alert('Failed to start chat');
+			toastError(getApiErrorMessage(err, 'Failed to start chat'));
 		}
 	}
 
@@ -324,7 +327,7 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			if (formApplicationMethod) input.applicationMethod = formApplicationMethod;
 			if (formLanguage) {
 				if (formLanguage.length !== 2) {
-					alert('Language must be exactly 2 characters (e.g., "en", "pt", "es")');
+					toastError('Language must be exactly 2 characters (e.g., "en", "pt", "es")');
 					return;
 				}
 				input.language = formLanguage.toLowerCase();
@@ -332,20 +335,29 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			await updateJobApplication(application.id, input);
 			showEditModal = false;
 			await loadApplication();
+			toastSuccess('Job application updated successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to update job application');
+			toastError(getApiErrorMessage(err, 'Failed to update job application'));
 			console.error('Error updating job application:', err);
 		}
 	}
 
-	async function handleDelete() {
-		if (!application || !confirm('Are you sure you want to delete this job application?')) return;
+	function handleDelete() {
+		if (!application) return;
+		showDeleteConfirm = true;
+	}
+
+	async function confirmDelete() {
+		if (!application) return;
 		try {
 			await deleteJobApplication(application.id);
-			await goto('/job-applications-admin');
+			toastSuccess('Job application deleted successfully');
+			await goto('/applications');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to delete job application');
+			toastError(getApiErrorMessage(err, 'Failed to delete job application'));
 			console.error('Error deleting job application:', err);
+		} finally {
+			showDeleteConfirm = false;
 		}
 	}
 
@@ -364,8 +376,9 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			showResponseModal = false;
 			resetResponseForm();
 			await fetchResponses();
+			toastSuccess('Response created successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to create response');
+			toastError(getApiErrorMessage(err, 'Failed to create response'));
 			console.error('Error creating response:', err);
 		}
 	}
@@ -383,20 +396,31 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			showResponseModal = false;
 			resetResponseForm();
 			await fetchResponses();
+			toastSuccess('Response updated successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to update response');
+			toastError(getApiErrorMessage(err, 'Failed to update response'));
 			console.error('Error updating response:', err);
 		}
 	}
 
-	async function handleDeleteResponse(id: string) {
-		if (!application || !confirm('Are you sure you want to delete this response?')) return;
+	function handleDeleteResponse(id: string) {
+		if (!application) return;
+		deleteResponseId = id;
+		showDeleteResponseConfirm = true;
+	}
+
+	async function confirmDeleteResponse() {
+		if (!application || !deleteResponseId) return;
 		try {
-			await deleteResponse(id, application.id);
+			await deleteResponse(deleteResponseId, application.id);
 			await fetchResponses();
+			toastSuccess('Response deleted successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to delete response');
+			toastError(getApiErrorMessage(err, 'Failed to delete response'));
 			console.error('Error deleting response:', err);
+		} finally {
+			deleteResponseId = null;
+			showDeleteResponseConfirm = false;
 		}
 	}
 
@@ -414,8 +438,9 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			showStageModal = false;
 			resetStageForm();
 			await fetchStages();
+			toastSuccess('Interview stage created successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to create interview stage');
+			toastError(getApiErrorMessage(err, 'Failed to create interview stage'));
 			console.error('Error creating interview stage:', err);
 		}
 	}
@@ -434,8 +459,9 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			showStageModal = false;
 			resetStageForm();
 			await fetchStages();
+			toastSuccess('Interview stage updated successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to update interview stage');
+			toastError(getApiErrorMessage(err, 'Failed to update interview stage'));
 			console.error('Error updating interview stage:', err);
 		}
 	}
@@ -443,54 +469,55 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	async function handleCompleteStage(stage: InterviewStage) {
 		if (!application) return;
 		const outcome = prompt('Enter outcome (passed, failed, cancelled):') as StageOutcome | null;
-		if (!outcome || !['passed', 'failed', 'cancelled'].includes(outcome)) return;
+		if (!outcome || !['passed', 'failed', 'cancelled'].includes(outcome)) {
+			toastError('Invalid outcome. Must be: passed, failed, or cancelled');
+			return;
+		}
 		try {
 			await completeStage(stage.id, application.id, {
 				completedDate: new Date().toISOString(),
 				outcome
 			});
 			await fetchStages();
+			toastSuccess('Interview stage completed successfully');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to complete interview stage');
+			toastError(getApiErrorMessage(err, 'Failed to complete interview stage'));
 			console.error('Error completing interview stage:', err);
 		}
 	}
 
-	async function handleDeleteStage(id: string) {
-		if (!application || !confirm('Are you sure you want to delete this interview stage?')) return;
-		try {
-			await deleteStage(id, application.id);
-			await fetchStages();
-		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to delete interview stage');
-			console.error('Error deleting interview stage:', err);
-		}
+	function handleDeleteStage(id: string) {
+		if (!application) return;
+		deleteStageId = id;
+		showDeleteStageConfirm = true;
 	}
 
-	async function handleRequestCV() {
+	let showGenerateCVConfirm = $state(false);
+
+	function handleRequestCV() {
 		if (!application) return;
-		if (!confirm('This will generate a new CV tailored to this job application. Continue?')) return;
-		
+		showGenerateCVConfirm = true;
+	}
+
+	async function confirmGenerateCV() {
+		if (!application) return;
 		requestingCV = true;
 		try {
-			const generatedResume = await requestCVGeneration({
+			const result = await requestCVGeneration({
 				jobApplicationId: application.id,
 				language: application.language || 'en'
 			});
 			
-			// Update the job application with the generated resume
-			await updateJobApplication(application.id, {
-				resumeId: generatedResume.id
-			});
-			
-			// Refresh resumes list and application
-			await Promise.all([fetchResumes(), loadApplication()]);
-			alert('CV generated successfully and associated with this job application!');
+			// The resume will be automatically linked when generation completes
+			// Just refresh the application to get the updated resume data
+			await loadApplication();
+			toastSuccess('CV generation started! It will be linked automatically when ready.');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to generate CV');
+			toastError(getApiErrorMessage(err, 'Failed to generate CV'));
 			console.error('Error generating CV:', err);
 		} finally {
 			requestingCV = false;
+			showGenerateCVConfirm = false;
 		}
 	}
 
@@ -502,9 +529,9 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 			});
 			await loadApplication();
 			showEditModal = false;
-			alert('CV associated successfully!');
+			toastSuccess('CV associated successfully!');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to associate CV');
+			toastError(getApiErrorMessage(err, 'Failed to associate CV'));
 			console.error('Error associating CV:', err);
 		}
 	}
@@ -558,8 +585,25 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 						<MessageSquare class="w-4 h-4 mr-2" />
 						Start Chat
 					</Button>
+					{#if application.resume}
+						<Button 
+							variant="secondary" 
+							size="sm" 
+							onclick={async () => {
+								try {
+									await downloadResumeById(application.resume!.id, application.resume!.fileName);
+									toastSuccess('Resume downloaded successfully');
+								} catch (err) {
+									toastError(getApiErrorMessage(err, 'Failed to download resume'));
+								}
+							}}
+						>
+							<Download size={14} />
+							Download CV
+						</Button>
+					{/if}
 					<Button onclick={handleRequestCV} variant="primary" size="sm" disabled={requestingCV}>
-						{requestingCV ? 'Generating CV...' : 'Request CV'}
+						{requestingCV ? 'Generating CV...' : 'Generate CV'}
 					</Button>
 					<Button onclick={openResponseModal} variant="secondary" size="sm">Add Response</Button>
 					<Button onclick={openStageModal} variant="secondary" size="sm">Add Interview Stage</Button>
@@ -605,3 +649,45 @@ import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 		</div>
 	{/if}
 </div>
+
+<ConfirmationModal
+	bind:open={showDeleteConfirm}
+	title="Delete Application"
+	message="Are you sure you want to delete this job application? This action cannot be undone."
+	confirmText="Delete"
+	cancelText="Cancel"
+	variant="danger"
+	onConfirm={confirmDelete}
+/>
+
+<ConfirmationModal
+	bind:open={showDeleteResponseConfirm}
+	title="Delete Response"
+	message="Are you sure you want to delete this response? This action cannot be undone."
+	confirmText="Delete"
+	cancelText="Cancel"
+	variant="danger"
+	onConfirm={confirmDeleteResponse}
+/>
+
+<ConfirmationModal
+	bind:open={showDeleteStageConfirm}
+	title="Delete Interview Stage"
+	message="Are you sure you want to delete this interview stage? This action cannot be undone."
+	confirmText="Delete"
+	cancelText="Cancel"
+	variant="danger"
+	onConfirm={confirmDeleteStage}
+/>
+
+<ConfirmationModal
+	bind:open={showGenerateCVConfirm}
+	title="Generate CV"
+	message="This will generate a new CV tailored to this job application. The CV will be automatically linked when generation completes. Continue?"
+	confirmText="Generate"
+	cancelText="Cancel"
+	variant="primary"
+	onConfirm={confirmGenerateCV}
+/>
+
+<ToastContainer />

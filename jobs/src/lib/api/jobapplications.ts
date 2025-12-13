@@ -14,6 +14,20 @@ export type ApplicationStatus =
 	| 'accepted'
 	| 'failed';
 
+export interface JobApplicationResume {
+	id: string;
+	userId: string;
+	title: string;
+	isMain: boolean;
+	isFeatured: boolean;
+	filePath: string;
+	fileName: string;
+	fileSize: number;
+	tags?: string[];
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface JobApplication {
 	id: string;
 	userId: string;
@@ -28,6 +42,7 @@ export interface JobApplication {
 	status: ApplicationStatus;
 	errorMessage?: string;
 	resumeId?: string;
+	resume?: JobApplicationResume; // Full resume object when available from detail view
 	salaryMin?: number;
 	salaryMax?: number;
 	salaryCurrency?: string;

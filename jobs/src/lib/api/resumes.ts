@@ -119,6 +119,36 @@ export function getResumePreviewUrl(userId: string, language: string = 'en'): st
 	return `${apiClient.defaults.baseURL}/public/resume/preview?${params.toString()}`;
 }
 
+// Download resume by ID (authenticated endpoint)
+export function getResumeDownloadUrlById(resumeId: string): string {
+	return `${apiClient.defaults.baseURL}/resumes/${resumeId}/download`;
+}
+
+// Download resume by ID (triggers download)
+export async function downloadResumeById(resumeId: string, fileName?: string): Promise<void> {
+	const url = getResumeDownloadUrlById(resumeId);
+	const response = await fetch(url, {
+		method: 'GET',
+		headers: {
+			'Authorization': `Bearer ${apiClient.getAuthToken()}`
+		}
+	});
+	
+	if (!response.ok) {
+		throw new Error(`Failed to download resume: ${response.statusText}`);
+	}
+	
+	const blob = await response.blob();
+	const downloadUrl = window.URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = downloadUrl;
+	link.download = fileName || 'resume.pdf';
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	window.URL.revokeObjectURL(downloadUrl);
+}
+
 // Request CV generation for a job application
 export interface RequestCVGenerationInput {
 	jobApplicationId: string;

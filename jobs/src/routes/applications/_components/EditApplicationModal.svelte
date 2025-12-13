@@ -6,6 +6,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { useTranslation } from '$lib/i18n';
 	import type { ApplicationStatus, UpdateJobApplicationInput, JobApplication } from '$lib/api/jobapplications';
+	import { listResumes, type Resume } from '$lib/api/resumes';
 	
 	let {
 		open = $bindable(false),
@@ -20,11 +21,26 @@
 	const tFn = useTranslation();
 	
 	let formStatus = $state<ApplicationStatus>('pending');
+	let formResumeId = $state<string>('');
+	let formSalaryMin = $state<number | ''>('');
+	let formSalaryMax = $state<number | ''>('');
+	let formSalaryCurrency = $state<string>('');
+	let formJobDescription = $state<string>('');
+	let formDeadline = $state<string>('');
 	let formInterestLevel = $state<string>('');
 	let formTags = $state<string[]>([]);
-	let formTagInput = $state('');
-	let formFollowUpDate = $state('');
-	let formNotes = $state('');
+	let formTagInput = $state<string>('');
+	let formFollowUpDate = $state<string>('');
+	let formResponseReceivedAt = $state<string>('');
+	let formRejectionReason = $state<string>('');
+	let formNextInterviewDate = $state<string>('');
+	let formSource = $state<string>('');
+	let formApplicationMethod = $state<string>('');
+	let formLanguage = $state<string>('');
+	let formNotes = $state<string>('');
+	
+	let resumes: Resume[] = $state([]);
+	let loadingResumes = $state(false);
 	
 	const statuses: ApplicationStatus[] = [
 		'pending',
@@ -44,16 +60,48 @@
 		{ value: 'very-high', label: 'Very High' }
 	];
 	
+	async function loadResumes() {
+		if (loadingResumes || resumes.length > 0) return;
+		loadingResumes = true;
+		try {
+			resumes = await listResumes();
+		} catch (err) {
+			console.warn('Failed to load resumes:', err);
+			resumes = [];
+		} finally {
+			loadingResumes = false;
+		}
+	}
+
 	$effect(() => {
 		if (application && open) {
 			formStatus = application.status;
+			formResumeId = application.resumeId || '';
+			formSalaryMin = application.salaryMin || '';
+			formSalaryMax = application.salaryMax || '';
+			formSalaryCurrency = application.salaryCurrency || '';
+			formJobDescription = application.jobDescription || '';
+			formDeadline = application.deadline 
+				? new Date(application.deadline).toISOString().split('T')[0]
+				: '';
 			formInterestLevel = application.interestLevel || '';
 			formTags = application.tags || [];
 			formTagInput = '';
 			formFollowUpDate = application.followUpDate 
 				? new Date(application.followUpDate).toISOString().split('T')[0]
 				: '';
+			formResponseReceivedAt = application.responseReceivedAt
+				? new Date(application.responseReceivedAt).toISOString().split('T')[0]
+				: '';
+			formRejectionReason = application.rejectionReason || '';
+			formNextInterviewDate = application.nextInterviewDate
+				? new Date(application.nextInterviewDate).toISOString().split('T')[0]
+				: '';
+			formSource = application.source || '';
+			formApplicationMethod = application.applicationMethod || '';
+			formLanguage = application.language || '';
 			formNotes = application.notes || '';
+			loadResumes();
 		}
 	});
 	
@@ -95,9 +143,21 @@
 			}
 			
 			const input: UpdateJobApplicationInput = {
+				resumeId: formResumeId.trim() || undefined,
+				salaryMin: formSalaryMin !== '' ? Number(formSalaryMin) : undefined,
+				salaryMax: formSalaryMax !== '' ? Number(formSalaryMax) : undefined,
+				salaryCurrency: formSalaryCurrency.trim() || undefined,
+				jobDescription: formJobDescription.trim() || undefined,
+				deadline: formDeadline ? new Date(formDeadline).toISOString() : undefined,
 				interestLevel: formInterestLevel.trim() || undefined,
 				tags: formTags.length > 0 ? formTags : undefined,
 				followUpDate: formFollowUpDate ? new Date(formFollowUpDate).toISOString() : undefined,
+				responseReceivedAt: formResponseReceivedAt ? new Date(formResponseReceivedAt).toISOString() : undefined,
+				rejectionReason: formRejectionReason.trim() || undefined,
+				nextInterviewDate: formNextInterviewDate ? new Date(formNextInterviewDate).toISOString() : undefined,
+				source: formSource.trim() || undefined,
+				applicationMethod: formApplicationMethod.trim() || undefined,
+				language: formLanguage.trim() && formLanguage.length === 2 ? formLanguage.toLowerCase() : undefined,
 				notes: formNotes.trim() || undefined
 			};
 			
@@ -123,13 +183,87 @@
 						{/each}
 					</Select>
 				</div>
+				{#if resumes.length > 0}
+					<div class="form-group">
+						<Select label="Resume" bind:value={formResumeId}>
+							<option value="">No resume selected</option>
+							{#each resumes as resume}
+								<option value={resume.id}>
+									{resume.title}{resume.isMain ? ' (Main)' : ''}
+								</option>
+							{/each}
+						</Select>
+					</div>
+				{/if}
 				<div class="form-row">
+					<Input
+						label="Salary Min"
+						type="number"
+						bind:value={formSalaryMin}
+						placeholder="e.g., 50000"
+					/>
+					<Input
+						label="Salary Max"
+						type="number"
+						bind:value={formSalaryMax}
+						placeholder="e.g., 80000"
+					/>
+				</div>
+				<div class="form-row">
+					<Input
+						label="Salary Currency"
+						bind:value={formSalaryCurrency}
+						placeholder="USD, EUR, BRL, etc."
+					/>
+					<Input
+						label="Language (ISO 639-1)"
+						bind:value={formLanguage}
+						placeholder="en, pt, es"
+						maxlength="2"
+					/>
+				</div>
+				<div class="form-row">
+					<Input
+						label="Deadline"
+						type="date"
+						bind:value={formDeadline}
+					/>
 					<Input
 						label="Follow-up Date"
 						type="date"
 						bind:value={formFollowUpDate}
 					/>
 				</div>
+				<div class="form-row">
+					<Input
+						label="Response Received At"
+						type="date"
+						bind:value={formResponseReceivedAt}
+					/>
+					<Input
+						label="Next Interview Date"
+						type="date"
+						bind:value={formNextInterviewDate}
+					/>
+				</div>
+				<div class="form-row">
+					<Input
+						label="Source"
+						bind:value={formSource}
+						placeholder="referral, job-board, direct, etc."
+					/>
+					<Input
+						label="Application Method"
+						bind:value={formApplicationMethod}
+						placeholder="auto, manual, assisted"
+					/>
+				</div>
+				<Textarea
+					label="Job Description"
+					bind:value={formJobDescription}
+					rows={6}
+					placeholder="Paste the full job description here..."
+				/>
 				<div class="form-group">
 					<label class="form-label">Tags</label>
 					<div class="tags-input-container">
@@ -153,6 +287,12 @@
 						</div>
 					{/if}
 				</div>
+				<Textarea
+					label="Rejection Reason"
+					bind:value={formRejectionReason}
+					rows={3}
+					placeholder="If rejected, explain why..."
+				/>
 				<Textarea
 					label="Notes"
 					bind:value={formNotes}

@@ -9,6 +9,8 @@
 	// Removed getUserPreferences - not needed for isolated jobs app
 	import { listResumes, type Resume } from '$lib/api/resumes';
 	import ApplicationTemplates, { type ApplicationTemplate } from './ApplicationTemplates.svelte';
+	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+	import { toastError } from '$lib/utils/toast';
 	
 	let {
 		open = $bindable(false),
@@ -43,6 +45,8 @@
 	let resumes: Resume[] = $state([]);
 	let loadingResumes = $state(false);
 	let showTemplatesModal = $state(false);
+	let showDuplicateConfirm = $state(false);
+	let duplicateApplication: JobApplication | null = $state(null);
 	
 	const interestLevels = [
 		{ value: '', label: 'Not set' },
@@ -419,7 +423,7 @@
 
 	async function handleSubmit() {
 		if (!formCompanyName.trim() || !formJobTitle.trim() || !formJobUrl.trim() || !formWebsite.trim()) {
-			alert(tFn('jobApplications.modal.required') + ' ' + tFn('jobApplications.modal.companyName') + ', ' + tFn('jobApplications.modal.jobTitle') + ', ' + tFn('jobApplications.modal.jobUrl') + ', ' + tFn('jobApplications.modal.website'));
+			toastError(tFn('jobApplications.modal.required') + ' ' + tFn('jobApplications.modal.companyName') + ', ' + tFn('jobApplications.modal.jobTitle') + ', ' + tFn('jobApplications.modal.jobUrl') + ', ' + tFn('jobApplications.modal.website'));
 			return;
 		}
 		
@@ -432,18 +436,15 @@
 		// Check for duplicate
 		const duplicate = checkForDuplicate(normalizedJobUrl, normalizedWebsite);
 		if (duplicate) {
-			const message = `You've already applied to this job!\n\n` +
-				`Company: ${duplicate.companyName}\n` +
-				`Title: ${duplicate.jobTitle}\n` +
-				`Status: ${duplicate.status}\n` +
-				`Applied: ${duplicate.appliedAt ? new Date(duplicate.appliedAt).toLocaleDateString() : 'Not yet'}\n\n` +
-				`Do you still want to create a duplicate application?`;
-			
-			if (!confirm(message)) {
-				return; // User cancelled
-			}
+			duplicateApplication = duplicate;
+			showDuplicateConfirm = true;
+			return;
 		}
 		
+		await proceedWithSubmit(normalizedWebsite, normalizedJobUrl);
+	}
+
+	async function proceedWithSubmit(normalizedWebsite: string, normalizedJobUrl: string) {
 		// Save website to localStorage for next time
 		if (typeof window !== 'undefined' && normalizedWebsite) {
 			localStorage.setItem(LAST_WEBSITE_KEY, normalizedWebsite);
@@ -474,6 +475,15 @@
 			await onSubmit(input);
 			handleClose();
 		}
+	}
+
+	async function confirmDuplicate() {
+		if (!duplicateApplication) return;
+		const normalizedWebsite = formWebsite.trim().toLowerCase();
+		const normalizedJobUrl = normalizeUrl(formJobUrl);
+		await proceedWithSubmit(normalizedWebsite, normalizedJobUrl);
+		showDuplicateConfirm = false;
+		duplicateApplication = null;
 	}
 </script>
 
@@ -705,3 +715,22 @@
 </style>
 
 <ApplicationTemplates bind:open={showTemplatesModal} onLoadTemplate={loadTemplate} />
+
+{#if duplicateApplication}
+	<ConfirmationModal
+		bind:open={showDuplicateConfirm}
+		title="Duplicate Application Detected"
+		message="You've already applied to this job!
+
+Company: {duplicateApplication.companyName}
+Title: {duplicateApplication.jobTitle}
+Status: {duplicateApplication.status}
+Applied: {duplicateApplication.appliedAt ? new Date(duplicateApplication.appliedAt).toLocaleDateString() : 'Not yet'}
+
+Do you still want to create a duplicate application?"
+		confirmText="Create Anyway"
+		cancelText="Cancel"
+		variant="warning"
+		onConfirm={confirmDuplicate}
+	/>
+{/if}

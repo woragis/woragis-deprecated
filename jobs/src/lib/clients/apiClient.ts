@@ -71,3 +71,10 @@ apiClient.interceptors.response.use(
 		return Promise.reject(error);
 	}
 );
+
+// Helper to get auth token for manual fetch calls
+apiClient.getAuthToken = () => {
+	if (!browser) return '';
+	const { token } = get(authStore);
+	return token || '';
+};

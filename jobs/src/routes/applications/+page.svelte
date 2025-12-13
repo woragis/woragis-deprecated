@@ -24,7 +24,8 @@
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import ToastContainer from '$lib/components/ToastContainer.svelte';
-	import { showToast } from '$lib/utils/toast';
+	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+	import { toastSuccess, toastError, getApiErrorMessage } from '$lib/utils/toast';
 
 	const tFn = useTranslation();
 	
@@ -57,6 +58,9 @@
 	let showEditModal = $state(false);
 	let showDetailsModal = $state(false);
 	let selectedApplication: JobApplication | null = $state(null);
+	let showDeleteConfirm = $state(false);
+	let deleteTargetId: string | null = $state(null);
+	let showBatchDeleteConfirm = $state(false);
 
 	onMount(async () => {
 		await fetchApplications();
@@ -83,28 +87,35 @@
 		try {
 			await createJobApplication(input);
 			await fetchApplications();
-			showToast('Job application created successfully!', 'success');
+			toastSuccess('Job application created successfully!');
 			showCreateModal = false;
 		} catch (err) {
-			const message = err instanceof Error ? err.message : tFn('jobApplications.createError');
-			showToast(message, 'error');
+			const message = getApiErrorMessage(err, tFn('jobApplications.createError'));
+			toastError(message);
 			console.error('Error creating job application:', err);
 			throw err;
 		}
 	}
 
-	async function handleDelete(id: string) {
-		if (!confirm(tFn('jobApplications.deleteConfirm'))) return;
+	function handleDelete(id: string) {
+		deleteTargetId = id;
+		showDeleteConfirm = true;
+	}
 
+	async function confirmDelete() {
+		if (!deleteTargetId) return;
 		try {
-			await deleteJobApplication(id);
+			await deleteJobApplication(deleteTargetId);
 			await fetchApplications();
-			showToast('Application deleted successfully', 'success');
-			selectedApplications.delete(id);
+			toastSuccess('Application deleted successfully');
+			selectedApplications.delete(deleteTargetId);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : tFn('jobApplications.deleteError');
-			showToast(message, 'error');
+			const message = getApiErrorMessage(err, tFn('jobApplications.deleteError'));
+			toastError(message);
 			console.error('Error deleting job application:', err);
+		} finally {
+			deleteTargetId = null;
+			showDeleteConfirm = false;
 		}
 	}
 
@@ -121,11 +132,11 @@
 		try {
 			await updateJobApplication(id, input);
 			await fetchApplications();
-			showToast('Application updated successfully', 'success');
+			toastSuccess('Application updated successfully');
 			showEditModal = false;
 		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Failed to update application';
-			showToast(message, 'error');
+			const message = getApiErrorMessage(err, 'Failed to update application');
+			toastError(message);
 			console.error('Error updating job application:', err);
 			throw err;
 		}
@@ -136,20 +147,25 @@
 		showEditModal = true;
 	}
 
-	async function handleBatchDelete() {
+	function handleBatchDelete() {
 		if (selectedApplications.size === 0) return;
-		if (!confirm(`Delete ${selectedApplications.size} application(s)?`)) return;
+		showBatchDeleteConfirm = true;
+	}
 
+	async function confirmBatchDelete() {
+		if (selectedApplications.size === 0) return;
 		try {
 			const deletePromises = Array.from(selectedApplications).map(id => deleteJobApplication(id));
 			await Promise.all(deletePromises);
 			await fetchApplications();
-			showToast(`Deleted ${selectedApplications.size} application(s)`, 'success');
+			toastSuccess(`Deleted ${selectedApplications.size} application(s)`);
 			selectedApplications.clear();
 			showBatchActions = false;
 		} catch (err) {
-			showToast('Error deleting applications', 'error');
+			toastError(getApiErrorMessage(err, 'Error deleting applications'));
 			console.error('Error batch deleting:', err);
+		} finally {
+			showBatchDeleteConfirm = false;
 		}
 	}
 
@@ -162,11 +178,11 @@
 			);
 			await Promise.all(updatePromises);
 			await fetchApplications();
-			showToast(`Updated ${selectedApplications.size} application(s) to ${status}`, 'success');
+			toastSuccess(`Updated ${selectedApplications.size} application(s) to ${status}`);
 			selectedApplications.clear();
 			showBatchActions = false;
 		} catch (err) {
-			showToast('Error updating applications', 'error');
+			toastError(getApiErrorMessage(err, 'Error updating applications'));
 			console.error('Error batch updating:', err);
 		}
 	}
@@ -194,7 +210,7 @@
 	function exportToCSV() {
 		const filtered = filteredApplications();
 		if (filtered.length === 0) {
-			showToast('No applications to export', 'warning');
+			toastError('No applications to export');
 			return;
 		}
 
@@ -240,7 +256,7 @@
 		document.body.removeChild(link);
 		URL.revokeObjectURL(url);
 
-		showToast(`Exported ${filtered.length} application(s) to CSV`, 'success');
+		toastSuccess(`Exported ${filtered.length} application(s) to CSV`);
 	}
 
 	function filteredApplications() {

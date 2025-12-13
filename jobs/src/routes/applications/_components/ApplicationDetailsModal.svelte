@@ -2,6 +2,7 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
 	import { useTranslation } from '$lib/i18n';
 	import type { JobApplication } from '$lib/api/jobapplications';
 	import { goto } from '$app/navigation';
@@ -20,6 +21,8 @@
 	
 	const tFn = useTranslation();
 	
+	let showDeleteConfirm = $state(false);
+	
 	function formatDate(dateString?: string): string {
 		if (!dateString) return '—';
 		return new Date(dateString).toLocaleDateString();
@@ -33,17 +36,22 @@
 	
 	function handleViewFull() {
 		if (application) {
-			goto(`/admin/job-applications-admin/${application.id}`);
+			goto(`/applications/${application.id}`);
 		}
 	}
 	
 	function handleDelete() {
 		if (application && onDelete) {
-			if (confirm('Are you sure you want to delete this application?')) {
-				onDelete(application.id);
-				open = false;
-			}
+			showDeleteConfirm = true;
 		}
+	}
+
+	async function confirmDelete() {
+		if (application && onDelete) {
+			onDelete(application.id);
+			open = false;
+		}
+		showDeleteConfirm = false;
 	}
 </script>
 
@@ -158,6 +166,16 @@
 			</div>
 		</div>
 	</Modal>
+
+	<ConfirmationModal
+		bind:open={showDeleteConfirm}
+		title="Delete Application"
+		message="Are you sure you want to delete this application? This action cannot be undone."
+		confirmText="Delete"
+		cancelText="Cancel"
+		variant="danger"
+		onConfirm={confirmDelete}
+	/>
 {/if}
 
 <style>
