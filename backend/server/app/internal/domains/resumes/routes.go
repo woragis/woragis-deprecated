@@ -9,6 +9,7 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Post("/", handler.CreateResume)
 	api.Get("/tags", handler.ListResumeTags) // Get all tags for autocomplete (must be before /:id routes)
 	api.Get("/", handler.ListResumes) // Supports ?tags=tag1,tag2 query parameter
+	api.Get("/:id/download", handler.DownloadResumeByID) // Download resume by ID (must be before /:id)
 	api.Get("/:id", handler.GetResume)
 	api.Patch("/:id", handler.UpdateResume)
 	api.Delete("/:id", handler.DeleteResume)

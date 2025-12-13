@@ -27,6 +27,7 @@ type Handler interface {
 	ListResumes(c *fiber.Ctx) error
 	ListResumeTags(c *fiber.Ctx) error
 	DownloadResume(c *fiber.Ctx) error
+	DownloadResumeByID(c *fiber.Ctx) error
 	PreviewResume(c *fiber.Ctx) error
 	GenerateResume(c *fiber.Ctx) error
 	MarkAsMain(c *fiber.Ctx) error
@@ -513,6 +514,66 @@ func (h *handler) DownloadResume(c *fiber.Ctx) error {
 
 	// Get the best resume (main > featured > most recent)
 	resume, err := h.service.GetBestResume(c.Context(), userID)
+	if err != nil {
+		if domainErr, ok := err.(*DomainError); ok {
+			if domainErr.Code == ErrCodeNotFound {
+				return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": domainErr.Message})
+			}
+		}
+		h.logger.Error("failed to get resume for download", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get resume"})
+	}
+
+	// Build full file path
+	fullPath := filepath.Join(h.baseFilePath, resume.FilePath)
+	if !filepath.IsAbs(resume.FilePath) {
+		fullPath = filepath.Join(h.baseFilePath, resume.FilePath)
+	} else {
+		fullPath = resume.FilePath
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		h.logger.Error("resume file not found", slog.String("path", fullPath))
+		return response.Error(c, fiber.StatusNotFound, 0, fiber.Map{"message": ErrFileNotFound})
+	}
+
+	// Open file
+	file, err := os.Open(fullPath)
+	if err != nil {
+		h.logger.Error("failed to open resume file", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": ErrFileReadError})
+	}
+	defer file.Close()
+
+	// Set headers for PDF download
+	c.Set("Content-Type", "application/pdf")
+	c.Set("Content-Disposition", `attachment; filename="`+resume.FileName+`"`)
+
+	// Stream file to response
+	_, err = io.Copy(c.Response().BodyWriter(), file)
+	if err != nil {
+		h.logger.Error("failed to stream resume file", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to stream file"})
+	}
+
+	return nil
+}
+
+// DownloadResumeByID downloads a resume by its ID (authenticated endpoint).
+func (h *handler) DownloadResumeByID(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
+	}
+
+	resumeID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
+	}
+
+	// Get resume
+	resume, err := h.service.GetResume(c.Context(), userID, resumeID)
 	if err != nil {
 		if domainErr, ok := err.(*DomainError); ok {
 			if domainErr.Code == ErrCodeNotFound {

@@ -42,6 +42,26 @@ type Conversation struct {
 	ID uuid.UUID
 }
 
+// ResumeService is an interface to avoid circular dependencies with resumes domain.
+type ResumeService interface {
+	GetResume(ctx context.Context, userID uuid.UUID, resumeID uuid.UUID) (*Resume, error)
+}
+
+// Resume represents a resume (minimal interface to avoid import cycle).
+type Resume struct {
+	ID         uuid.UUID `json:"id"`
+	UserID     uuid.UUID `json:"userId"`
+	Title      string    `json:"title"`
+	IsMain     bool      `json:"isMain"`
+	IsFeatured bool      `json:"isFeatured"`
+	FilePath   string    `json:"filePath"`
+	FileName   string    `json:"fileName"`
+	FileSize   int64     `json:"fileSize"`
+	Tags       []string  `json:"tags"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
 // Handler exposes job application endpoints.
 type Handler interface {
 	CreateJobApplication(c *fiber.Ctx) error
@@ -55,6 +75,7 @@ type Handler interface {
 type handler struct {
 	service          Service
 	conversationCreator ConversationCreator // Optional: for auto-creating conversations
+	resumeService    ResumeService          // Optional: for including resume data in responses
 	logger          *slog.Logger
 }
 
@@ -71,6 +92,16 @@ func NewHandlerWithChatService(service Service, conversationCreator Conversation
 	return &handler{
 		service:            service,
 		conversationCreator: conversationCreator,
+		logger:             logger,
+	}
+}
+
+// NewHandlerWithDependencies constructs a job application handler with all dependencies.
+func NewHandlerWithDependencies(service Service, conversationCreator ConversationCreator, resumeService ResumeService, logger *slog.Logger) Handler {
+	return &handler{
+		service:            service,
+		conversationCreator: conversationCreator,
+		resumeService:      resumeService,
 		logger:             logger,
 	}
 }
@@ -200,7 +231,68 @@ func (h *handler) GetJobApplication(c *fiber.Ctx) error {
 		return h.handleError(c, err)
 	}
 
-	return response.Success(c, fiber.StatusOK, application)
+	// Include full resume data if resumeId exists
+	responseData := fiber.Map{
+		"id":                  application.ID,
+		"userId":             application.UserID,
+		"companyName":        application.CompanyName,
+		"location":            application.Location,
+		"jobTitle":            application.JobTitle,
+		"jobUrl":              application.JobURL,
+		"website":             application.Website,
+		"appliedAt":           application.AppliedAt,
+		"coverLetter":         application.CoverLetter,
+		"linkedInContact":     application.LinkedInContact,
+		"status":              application.Status,
+		"errorMessage":        application.ErrorMessage,
+		"resumeId":            application.ResumeID,
+		"salaryMin":           application.SalaryMin,
+		"salaryMax":           application.SalaryMax,
+		"salaryCurrency":     application.SalaryCurrency,
+		"jobDescription":      application.JobDescription,
+		"deadline":            application.Deadline,
+		"interestLevel":      application.InterestLevel,
+		"notes":               application.Notes,
+		"tags":                application.Tags,
+		"followUpDate":        application.FollowUpDate,
+		"responseReceivedAt":  application.ResponseReceivedAt,
+		"rejectionReason":     application.RejectionReason,
+		"interviewCount":      application.InterviewCount,
+		"nextInterviewDate":   application.NextInterviewDate,
+		"source":              application.Source,
+		"applicationMethod":   application.ApplicationMethod,
+		"language":            application.Language,
+		"createdAt":           application.CreatedAt,
+		"updatedAt":           application.UpdatedAt,
+	}
+
+	// If resumeId exists and resumeService is available, fetch full resume data
+	if application.ResumeID != nil && h.resumeService != nil {
+		resume, err := h.resumeService.GetResume(c.Context(), application.UserID, *application.ResumeID)
+		if err == nil {
+			responseData["resume"] = fiber.Map{
+				"id":         resume.ID,
+				"userId":     resume.UserID,
+				"title":      resume.Title,
+				"isMain":     resume.IsMain,
+				"isFeatured": resume.IsFeatured,
+				"filePath":   resume.FilePath,
+				"fileName":   resume.FileName,
+				"fileSize":   resume.FileSize,
+				"tags":       resume.Tags,
+				"createdAt":  resume.CreatedAt,
+				"updatedAt":  resume.UpdatedAt,
+			}
+		} else {
+			// Log error but don't fail the request
+			h.logger.Warn("failed to fetch resume data",
+				slog.String("resume_id", application.ResumeID.String()),
+				slog.Any("error", err),
+			)
+		}
+	}
+
+	return response.Success(c, fiber.StatusOK, responseData)
 }
 
 func (h *handler) ListJobApplications(c *fiber.Ctx) error {

@@ -129,6 +129,31 @@ type jobApplicationServiceForResponsesAdapter struct {
 	service jobapplicationsdomain.Service
 }
 
+// resumeServiceAdapter implements jobapplicationsdomain.ResumeService
+type resumeServiceAdapter struct {
+	service resumesdomain.Service
+}
+
+func (a *resumeServiceAdapter) GetResume(ctx context.Context, userID uuid.UUID, resumeID uuid.UUID) (*jobapplicationsdomain.Resume, error) {
+	resume, err := a.service.GetResume(ctx, userID, resumeID)
+	if err != nil {
+		return nil, err
+	}
+	return &jobapplicationsdomain.Resume{
+		ID:         resume.ID,
+		UserID:     resume.UserID,
+		Title:      resume.Title,
+		IsMain:     resume.IsMain,
+		IsFeatured: resume.IsFeatured,
+		FilePath:   resume.FilePath,
+		FileName:   resume.FileName,
+		FileSize:   resume.FileSize,
+		Tags:       []string(resume.Tags),
+		CreatedAt:  resume.CreatedAt,
+		UpdatedAt:  resume.UpdatedAt,
+	}, nil
+}
+
 func (a *jobApplicationServiceForResponsesAdapter) GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*jobapplicationresponsesdomain.JobApplication, error) {
 	app, err := a.service.GetJobApplication(ctx, applicationID)
 	if err != nil {
@@ -753,10 +778,14 @@ func main() {
 		return &jobapplicationsdomain.Conversation{ID: conv.ID}, nil
 	})
 	
-	// Update the application handler with the conversation creator adapter
+	// Create resume service adapter for job applications handler
+	resumeServiceAdapter := &resumeServiceAdapter{service: resumeService}
+	
+	// Update the application handler with the conversation creator adapter and resume service
 	// This enables auto-creation of conversations when job applications are created
-	applicationHandler = jobapplicationsdomain.NewHandlerWithChatService(applicationService, conversationCreator, slogLogger)
-	// Setup routes with the handler that now has conversation creation capability
+	// and includes full resume data in job application responses
+	applicationHandler = jobapplicationsdomain.NewHandlerWithDependencies(applicationService, conversationCreator, resumeServiceAdapter, slogLogger)
+	// Setup routes with the handler that now has conversation creation capability and resume data
 	jobapplicationsdomain.SetupRoutes(jobApplicationsGroup, applicationHandler, responseHandler, stageHandler)
 	
 	chatsHandler := chatsdomain.NewHandler(chatsService, slogLogger, chatsStream)
