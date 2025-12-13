@@ -63,20 +63,24 @@ class AIService:
                 lang_instruction = "in English."
 
             # Call AI service
-            system_instruction = (
-                "You are an expert resume writer. "
-                f"Generate professional, ATS-friendly resume content {lang_instruction} "
-                "Be concise, use strong action verbs, and quantify achievements when possible."
-            )
             response = requests.post(
-                f"{self.base_url}/v1/chat",
+                f"{self.base_url}/api/chat/completions",
                 json={
-                    "agent": "auto",  # Auto-select agent based on input
-                    "provider": "openai",  # Use OpenAI for resume writing
-                    "model": "gpt-4o-mini",
-                    "input": prompt,
-                    "system": system_instruction,
-                    "temperature": 0.3
+                    "provider": "anthropic",  # Use Anthropic for better resume writing
+                    "model": "claude-3-5-sonnet-latest",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": (
+                                "You are an expert resume writer. "
+                                f"Generate professional, ATS-friendly resume content {lang_instruction} "
+                                "Be concise, use strong action verbs, and quantify achievements when possible.\n\n"
+                                f"{prompt}"
+                            )
+                        }
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 1000
                 },
                 timeout=30
             )
@@ -84,11 +88,9 @@ class AIService:
             response.raise_for_status()
             data = response.json()
             
-            # Extract content from response (AI service returns {"agent": "...", "output": "..."})
+            # Extract content from response (handle both response formats)
             content = ""
-            if 'output' in data:
-                content = data['output']
-            elif 'message' in data and 'content' in data['message']:
+            if 'message' in data and 'content' in data['message']:
                 content = data['message']['content']
             elif 'choices' in data and len(data['choices']) > 0:
                 content = data['choices'][0]['message']['content']
@@ -309,20 +311,24 @@ Requirements:
             prompt = self._build_tags_prompt(job_description, projects)
             
             # Call AI service
-            system_instruction = (
-                "You are a technical tag extractor. "
-                "Extract relevant technology tags from the job description and projects. "
-                "Return ONLY a comma-separated list of lowercase tags, nothing else."
-            )
             response = requests.post(
-                f"{self.base_url}/v1/chat",
+                f"{self.base_url}/api/chat/completions",
                 json={
-                    "agent": "auto",
-                    "provider": "openai",
-                    "model": "gpt-4o-mini",
-                    "input": prompt,
-                    "system": system_instruction,
-                    "temperature": 0.2
+                    "provider": "anthropic",
+                    "model": "claude-3-5-sonnet-latest",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": (
+                                "You are a technical tag extractor. "
+                                "Extract relevant technology tags from the job description and projects. "
+                                "Return ONLY a comma-separated list of lowercase tags, nothing else.\n\n"
+                                f"{prompt}"
+                            )
+                        }
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 200
                 },
                 timeout=20
             )
@@ -330,11 +336,9 @@ Requirements:
             response.raise_for_status()
             data = response.json()
             
-            # Extract content (AI service returns {"agent": "...", "output": "..."})
+            # Extract content
             content = ""
-            if 'output' in data:
-                content = data['output']
-            elif 'message' in data and 'content' in data['message']:
+            if 'message' in data and 'content' in data['message']:
                 content = data['message']['content']
             elif 'choices' in data and len(data['choices']) > 0:
                 content = data['choices'][0]['message']['content']

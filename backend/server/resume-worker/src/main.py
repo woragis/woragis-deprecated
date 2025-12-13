@@ -3,22 +3,19 @@
 Resume Generation Worker - Main Entry Point
 
 This worker generates customized resumes based on job requirements.
-It can run in two modes:
-1. Worker mode: Long-running process that processes jobs from Redis queue
-2. CLI mode: One-time execution with command-line arguments (for testing)
-
-Usage:
-    Worker mode: python main.py --worker
-    CLI mode: python main.py <user_id> <job_description> [job_title] [output_filename] [language]
+It searches through projects (by technology tags) and certifications,
+uses AI to generate resume sections, and creates PDFs using WeasyPrint.
 """
 
 import os
 import sys
 import json
 import logging
-import argparse
 from datetime import datetime
 from dotenv import load_dotenv
+
+import sys
+import os
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
@@ -27,12 +24,11 @@ from database import Database
 from ai_service import AIService
 from resume_generator import ResumeGenerator
 from translation_helper import TranslationHelper
-from worker import Worker
 
 # Load environment variables
 load_dotenv()
 
-# Configure basic logging for CLI mode
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -62,9 +58,9 @@ def save_result(result: dict, results_dir: str = RESULTS_LOG_DIR):
         logger.error(f"Failed to save result: {e}")
 
 
-def run_cli_mode():
-    """Run in CLI mode (one-time execution for testing)."""
-    logger.info("Starting Resume Generation Worker (CLI mode)")
+def main():
+    """Main entry point"""
+    logger.info("Starting Resume Generation Worker")
     
     # Initialize components
     db = Database(DATABASE_URL)
@@ -109,39 +105,11 @@ def run_cli_mode():
         sys.exit(0)
         
     except Exception as e:
-        logger.error(f"Error in CLI mode: {e}", exc_info=True)
+        logger.error(f"Error in main: {e}", exc_info=True)
         sys.exit(1)
     finally:
         db.close()
         translation_helper.close()
-
-
-def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(description="Resume Generation Worker")
-    parser.add_argument(
-        "--worker",
-        action="store_true",
-        help="Run in worker mode (processes jobs from Redis queue)"
-    )
-    
-    args = parser.parse_args()
-    
-    if args.worker:
-        # Run in worker mode
-        worker = Worker()
-        try:
-            worker.start()
-        except KeyboardInterrupt:
-            logger.info("Received interrupt signal")
-        except Exception as e:
-            logger.error("Worker failed to start", exc_info=True)
-            sys.exit(1)
-        finally:
-            worker.stop()
-    else:
-        # Run in CLI mode (backward compatibility)
-        run_cli_mode()
 
 
 if __name__ == '__main__':

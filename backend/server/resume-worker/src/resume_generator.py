@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
-from pypdf import PdfReader, PdfWriter, Transformation
 
 import sys
 import os
@@ -22,92 +21,6 @@ from keyword_extractor import extract_keywords
 from translation_helper import TranslationHelper
 
 logger = logging.getLogger(__name__)
-
-# Fix WeasyPrint compatibility issues - patch weasyprint.pdf.stream.Stream class
-# Issues:
-# 1. weasyprint.pdf.stream.Stream calls super().transform() but pydyf.Stream doesn't have transform
-# 2. WeasyPrint tries to call stream.text_matrix() as a method but it doesn't exist
-try:
-    from weasyprint.pdf import stream as weasy_stream
-    import pydyf
-    
-    # Check if pydyf.Stream has transform method
-    pydyf_has_transform = hasattr(pydyf.Stream, 'transform')
-    
-    if hasattr(weasy_stream.Stream, 'transform'):
-        # Store the original method
-        _original_weasy_transform = weasy_stream.Stream.transform
-        
-        def _patched_transform(self, a=1, b=0, c=0, d=1, e=0, f=0):
-            """Patched transform method to fix coordinate system issues"""
-            # The problem: WeasyPrint's Stream.transform() calls super().transform()
-            # If pydyf.Stream doesn't have transform(), this fails.
-            # If it does, we need to call it correctly to avoid vertical inversion.
-            #
-            # CRITICAL FIX: The vertical inversion is caused by incorrectly applying
-            # coordinate system transforms. We need to call pydyf's transform directly
-            # on the underlying stream object, not via set_text_matrix().
-            try:
-                # Check if this is a vertical flip transform (Y-axis inversion)
-                # Pattern: [1, 0, 0, -1, 0, height] flips Y-axis
-                is_vertical_flip = (a == 1 and b == 0 and c == 0 and d == -1)
-                
-                if is_vertical_flip:
-                    # This is a coordinate system setup transform that causes vertical inversion
-                    # when incorrectly applied. We need to skip it and let pydyf handle
-                    # the coordinate system setup naturally (PDF uses bottom-left origin).
-                    logger.debug(f"Skipping vertical flip transform [{a}, {b}, {c}, {d}, {e}, {f}] to prevent inversion")
-                    return None
-                
-                # For other transforms, try to call pydyf's transform if available
-                if pydyf_has_transform:
-                    # Get the underlying pydyf.Stream instance
-                    # WeasyPrint's Stream wraps a pydyf.Stream
-                    if hasattr(self, '_stream') or hasattr(self, 'stream'):
-                        stream_obj = getattr(self, '_stream', getattr(self, 'stream', None))
-                        if stream_obj and hasattr(stream_obj, 'transform'):
-                            stream_obj.transform(a, b, c, d, e, f)
-                            return None
-                    
-                    # Try calling on self if it's actually a pydyf.Stream instance
-                    if isinstance(self, pydyf.Stream):
-                        self.transform(a, b, c, d, e, f)
-                        return None
-                
-                # If we can't call pydyf's transform, skip it
-                # The coordinate system should be handled correctly by pydyf/WeasyPrint
-                logger.debug(f"Skipping transform [{a}, {b}, {c}, {d}, {e}, {f}] - coordinate system handled internally")
-                return None
-            except Exception as e:
-                # If anything fails, skip the transform (might not be critical)
-                logger.debug(f"Transform patch error (non-fatal): {e}")
-                return None
-        
-        # Replace the transform method
-        weasy_stream.Stream.transform = _patched_transform
-        if pydyf_has_transform:
-            logger.debug("Patched weasyprint.pdf.stream.Stream.transform to prevent vertical inversion")
-        else:
-            logger.debug("Patched weasyprint.pdf.stream.Stream.transform to fix compatibility and prevent vertical inversion")
-    
-    # Also patch text_matrix to be a method that calls set_text_matrix
-    if not hasattr(weasy_stream.Stream, 'text_matrix'):
-        def _text_matrix_method(self, *args):
-            """Patched text_matrix method to fix 'Stream' object has no attribute 'text_matrix' error"""
-            # WeasyPrint calls stream.text_matrix(*matrix.values) but it doesn't exist
-            # We'll make it call set_text_matrix instead
-            if hasattr(self, 'set_text_matrix') and len(args) == 6:
-                return self.set_text_matrix(*args)
-            return None
-        
-        # Add text_matrix as a method
-        weasy_stream.Stream.text_matrix = _text_matrix_method
-        logger.debug("Patched weasyprint.pdf.stream.Stream.text_matrix to fix compatibility issue")
-    
-    if pydyf_has_transform:
-        logger.debug("pydyf.Stream has transform method, no patch needed")
-except (ImportError, AttributeError) as e:
-    logger.warning(f"Could not patch WeasyPrint Stream methods: {e}. PDF generation may fail with transform errors.")
 
 
 class ResumeGenerator:
@@ -459,74 +372,18 @@ class ResumeGenerator:
         
         # Generate PDF with WeasyPrint
         css_path = os.path.join(self.template_dir, 'style.css')
-        pdf_generated = False
-        
-        # Try multiple approaches to work around WeasyPrint transform issues
-        attempts = [
-            (lambda: HTML(string=html_content, base_url=self.template_dir).write_pdf(
-                output_path,
-                stylesheets=[CSS(filename=css_path)]
-            ), "with base_url"),
-            (lambda: HTML(string=html_content).write_pdf(
-                output_path,
-                stylesheets=[CSS(filename=css_path)]
-            ), "without base_url"),
-        ]
-        
-        last_error = None
-        for attempt_func, attempt_desc in attempts:
-            try:
-                attempt_func()
-                pdf_generated = True
-                logger.debug(f"PDF generated successfully {attempt_desc}")
-                break
-            except AttributeError as e:
-                if "'super' object has no attribute 'transform'" in str(e):
-                    logger.warning(f"PDF generation {attempt_desc} failed due to WeasyPrint transform bug: {e}")
-                    last_error = e
-                    continue
-                else:
-                    raise
-            except Exception as e:
-                logger.warning(f"PDF generation {attempt_desc} failed: {e}")
-                last_error = e
-                continue
-        
-        if not pdf_generated:
-            raise RuntimeError(f"Failed to generate PDF after all attempts. Last error: {last_error}")
-        
-        # Fix vertical and horizontal inversion
         try:
-            logger.info("Fixing PDF vertical and horizontal inversion...")
-            reader = PdfReader(output_path)
-            writer = PdfWriter()
-            
-            for page in reader.pages:
-                # Get page dimensions (need to get before any transformations)
-                page_width = float(page.mediabox.width)
-                page_height = float(page.mediabox.height)
-                
-                # Apply transformations to fix both vertical and horizontal inversion
-                # After 180 rotation, coordinate system is rotated, so we use page_height for horizontal translation
-                # Rotate 180 degrees to fix vertical inversion
-                page.rotate(180)
-                
-                # Flip horizontally: scale x by -1, then translate to correct position
-                # After 180 rotation, we need to translate by page_width to position correctly
-                # (not page_height, as the rotation doesn't swap the coordinate system in the way we need)
-                horizontal_flip = Transformation().scale(sx=-1, sy=1).translate(tx=page_width, ty=0)
-                page.add_transformation(horizontal_flip)
-                
-                writer.add_page(page)
-            
-            # Write the fixed PDF
-            with open(output_path, 'wb') as output_file:
-                writer.write(output_file)
-            
-            logger.info("PDF vertical and horizontal inversion fixed successfully")
+            HTML(string=html_content, base_url=self.template_dir).write_pdf(
+                output_path,
+                stylesheets=[CSS(filename=css_path)]
+            )
         except Exception as e:
-            logger.error(f"Failed to fix PDF rotation/flip: {e}", exc_info=True)
-            # Continue anyway - PDF was generated, just might be inverted
+            # Fallback: try without base_url
+            logger.warning(f"PDF generation with base_url failed: {e}, trying without base_url")
+            HTML(string=html_content).write_pdf(
+                output_path,
+                stylesheets=[CSS(filename=css_path)]
+            )
         
         # Get file size
         file_size = os.path.getsize(output_path)
