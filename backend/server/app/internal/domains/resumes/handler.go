@@ -37,11 +37,13 @@ type Handler interface {
 	GetJobStatus(c *fiber.Ctx) error
 	RetryJob(c *fiber.Ctx) error
 	CancelJob(c *fiber.Ctx) error
+	CompleteResumeGeneration(c *fiber.Ctx) error // Internal callback for resume worker
 }
 
 // JobApplicationService is an interface to avoid circular dependencies
 type JobApplicationService interface {
 	GetJobApplication(ctx context.Context, applicationID uuid.UUID) (*JobApplication, error)
+	UpdateJobApplicationResumeID(ctx context.Context, applicationID uuid.UUID, resumeID uuid.UUID) error
 }
 
 // JobApplication represents a job application (minimal interface)
@@ -888,6 +890,165 @@ func (h *handler) CancelJob(c *fiber.Ctx) error {
 		"jobId":  job.ID,
 		"status": "failed",
 		"message": "Job cancelled",
+	})
+}
+
+// CompleteResumeGeneration is an internal callback endpoint for the resume worker.
+// It saves the generated resume file, creates a database record, and links it to the job application.
+func (h *handler) CompleteResumeGeneration(c *fiber.Ctx) error {
+	// Validate API key for internal service authentication
+	apiKey := c.Get("X-API-Key")
+	if apiKey == "" {
+		apiKey = c.Get("x-api-key")
+	}
+	
+	expectedAPIKey := os.Getenv("PUBLIC_API_KEY")
+	if expectedAPIKey == "" {
+		h.logger.Warn("PUBLIC_API_KEY not set, allowing request without API key validation")
+	} else if apiKey != expectedAPIKey {
+		h.logger.Warn("Invalid API key provided for internal resume completion",
+			slog.String("provided_key_prefix", func() string {
+				if len(apiKey) > 8 {
+					return apiKey[:8]
+				}
+				return apiKey
+			}()),
+		)
+		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "unauthorized: invalid API key"})
+	}
+	
+	// Parse multipart form
+	form, err := c.MultipartForm()
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid multipart form"})
+	}
+
+	// Get required fields
+	jobIDValues := form.Value["jobId"]
+	jobApplicationIDValues := form.Value["jobApplicationId"]
+	userIDValues := form.Value["userId"]
+	titleValues := form.Value["title"]
+	tagsValues := form.Value["tags"]
+
+	if len(jobIDValues) == 0 || len(jobApplicationIDValues) == 0 || len(userIDValues) == 0 {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "jobId, jobApplicationId, and userId are required"})
+	}
+
+	jobID := jobIDValues[0]
+	jobApplicationIDStr := jobApplicationIDValues[0]
+	userIDStr := userIDValues[0]
+
+	jobApplicationID, err := uuid.Parse(jobApplicationIDStr)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid job application ID"})
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid user ID"})
+	}
+
+	// Get file from form
+	files := form.File["file"]
+	if len(files) == 0 {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "file is required"})
+	}
+	fileHeader := files[0]
+
+	// Get title (default to job title if not provided)
+	title := ""
+	if len(titleValues) > 0 && titleValues[0] != "" {
+		title = titleValues[0]
+	} else {
+		title = filepath.Base(fileHeader.Filename)
+		// Remove extension for title
+		title = strings.TrimSuffix(title, filepath.Ext(title))
+	}
+
+	// Get tags
+	tags := []string{}
+	if len(tagsValues) > 0 && tagsValues[0] != "" {
+		// Parse tags as comma-separated string
+		tags = strings.Split(tagsValues[0], ",")
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
+	}
+
+	// Create upload directory if it doesn't exist
+	uploadDir := filepath.Join(h.baseFilePath, "uploads")
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		h.logger.Error("failed to create upload directory", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to create upload directory"})
+	}
+
+	// Generate unique filename
+	timestamp := time.Now().Unix()
+	safeFilename := fmt.Sprintf("%d_%s", timestamp, fileHeader.Filename)
+	filePath := filepath.Join("uploads", safeFilename)
+	fullPath := filepath.Join(h.baseFilePath, filePath)
+
+	// Save file
+	if err := c.SaveFile(fileHeader, fullPath); err != nil {
+		h.logger.Error("failed to save file", slog.Any("error", err))
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to save file"})
+	}
+
+	// Get file size
+	fileInfo, err := os.Stat(fullPath)
+	if err != nil {
+		h.logger.Error("failed to get file info", slog.Any("error", err))
+		// Clean up file
+		os.Remove(fullPath)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to get file info"})
+	}
+
+	// Create resume entry
+	resume, err := h.service.CreateResume(c.Context(), userID, title, filePath, fileHeader.Filename, fileInfo.Size(), JSONArray(tags))
+	if err != nil {
+		h.logger.Error("failed to create resume", slog.Any("error", err))
+		// Clean up file
+		os.Remove(fullPath)
+		return response.Error(c, fiber.StatusInternalServerError, 0, fiber.Map{"message": "failed to create resume"})
+	}
+
+	// Link resume to job application
+	if h.jobApplicationService != nil {
+		if err := h.jobApplicationService.UpdateJobApplicationResumeID(c.Context(), jobApplicationID, resume.ID); err != nil {
+			h.logger.Warn("failed to link resume to job application",
+				slog.String("job_application_id", jobApplicationID.String()),
+				slog.String("resume_id", resume.ID.String()),
+				slog.Any("error", err),
+			)
+			// Don't fail the request if linking fails - resume is still created
+		}
+	}
+
+	// Update job status to completed
+	result := &ResumeJobResult{
+		OutputPath: filePath,
+		FileName:   fileHeader.Filename,
+		FileSize:   fileInfo.Size(),
+		Tags:       tags,
+	}
+	if err := h.queue.UpdateJobStatus(c.Context(), jobID, "completed", nil, nil, nil, result); err != nil {
+		h.logger.Warn("failed to update job status",
+			slog.String("job_id", jobID),
+			slog.Any("error", err),
+		)
+		// Don't fail the request if status update fails
+	}
+
+	h.logger.Info("Resume generation completed and saved",
+		slog.String("job_id", jobID),
+		slog.String("job_application_id", jobApplicationID.String()),
+		slog.String("resume_id", resume.ID.String()),
+		slog.String("user_id", userID.String()),
+	)
+
+	return response.Success(c, fiber.StatusOK, fiber.Map{
+		"resumeId": resume.ID,
+		"message":  "Resume saved successfully",
 	})
 }
 

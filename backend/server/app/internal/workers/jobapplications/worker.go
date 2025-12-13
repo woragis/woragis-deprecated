@@ -13,7 +13,6 @@ import (
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 	aiservice "github.com/woragis/backend/server/app/internal/services/ai"
 	playwrightservice "github.com/woragis/backend/server/app/internal/services/playwright"
-	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
 )
 
 // Worker processes job application jobs from Redis queue.

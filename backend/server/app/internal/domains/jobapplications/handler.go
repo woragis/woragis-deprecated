@@ -438,23 +438,6 @@ func (h *handler) DeleteJobApplication(c *fiber.Ctx) error {
 	})
 }
 
-// normalizeURL adds https:// prefix to URL if it's missing.
-// Preserves existing http:// or https:// prefixes.
-func normalizeURL(url string) string {
-	url = strings.TrimSpace(url)
-	if url == "" {
-		return url
-	}
-	
-	// Check if URL already has a protocol
-	if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-		return url
-	}
-	
-	// Add https:// prefix
-	return "https://" + url
-}
-
 func (h *handler) handleError(c *fiber.Ctx, err error) error {
 	if domainErr, ok := AsDomainError(err); ok {
 		statusCode := fiber.StatusInternalServerError

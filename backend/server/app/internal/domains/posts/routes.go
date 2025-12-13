@@ -40,5 +40,11 @@ func SetupRoutes(api fiber.Router, handler Handler) {
 	api.Get("/tags", handler.ListTags)
 	api.Get("/tags/slug/:slug", handler.GetTagBySlug)
 	api.Get("/tags/:id", handler.GetTag)
+
+	// Creative assets routes
+	api.Post("/:id/assets/generate/thumbnail", handler.GeneratePostThumbnail)
+	api.Post("/:id/assets/generate/featured-image", handler.GeneratePostFeaturedImage)
+	api.Post("/:id/assets/generate/og-image", handler.GeneratePostOGImage)
+	api.Get("/:id/assets", handler.GetPostAssets)
 }
 

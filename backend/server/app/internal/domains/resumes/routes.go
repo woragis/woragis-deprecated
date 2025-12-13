@@ -28,3 +28,8 @@ func SetupPublicRoutes(api fiber.Router, handler Handler) {
 	api.Get("/resume/preview", handler.PreviewResume)
 }
 
+// SetupInternalRoutes registers internal resume endpoints (no auth middleware).
+func SetupInternalRoutes(api fiber.Router, handler Handler) {
+	api.Post("/resumes/complete", handler.CompleteResumeGeneration) // Internal callback for resume worker
+}
+

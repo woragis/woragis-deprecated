@@ -3,7 +3,6 @@ package jobapplications
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 )

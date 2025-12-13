@@ -2,6 +2,7 @@ package posts
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strconv"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
+	creativeassets "github.com/woragis/backend/server/app/internal/domains/creativeassets"
 	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/pkg/response"
@@ -46,23 +48,31 @@ type Handler interface {
 	GetPostTags(c *fiber.Ctx) error
 	AttachTagToPost(c *fiber.Ctx) error
 	DetachTagFromPost(c *fiber.Ctx) error
+
+	// Creative assets integration
+	GeneratePostThumbnail(c *fiber.Ctx) error
+	GeneratePostFeaturedImage(c *fiber.Ctx) error
+	GeneratePostOGImage(c *fiber.Ctx) error
+	GetPostAssets(c *fiber.Ctx) error
 }
 
 type handler struct {
 	service          Service
 	enricher         *translationenricher.Enricher
 	translationService translationsdomain.Service
+	creativeAssetsService creativeassets.Service
 	logger           *slog.Logger
 }
 
 var _ Handler = (*handler)(nil)
 
 // NewHandler constructs a post handler.
-func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, logger *slog.Logger) Handler {
+func NewHandler(service Service, enricher *translationenricher.Enricher, translationService translationsdomain.Service, creativeAssetsService creativeassets.Service, logger *slog.Logger) Handler {
 	return &handler{
 		service:           service,
 		enricher:          enricher,
 		translationService: translationService,
+		creativeAssetsService: creativeAssetsService,
 		logger:            logger,
 	}
 }
@@ -819,6 +829,200 @@ func (h *handler) DetachTagFromPost(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, fiber.Map{"message": "tag detached"})
+}
+
+// Creative assets integration
+
+type generateThumbnailPayload struct {
+	Prompt  string `json:"prompt"`
+	Context string `json:"context,omitempty"`
+}
+
+func (h *handler) GeneratePostThumbnail(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeUnauthorized, fiber.Map{
+			"message": "authentication required",
+		})
+	}
+
+	postID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Verify post ownership
+	post, err := h.service.GetPost(c.Context(), postID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+	if post.UserID != userID {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeUnauthorized, fiber.Map{
+			"message": "unauthorized",
+		})
+	}
+
+	var payload generateThumbnailPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	if payload.Prompt == "" {
+		payload.Prompt = post.Title // Use post title as default prompt
+	}
+
+	asset, err := h.creativeAssetsService.GenerateAndStoreThumbnail(
+		c.Context(),
+		userID,
+		creativeassets.EntityTypePost,
+		postID,
+		payload.Prompt,
+		payload.Context,
+	)
+	if err != nil {
+		h.logger.Error("failed to generate thumbnail", "error", err)
+		return response.Error(c, fiber.StatusInternalServerError, 500, fiber.Map{
+			"message": "failed to generate thumbnail",
+		})
+	}
+
+	// Update post with asset URL if we have one
+	assetURL := fmt.Sprintf("/api/v1/creative-assets/%s/data", asset.ID.String())
+	updateReq := UpdatePostRequest{FeaturedImage: &assetURL}
+	h.service.UpdatePost(c.Context(), userID, postID, updateReq)
+
+	return response.Success(c, fiber.StatusCreated, asset)
+}
+
+func (h *handler) GeneratePostFeaturedImage(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeUnauthorized, fiber.Map{
+			"message": "authentication required",
+		})
+	}
+
+	postID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	post, err := h.service.GetPost(c.Context(), postID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+	if post.UserID != userID {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeUnauthorized, fiber.Map{
+			"message": "unauthorized",
+		})
+	}
+
+	var payload generateThumbnailPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	if payload.Prompt == "" {
+		payload.Prompt = post.Title
+	}
+
+	asset, err := h.creativeAssetsService.GenerateAndStoreImage(
+		c.Context(),
+		userID,
+		creativeassets.EntityTypePost,
+		postID,
+		creativeassets.PurposeFeaturedImage,
+		payload.Prompt,
+		payload.Context,
+	)
+	if err != nil {
+		h.logger.Error("failed to generate featured image", "error", err)
+		return response.Error(c, fiber.StatusInternalServerError, 500, fiber.Map{
+			"message": "failed to generate featured image",
+		})
+	}
+
+	assetURL := fmt.Sprintf("/api/v1/creative-assets/%s/data", asset.ID.String())
+	updateReq := UpdatePostRequest{FeaturedImage: &assetURL}
+	h.service.UpdatePost(c.Context(), userID, postID, updateReq)
+
+	return response.Success(c, fiber.StatusCreated, asset)
+}
+
+func (h *handler) GeneratePostOGImage(c *fiber.Ctx) error {
+	userID, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeUnauthorized, fiber.Map{
+			"message": "authentication required",
+		})
+	}
+
+	postID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	post, err := h.service.GetPost(c.Context(), postID)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+	if post.UserID != userID {
+		return response.Error(c, fiber.StatusUnauthorized, ErrCodeUnauthorized, fiber.Map{
+			"message": "unauthorized",
+		})
+	}
+
+	var payload generateThumbnailPayload
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	if payload.Prompt == "" {
+		payload.Prompt = post.Title
+	}
+
+	asset, err := h.creativeAssetsService.GenerateAndStoreImage(
+		c.Context(),
+		userID,
+		creativeassets.EntityTypePost,
+		postID,
+		creativeassets.PurposeOGImage,
+		payload.Prompt,
+		payload.Context,
+	)
+	if err != nil {
+		h.logger.Error("failed to generate OG image", "error", err)
+		return response.Error(c, fiber.StatusInternalServerError, 500, fiber.Map{
+			"message": "failed to generate OG image",
+		})
+	}
+
+	assetURL := fmt.Sprintf("/api/v1/creative-assets/%s/data", asset.ID.String())
+	updateReq := UpdatePostRequest{OGImage: &assetURL}
+	h.service.UpdatePost(c.Context(), userID, postID, updateReq)
+
+	return response.Success(c, fiber.StatusCreated, asset)
+}
+
+func (h *handler) GetPostAssets(c *fiber.Ctx) error {
+	postID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	assets, err := h.creativeAssetsService.GetAssetsByEntity(
+		c.Context(),
+		creativeassets.EntityTypePost,
+		postID,
+	)
+	if err != nil {
+		h.logger.Error("failed to get post assets", "error", err)
+		return response.Error(c, fiber.StatusInternalServerError, 500, fiber.Map{
+			"message": "failed to get assets",
+		})
+	}
+
+	return response.Success(c, fiber.StatusOK, assets)
 }
 
 // Response helpers

@@ -30,6 +30,7 @@ import (
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	casestudiesdomain "github.com/woragis/backend/server/app/internal/domains/casestudies"
+	creativeassetsdomain "github.com/woragis/backend/server/app/internal/domains/creativeassets"
 	certificationsdomain "github.com/woragis/backend/server/app/internal/domains/certifications"
 	experiencesdomain "github.com/woragis/backend/server/app/internal/domains/experiences"
 	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
@@ -62,6 +63,7 @@ import (
 	userpreferencesdomain "github.com/woragis/backend/server/app/internal/domains/userpreferences"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
+	creativeservice "github.com/woragis/backend/server/app/internal/services/creative"
 	whatsappservice "github.com/woragis/backend/server/app/internal/services/whatsapp"
 	notifications "github.com/woragis/backend/server/app/internal/workers/notifications"
 	schedulerworker "github.com/woragis/backend/server/app/internal/workers/scheduler"
@@ -97,6 +99,13 @@ func (a *jobApplicationServiceAdapter) GetJobApplication(ctx context.Context, ap
 		Language:       app.Language,
 		CompanyName:    app.CompanyName,
 	}, nil
+}
+
+func (a *jobApplicationServiceAdapter) UpdateJobApplicationResumeID(ctx context.Context, applicationID uuid.UUID, resumeID uuid.UUID) error {
+	_, err := a.service.UpdateJobApplication(ctx, applicationID, jobapplicationsdomain.UpdateJobApplicationRequest{
+		ResumeID: &resumeID,
+	})
+	return err
 }
 
 // jobApplicationServiceForStagesAdapter implements jobapplicationstagesdomain.JobApplicationService
@@ -358,10 +367,19 @@ func main() {
 	))
 	socialmediapostsdomain.SetupRoutes(socialMediaPostsGroup, socialMediaPostHandler)
 
+	// Creative Assets: Initialize service and client
+	creativeClient := creativeservice.NewClient(os.Getenv("CREATIVE_SERVICE_URL"))
+	creativeAssetsRepo := creativeassetsdomain.NewRepository(db)
+	creativeAssetsService := creativeassetsdomain.NewService(creativeAssetsRepo, creativeClient)
+	creativeAssetsHandler := creativeassetsdomain.NewHandler(creativeAssetsService, slogLogger)
+	
+	// Register creative assets routes (public data endpoint, protected management endpoints)
+	creativeassetsdomain.SetupRoutes(app, creativeAssetsHandler, authdomain.NewAuthMiddleware(jwtManager, slogLogger))
+
 	// Posts: GET endpoints support API keys, POST/PATCH/DELETE require JWT
 	postRepo := postsdomain.NewGormRepository(db)
 	postService := postsdomain.NewService(postRepo, slogLogger)
-	postHandler := postsdomain.NewHandler(postService, translationEnricher, translationService, slogLogger)
+	postHandler := postsdomain.NewHandler(postService, translationEnricher, translationService, creativeAssetsService, slogLogger)
 	postsGroup := api.Group("/posts")
 	postsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	postsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
@@ -695,6 +713,9 @@ func main() {
 	resumesdomain.SetupRoutes(resumesGroup, resumeHandler)
 	// Setup public resume endpoints (handler is now initialized)
 	resumesdomain.SetupPublicRoutes(publicAPI, resumeHandler)
+	// Setup internal resume endpoints on app router (path without /api prefix to avoid middleware)
+	// Register on app with /internal path to completely bypass all /api middleware
+	app.Post("/internal/resumes/complete", resumeHandler.CompleteResumeGeneration)
 
 	// Now initialize chat service with context builder (all services are available)
 	chatsService := chatsdomain.NewService(chatsRepo, langchainClient, slogLogger, defaultProvider, defaultModel, chatsStream)
@@ -915,6 +936,7 @@ func migrate(db *gorm.DB) error {
 		&jobapplicationsdomain.JobApplication{},
 		&jobapplicationstagesdomain.InterviewStage{},
 		&jobapplicationresponsesdomain.Response{},
+		&creativeassetsdomain.CreativeAsset{},
 	)
 }
 
