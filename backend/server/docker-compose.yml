@@ -74,11 +74,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./resume-worker/output:/app/output
+      - ../resume-worker/output:/app/output
     restart: on-failure
   translation-worker:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.translation-worker
     container_name: woragis-translation-worker
     depends_on:
@@ -98,7 +98,7 @@ services:
     restart: unless-stopped
   job-application-worker:
     build:
-      context: ./job-application-worker
+      context: ../job-application-worker
       dockerfile: ../Dockerfile.job-application-worker
     container_name: woragis-job-application-worker
     depends_on:
@@ -183,7 +183,7 @@ services:
     restart: on-failure
   resume-worker:
     build:
-      context: ./resume-worker
+      context: ../resume-worker
       dockerfile: ../Dockerfile.resume-worker
     container_name: woragis-resume-worker
     depends_on:
@@ -205,10 +205,10 @@ services:
       MAX_RETRIES: ${MAX_RETRIES:-3}
       QUEUE_TIMEOUT: ${QUEUE_TIMEOUT:-5}
     volumes:
-      - ./resume-worker/output:/app/output
-      - ./resume-worker/results:/app/results
-      - ./resume-worker/logs:/app/logs
-    command: ["python", "/app/src/main.py", "--worker"]
+      - ../resume-worker/output:/app/output
+      - ../resume-worker/results:/app/results
+      - ../resume-worker/logs:/app/logs
+    command: ["tail", "-f", "/dev/null"]
     restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)
