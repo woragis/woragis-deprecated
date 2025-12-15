@@ -210,13 +210,21 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      redis:
+      rabbitmq:
         condition: service_healthy
       ai-service:
         condition: service_started
     environment:
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
-      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
+      RESUME_QUEUE_NAME: ${RESUME_QUEUE_NAME:-resumes.queue}
+      RESUME_EXCHANGE: ${RESUME_EXCHANGE:-woragis.tasks}
+      RESUME_ROUTING_KEY: ${RESUME_ROUTING_KEY:-resumes.queue}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       BACKEND_URL: ${BACKEND_URL:-http://app:8080}
       PUBLIC_API_KEY: ${PUBLIC_API_KEY:-}
@@ -229,7 +237,7 @@ services:
       - ../resume-worker/output:/app/output
       - ../resume-worker/results:/app/results
       - ../resume-worker/logs:/app/logs
-    command: ["tail", "-f", "/dev/null"]
+    command: ["python", "src/main.py"]
     restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)

@@ -5,6 +5,10 @@ Resume Generation Worker - Main Entry Point
 This worker generates customized resumes based on job requirements.
 It searches through projects (by technology tags) and certifications,
 uses AI to generate resume sections, and creates PDFs using WeasyPrint.
+
+Supports two modes:
+1. CLI mode: Direct invocation with command-line arguments
+2. Queue mode: Consumes jobs from RabbitMQ queue (default when no args provided)
 """
 
 import os
@@ -24,6 +28,7 @@ from database import Database
 from ai_service import AIService
 from resume_generator import ResumeGenerator
 from translation_helper import TranslationHelper
+from queue_consumer import create_consumer_from_env
 
 # Load environment variables
 load_dotenv()
@@ -58,9 +63,79 @@ def save_result(result: dict, results_dir: str = RESULTS_LOG_DIR):
         logger.error(f"Failed to save result: {e}")
 
 
-def main():
-    """Main entry point"""
-    logger.info("Starting Resume Generation Worker")
+def process_resume_job(message: dict) -> bool:
+    """
+    Process a resume generation job from the queue.
+    
+    Args:
+        message: Job message containing:
+            - user_id: User ID
+            - job_description: Job description text
+            - job_title: Job title (optional, default: "Software Engineer")
+            - output_filename: Output filename (optional)
+            - language: Language code (optional, default: "en")
+    
+    Returns:
+        True if job was processed successfully, False otherwise
+    """
+    try:
+        # Extract job parameters
+        user_id = message.get('user_id')
+        job_description = message.get('job_description')
+        job_title = message.get('job_title', 'Software Engineer')
+        output_filename = message.get('output_filename')
+        language = message.get('language', 'en')
+        
+        if not user_id or not job_description:
+            logger.error("Missing required fields: user_id and job_description are required")
+            return False
+        
+        logger.info(f"Processing resume generation job for user: {user_id}, language: {language}")
+        
+        # Initialize components
+        db = Database(DATABASE_URL)
+        ai_service = AIService(AI_SERVICE_URL)
+        translation_helper = TranslationHelper(DATABASE_URL)
+        generator = ResumeGenerator(db, ai_service, OUTPUT_DIR, translation_helper)
+        
+        try:
+            db.connect()
+            translation_helper.connect()
+            
+            # Generate resume
+            result = generator.generate_resume(
+                user_id=user_id,
+                job_description=job_description,
+                job_title=job_title,
+                output_filename=output_filename,
+                language=language
+            )
+            
+            # Save result metadata
+            save_result(result, RESULTS_LOG_DIR)
+            
+            logger.info(f"Resume successfully generated: {result['output_path']}")
+            logger.info(f"File size: {result['file_size']} bytes")
+            logger.info(f"Projects included: {result['projects_count']}")
+            logger.info(f"Certifications included: {result['certifications_count']}")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error generating resume: {e}", exc_info=True)
+            return False
+        finally:
+            db.close()
+            translation_helper.close()
+            
+    except Exception as e:
+        logger.error(f"Error processing resume job: {e}", exc_info=True)
+        return False
+
+
+def run_cli_mode():
+    """Run in CLI mode (direct invocation with command-line arguments)"""
+    logger.info("Starting Resume Generation Worker (CLI Mode)")
     
     # Initialize components
     db = Database(DATABASE_URL)
@@ -110,6 +185,46 @@ def main():
     finally:
         db.close()
         translation_helper.close()
+
+
+def run_queue_mode():
+    """Run in queue mode (consume jobs from RabbitMQ)"""
+    logger.info("Starting Resume Generation Worker (Queue Mode)")
+    
+    try:
+        # Create queue consumer
+        consumer = create_consumer_from_env()
+        
+        # Connect to RabbitMQ
+        if not consumer.connect():
+            logger.error("Failed to connect to RabbitMQ, exiting...")
+            sys.exit(1)
+        
+        # Start consuming messages
+        consumer.start_consuming(process_resume_job)
+        
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down...")
+    except Exception as e:
+        logger.error(f"Error in queue mode: {e}", exc_info=True)
+        sys.exit(1)
+
+
+def main():
+    """Main entry point - determines mode based on command-line arguments"""
+    # If command-line arguments are provided, run in CLI mode
+    # Otherwise, run in queue mode
+    if len(sys.argv) > 1:
+        # CLI mode: requires at least user_id and job_description
+        if len(sys.argv) >= 3:
+            run_cli_mode()
+        else:
+            logger.error("CLI mode requires at least <user_id> and <job_description>")
+            logger.error("Usage: python main.py <user_id> <job_description> [job_title] [output_filename] [language]")
+            sys.exit(1)
+    else:
+        # Queue mode: no arguments provided
+        run_queue_mode()
 
 
 if __name__ == '__main__':
