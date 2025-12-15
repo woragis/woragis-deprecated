@@ -62,42 +62,38 @@ class AIService:
             else:
                 lang_instruction = "in English."
 
-            # Call AI service
+            system_prompt = (
+                "You are an expert resume writer. "
+                f"Generate professional, ATS-friendly resume content {lang_instruction} "
+                "Be concise, use strong action verbs, and quantify achievements when possible. "
+                "IMPORTANT: Return ONLY valid HTML code. Do NOT use markdown. Use proper HTML tags like <p>, <strong>, <em>, <ul>, <li>, <h3>, <h4>, <div>, <span> with appropriate CSS classes as specified in the prompt."
+            )
             response = requests.post(
-                f"{self.base_url}/api/chat/completions",
+                f"{self.base_url}/v1/chat",
                 json={
-                    "provider": "anthropic",  # Use Anthropic for better resume writing
+                    "agent": "auto",
+                    "provider": "anthropic",
                     "model": "claude-3-5-sonnet-latest",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": (
-                                "You are an expert resume writer. "
-                                f"Generate professional, ATS-friendly resume content {lang_instruction} "
-                                "Be concise, use strong action verbs, and quantify achievements when possible.\n\n"
-                                f"{prompt}"
-                            )
-                        }
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 1000
+                    "system": system_prompt,
+                    "input": prompt,
+                    "temperature": 0.3
                 },
                 timeout=30
             )
             
             response.raise_for_status()
             data = response.json()
-            
-            # Extract content from response (handle both response formats)
+            # Extract content from response
             content = ""
-            if 'message' in data and 'content' in data['message']:
+            if 'output' in data:
+                content = data['output']
+            elif 'message' in data and 'content' in data['message']:
                 content = data['message']['content']
             elif 'choices' in data and len(data['choices']) > 0:
                 content = data['choices'][0]['message']['content']
             else:
                 logger.warning(f"Unexpected AI response format: {data}")
                 return ""
-            
             # Clean up content: remove extra whitespace but preserve normal spacing
             # Replace any non-breaking spaces or special Unicode spaces with regular spaces
             content = content.replace('\u00A0', ' ')  # Non-breaking space
@@ -133,16 +129,25 @@ Job Description:
 Relevant Projects:
 {projects_text}
 
-        Requirements:
-        - Follow the same 3-paragraph structure as the template
-        - First paragraph: Passion + specialization + key principles (match job requirements)
-        - Second paragraph: Education/background + focus areas + commitment to quality
-        - Third paragraph: Experience highlights + continuous learning + value delivery
-        - Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
-        - Keep the same professional tone and length
-        - Use strong action words and technical terminology relevant to the job
-        - Maintain the structure but personalize content based on job requirements
-        - Optimize for ATS (Applicant Tracking Systems)"""
+Requirements:
+- Return ONLY valid HTML code (no markdown, no plain text)
+- Use <p> tags for paragraphs
+- Use <strong> for emphasis on key terms
+- Use <em> for subtle emphasis
+- Follow the same 3-paragraph structure as the template
+- First paragraph: Passion + specialization + key principles (match job requirements)
+- Second paragraph: Education/background + focus areas + commitment to quality
+- Third paragraph: Experience highlights + continuous learning + value delivery
+- Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
+- Keep the same professional tone and length
+- Use strong action words and technical terminology relevant to the job
+- Maintain the structure but personalize content based on job requirements
+- Optimize for ATS (Applicant Tracking Systems)
+
+Example HTML format:
+<p>Passionate <strong>Full-Stack Developer</strong> specializing in <strong>clean architecture</strong> and <strong>domain-driven design</strong> principles.</p>
+<p>Currently pursuing a Computer Science degree with a strong focus on building scalable, maintainable applications across backend, frontend, and mobile platforms.</p>
+<p>Experienced in designing and implementing distributed systems, microservices architectures, and high-performance APIs.</p>"""
     
     def _build_about_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for about me section - follows a specific template structure"""
@@ -159,6 +164,10 @@ Job Description:
 Relevant Projects: {projects_summary}
 
 Requirements:
+- Return ONLY valid HTML code (no markdown, no plain text)
+- Use <p> tags for paragraphs
+- Use <strong> for emphasis on key terms
+- Use <em> for subtle emphasis
 - Follow the same 3-paragraph structure as the template
 - First paragraph: Passion + specialization + key principles (match job requirements)
 - Second paragraph: Education/background + focus areas + commitment to quality
@@ -166,7 +175,12 @@ Requirements:
 - Adapt the technical focus to match the job (e.g., if job mentions Golang, emphasize backend/distributed systems; if frontend, emphasize UI/UX)
 - Keep the same professional tone and length
 - Use strong action words and technical terminology relevant to the job
-- Maintain the structure but personalize content based on job requirements"""
+- Maintain the structure but personalize content based on job requirements
+
+Example HTML format:
+<p>Passionate <strong>Full-Stack Developer</strong> specializing in <strong>clean architecture</strong>, <strong>domain-driven design</strong>, and scalable system development.</p>
+<p>Currently pursuing a Computer Science degree with a strong focus on building robust, maintainable applications across backend, frontend, and mobile platforms.</p>
+<p>Experienced in designing and implementing distributed systems, microservices architectures, and high-performance APIs.</p>"""
     
     def _build_experience_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for experience/projects section"""
@@ -184,12 +198,32 @@ Projects:
 {projects_text}
 
 Requirements:
+- Return ONLY valid HTML code (no markdown, no plain text)
+- Use <div class="experience-item"> for each project entry
+- Use <h3 class="experience-title"> for project names
+- Use <ul class="experience-description"> and <li> for bullet points
 - Use past tense action verbs
 - Quantify results when possible
 - Focus on impact and achievements
 - Keep each bullet point concise (one line)
 - Match the job requirements
-- Format as plain text with project names as headers followed by bullet points"""
+
+Example HTML format:
+<div class="experience-item">
+  <h3 class="experience-title">Project Name</h3>
+  <ul class="experience-description">
+    <li>Developed scalable microservices architecture using Go and Docker, reducing response time by 40%</li>
+    <li>Implemented RESTful APIs serving 10,000+ requests per day with 99.9% uptime</li>
+    <li>Led team of 3 developers in adopting domain-driven design principles</li>
+  </ul>
+</div>
+<div class="experience-item">
+  <h3 class="experience-title">Another Project</h3>
+  <ul class="experience-description">
+    <li>Built responsive frontend using React.js and TypeScript</li>
+    <li>Optimized database queries reducing load time by 50%</li>
+  </ul>
+</div>"""
     
     def _build_skills_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for technical skills section - formatted for 2-column display"""
@@ -208,23 +242,32 @@ Technologies Used:
 {', '.join(unique_techs[:30])}
 
 Requirements:
+- Return ONLY valid HTML code (no markdown, no plain text)
+- Use <div class="skill-category"> for each category
+- Use <div class="skill-category-title"> or <strong> for category names
+- Use <div class="skill-items"> or <span> for skills, separated by " • " (bullet separator)
 - Group skills into 4-6 categories (e.g., "Backend Development", "Frontend Development", "Architecture & Design", "Tools & Technologies", "Cloud & DevOps", "Databases")
-- Format each category as: "Category Name" (bold) followed by skills separated by " • " (bullet points)
 - Only include skills relevant to the job
 - Use standard naming conventions
 - Keep categories balanced for 2-column display
-- Format example:
-Backend Development
-Go • JavaScript/TypeScript • Python • Java
 
-Frontend Development
-React.js • Next.js • SvelteKit
-
-Architecture & Design
-Domain-Driven Design (DDD) • Clean Architecture • Microservices • RESTful APIs
-
-Tools & Technologies
-Docker • Kubernetes • PostgreSQL • Redis"""
+Example HTML format:
+<div class="skill-category">
+  <div class="skill-category-title">Backend Development</div>
+  <div class="skill-items">Go • JavaScript/TypeScript • Python • Java</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Frontend Development</div>
+  <div class="skill-items">React.js • Next.js • SvelteKit</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Architecture & Design</div>
+  <div class="skill-items">Domain-Driven Design (DDD) • Clean Architecture • Microservices • RESTful APIs</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Tools & Technologies</div>
+  <div class="skill-items">Docker • Kubernetes • PostgreSQL • Redis</div>
+</div>"""
     
     def _build_hard_skills_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for hard skills section - comprehensive technical skills list"""
@@ -243,6 +286,10 @@ Technologies Used:
 {', '.join(unique_techs[:40])}
 
 Requirements:
+- Return ONLY valid HTML code (no markdown, no plain text)
+- Use <div class="skill-category"> for each category
+- Use <div class="skill-category-title"> or <strong> for category names
+- Use <div class="skill-items"> or <span> for skills, separated by " • " (bullet separator)
 - Group skills into 6-8 categories such as:
   * Primary Stack (main programming languages and frameworks)
   * Backend Expertise (patterns, architectures, concepts)
@@ -252,30 +299,36 @@ Requirements:
   * Testing & Quality
   * Cloud Platforms (AWS, GCP, Azure if relevant)
   * Other relevant categories based on job requirements
-- Format each category as: "Category Name" (bold) followed by skills separated by " • " (bullet points)
 - Only include skills relevant to the job description
 - Use standard naming conventions
 - Keep categories balanced for 2-column display
 - Be comprehensive but focused on job requirements
-- Skills within each category should be displayed in a 2-column grid format
-- Format example:
-Primary Stack
-Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems
 
-Backend Expertise
-Concurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues
-
-Databases & Storage
-PostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization
-
-Infrastructure & DevOps
-Docker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix
-
-Additional Technologies
-JavaScript/TypeScript • Python • Java • GraphQL
-
-Testing & Quality
-Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing"""
+Example HTML format:
+<div class="skill-category">
+  <div class="skill-category-title">Primary Stack</div>
+  <div class="skill-items">Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Backend Expertise</div>
+  <div class="skill-items">Concurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Databases & Storage</div>
+  <div class="skill-items">PostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Infrastructure & DevOps</div>
+  <div class="skill-items">Docker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Additional Technologies</div>
+  <div class="skill-items">JavaScript/TypeScript • Python • Java • GraphQL</div>
+</div>
+<div class="skill-category">
+  <div class="skill-category-title">Testing & Quality</div>
+  <div class="skill-items">Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing</div>
+</div>"""
     
     def _build_tags_prompt(self, job_description: str, projects: List[Dict]) -> str:
         """Build prompt for generating tags (technologies, languages, tools)"""
@@ -312,33 +365,26 @@ Requirements:
             
             # Call AI service
             response = requests.post(
-                f"{self.base_url}/api/chat/completions",
+                f"{self.base_url}/v1/chat",
                 json={
+                    "agent": "auto",
                     "provider": "anthropic",
                     "model": "claude-3-5-sonnet-latest",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": (
-                                "You are a technical tag extractor. "
-                                "Extract relevant technology tags from the job description and projects. "
-                                "Return ONLY a comma-separated list of lowercase tags, nothing else.\n\n"
-                                f"{prompt}"
-                            )
-                        }
-                    ],
-                    "temperature": 0.2,
-                    "max_tokens": 200
+                    "system": "You are a technical tag extractor. Extract relevant technology tags from the job description and projects. Return ONLY a comma-separated list of lowercase tags, nothing else.",
+                    "input": prompt,
+                    "temperature": 0.2
                 },
                 timeout=20
             )
-            
+
             response.raise_for_status()
             data = response.json()
-            
+
             # Extract content
             content = ""
-            if 'message' in data and 'content' in data['message']:
+            if 'output' in data:
+                content = data['output']
+            elif 'message' in data and 'content' in data['message']:
                 content = data['message']['content']
             elif 'choices' in data and len(data['choices']) > 0:
                 content = data['choices'][0]['message']['content']
@@ -347,10 +393,9 @@ Requirements:
                 return []
             
             # Parse comma-separated tags
-            tags = [tag.strip().lower() for tag in content.split(',') if tag.strip()]
+            tags = [tag.strip().lower() for tag in content.split(",") if tag.strip()]
             # Remove duplicates and limit to 10
             unique_tags = list(dict.fromkeys(tags))[:10]
-            
             return unique_tags
                 
         except Exception as e:

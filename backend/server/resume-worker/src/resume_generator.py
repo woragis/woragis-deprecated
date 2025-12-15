@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML, CSS
+import bleach
 
 import sys
 import os
@@ -21,6 +22,35 @@ from keyword_extractor import extract_keywords
 from translation_helper import TranslationHelper
 
 logger = logging.getLogger(__name__)
+
+# Allowed HTML tags and attributes for resume content
+ALLOWED_TAGS = [
+    'p', 'div', 'span', 'strong', 'em', 'ul', 'ol', 'li', 
+    'h3', 'h4', 'h5', 'h6', 'br'
+]
+
+ALLOWED_ATTRIBUTES = {
+    'div': ['class'],
+    'span': ['class'],
+    'h3': ['class'],
+    'h4': ['class'],
+    'h5': ['class'],
+    'h6': ['class'],
+    'ul': ['class'],
+    'ol': ['class'],
+    'li': ['class']
+}
+
+def sanitize_html(html_content: str) -> str:
+    """Sanitize HTML content to prevent XSS attacks"""
+    if not html_content:
+        return ""
+    return bleach.clean(
+        html_content,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        strip=True
+    )
 
 
 class ResumeGenerator:
@@ -216,25 +246,15 @@ class ResumeGenerator:
         # Hardcoded Volunteer Work section (can be moved to database later)
         volunteer_work = [
             {
-                'title': 'Open Source Contributor',
-                'organization': 'Various Open Source Projects',
-                'location': 'Remote',
-                'period': '2021 - Present',
+                'title': 'Music Volunteer',
+                'organization': 'APAE-JP (Associação de Pais e Amigos dos Excepcionais – João Pessoa)',
+                'location': 'João Pessoa, Brazil',
+                'period': 'Volunteer',
                 'description': [
-                    'Contributed to open source projects on GitHub',
-                    'Helped improve documentation and fix bugs in community projects',
-                    'Shared knowledge through technical blog posts and tutorials'
-                ]
-            },
-            {
-                'title': 'Technical Mentor',
-                'organization': 'Programming Communities',
-                'location': 'Online',
-                'period': '2022 - Present',
-                'description': [
-                    'Mentored junior developers in software engineering best practices',
-                    'Conducted code reviews and provided constructive feedback',
-                    'Organized technical workshops and knowledge-sharing sessions'
+                    'Led and supported music-based activities for individuals with intellectual and developmental disabilities',
+                    'Used rhythm, singing, and simple instruments to promote emotional expression, motor coordination, and social interaction',
+                    'Assisted therapists and educators during sessions, adapting activities to different cognitive and sensory needs',
+                    'Helped create a welcoming, inclusive environment that encouraged participation, confidence, and well-being'
                 ]
             }
         ]
@@ -248,6 +268,13 @@ class ResumeGenerator:
         hard_skills = self.ai_service.generate_resume_section('hard_skills', job_description, projects, language=language)
         logger.info(f"Hard skills generated: {len(hard_skills) if hard_skills else 0} characters")
         
+        # Sanitize HTML content from AI
+        profile = sanitize_html(profile) if profile else ""
+        about = sanitize_html(about) if about else ""
+        experience = sanitize_html(experience) if experience else ""
+        skills = sanitize_html(skills) if skills else ""
+        hard_skills = sanitize_html(hard_skills) if hard_skills else ""
+        
         # Generate tags using AI
         logger.info("Generating tags...")
         tags = self.ai_service.generate_tags(job_description, projects, language=language)
@@ -256,29 +283,42 @@ class ResumeGenerator:
         # Ensure profile is never empty - use fallback if AI returns empty
         if not profile or not profile.strip():
             logger.warning("Profile generation returned empty, using fallback")
-            profile = PROFILE_TEMPLATE
+            profile = f"<p>{PROFILE_TEMPLATE}</p>"
 
-        # Parse hard_skills text into structured format for 2-column grid display,
-        # with a deterministic fallback when the AI section is empty or on error.
+        # Hard skills is now HTML, so we can use it directly
+        # Keep the parsing logic for backward compatibility with fallback, but use HTML directly if available
         if not hard_skills or not hard_skills.strip():
             logger.warning("Hard skills generation returned empty, using fallback hard skills template")
-            fallback_skills = (
-                "Primary Stack\n"
-                "Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems\n\n"
-                "Backend Expertise\n"
-                "Concurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues\n\n"
-                "Databases & Storage\n"
-                "PostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization\n\n"
-                "Infrastructure & DevOps\n"
-                "Docker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix\n\n"
-                "Additional Technologies\n"
-                "JavaScript/TypeScript • Python • Java • GraphQL\n\n"
-                "Testing & Quality\n"
-                "Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing"
+            fallback_skills_html = (
+                '<div class="skill-category">'
+                '<div class="skill-category-title">Primary Stack</div>'
+                '<div class="skill-items">Go (Golang) • Microservices Architecture • RESTful & gRPC APIs • Event-Driven Systems</div>'
+                '</div>'
+                '<div class="skill-category">'
+                '<div class="skill-category-title">Backend Expertise</div>'
+                '<div class="skill-items">Concurrent Programming • Design Patterns • Domain-Driven Design (DDD) • Clean Architecture • CQRS • Message Queues</div>'
+                '</div>'
+                '<div class="skill-category">'
+                '<div class="skill-category-title">Databases & Storage</div>'
+                '<div class="skill-items">PostgreSQL • MySQL • MongoDB • Redis • Database Design & Optimization</div>'
+                '</div>'
+                '<div class="skill-category">'
+                '<div class="skill-category-title">Infrastructure & DevOps</div>'
+                '<div class="skill-items">Docker • Kubernetes • CI/CD Pipelines • Git • Linux/Unix</div>'
+                '</div>'
+                '<div class="skill-category">'
+                '<div class="skill-category-title">Additional Technologies</div>'
+                '<div class="skill-items">JavaScript/TypeScript • Python • Java • GraphQL</div>'
+                '</div>'
+                '<div class="skill-category">'
+                '<div class="skill-category-title">Testing & Quality</div>'
+                '<div class="skill-items">Unit Testing • Integration Testing • Test-Driven Development (TDD) • Performance Testing</div>'
+                '</div>'
             )
-            hard_skills_parsed = self._parse_hard_skills(fallback_skills)
+            hard_skills_parsed = sanitize_html(fallback_skills_html)
         else:
-            hard_skills_parsed = self._parse_hard_skills(hard_skills)
+            # Hard skills is already HTML, just use it directly
+            hard_skills_parsed = hard_skills
         
         # Choose template based on language (English vs Brazilian Portuguese)
         if language.lower().startswith("pt"):
@@ -346,7 +386,7 @@ class ResumeGenerator:
             'about': about,
             'experience': experience,
             'skills': skills,
-            'hard_skills': hard_skills_parsed,
+            'hard_skills': hard_skills_parsed,  # This is now HTML, not parsed structure
             'projects': projects_to_show,
             'certifications': certifications_to_show,
             'education': education,

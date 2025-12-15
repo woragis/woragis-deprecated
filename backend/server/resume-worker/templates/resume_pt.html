@@ -47,7 +47,11 @@
         <section class="section">
             <h2 class="section-title">{{ section_headers.profile if section_headers else 'Perfil' }}</h2>
             <div class="section-content">
-                <p>{{ profile if profile else 'Passionate Full-Stack Developer specializing in clean architecture and domain-driven design principles. Currently pursuing a Computer Science degree with a strong focus on building scalable, maintainable applications across backend, frontend, and mobile platforms. Committed to writing elegant code that reflects real-world business domains and delivers measurable business value.' }}</p>
+                {% if profile %}
+                {{ profile|safe }}
+                {% else %}
+                <p>Passionate Full-Stack Developer specializing in clean architecture and domain-driven design principles. Currently pursuing a Computer Science degree with a strong focus on building scalable, maintainable applications across backend, frontend, and mobile platforms. Committed to writing elegant code that reflects real-world business domains and delivers measurable business value.</p>
+                {% endif %}
             </div>
         </section>
 
@@ -189,7 +193,7 @@
         <section class="section">
             <h2 class="section-title">{{ section_headers.experience if section_headers else 'Experiência' }}</h2>
             <div class="section-content experience-content">
-                <pre>{{ experience }}</pre>
+                {{ experience|safe }}
             </div>
         </section>
         <hr class="divider">
