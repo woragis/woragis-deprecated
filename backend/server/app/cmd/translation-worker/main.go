@@ -8,7 +8,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -18,6 +17,7 @@ import (
 	translationworker "github.com/woragis/backend/server/app/internal/workers/translations"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
+	"github.com/woragis/backend/server/app/pkg/rabbitmq"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	logger.Info("starting translation worker")
 
 	// Load configuration
-	redisCfg := appconfig.LoadRedisConfig()
+	rabbitmqCfg := appconfig.LoadRabbitMQConfig()
 
 	// Connect to database
 	dbURL := os.Getenv("DATABASE_URL")
@@ -43,27 +43,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Connect to Redis
-	redisOpts, err := redis.ParseURL(redisCfg.URL)
+	// Connect to RabbitMQ
+	rabbitmqConn, err := rabbitmq.NewConnection(rabbitmqCfg.URL, logger)
 	if err != nil {
-		logger.Error("failed to parse redis url", slog.Any("error", err))
+		logger.Error("failed to connect to rabbitmq", slog.Any("error", err))
 		os.Exit(1)
 	}
-
-	redisClient := redis.NewClient(redisOpts)
-	defer redisClient.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := redisClient.Ping(ctx).Err(); err != nil {
-		logger.Error("failed to connect to redis", slog.Any("error", err))
-		os.Exit(1)
-	}
-	logger.Info("connected to redis", slog.String("url", redisCfg.URL))
+	defer rabbitmqConn.Close()
+	logger.Info("connected to rabbitmq", slog.String("url", rabbitmqCfg.URL))
 
 	// Initialize services
 	translationRepo := translationsdomain.NewGormRepository(db)
-	translationQueue := translationsdomain.NewRedisQueue(redisClient)
+	translationQueue, err := translationsdomain.NewRabbitMQQueue(rabbitmqConn)
+	if err != nil {
+		logger.Error("failed to create translation queue", slog.Any("error", err))
+		os.Exit(1)
+	}
 	aiClient := langchainservice.NewClient(logger)
 	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, db, logger)
 

@@ -30,6 +30,24 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: woragis-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/woragis}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
   app:
     build:
       context: .
@@ -84,14 +102,17 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      redis:
+      rabbitmq:
         condition: service_healthy
       ai-service:
         condition: service_started
     environment:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
-      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       # Note: API keys are not needed here - the worker calls the AI service which has its own keys
     command: ["translation-worker"]
@@ -244,5 +265,6 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  rabbitmq-data:
   # grafana-data:
 

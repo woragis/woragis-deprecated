@@ -5,7 +5,7 @@ WORKDIR /build
 # Enable automatic toolchain download if needed
 ENV GOTOOLCHAIN=auto
 
-COPY go.mod go.sum ./
+COPY server/go.mod server/go.sum ./
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential libsqlite3-dev && \
@@ -13,7 +13,7 @@ RUN apt-get update && \
 
 RUN go mod download
 
-COPY . .
+COPY server/app ./app
 
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o /build/bin/translation-worker ./app/cmd/translation-worker
 
