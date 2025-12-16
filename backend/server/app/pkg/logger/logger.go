@@ -2,8 +2,10 @@ package logger
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -13,11 +15,36 @@ const (
 	ServiceName = "server"
 	// TraceIDKey is the context key for trace ID
 	TraceIDKey = "trace_id"
+	// DefaultLogDir is the default directory for log files in development
+	DefaultLogDir = "logs"
 )
+
+// LogConfig holds configuration for logger output
+type LogConfig struct {
+	// Env is the environment (development, production, etc.)
+	Env string
+	// LogDir is the directory for log files (only used in development)
+	// If empty, logs go to stdout
+	LogDir string
+	// LogToFile enables file logging in development (default: false, uses stdout)
+	LogToFile bool
+}
 
 // New creates a slog.Logger configured for the supplied environment.
 // The logger automatically includes service name and supports trace_id from context.
+//
+// In production: logs go to stdout (for Kubernetes/log aggregation)
+// In development: logs go to stdout by default, or to files if LogToFile is enabled
 func New(env string) *slog.Logger {
+	return NewWithConfig(LogConfig{
+		Env:       env,
+		LogToFile: false, // Default to stdout even in development
+	})
+}
+
+// NewWithConfig creates a logger with custom configuration
+func NewWithConfig(cfg LogConfig) *slog.Logger {
+	var writer io.Writer = os.Stdout
 	var handler slog.Handler
 
 	opts := &slog.HandlerOptions{
@@ -35,13 +62,42 @@ func New(env string) *slog.Logger {
 		},
 	}
 
-	switch strings.ToLower(env) {
-	case "production", "prod":
+	env := strings.ToLower(cfg.Env)
+	isProduction := env == "production" || env == "prod"
+
+	// In production, always use stdout (for Kubernetes/log aggregation)
+	// In development, use files if LogToFile is enabled
+	if !isProduction && cfg.LogToFile {
+		logDir := cfg.LogDir
+		if logDir == "" {
+			logDir = DefaultLogDir
+		}
+
+		// Create log directory if it doesn't exist
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			// Fallback to stdout if directory creation fails
+			writer = os.Stdout
+		} else {
+			// Open log file (append mode)
+			logFile := filepath.Join(logDir, ServiceName+".log")
+			file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+			if err != nil {
+				// Fallback to stdout if file open fails
+				writer = os.Stdout
+			} else {
+				// Use multi-writer to write to both file and stdout
+				writer = io.MultiWriter(file, os.Stdout)
+			}
+		}
+	}
+
+	// Configure handler based on environment
+	if isProduction {
 		opts.Level = slog.LevelInfo
-		handler = slog.NewJSONHandler(os.Stdout, opts)
-	default:
+		handler = slog.NewJSONHandler(writer, opts)
+	} else {
 		opts.Level = slog.LevelDebug
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		handler = slog.NewTextHandler(writer, opts)
 	}
 
 	// Wrap handler to add service name and trace_id
