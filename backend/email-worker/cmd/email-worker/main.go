@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,15 +9,18 @@ import (
 	"github.com/woragis/backend/email-worker/internal/config"
 	"github.com/woragis/backend/email-worker/internal/queue"
 	"github.com/woragis/backend/email-worker/internal/sender"
+	"github.com/woragis/backend/email-worker/pkg/logger"
 )
 
 func main() {
-	// Setup logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	// Setup structured logger
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "development"
+	}
+	logger := logger.New(env)
 
-	logger.Info("Starting email worker")
+	logger.Info("Starting email worker", "env", env)
 
 	// Load configuration
 	emailCfg, err := config.LoadEmailConfig()
