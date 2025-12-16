@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,6 +19,7 @@ import (
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 	"github.com/woragis/backend/server/app/pkg/rabbitmq"
+	translationhealth "github.com/woragis/backend/server/app/cmd/translation-worker/pkg/health"
 )
 
 func main() {
@@ -65,6 +67,22 @@ func main() {
 	// Create worker
 	worker := translationworker.NewWorker(translationQueue, translationService, logger)
 
+	// Setup health check HTTP server
+	healthChecker := translationhealth.NewHealthChecker(rabbitmqConn, logger)
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/healthz", healthChecker.Handler())
+	healthServer := &http.Server{
+		Addr:    ":8080",
+		Handler: healthMux,
+	}
+
+	go func() {
+		logger.Info("health check server starting", slog.String("addr", ":8080"))
+		if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("health check server failed", slog.Any("error", err))
+		}
+	}()
+
 	// Start worker in background
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	go worker.Start(workerCtx)
@@ -79,6 +97,13 @@ func main() {
 	// Stop worker
 	worker.Stop()
 	workerCancel()
+
+	// Shutdown health check server
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if err := healthServer.Shutdown(shutdownCtx); err != nil {
+		logger.Warn("health check server shutdown error", slog.Any("error", err))
+	}
 
 	// Give worker time to finish current job
 	time.Sleep(2 * time.Second)
