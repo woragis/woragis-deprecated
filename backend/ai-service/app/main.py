@@ -1,5 +1,4 @@
 import os
-import logging
 from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -14,16 +13,26 @@ import json
 from app.agents import get_agent_names, get_agent, build_agent_with_model, build_system_message
 from app.providers import make_model, CipherClient
 from app.config import settings
+from app.logger import configure_logging, get_logger
+from app.middleware import RequestIDMiddleware, RequestLoggerMiddleware
 
 
 load_dotenv()
 
+# Configure structured logging
+env = os.getenv("ENV", "development")
+log_to_file = os.getenv("LOG_TO_FILE", "false").lower() == "true"
+log_dir = os.getenv("LOG_DIR", "logs")
+configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
+
+logger = get_logger()
+logger.info("AI service initialized", env=env)
+
 app = FastAPI(title="Woragis AI Service", version="0.1.0")
 
-# Configure basic logging for container visibility
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-logger = logging.getLogger("woragis.ai-service")
-logger.info("AI service initialized")
+# Add middleware for request ID and logging
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RequestLoggerMiddleware)
 
 if settings.CORS_ENABLED:
     origins = settings.CORS_ALLOWED_ORIGINS.split(",")
@@ -93,13 +102,11 @@ def _apply_overrides(chain: Runnable, model_name: Optional[str], temperature: Op
 async def chat(req: ChatRequest):
     logger.info(
         "chat request",
-        extra={
-            "agent": req.agent,
-            "provider": (req.provider or "openai").lower(),
-            "model": req.model or "",
-            "has_system": bool(req.system),
-            "temperature": req.temperature,
-        },
+        agent=req.agent,
+        provider=(req.provider or "openai").lower(),
+        model=req.model or "",
+        has_system=bool(req.system),
+        temperature=req.temperature,
     )
     provider = (req.provider or "openai").lower()
 
@@ -151,7 +158,7 @@ async def chat(req: ChatRequest):
         # Simple concatenation to include system guidance
         inputs = f"{req.system}\n\nUser: {req.input}"
 
-    logger.info("invoking chat chain", extra={"agent": agent_name, "provider": provider})
+    logger.info("invoking chat chain", agent=agent_name, provider=provider)
     # The prompt template expects both 'agent_name' and 'input' variables
     result = await chain.ainvoke({
         "agent_name": agent_name.title() + " Agent",
@@ -162,7 +169,7 @@ async def chat(req: ChatRequest):
     else:
         output_text = str(result)
 
-    logger.info("chat completed", extra={"agent": agent_name, "output_len": len(output_text)})
+    logger.info("chat completed", agent=agent_name, output_len=len(output_text))
     return ChatResponse(agent=agent_name, output=output_text)
 
 
@@ -194,13 +201,11 @@ async def generate_images(req: ImageRequest):
 async def chat_stream(req: ChatStreamRequest):
     logger.info(
         "chat stream request",
-        extra={
-            "agent": req.agent,
-            "provider": (req.provider or "openai").lower(),
-            "model": req.model or "",
-            "has_system": bool(req.system),
-            "temperature": req.temperature,
-        },
+        agent=req.agent,
+        provider=(req.provider or "openai").lower(),
+        model=req.model or "",
+        has_system=bool(req.system),
+        temperature=req.temperature,
     )
     provider = (req.provider or "openai").lower()
 
@@ -253,7 +258,7 @@ async def chat_stream(req: ChatStreamRequest):
         raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_name}'. Available: {', '.join(get_agent_names())}")
 
     async def event_gen():
-        logger.info("stream started", extra={"agent": agent_name, "provider": provider})
+        logger.info("stream started", agent=agent_name, provider=provider)
         full_parts = []
         try:
             # The prompt template expects both 'agent_name' and 'input' variables
@@ -272,10 +277,10 @@ async def chat_stream(req: ChatStreamRequest):
                         full_parts.append(chunk)
                         yield json.dumps({"delta": chunk}) + "\n"
         except Exception as e:
-            logger.exception("stream error")
+            logger.exception("stream error", exc_info=True)
             yield json.dumps({"error": str(e)}) + "\n"
         final_text = "".join(full_parts)
-        logger.info("stream completed", extra={"agent": agent_name, "output_len": len(final_text)})
+        logger.info("stream completed", agent=agent_name, output_len=len(final_text))
         yield json.dumps({"done": True, "output": final_text}) + "\n"
 
     return StreamingResponse(event_gen(), media_type="application/x-ndjson")
