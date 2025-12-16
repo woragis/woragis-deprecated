@@ -1,0 +1,27 @@
+{
+  "chat_requests": [
+    {
+      "agent": "startup",
+      "input": "What is a good MVP strategy?",
+      "provider": "openai"
+    },
+    {
+      "agent": "economist",
+      "input": "What are the market trends?",
+      "provider": "openai"
+    },
+    {
+      "agent": "auto",
+      "input": "How do I validate my startup idea?",
+      "provider": "openai"
+    }
+  ],
+  "image_requests": [
+    {
+      "provider": "cipher",
+      "prompt": "A futuristic cityscape",
+      "n": 1,
+      "size": "1024x1024"
+    }
+  ]
+}
