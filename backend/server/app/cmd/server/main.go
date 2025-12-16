@@ -13,7 +13,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
@@ -233,7 +232,10 @@ func main() {
 	}
 
 	app.Use(recover.New())
-	app.Use(fiberlogger.New())
+	// Add request ID middleware for distributed tracing
+	app.Use(applogger.RequestIDMiddleware(slogLogger))
+	// Add structured request logging middleware
+	app.Use(applogger.RequestLoggerMiddleware(slogLogger))
 
 	api := app.Group("/api")
 
