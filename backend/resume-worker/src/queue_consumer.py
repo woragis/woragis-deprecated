@@ -104,6 +104,12 @@ class ResumeQueueConsumer:
             self._expose_for_health()
             
             return True
+        except AMQPConnectionError as e:
+            logger.error(f"Failed to connect to RabbitMQ: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error connecting to RabbitMQ: {e}", exc_info=True)
+            return False
     
     def _expose_for_health(self):
         """Expose connection for health checks."""
@@ -113,13 +119,6 @@ class ResumeQueueConsumer:
         except ImportError:
             # Health module may not be available
             pass
-            
-        except AMQPConnectionError as e:
-            logger.error(f"Failed to connect to RabbitMQ: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error connecting to RabbitMQ: {e}", exc_info=True)
-            return False
     
     def start_consuming(self, message_handler):
         """

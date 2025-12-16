@@ -48,7 +48,7 @@ def extract_keywords(job_description: str) -> Dict[str, List[str]]:
     
     # Extract specific skill names mentioned in job description
     skill_names = []
-    skill_keywords = ['golang', 'go programming', 'python', 'java', 'javascript', 'typescript', 'rust', 
+    skill_keywords = ['golang', 'go programming', 'go language', 'python', 'java', 'javascript', 'typescript', 'rust', 
                       'kubernetes', 'docker', 'postgresql', 'redis', 'grpc', 'websocket']
     for skill in skill_keywords:
         if skill in job_lower:
