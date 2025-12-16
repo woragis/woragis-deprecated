@@ -266,12 +266,14 @@
 ## Structured Logs
 
 ### Tasks
-- [ ] Structured logging for server
-- [ ] Structured logging for email-worker
-- [ ] Structured logging for job-application-worker
-- [ ] Structured logging for resume-worker
-- [ ] Structured logging for translation-worker
-- [ ] Structured logging for whatsapp-worker
+- [x] Structured logging for server
+- [x] Structured logging for email-worker
+- [x] Structured logging for job-application-worker
+- [x] Structured logging for resume-worker
+- [x] Structured logging for translation-worker
+- [x] Structured logging for whatsapp-worker
+- [x] Structured logging for ai-service
+- [x] Structured logging for creative-service
 
 ### Strategy
 
@@ -337,6 +339,11 @@
 - **warn:** Warning messages (retries, degraded functionality)
 - **error:** Error messages (failures, exceptions)
 - **fatal:** Critical errors (application cannot continue)
+
+**Log Storage:**
+- **Development:** stdout by default (optional file logging with `LOG_TO_FILE=true`)
+- **Production:** stdout only (Kubernetes will collect automatically)
+- **File logging:** Only available in development, writes to `logs/` directory (dual output: file + stdout)
 
 **Log Aggregation:**
 - **Output:** stdout/stderr (Kubernetes will collect)
