@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,15 +10,18 @@ import (
 	"github.com/woragis/backend/whatsapp-worker/internal/config"
 	"github.com/woragis/backend/whatsapp-worker/internal/queue"
 	"github.com/woragis/backend/whatsapp-worker/internal/notifier"
+	"github.com/woragis/backend/whatsapp-worker/pkg/logger"
 )
 
 func main() {
-	// Setup logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	// Setup structured logger
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "development"
+	}
+	logger := logger.New(env)
 
-	logger.Info("Starting WhatsApp worker")
+	logger.Info("Starting WhatsApp worker", "env", env)
 
 	// Load configuration
 	whatsappCfg := config.LoadWhatsAppConfig()
