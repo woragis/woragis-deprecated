@@ -81,3 +81,12 @@ func (c *Connection) BindQueue(queue, exchange, routingKey string) error {
 		nil,        // arguments
 	)
 }
+
+// IsConnected checks if the RabbitMQ connection is active
+func (c *Connection) IsConnected() bool {
+	if c.conn == nil || c.channel == nil {
+		return false
+	}
+	// Check if connection is closed
+	return !c.conn.IsClosed()
+}

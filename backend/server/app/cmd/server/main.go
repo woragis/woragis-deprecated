@@ -68,6 +68,7 @@ import (
 	notifications "github.com/woragis/backend/server/app/internal/workers/notifications"
 	schedulerworker "github.com/woragis/backend/server/app/internal/workers/scheduler"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
+	apphealth "github.com/woragis/backend/server/app/pkg/health"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 	rabbitmq "github.com/woragis/backend/server/app/pkg/rabbitmq"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
@@ -237,6 +238,12 @@ func main() {
 	// Add structured request logging middleware
 	app.Use(applogger.RequestLoggerMiddleware(slogLogger))
 
+	// Initialize health checker
+	healthChecker := apphealth.NewHealthChecker(db, redisClient, slogLogger)
+
+	// Health check endpoint (before API routes, no auth required)
+	app.Get("/healthz", healthChecker.Handler())
+
 	api := app.Group("/api")
 
 	var emailSender emailservice.Sender = emailservice.NewNoopSender(slogLogger)
@@ -273,11 +280,15 @@ func main() {
 	var rabbitmqEmailPublisher *notifications.RabbitMQPublisher
 	var rabbitmqWhatsAppPublisher *notifications.RabbitMQPublisher
 	rabbitmqCfg := appconfig.LoadRabbitMQConfig()
+	var rabbitmqConn *rabbitmq.Connection
 	if rabbitmqCfg.URL != "" {
-		rabbitmqConn, err := rabbitmq.NewConnection(rabbitmqCfg.URL, slogLogger)
+		var err error
+		rabbitmqConn, err = rabbitmq.NewConnection(rabbitmqCfg.URL, slogLogger)
 		if err != nil {
 			slogLogger.Warn("failed to connect to RabbitMQ, notifications will use Redis only", slog.Any("error", err))
 		} else {
+			// Set RabbitMQ checker for health checks
+			healthChecker.SetRabbitMQChecker(rabbitmqConn)
 			// Create RabbitMQ publisher for emails
 			emailExchange := os.Getenv("EMAIL_EXCHANGE")
 			if emailExchange == "" {
