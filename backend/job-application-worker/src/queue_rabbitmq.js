@@ -53,6 +53,14 @@ export class RabbitMQQueue {
         queue: this.queueName,
         routingKey: this.routingKey
       });
+      
+      // Expose connection for health checks
+      try {
+        const { setRabbitMQConnection } = await import('./health.js');
+        setRabbitMQConnection(this.connection);
+      } catch (err) {
+        // Health module may not be available
+      }
     } catch (error) {
       logger.error('Failed to connect to RabbitMQ', { error: error.message });
       throw error;

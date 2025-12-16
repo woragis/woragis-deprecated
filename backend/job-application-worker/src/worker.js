@@ -21,6 +21,15 @@ export class Worker {
 
     // Initialize connections
     await this.queue.connect();
+    
+    // Expose RabbitMQ connection for health checks
+    try {
+      const { setRabbitMQConnection } = await import('./health.js');
+      setRabbitMQConnection(this.queue.connection);
+    } catch (err) {
+      // Health module may not be available
+    }
+    
     await this.db.connect();
     await this.scraper.initialize();
 
