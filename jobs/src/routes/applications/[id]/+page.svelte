@@ -5,6 +5,7 @@
 		getJobApplication,
 		updateJobApplication,
 		deleteJobApplication,
+		generateCoverLetter,
 		type JobApplication,
 		type UpdateJobApplicationInput,
 		type ApplicationStatus
@@ -27,10 +28,10 @@
 		type StageType,
 		type StageOutcome
 	} from '$lib/api/jobapplicationstages';
-	import { listResumes, requestCVGeneration, type Resume } from '$lib/api/resumes';
+	import { listResumes, requestCVGeneration, downloadResumeById, type Resume } from '$lib/api/resumes';
 	import { searchConversations, createConversation, type Conversation } from '$lib/api/chats';
 	import InlineChat from '$lib/components/InlineChat.svelte';
-	import { MessageSquare } from 'lucide-svelte';
+	import { MessageSquare, Download } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
@@ -60,6 +61,18 @@
 	let showStageModal = $state(false);
 	let editingResponse: JobApplicationResponse | null = $state(null);
 	let editingStage: InterviewStage | null = $state(null);
+	
+	// Confirmation modal states
+	let showDeleteConfirm = $state(false);
+	let showDeleteResponseConfirm = $state(false);
+	let showDeleteStageConfirm = $state(false);
+	let showGenerateCVConfirm = $state(false);
+	
+	// Action states
+	let generatingCoverLetter = $state(false);
+	let requestingCV = $state(false);
+	let deleteStageId: string | null = $state(null);
+	let deleteResponseId: string | null = $state(null);
 
 	// Form states
 	let formCompanyName = $state('');
@@ -83,7 +96,6 @@
 	let formSource = $state('');
 	let formApplicationMethod = $state('');
 	let formLanguage = $state('');
-	let requestingCV = $state(false);
 
 	// Response form
 	let formResponseType = $state<ResponseType>('no-response');
@@ -492,7 +504,20 @@
 		showDeleteStageConfirm = true;
 	}
 
-	let showGenerateCVConfirm = $state(false);
+	async function confirmDeleteStage() {
+		if (!application || !deleteStageId) return;
+		try {
+			await deleteStage(deleteStageId, application.id);
+			await fetchStages();
+			toastSuccess('Interview stage deleted successfully');
+		} catch (err) {
+			toastError(getApiErrorMessage(err, 'Failed to delete interview stage'));
+			console.error('Error deleting interview stage:', err);
+		} finally {
+			deleteStageId = null;
+			showDeleteStageConfirm = false;
+		}
+	}
 
 	function handleRequestCV() {
 		if (!application) return;
@@ -518,6 +543,21 @@
 		} finally {
 			requestingCV = false;
 			showGenerateCVConfirm = false;
+		}
+	}
+
+	async function handleGenerateCoverLetter() {
+		if (!application) return;
+		generatingCoverLetter = true;
+		try {
+			await generateCoverLetter(application.id);
+			await loadApplication();
+			toastSuccess('Cover letter generated and saved successfully!');
+		} catch (err) {
+			toastError(getApiErrorMessage(err, 'Failed to generate cover letter'));
+			console.error('Error generating cover letter:', err);
+		} finally {
+			generatingCoverLetter = false;
 		}
 	}
 
@@ -585,13 +625,15 @@
 						<MessageSquare class="w-4 h-4 mr-2" />
 						Start Chat
 					</Button>
-					{#if application.resume}
+					{#if application?.resume}
 						<Button 
 							variant="secondary" 
 							size="sm" 
 							onclick={async () => {
+								if (!application?.resume) return;
+								const resume = application.resume;
 								try {
-									await downloadResumeById(application.resume!.id, application.resume!.fileName);
+									await downloadResumeById(resume.id, resume.fileName);
 									toastSuccess('Resume downloaded successfully');
 								} catch (err) {
 									toastError(getApiErrorMessage(err, 'Failed to download resume'));
@@ -604,6 +646,9 @@
 					{/if}
 					<Button onclick={handleRequestCV} variant="primary" size="sm" disabled={requestingCV}>
 						{requestingCV ? 'Generating CV...' : 'Generate CV'}
+					</Button>
+					<Button onclick={handleGenerateCoverLetter} variant="secondary" size="sm" disabled={generatingCoverLetter}>
+						{generatingCoverLetter ? 'Generating...' : 'Generate Cover Letter'}
 					</Button>
 					<Button onclick={openResponseModal} variant="secondary" size="sm">Add Response</Button>
 					<Button onclick={openStageModal} variant="secondary" size="sm">Add Interview Stage</Button>

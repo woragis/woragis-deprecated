@@ -13,7 +13,8 @@
 	import { authStore } from '$lib';
 	import { toastError, toastSuccess } from '$lib/utils/toast';
 	import { renderMarkdown } from '$lib/utils/markdown';
-	import { MessageSquare, Send, X } from 'lucide-svelte';
+	import { MessageSquare, Send, X, FileText } from 'lucide-svelte';
+	import { generateCoverLetter } from '$lib/api/jobapplications';
 
 	interface Props {
 		jobApplicationId?: string;
@@ -33,6 +34,8 @@
 	let error: string | null = $state(null);
 	let lastInitializedConversationId: string | undefined = $state(undefined);
 	let lastInitializedJobApplicationId: string | undefined = $state(undefined);
+	let generatingCoverLetterFromMessage = $state(false);
+	let hoveredMessageId: string | null = $state(null);
 
 	// WebSocket connection state
 	let ws: WebSocket | null = $state(null);
@@ -297,9 +300,23 @@
 		} catch (err) {
 			console.error('Error sending message:', err);
 			toastError('Failed to send message');
-			messageContent = content; // Restore message on error
 		} finally {
 			sending = false;
+		}
+	}
+
+	async function handleGenerateCoverLetterFromMessage(messageId: string) {
+		if (!jobApplicationId || generatingCoverLetterFromMessage) return;
+		
+		generatingCoverLetterFromMessage = true;
+		try {
+			await generateCoverLetter(jobApplicationId, { messageId });
+			toastSuccess('Cover letter generated from message and saved successfully!');
+		} catch (err) {
+			toastError(err instanceof Error ? err.message : 'Failed to generate cover letter from message');
+			console.error('Error generating cover letter from message:', err);
+		} finally {
+			generatingCoverLetterFromMessage = false;
 		}
 	}
 
@@ -350,7 +367,11 @@
 			</div>
 		{:else}
 			{#each messages as message}
-				<div class="message-wrapper {message.role === 'user' ? 'message-user' : 'message-assistant'}">
+				<div 
+					class="message-wrapper {message.role === 'user' ? 'message-user' : 'message-assistant'}"
+					onmouseenter={() => hoveredMessageId = message.id}
+					onmouseleave={() => hoveredMessageId = null}
+				>
 					<div class="message-bubble {message.role === 'user' ? 'bubble-user' : 'bubble-assistant'}">
 						{#if message.role === 'assistant'}
 							<div class="message-content markdown-content">
@@ -365,6 +386,17 @@
 							</span>
 							{#if message.id?.startsWith('__streaming_') || message.id === streamingMessageId}
 								<span class="streaming-indicator">●</span>
+							{/if}
+							{#if jobApplicationId && hoveredMessageId === message.id && !message.id?.startsWith('__streaming_')}
+								<button
+									class="generate-cover-letter-btn"
+									onclick={() => handleGenerateCoverLetterFromMessage(message.id)}
+									disabled={generatingCoverLetterFromMessage}
+									title="Generate cover letter from this message"
+								>
+									<FileText size={14} />
+									Generate Cover Letter
+								</button>
 							{/if}
 						</div>
 					</div>
@@ -686,11 +718,37 @@
 		align-items: center;
 		gap: var(--spacing-xs);
 		margin-top: var(--spacing-xs);
+		justify-content: space-between;
 	}
 
 	.message-time {
 		font-size: var(--font-size-xs);
 		opacity: 0.7;
+	}
+
+	.generate-cover-letter-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background-color: var(--color-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-sm);
+		font-size: var(--font-size-xs);
+		cursor: pointer;
+		transition: all var(--transition-base);
+		margin-left: auto;
+	}
+
+	.generate-cover-letter-btn:hover:not(:disabled) {
+		background-color: var(--color-primary-hover);
+		transform: translateY(-1px);
+	}
+
+	.generate-cover-letter-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.streaming-indicator {

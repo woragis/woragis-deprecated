@@ -142,3 +142,18 @@ export async function deleteJobApplication(id: string): Promise<void> {
 	await apiClient.delete(`/job-applications/${id}`);
 }
 
+export interface GenerateCoverLetterInput {
+	messageId?: string; // Optional: message ID from chat to use as additional context
+}
+
+export async function generateCoverLetter(
+	id: string,
+	input?: GenerateCoverLetterInput
+): Promise<JobApplication> {
+	const response = await apiClient.post<ApiResponse<JobApplication>>(
+		`/job-applications/${id}/generate-cover-letter`,
+		input || {}
+	);
+	return response.data.data;
+}
+
