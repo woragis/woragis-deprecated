@@ -33,12 +33,15 @@ from queue_consumer import create_consumer_from_env
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Configure structured logging
+from logger import configure_logging, get_logger
+
+env = os.getenv("ENV", "development")
+log_to_file = os.getenv("LOG_TO_FILE", "false").lower() == "true"
+log_dir = os.getenv("LOG_DIR", "logs")
+configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
+
+logger = get_logger()
 
 # Configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgres://postgres:postgres@database:5432/woragis?sslmode=disable')
