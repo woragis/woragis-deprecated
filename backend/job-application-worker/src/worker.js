@@ -125,6 +125,10 @@ export class Worker {
     await this.queue.disconnect();
     await this.db.disconnect();
     await this.scraper.cleanup();
+    // Close log file if file logging is enabled
+    if (logger.close) {
+      logger.close();
+    }
   }
 
   sleep(ms) {
