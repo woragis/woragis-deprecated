@@ -66,6 +66,14 @@ func (c *Connection) Close() error {
 	return nil
 }
 
+// IsClosed checks if the RabbitMQ connection is closed
+func (c *Connection) IsClosed() bool {
+	if c.conn == nil {
+		return true
+	}
+	return c.conn.IsClosed()
+}
+
 // NewQueue creates a new WhatsApp queue.
 func NewQueue(conn *Connection, queueName, exchange, routingKey string, logger *slog.Logger) (*Queue, error) {
 	// Declare exchange

@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/woragis/backend/whatsapp-worker/internal/config"
 	"github.com/woragis/backend/whatsapp-worker/internal/queue"
 	"github.com/woragis/backend/whatsapp-worker/internal/notifier"
+	"github.com/woragis/backend/whatsapp-worker/pkg/health"
 	"github.com/woragis/backend/whatsapp-worker/pkg/logger"
 )
 
@@ -75,6 +78,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup health check HTTP server
+	healthChecker := health.NewHealthChecker(conn, logger)
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/healthz", healthChecker.Handler())
+	healthServer := &http.Server{
+		Addr:    ":8080",
+		Handler: healthMux,
+	}
+
+	go func() {
+		logger.Info("Health check server starting", slog.String("addr", ":8080"))
+		if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("Health check server failed", slog.Any("error", err))
+		}
+	}()
+
 	// Setup graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -116,6 +135,12 @@ func main() {
 		logger.Info("Received shutdown signal", slog.String("signal", sig.String()))
 		cancel()
 		whatsappNotifier.Disconnect()
+		// Shutdown health check server
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		if err := healthServer.Shutdown(shutdownCtx); err != nil {
+			logger.Warn("Health check server shutdown error", slog.Any("error", err))
+		}
 	case err := <-errChan:
 		if err != nil {
 			logger.Error("WhatsApp queue consumer error", slog.Any("error", err))
