@@ -1,5 +1,4 @@
 import os
-import logging
 from typing import Literal, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,16 +9,26 @@ import base64
 
 from app.providers import ImageProviderFactory, DiagramProviderFactory, VideoProviderFactory
 from app.config import settings
+from app.logger import configure_logging, get_logger
+from app.middleware import RequestIDMiddleware, RequestLoggerMiddleware
 
 
 load_dotenv()
 
+# Configure structured logging
+env = os.getenv("ENV", "development")
+log_to_file = os.getenv("LOG_TO_FILE", "false").lower() == "true"
+log_dir = os.getenv("LOG_DIR", "logs")
+configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
+
+logger = get_logger()
+logger.info("Creative service initialized", env=env)
+
 app = FastAPI(title="Woragis Creative Service", version="0.1.0", description="AI-powered image, diagram, and video generation for technical content")
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-logger = logging.getLogger("woragis.creative-service")
-logger.info("Creative service initialized")
+# Add middleware for request ID and logging
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RequestLoggerMiddleware)
 
 if settings.CORS_ENABLED:
     origins = settings.CORS_ALLOWED_ORIGINS.split(",")
@@ -93,7 +102,7 @@ def healthz():
 @app.post("/v1/images/generate", response_model=ImageGenerationResponse)
 async def generate_images(req: ImageGenerationRequest):
     """Generate images using various AI providers."""
-    logger.info(f"Image generation request: provider={req.provider}, style={req.style}")
+    logger.info("Image generation request", provider=req.provider, style=req.style)
     
     try:
         provider = ImageProviderFactory.create(req.provider)
@@ -134,7 +143,7 @@ async def generate_images(req: ImageGenerationRequest):
             prompt=req.prompt,
         )
     except Exception as e:
-        logger.exception("Image generation error")
+        logger.exception("Image generation error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -149,7 +158,7 @@ async def generate_thumbnail(req: ImageGenerationRequest):
 @app.post("/v1/diagrams/generate", response_model=DiagramGenerationResponse)
 async def generate_diagram(req: DiagramGenerationRequest):
     """Generate technical diagrams using AI-generated code (Mermaid/Graphviz)."""
-    logger.info(f"Diagram generation request: type={req.diagram_type}, kind={req.diagram_kind}")
+    logger.info("Diagram generation request", diagram_type=req.diagram_type, diagram_kind=req.diagram_kind)
     
     try:
         generator = DiagramProviderFactory.create(req.ai_provider)
@@ -167,7 +176,7 @@ async def generate_diagram(req: DiagramGenerationRequest):
             diagram_type=req.diagram_type,
         )
     except Exception as e:
-        logger.exception("Diagram generation error")
+        logger.exception("Diagram generation error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -192,7 +201,7 @@ async def generate_mermaid_diagram(
 @app.post("/v1/videos/generate", response_model=VideoGenerationResponse)
 async def generate_video(req: VideoGenerationRequest):
     """Generate a video/GIF from an image using AI."""
-    logger.info("Video generation request")
+    logger.info("Video generation request", provider=req.provider)
     
     if not req.image_url and not req.image_b64:
         raise HTTPException(status_code=400, detail="Either image_url or image_b64 must be provided")
@@ -212,7 +221,7 @@ async def generate_video(req: VideoGenerationRequest):
             format=result.get("format", "mp4"),
         )
     except Exception as e:
-        logger.exception("Video generation error")
+        logger.exception("Video generation error", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
