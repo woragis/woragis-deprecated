@@ -132,12 +132,14 @@
 ## Health Checks
 
 ### Tasks
-- [ ] Health check endpoint for server
-- [ ] Health check for email-worker
-- [ ] Health check for job-application-worker
-- [ ] Health check for resume-worker
-- [ ] Health check for translation-worker
-- [ ] Health check for whatsapp-worker
+- [x] Health check endpoint for server
+- [x] Health check for email-worker
+- [x] Health check for job-application-worker
+- [x] Health check for resume-worker
+- [x] Health check for translation-worker
+- [x] Health check for whatsapp-worker
+- [x] Health check for ai-service
+- [x] Health check for creative-service
 
 ### Strategy
 
