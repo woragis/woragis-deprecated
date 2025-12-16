@@ -70,6 +70,7 @@ import (
 	schedulerworker "github.com/woragis/backend/server/app/internal/workers/scheduler"
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
+	rabbitmq "github.com/woragis/backend/server/app/pkg/rabbitmq"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 )
 
@@ -263,10 +264,55 @@ func main() {
 			}()
 		}
 	}
-	publisher := notifications.NewPublisher(redisClient)
+	// Initialize publishers
+	redisPublisher := notifications.NewPublisher(redisClient)
+	
+	// Initialize RabbitMQ publisher for email notifications
+	var rabbitmqEmailPublisher *notifications.RabbitMQPublisher
+	rabbitmqCfg := appconfig.LoadRabbitMQConfig()
+	if rabbitmqCfg.URL != "" {
+		rabbitmqConn, err := rabbitmq.NewConnection(rabbitmqCfg.URL, slogLogger)
+		if err != nil {
+			slogLogger.Warn("failed to connect to RabbitMQ, email will use Redis only", slog.Any("error", err))
+		} else {
+			// Create RabbitMQ publisher for emails
+			emailExchange := os.Getenv("EMAIL_EXCHANGE")
+			if emailExchange == "" {
+				emailExchange = "woragis.notifications"
+			}
+			emailRoutingKey := os.Getenv("EMAIL_ROUTING_KEY")
+			if emailRoutingKey == "" {
+				emailRoutingKey = "emails.send"
+			}
+			rabbitmqEmailPublisher, err = notifications.NewRabbitMQPublisher(
+				rabbitmqConn.Channel(),
+				emailExchange,
+				emailRoutingKey,
+			)
+			if err != nil {
+				slogLogger.Warn("failed to create RabbitMQ email publisher", slog.Any("error", err))
+			} else {
+				slogLogger.Info("RabbitMQ email publisher initialized",
+					slog.String("exchange", emailExchange),
+					slog.String("routing_key", emailRoutingKey),
+				)
+			}
+		}
+	}
+	
+	// Use dual publisher during migration (publishes to both Redis and RabbitMQ)
+	var publisher reportsdomain.Publisher
+	if rabbitmqEmailPublisher != nil {
+		publisher = notifications.NewDualPublisher(redisPublisher, rabbitmqEmailPublisher, slogLogger)
+		slogLogger.Info("Using dual publisher (Redis + RabbitMQ) for email notifications")
+	} else {
+		publisher = redisPublisher
+		slogLogger.Info("Using Redis publisher only (RabbitMQ not available)")
+	}
 
 	tokenStore := authdomain.NewRedisTokenStore(redisClient)
 
+	// Keep embedded email worker running during migration (will be removed later)
 	if err := notifications.StartEmailWorker(workerCtx, redisClient, emailSender, slogLogger); err != nil && slogLogger != nil {
 		slogLogger.Error("failed to start email worker", slog.Any("error", err))
 	}

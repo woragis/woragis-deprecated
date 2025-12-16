@@ -1,0 +1,32 @@
+FROM golang:1.24-bookworm AS builder
+
+WORKDIR /build
+
+# Enable automatic toolchain download if needed
+ENV GOTOOLCHAIN=auto
+
+COPY email-worker/go.mod email-worker/go.sum ./
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN go mod download
+
+COPY email-worker/ ./
+
+RUN GOOS=linux GOARCH=amd64 go build -o /build/bin/email-worker ./cmd/email-worker
+
+FROM debian:bookworm-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/bin/email-worker /usr/local/bin/email-worker
+
+ENV APP_ENV=production
+
+CMD ["email-worker"]

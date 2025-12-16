@@ -239,6 +239,33 @@ services:
       - ../resume-worker/logs:/app/logs
     command: ["python", "src/main.py"]
     restart: unless-stopped
+  email-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.email-worker
+    container_name: woragis-email-worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
+      EMAIL_QUEUE_NAME: ${EMAIL_QUEUE_NAME:-emails.queue}
+      EMAIL_EXCHANGE: ${EMAIL_EXCHANGE:-woragis.notifications}
+      EMAIL_ROUTING_KEY: ${EMAIL_ROUTING_KEY:-emails.send}
+      EMAIL_PREFETCH_COUNT: ${EMAIL_PREFETCH_COUNT:-1}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TLS: ${SMTP_TLS:-true}
+    restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)
   # prometheus:
