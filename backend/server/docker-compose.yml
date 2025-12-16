@@ -125,14 +125,23 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      redis:
+      rabbitmq:
         condition: service_healthy
       ai-service:
         condition: service_started
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
-      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
+      JOB_APPLICATION_QUEUE_NAME: ${JOB_APPLICATION_QUEUE_NAME:-job-applications.queue}
+      JOB_APPLICATION_EXCHANGE: ${JOB_APPLICATION_EXCHANGE:-woragis.tasks}
+      JOB_APPLICATION_ROUTING_KEY: ${JOB_APPLICATION_ROUTING_KEY:-job-applications.process}
+      JOB_APPLICATION_PREFETCH_COUNT: ${JOB_APPLICATION_PREFETCH_COUNT:-1}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
       JOB_APPLICATION_ENABLED: ${JOB_APPLICATION_ENABLED:-true}
       PLAYWRIGHT_HEADLESS: ${PLAYWRIGHT_HEADLESS:-true}

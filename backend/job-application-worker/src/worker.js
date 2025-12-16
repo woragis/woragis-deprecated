@@ -1,4 +1,4 @@
-import { Queue } from './queue.js';
+import { RabbitMQQueue } from './queue_rabbitmq.js';
 import { Database } from './database.js';
 import { Orchestrator } from './orchestrator.js';
 import { Scraper } from './scraper.js';
@@ -7,7 +7,7 @@ import { logger } from './utils/logger.js';
 
 export class Worker {
   constructor() {
-    this.queue = new Queue();
+    this.queue = new RabbitMQQueue();
     this.db = new Database();
     this.orchestrator = new Orchestrator(this.db);
     this.scraper = new Scraper();
@@ -24,55 +24,46 @@ export class Worker {
     await this.db.connect();
     await this.scraper.initialize();
 
-    // Start processing loop
-    this.processLoop();
+    // Start consuming messages from RabbitMQ
+    await this.queue.consume(async (job) => {
+      await this.processJob(job);
+    });
   }
 
-  async processLoop() {
-    while (this.running) {
-      try {
-        // Dequeue job with 5 second timeout
-        const job = await this.queue.dequeueJob(5000);
-        
-        if (!job) {
-          // No job available, continue polling
-          continue;
-        }
+  async processJob(job) {
+    try {
+      logger.info('Processing job application', {
+        jobId: job.id,
+        company: job.companyName,
+        website: job.website,
+      });
 
-        logger.info('Processing job application', {
-          jobId: job.id,
-          company: job.companyName,
+      // Check if we should process this website (rate limit check)
+      const shouldProcess = await this.orchestrator.shouldProcessWebsite(job.website);
+      
+      if (!shouldProcess) {
+        logger.info('Website limit reached, rejecting job for retry', {
           website: job.website,
         });
-
-        // Check if we should process this website (rate limit check)
-        const shouldProcess = await this.orchestrator.shouldProcessWebsite(job.website);
-        
-        if (!shouldProcess) {
-          logger.info('Website limit reached, re-enqueuing job', {
-            website: job.website,
-          });
-          // Re-enqueue for later
-          await this.queue.enqueueJob(job);
-          // Wait before checking again
-          await this.sleep(3600000); // 1 hour
-          continue;
-        }
-
-        // Process the job
-        await this.processApplication(job);
-
-        // Increment website count
-        await this.orchestrator.incrementWebsiteCount(job.website);
-
-        // Mark job as complete
-        await this.queue.markJobComplete(job.id);
-
-        logger.info('Job application completed', { jobId: job.id });
-      } catch (error) {
-        logger.error('Error processing job', { error: error.message, stack: error.stack });
-        // Continue processing other jobs
+        // Reject and requeue - RabbitMQ will handle retry
+        throw new Error(`Website limit reached for ${job.website}`);
       }
+
+      // Process the job
+      await this.processApplication(job);
+
+      // Increment website count
+      await this.orchestrator.incrementWebsiteCount(job.website);
+
+      logger.info('Job application completed', { jobId: job.id });
+    } catch (error) {
+      logger.error('Error processing job', { 
+        jobId: job.id,
+        error: error.message, 
+        stack: error.stack 
+      });
+      // Re-throw to let RabbitMQ handle requeue
+      throw error;
     }
   }
 
