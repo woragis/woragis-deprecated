@@ -48,6 +48,9 @@ class ResumeQueueConsumer:
         self.channel: Optional[pika.channel.Channel] = None
         self.should_stop = False
         
+        # Expose connection for health checks
+        self._expose_for_health()
+        
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -96,7 +99,20 @@ class ResumeQueueConsumer:
             self.channel.basic_qos(prefetch_count=1)
             
             logger.info(f"Connected to RabbitMQ and ready to consume from queue: {self.queue_name}")
+            
+            # Update health check connection reference
+            self._expose_for_health()
+            
             return True
+    
+    def _expose_for_health(self):
+        """Expose connection for health checks."""
+        try:
+            from health import set_rabbitmq_connection
+            set_rabbitmq_connection(self.connection)
+        except ImportError:
+            # Health module may not be available
+            pass
             
         except AMQPConnectionError as e:
             logger.error(f"Failed to connect to RabbitMQ: {e}")

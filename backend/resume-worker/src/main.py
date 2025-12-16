@@ -194,6 +194,35 @@ def run_queue_mode():
     """Run in queue mode (consume jobs from RabbitMQ)"""
     logger.info("Starting Resume Generation Worker (Queue Mode)")
     
+    # Start health check HTTP server
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import json as json_lib
+    from health import check_health
+    
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/healthz':
+                result = check_health()
+                status_code = 200 if result["status"] != "unhealthy" else 503
+                
+                self.send_response(status_code)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json_lib.dumps(result).encode())
+            else:
+                self.send_response(404)
+                self.end_headers()
+        
+        def log_message(self, format, *args):
+            # Suppress default HTTP server logs
+            pass
+    
+    health_server = HTTPServer(('0.0.0.0', 8080), HealthHandler)
+    import threading
+    health_thread = threading.Thread(target=health_server.serve_forever, daemon=True)
+    health_thread.start()
+    logger.info("Health check server started on port 8080")
+    
     try:
         # Create queue consumer
         consumer = create_consumer_from_env()
