@@ -1,0 +1,19 @@
+FROM golang:1.24-alpine
+
+WORKDIR /app
+
+# Install dependencies including CGO requirements for SQLite
+RUN apk add --no-cache git gcc musl-dev sqlite-dev
+
+# Enable CGO for SQLite support
+ENV CGO_ENABLED=1
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Run tests
+CMD ["go", "test", "./...", "-v", "-coverprofile=coverage.out", "-covermode=atomic"]

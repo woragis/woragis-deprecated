@@ -582,21 +582,81 @@ docker run --rm email-worker-test
 ```
 whatsapp-worker/
 ├── internal/
-│   ├── notifier/
-│   │   ├── whatsmeow_notifier.go
-│   │   └── whatsmeow_notifier_test.go
+│   ├── config/
+│   │   ├── config.go
+│   │   └── config_test.go           ✅ Implemented
 │   └── queue/
 │       ├── queue.go
-│       └── queue_test.go
-└── test/
-    └── integration/
-        └── worker_test.go
+│       └── queue_test.go             ✅ Implemented
+├── pkg/
+│   ├── health/
+│   │   ├── health.go
+│   │   └── health_test.go            ✅ Implemented
+│   └── logger/
+│       ├── logger.go
+│       └── (no tests yet)
+└── tests/
+    └── README.md                     ✅ Implemented
 ```
+
+### Implementation Status
+**Status:** 🔄 **PARTIALLY COMPLETE** | **Coverage:** 23.4% | **Tests:** 20+ passing
+
+**Coverage Breakdown:**
+- `internal/config`: 100% ✅
+- `pkg/health`: 94.6% ✅
+- `internal/queue`: 9.8%
+- `pkg/logger`: 0% (not yet tested)
+- `internal/notifier`: 0% (not yet tested)
+- `cmd/whatsapp-worker`: 0% (not yet tested)
+
+**Test Files:**
+- `internal/config/config_test.go` - Configuration loading tests
+- `internal/queue/queue_test.go` - Queue structure tests
+- `pkg/health/health_test.go` - Health check tests
+- `Makefile` - Test commands
+- `Dockerfile.test` - Docker test image
+- `tests/README.md` - Test documentation
+
+**Note:** Queue package requires integration tests with real RabbitMQ instance to reach 70% coverage target. Notifier package needs tests for WhatsApp connection and message sending.
 
 ### Unit Tests
 
+#### Config Tests
+**Target Coverage:** 90%+ | **Current Coverage:** 100% ✅
+
+- [x] RabbitMQ configuration loading
+- [x] Worker configuration loading
+- [x] WhatsApp configuration loading
+- [x] Environment variable parsing
+- [x] Default values
+- [x] Validation
+
+#### Queue Tests
+**Target Coverage:** 80%+ | **Current Coverage:** 9.8%
+
+- [x] Message envelope serialization
+- [x] Connection state checking
+- [x] Connection closing
+- [x] Context cancellation
+- [x] Invalid message handling
+- [ ] Queue connection (requires RabbitMQ)
+- [ ] Message consumption (requires RabbitMQ)
+- [ ] Message acknowledgment (requires RabbitMQ)
+- [ ] Message rejection/requeue (requires RabbitMQ)
+
+#### Health Check Tests
+**Target Coverage:** 90%+ | **Current Coverage:** 94.6% ✅
+
+- [x] Health check initialization
+- [x] Health check endpoint
+- [x] RabbitMQ connection status
+- [x] Response formatting
+- [x] Caching behavior
+- [x] Unhealthy status handling
+
 #### WhatsApp Notifier Tests
-**Target Coverage:** 70%+
+**Target Coverage:** 70%+ | **Current Coverage:** 0%
 
 - [ ] Notifier initialization
 - [ ] Connection handling
@@ -604,14 +664,6 @@ whatsapp-worker/
 - [ ] QR code generation (if applicable)
 - [ ] Error handling
 - [ ] Disconnection handling
-
-#### Queue Tests
-**Target Coverage:** 80%+
-
-- [ ] Queue connection
-- [ ] Message consumption
-- [ ] Message processing
-- [ ] Error handling
 
 ### Integration Tests
 
@@ -624,10 +676,20 @@ whatsapp-worker/
 ### Running Tests
 ```bash
 # Unit tests
-go test ./internal/... -v -cover
+go test ./internal/... ./pkg/... -v
 
-# Integration tests (requires test WhatsApp account or mocks)
-go test ./test/integration/... -v -tags=integration
+# All tests with coverage
+go test ./... -v -coverprofile=coverage.out
+go tool cover -html=coverage.out
+
+# Using Makefile
+make test
+make test-unit
+make test-cov
+
+# Using Docker
+docker build -f Dockerfile.test -t whatsapp-worker-test .
+docker run --rm whatsapp-worker-test
 ```
 
 ---
@@ -1191,10 +1253,10 @@ export async function cleanupTestDB() {
 ### 🔄 In Progress
 - **Email Worker:** Integration tests needed for queue package to reach 70% target
 - **Job Application Worker:** 15.46% coverage, 23 tests passing (needs more test coverage)
+- **WhatsApp Worker:** 23.4% coverage, 20+ tests passing (config: 100%, health: 94.6%, needs notifier and queue integration tests)
 
 ### ⏳ Pending
 - **Server:** Unit and integration tests
-- **WhatsApp Worker:** Unit and integration tests (tests implemented, need to run)
 - **Translation Worker:** Unit and integration tests
 
 ---
