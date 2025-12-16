@@ -808,35 +808,87 @@ make test-cov
 ## Job Application Worker (Node.js)
 
 ### Testing Framework
-- **Unit Tests:** Jest or Mocha + Chai
+- **Unit Tests:** Jest
 - **Integration Tests:** Jest + test RabbitMQ container
-- **Mocking:** Jest mocks or Sinon
-- **Coverage:** `nyc` or `c8`
+- **Mocking:** Jest mocks (`jest.fn()`, `jest.unstable_mockModule()`)
+- **Coverage:** Jest built-in coverage
 
 ### Test Structure
 ```
 job-application-worker/
 ├── src/
 │   ├── worker.js
-│   ├── worker.test.js
-│   ├── scraper.js
-│   ├── scraper.test.js
-│   └── orchestrator.js
+│   ├── orchestrator.js
+│   ├── coverLetter.js
+│   ├── health.js
+│   └── ...
 └── tests/
-    ├── unit/
-    │   ├── worker.test.js
-    │   ├── scraper.test.js
-    │   └── orchestrator.test.js
-    ├── integration/
-    │   └── worker.integration.test.js
-    └── fixtures/
-        └── test_jobs.json
+    ├── __tests__/
+    │   ├── health.test.js          ✅ Implemented
+    │   ├── orchestrator.test.js    ✅ Implemented
+    │   └── coverLetter.test.js     ✅ Implemented
+    ├── setup.js                    ✅ Implemented
+    └── README.md                   ✅ Implemented
 ```
+
+### Implementation Status
+**Status:** 🔄 **PARTIALLY COMPLETE** | **Coverage:** 15.46% | **Tests:** 23 passing
+
+**Coverage Breakdown:**
+- `orchestrator.js`: 100% ✅
+- `health.js`: 94.73% ✅
+- `coverLetter.js`: 41.33%
+- `logger.js` (utils): 63.26%
+- Other modules: 0% (not yet tested)
+
+**Test Files:**
+- `tests/__tests__/health.test.js` - Health check tests
+- `tests/__tests__/orchestrator.test.js` - Website rate limiting and count tracking
+- `tests/__tests__/coverLetter.test.js` - Cover letter generation
+- `jest.config.js` - Jest configuration for ES modules
+- `tests/setup.js` - Jest setup for global `jest` availability
+- `Dockerfile.test` - Docker test image
+- `Makefile` - Test commands
+- `tests/README.md` - Test documentation
+
+**Note:** Coverage is low because only a few modules are tested. To reach 70%, tests are needed for:
+- `worker.js` (0%)
+- `scraper.js` (0%)
+- `database.js` (0%)
+- `queue.js` / `queue_rabbitmq.js` (0%)
+- `aiSelectorFinder.js` (0%)
+- `selectorCache.js` (0%)
+- `selfHealingScraper.js` (0%)
 
 ### Unit Tests
 
+#### Health Check Tests
+**Target Coverage:** 90%+ | **Current Coverage:** 94.73% ✅
+
+- [x] Health check endpoint
+- [x] RabbitMQ connection status
+- [x] Response formatting
+
+#### Orchestrator Tests
+**Target Coverage:** 80%+ | **Current Coverage:** 100% ✅
+
+- [x] Website rate limiting
+- [x] Website count tracking
+- [x] Should process logic
+- [x] Count increment logic
+- [x] New day reset logic
+
+#### Cover Letter Service Tests
+**Target Coverage:** 70%+ | **Current Coverage:** 41.33%
+
+- [x] Cover letter generation
+- [x] Profile data processing
+- [x] Job info processing
+- [x] Error handling
+- [ ] Edge cases and retries
+
 #### Worker Tests
-**Target Coverage:** 70%+
+**Target Coverage:** 70%+ | **Current Coverage:** 0%
 
 - [ ] Worker initialization
 - [ ] Job processing logic
@@ -845,7 +897,7 @@ job-application-worker/
 - [ ] Graceful shutdown
 
 #### Scraper Tests
-**Target Coverage:** 80%+
+**Target Coverage:** 80%+ | **Current Coverage:** 0%
 
 - [ ] Playwright browser initialization
 - [ ] Selector finding logic
@@ -853,21 +905,6 @@ job-application-worker/
 - [ ] Job application submission
 - [ ] Error handling
 - [ ] Selector caching
-
-#### Orchestrator Tests
-**Target Coverage:** 80%+
-
-- [ ] Website rate limiting
-- [ ] Website count tracking
-- [ ] Should process logic
-- [ ] Count increment logic
-
-#### Cover Letter Service Tests
-**Target Coverage:** 70%+
-
-- [ ] Cover letter generation
-- [ ] Profile data processing
-- [ ] Job info processing
 
 ### Integration Tests
 
@@ -886,6 +923,14 @@ module.exports = {
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['src/**/*.js'],
   testMatch: ['**/__tests__/**/*.js', '**/*.test.js'],
+  coverageThreshold: {
+    global: {
+      statements: 70,
+      branches: 70,
+      functions: 70,
+      lines: 70
+    }
+  },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js']
 };
 ```
@@ -893,15 +938,19 @@ module.exports = {
 ### Running Tests
 ```bash
 # Unit tests
-npm test
-
-# Integration tests
-docker-compose -f docker-compose.test.yml up -d
-npm run test:integration
-docker-compose -f docker-compose.test.yml down
+npm run test:jest
 
 # With coverage
-npm run test:coverage
+npm run test:jest:coverage
+
+# Using Docker
+docker build -f Dockerfile.test -t job-application-worker-test .
+docker run --rm job-application-worker-test
+
+# Using Makefile
+make test
+make test-unit
+make test-cov
 ```
 
 ---
@@ -1137,13 +1186,14 @@ export async function cleanupTestDB() {
 - **AI Service:** 85% coverage, 30+ tests passing
 - **Creative Service:** 84% coverage, 46 tests passing
 - **Email Worker:** 49.7% coverage, 30+ tests passing (config: 100%, health: 94.6%)
+- **Resume Worker:** 76.78% coverage, 93 tests passing ✅
 
 ### 🔄 In Progress
 - **Email Worker:** Integration tests needed for queue package to reach 70% target
+- **Job Application Worker:** 15.46% coverage, 23 tests passing (needs more test coverage)
 
 ### ⏳ Pending
 - **Server:** Unit and integration tests
-- **Job Application Worker:** Unit and integration tests (tests implemented, need to run)
 - **WhatsApp Worker:** Unit and integration tests (tests implemented, need to run)
 - **Translation Worker:** Unit and integration tests
 
