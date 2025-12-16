@@ -342,13 +342,8 @@ func main() {
 
 	tokenStore := authdomain.NewRedisTokenStore(redisClient)
 
-	// Keep embedded email worker running during migration (will be removed later)
-	if err := notifications.StartEmailWorker(workerCtx, redisClient, emailSender, slogLogger); err != nil && slogLogger != nil {
-		slogLogger.Error("failed to start email worker", slog.Any("error", err))
-	}
-	if err := notifications.StartWhatsAppWorker(workerCtx, redisClient, whatsappNotifier, slogLogger); err != nil && slogLogger != nil {
-		slogLogger.Error("failed to start whatsapp worker", slog.Any("error", err))
-	}
+	// Email and WhatsApp workers are now standalone services using RabbitMQ
+	// Embedded Redis workers have been removed after successful migration
 	authRepo := authdomain.NewGormRepository(db)
 	jwtManager, err := authdomain.NewJWTManager(authCfg.JWTSecret, authCfg.JWTTTL, cfg.AppName)
 	if err != nil {
@@ -733,7 +728,40 @@ func main() {
 	// Job Applications: requires JWT for all operations
 	// Note: Service will be fully initialized after userPreferencesService is created below
 	applicationRepo := jobapplicationsdomain.NewGormRepository(db)
-	applicationQueue := jobapplicationsdomain.NewRedisQueue(redisClient)
+	
+	// Use RabbitMQ queue for job applications if available, otherwise fall back to Redis
+	var applicationQueue jobapplicationsdomain.Queue
+	rabbitmqCfgForJobs := appconfig.LoadRabbitMQConfig()
+	if rabbitmqCfgForJobs.URL != "" {
+		queueName := os.Getenv("JOB_APPLICATION_QUEUE_NAME")
+		if queueName == "" {
+			queueName = "job-applications.queue"
+		}
+		exchange := os.Getenv("JOB_APPLICATION_EXCHANGE")
+		if exchange == "" {
+			exchange = "woragis.tasks"
+		}
+		routingKey := os.Getenv("JOB_APPLICATION_ROUTING_KEY")
+		if routingKey == "" {
+			routingKey = "job-applications.process"
+		}
+		rabbitmqQueue, err := jobapplicationsdomain.NewRabbitMQQueue(rabbitmqCfgForJobs.URL, queueName, exchange, routingKey)
+		if err != nil {
+			slogLogger.Warn("failed to create RabbitMQ queue for job applications, falling back to Redis", slog.Any("error", err))
+			applicationQueue = jobapplicationsdomain.NewRedisQueue(redisClient)
+		} else {
+			applicationQueue = rabbitmqQueue
+			slogLogger.Info("Using RabbitMQ queue for job applications",
+				slog.String("queue", queueName),
+				slog.String("exchange", exchange),
+				slog.String("routing_key", routingKey),
+			)
+		}
+	} else {
+		applicationQueue = jobapplicationsdomain.NewRedisQueue(redisClient)
+		slogLogger.Info("Using Redis queue for job applications (RabbitMQ not available)")
+	}
+	
 	// Temporary service creation - will be updated after preferences service is created
 	var applicationService jobapplicationsdomain.Service
 	applicationService = jobapplicationsdomain.NewServiceWithChats(applicationRepo, applicationQueue, chatsRepo, slogLogger)
