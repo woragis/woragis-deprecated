@@ -3,6 +3,7 @@ from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
@@ -175,7 +176,19 @@ async def chat(req: ChatRequest):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok"}
+    """
+    Health check endpoint.
+    Returns service availability and dependency status.
+    """
+    from app.health import check_health
+    result = check_health()
+    
+    # Determine HTTP status code
+    status_code = 200
+    if result["status"] == "unhealthy":
+        status_code = 503
+    
+    return JSONResponse(content=result, status_code=status_code)
 
 
 @app.post("/v1/images", response_model=ImageResponse)
