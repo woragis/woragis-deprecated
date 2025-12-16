@@ -266,6 +266,30 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_TLS: ${SMTP_TLS:-true}
     restart: unless-stopped
+  whatsapp-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.whatsapp-worker
+    container_name: woragis-whatsapp-worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
+      WHATSAPP_QUEUE_NAME: ${WHATSAPP_QUEUE_NAME:-whatsapp.queue}
+      WHATSAPP_EXCHANGE: ${WHATSAPP_EXCHANGE:-woragis.notifications}
+      WHATSAPP_ROUTING_KEY: ${WHATSAPP_ROUTING_KEY:-whatsapp.send}
+      WHATSAPP_PREFETCH_COUNT: ${WHATSAPP_PREFETCH_COUNT:-1}
+      WHATSAPP_SESSION_PATH: ${WHATSAPP_SESSION_PATH:-/app/session}
+    volumes:
+      - ../whatsapp-worker/session:/app/session
+    restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)
   # prometheus:

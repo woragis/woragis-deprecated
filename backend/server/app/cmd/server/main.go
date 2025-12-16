@@ -267,13 +267,14 @@ func main() {
 	// Initialize publishers
 	redisPublisher := notifications.NewPublisher(redisClient)
 	
-	// Initialize RabbitMQ publisher for email notifications
+	// Initialize RabbitMQ publishers for email and WhatsApp notifications
 	var rabbitmqEmailPublisher *notifications.RabbitMQPublisher
+	var rabbitmqWhatsAppPublisher *notifications.RabbitMQPublisher
 	rabbitmqCfg := appconfig.LoadRabbitMQConfig()
 	if rabbitmqCfg.URL != "" {
 		rabbitmqConn, err := rabbitmq.NewConnection(rabbitmqCfg.URL, slogLogger)
 		if err != nil {
-			slogLogger.Warn("failed to connect to RabbitMQ, email will use Redis only", slog.Any("error", err))
+			slogLogger.Warn("failed to connect to RabbitMQ, notifications will use Redis only", slog.Any("error", err))
 		} else {
 			// Create RabbitMQ publisher for emails
 			emailExchange := os.Getenv("EMAIL_EXCHANGE")
@@ -297,14 +298,43 @@ func main() {
 					slog.String("routing_key", emailRoutingKey),
 				)
 			}
+
+			// Create RabbitMQ publisher for WhatsApp
+			whatsappExchange := os.Getenv("WHATSAPP_EXCHANGE")
+			if whatsappExchange == "" {
+				whatsappExchange = "woragis.notifications"
+			}
+			whatsappRoutingKey := os.Getenv("WHATSAPP_ROUTING_KEY")
+			if whatsappRoutingKey == "" {
+				whatsappRoutingKey = "whatsapp.send"
+			}
+			rabbitmqWhatsAppPublisher, err = notifications.NewRabbitMQPublisher(
+				rabbitmqConn.Channel(),
+				whatsappExchange,
+				whatsappRoutingKey,
+			)
+			if err != nil {
+				slogLogger.Warn("failed to create RabbitMQ WhatsApp publisher", slog.Any("error", err))
+			} else {
+				slogLogger.Info("RabbitMQ WhatsApp publisher initialized",
+					slog.String("exchange", whatsappExchange),
+					slog.String("routing_key", whatsappRoutingKey),
+				)
+			}
 		}
 	}
 	
 	// Use dual publisher during migration (publishes to both Redis and RabbitMQ)
 	var publisher reportsdomain.Publisher
-	if rabbitmqEmailPublisher != nil {
-		publisher = notifications.NewDualPublisher(redisPublisher, rabbitmqEmailPublisher, slogLogger)
-		slogLogger.Info("Using dual publisher (Redis + RabbitMQ) for email notifications")
+	if rabbitmqEmailPublisher != nil || rabbitmqWhatsAppPublisher != nil {
+		publisher = notifications.NewDualPublisher(redisPublisher, rabbitmqEmailPublisher, rabbitmqWhatsAppPublisher, slogLogger)
+		if rabbitmqEmailPublisher != nil && rabbitmqWhatsAppPublisher != nil {
+			slogLogger.Info("Using dual publisher (Redis + RabbitMQ) for email and WhatsApp notifications")
+		} else if rabbitmqEmailPublisher != nil {
+			slogLogger.Info("Using dual publisher (Redis + RabbitMQ) for email notifications")
+		} else if rabbitmqWhatsAppPublisher != nil {
+			slogLogger.Info("Using dual publisher (Redis + RabbitMQ) for WhatsApp notifications")
+		}
 	} else {
 		publisher = redisPublisher
 		slogLogger.Info("Using Redis publisher only (RabbitMQ not available)")

@@ -59,3 +59,25 @@ func (p *RabbitMQPublisher) PublishEmailReport(ctx context.Context, env ReportEn
 		},
 	)
 }
+
+// PublishWhatsAppReport publishes a WhatsApp message to RabbitMQ.
+func (p *RabbitMQPublisher) PublishWhatsAppReport(ctx context.Context, env ReportEnvelope) error {
+	payload, err := json.Marshal(env)
+	if err != nil {
+		return fmt.Errorf("failed to marshal whatsapp envelope: %w", err)
+	}
+
+	return p.channel.PublishWithContext(
+		ctx,
+		p.exchange,   // exchange
+		p.routingKey, // routing key
+		false,        // mandatory
+		false,        // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         payload,
+			DeliveryMode: amqp.Persistent, // Make message persistent
+			Timestamp:    time.Now(),
+		},
+	)
+}
