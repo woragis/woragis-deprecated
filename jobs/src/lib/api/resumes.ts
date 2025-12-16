@@ -155,8 +155,14 @@ export interface RequestCVGenerationInput {
 	language?: string;
 }
 
-export async function requestCVGeneration(input: RequestCVGenerationInput): Promise<Resume> {
-	const response = await apiClient.post<ApiResponse<Resume>>('/resumes/generate', input);
+export interface ResumeGenerationJobResponse {
+	jobId: string;
+	status: string;
+	message: string;
+}
+
+export async function requestCVGeneration(input: RequestCVGenerationInput): Promise<ResumeGenerationJobResponse> {
+	const response = await apiClient.post<ApiResponse<ResumeGenerationJobResponse>>('/resumes/generate', input);
 	return response.data.data;
 }
 
@@ -176,6 +182,43 @@ export async function listResumesByTags(tags: string[]): Promise<Resume[]> {
 // Recalculate metrics for a resume
 export async function recalculateResumeMetrics(id: string): Promise<Resume> {
 	const response = await apiClient.post<ApiResponse<Resume>>(`/resumes/${id}/recalculate-metrics`);
+	return response.data.data;
+}
+
+// Job status interfaces
+export interface ResumeJobStatus {
+	id: string;
+	status: 'pending' | 'processing' | 'completed' | 'failed' | 'dead_letter' | 'cancelled';
+	retryCount: number;
+	maxRetries: number;
+	createdAt: string;
+	updatedAt: string;
+	error?: string;
+	errorType?: string;
+	errorAt?: string;
+	result?: {
+		outputPath?: string;
+		fileName?: string;
+		fileSize?: number;
+		tags?: string[];
+	};
+}
+
+// Get job status for resume generation
+export async function getResumeJobStatus(jobId: string): Promise<ResumeJobStatus> {
+	const response = await apiClient.get<ApiResponse<ResumeJobStatus>>(`/resumes/jobs/${jobId}`);
+	return response.data.data;
+}
+
+// Retry a failed resume generation job
+export async function retryResumeJob(jobId: string): Promise<ResumeJobStatus> {
+	const response = await apiClient.post<ApiResponse<ResumeJobStatus>>(`/resumes/jobs/${jobId}/retry`);
+	return response.data.data;
+}
+
+// Cancel a pending/processing resume generation job
+export async function cancelResumeJob(jobId: string): Promise<ResumeJobStatus> {
+	const response = await apiClient.post<ApiResponse<ResumeJobStatus>>(`/resumes/jobs/${jobId}/cancel`);
 	return response.data.data;
 }
 

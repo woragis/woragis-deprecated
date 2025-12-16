@@ -1,10 +1,12 @@
 <script lang="ts">
 	let {
 		status,
-		type = 'status' as 'status' | 'response' | 'outcome'
+		type = 'status' as 'status' | 'response' | 'outcome',
+		label
 	}: {
 		status: string;
 		type?: 'status' | 'response' | 'outcome';
+		label?: string;
 	} = $props();
 	
 	let className = $derived.by(() => {
@@ -13,7 +15,7 @@
 </script>
 
 <span class={className}>
-	<slot />
+	{label || status}
 </span>
 
 <style>
@@ -102,5 +104,16 @@
 	.badge-outcome-cancelled {
 		background-color: var(--color-bg-tertiary);
 		color: var(--color-text-secondary);
+	}
+
+	/* Resume Status Badges */
+	.badge-status-main {
+		background-color: #fef3c7;
+		color: #92400e;
+	}
+
+	.badge-status-featured {
+		background-color: #dbeafe;
+		color: #1e40af;
 	}
 </style>
