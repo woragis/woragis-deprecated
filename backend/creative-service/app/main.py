@@ -96,7 +96,19 @@ class VideoGenerationResponse(BaseModel):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok"}
+    """
+    Health check endpoint.
+    Returns service availability and dependency status.
+    """
+    from app.health import check_health
+    result = check_health()
+    
+    # Determine HTTP status code
+    status_code = 200
+    if result["status"] == "unhealthy":
+        status_code = 503
+    
+    return JSONResponse(content=result, status_code=status_code)
 
 
 @app.post("/v1/images/generate", response_model=ImageGenerationResponse)
