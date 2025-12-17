@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
   app:
     build:
-      context: .
+      context: ./server
       dockerfile: Dockerfile
     container_name: woragis-app
     depends_on:
@@ -96,16 +96,14 @@ services:
     restart: on-failure
   translation-worker:
     build:
-      context: ..
-      dockerfile: Dockerfile.translation-worker
+      context: ./translation-worker
+      dockerfile: Dockerfile
     container_name: woragis-translation-worker
     depends_on:
       database:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      ai-service:
-        condition: service_started
     environment:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
@@ -113,9 +111,15 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
-      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
-      # Note: API keys are not needed here - the worker calls the AI service which has its own keys
-    command: ["translation-worker"]
+      TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-google}
+      GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-}
+      GOOGLE_CLOUD_PROJECT_ID: ${GOOGLE_CLOUD_PROJECT_ID:-}
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+      LIBRE_TRANSLATE_API_URL: ${LIBRE_TRANSLATE_API_URL:-}
+      LIBRE_TRANSLATE_API_KEY: ${LIBRE_TRANSLATE_API_KEY:-}
+      TRANSLATION_TIMEOUT: ${TRANSLATION_TIMEOUT:-30}
+      TRANSLATION_MAX_RETRIES: ${TRANSLATION_MAX_RETRIES:-3}
+      TRANSLATION_RETRY_DELAY: ${TRANSLATION_RETRY_DELAY:-1000}
     restart: unless-stopped
   job-application-worker:
     build:
@@ -150,7 +154,7 @@ services:
     restart: unless-stopped
   ai-service:
     build:
-      context: ../ai-service
+      context: ./ai-service
       dockerfile: Dockerfile
     container_name: woragis-ai-service
     depends_on:
@@ -182,7 +186,7 @@ services:
     restart: on-failure
   creative-service:
     build:
-      context: ../creative-service
+      context: ./creative-service
       dockerfile: Dockerfile
     container_name: woragis-creative-service
     depends_on:
@@ -243,9 +247,9 @@ services:
       MAX_RETRIES: ${MAX_RETRIES:-3}
       QUEUE_TIMEOUT: ${QUEUE_TIMEOUT:-5}
     volumes:
-      - ../resume-worker/output:/app/output
-      - ../resume-worker/results:/app/results
-      - ../resume-worker/logs:/app/logs
+      - ./resume-worker/output:/app/output
+      - ./resume-worker/results:/app/results
+      - ./resume-worker/logs:/app/logs
     command: ["python", "src/main.py"]
     restart: unless-stopped
   email-worker:
@@ -277,8 +281,8 @@ services:
     restart: unless-stopped
   whatsapp-worker:
     build:
-      context: ..
-      dockerfile: Dockerfile.whatsapp-worker
+      context: ./whatsapp-worker
+      dockerfile: ../Dockerfile.whatsapp-worker
     container_name: woragis-whatsapp-worker
     depends_on:
       rabbitmq:
@@ -297,7 +301,7 @@ services:
       WHATSAPP_PREFETCH_COUNT: ${WHATSAPP_PREFETCH_COUNT:-1}
       WHATSAPP_SESSION_PATH: ${WHATSAPP_SESSION_PATH:-/app/session}
     volumes:
-      - ../whatsapp-worker/session:/app/session
+      - ./whatsapp-worker/session:/app/session
     restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)
