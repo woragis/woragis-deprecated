@@ -416,7 +416,23 @@ func main() {
 	projectService := projectsdomain.NewService(projectRepo, slogLogger)
 	// Initialize translation services first (needed by other handlers)
 	translationRepo := translationsdomain.NewGormRepository(db)
-	translationQueue := translationsdomain.NewRedisQueue(redisClient)
+	// Use RabbitMQ queue for translations if available, otherwise fall back to Redis
+	var translationQueue translationsdomain.Queue
+	if rabbitmqConn != nil {
+		rabbitmqQueue, err := translationsdomain.NewRabbitMQQueue(rabbitmqConn)
+		if err != nil {
+			slogLogger.Warn("failed to create RabbitMQ queue for translations, falling back to Redis", slog.Any("error", err))
+			translationQueue = translationsdomain.NewRedisQueue(redisClient)
+		} else {
+			translationQueue = rabbitmqQueue
+			slogLogger.Info("Using RabbitMQ queue for translations",
+				slog.String("queue", "translations.queue"),
+				slog.String("exchange", "woragis.tasks"))
+		}
+	} else {
+		translationQueue = translationsdomain.NewRedisQueue(redisClient)
+		slogLogger.Info("Using Redis queue for translations (RabbitMQ not available)")
+	}
 	aiClient := langchainservice.NewClient(slogLogger)
 	translationService := translationsdomain.NewService(translationRepo, translationQueue, aiClient, db, slogLogger)
 	translationEnricher := translationenricher.NewEnricher(translationRepo, slogLogger)
