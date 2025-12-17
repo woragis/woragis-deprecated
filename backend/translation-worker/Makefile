@@ -42,6 +42,11 @@ docker-run:
 		-e GOOGLE_TRANSLATE_API_KEY="your-api-key" \
 		translation-worker:latest
 
+# Run tests in Docker
+test-docker:
+	docker build -f Dockerfile.test -t translation-worker-test .
+	docker run --rm translation-worker-test
+
 # Clean test artifacts
 clean:
 	rm -f coverage.out
