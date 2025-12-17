@@ -1,0 +1,47 @@
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+build/
+server.exe
+
+# Development files
+.env
+.env.local
+.env.*.local
+*.log
+*.tmp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test coverage
+coverage/
+*.out
+*.html
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+woragis.db
+
+# Temporary and cache files
+tmp/
+temp/
+.cache/
+*.cache
+
+# WhatsApp session data
+whatsapp-session/
+
+# Environment samples (keep env.sample)
+.env.example
