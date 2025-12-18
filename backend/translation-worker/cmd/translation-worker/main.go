@@ -11,12 +11,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/woragis/backend/translation-worker/internal/config"
 	"github.com/woragis/backend/translation-worker/internal/database"
 	"github.com/woragis/backend/translation-worker/internal/queue"
 	"github.com/woragis/backend/translation-worker/internal/translator"
 	"github.com/woragis/backend/translation-worker/pkg/health"
 	"github.com/woragis/backend/translation-worker/pkg/logger"
+	appmetrics "github.com/woragis/backend/translation-worker/pkg/metrics"
 )
 
 func main() {
@@ -101,7 +103,20 @@ func main() {
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- translationQueue.Consume(ctx, func(job queue.TranslationJob) error {
-			return processTranslationJob(ctx, job, dbRepo, translatorClient, logger)
+			start := time.Now()
+			workerName := "translation-worker"
+
+			err := processTranslationJob(ctx, job, dbRepo, translatorClient, logger)
+			duration := time.Since(start).Seconds()
+
+			if err != nil {
+				appmetrics.RecordJobProcessed(workerName, "failed", duration)
+				appmetrics.RecordJobFailed(workerName, "processing_error")
+			} else {
+				appmetrics.RecordJobProcessed(workerName, "success", duration)
+			}
+
+			return err
 		})
 	}()
 

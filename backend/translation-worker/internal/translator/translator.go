@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sony/gobreaker"
 	"github.com/woragis/backend/translation-worker/internal/config"
+	appcircuitbreaker "github.com/woragis/backend/translation-worker/pkg/circuitbreaker"
 )
 
 // Translator provides translation services via external APIs.
@@ -53,10 +55,24 @@ type GoogleTranslator struct {
 	retryDelay int
 	logger     *slog.Logger
 	client     *http.Client
+	cb         *gobreaker.CircuitBreaker
 }
 
 // NewGoogleTranslator creates a new Google Translate client.
 func NewGoogleTranslator(apiKey, projectID string, timeout, maxRetries, retryDelay int, logger *slog.Logger) *GoogleTranslator {
+	// Create circuit breaker for Google Translate API
+	cbConfig := appcircuitbreaker.DefaultConfig("google-translate", logger)
+	cbConfig.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+		if logger != nil {
+			logger.Info("circuit breaker state changed",
+				slog.String("name", name),
+				slog.String("from", from.String()),
+				slog.String("to", to.String()),
+			)
+		}
+	}
+	cb := appcircuitbreaker.NewCircuitBreaker(cbConfig)
+
 	return &GoogleTranslator{
 		apiKey:     apiKey,
 		projectID:  projectID,
@@ -67,6 +83,7 @@ func NewGoogleTranslator(apiKey, projectID string, timeout, maxRetries, retryDel
 		client: &http.Client{
 			Timeout: time.Duration(timeout) * time.Second,
 		},
+		cb: cb,
 	}
 }
 
@@ -161,10 +178,24 @@ type DeepLTranslator struct {
 	retryDelay int
 	logger     *slog.Logger
 	client     *http.Client
+	cb         *gobreaker.CircuitBreaker
 }
 
 // NewDeepLTranslator creates a new DeepL client.
 func NewDeepLTranslator(apiKey string, timeout, maxRetries, retryDelay int, logger *slog.Logger) *DeepLTranslator {
+	// Create circuit breaker for DeepL API
+	cbConfig := appcircuitbreaker.DefaultConfig("deepl-translate", logger)
+	cbConfig.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+		if logger != nil {
+			logger.Info("circuit breaker state changed",
+				slog.String("name", name),
+				slog.String("from", from.String()),
+				slog.String("to", to.String()),
+			)
+		}
+	}
+	cb := appcircuitbreaker.NewCircuitBreaker(cbConfig)
+
 	return &DeepLTranslator{
 		apiKey:     apiKey,
 		timeout:    timeout,
@@ -174,11 +205,30 @@ func NewDeepLTranslator(apiKey string, timeout, maxRetries, retryDelay int, logg
 		client: &http.Client{
 			Timeout: time.Duration(timeout) * time.Second,
 		},
+		cb: cb,
 	}
 }
 
 // Translate translates text using DeepL API.
 func (t *DeepLTranslator) Translate(ctx context.Context, text string, targetLanguage string) (string, error) {
+	// Wrap the entire translation call with circuit breaker
+	// If circuit is open, fail fast without retrying
+	result, err := appcircuitbreaker.Execute(t.cb, func() (string, error) {
+		return t.doTranslate(ctx, text, targetLanguage)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			return "", fmt.Errorf("deepl-translate circuit breaker is open: service unavailable")
+		}
+		return "", err
+	}
+	
+	return result, nil
+}
+
+func (t *DeepLTranslator) doTranslate(ctx context.Context, text string, targetLanguage string) (string, error) {
 	// Map language codes to DeepL's format
 	targetLang := mapLanguageToDeepL(targetLanguage)
 
@@ -280,6 +330,24 @@ func NewLibreTranslator(apiURL, apiKey string, timeout, maxRetries, retryDelay i
 
 // Translate translates text using LibreTranslate API.
 func (t *LibreTranslator) Translate(ctx context.Context, text string, targetLanguage string) (string, error) {
+	// Wrap the entire translation call with circuit breaker
+	// If circuit is open, fail fast without retrying
+	result, err := appcircuitbreaker.Execute(t.cb, func() (string, error) {
+		return t.doTranslate(ctx, text, targetLanguage)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			return "", fmt.Errorf("libretranslate circuit breaker is open: service unavailable")
+		}
+		return "", err
+	}
+	
+	return result, nil
+}
+
+func (t *LibreTranslator) doTranslate(ctx context.Context, text string, targetLanguage string) (string, error) {
 	// Map language codes to LibreTranslate's format
 	targetLang := mapLanguageToLibre(targetLanguage)
 
