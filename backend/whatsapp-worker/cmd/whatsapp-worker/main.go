@@ -10,11 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/woragis/backend/whatsapp-worker/internal/config"
 	"github.com/woragis/backend/whatsapp-worker/internal/queue"
 	"github.com/woragis/backend/whatsapp-worker/internal/notifier"
 	"github.com/woragis/backend/whatsapp-worker/pkg/health"
 	"github.com/woragis/backend/whatsapp-worker/pkg/logger"
+	appmetrics "github.com/woragis/backend/whatsapp-worker/pkg/metrics"
 )
 
 func main() {
@@ -82,6 +84,7 @@ func main() {
 	healthChecker := health.NewHealthChecker(conn, logger)
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", healthChecker.Handler())
+	healthMux.Handle("/metrics", promhttp.Handler()) // Prometheus metrics endpoint
 	healthServer := &http.Server{
 		Addr:    ":8080",
 		Handler: healthMux,
@@ -102,8 +105,14 @@ func main() {
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- whatsappQueue.Consume(ctx, func(envelope queue.WhatsAppEnvelope) error {
+			start := time.Now()
+			workerName := "whatsapp-worker"
+
 			// Validate destination
 			if envelope.Destination == "" {
+				duration := time.Since(start).Seconds()
+				appmetrics.RecordJobProcessed(workerName, "failed", duration)
+				appmetrics.RecordJobFailed(workerName, "validation_error")
 				logger.Error("Missing destination in WhatsApp message",
 					slog.String("user_id", envelope.UserID),
 				)
@@ -112,6 +121,9 @@ func main() {
 
 			// Send WhatsApp message
 			if err := whatsappNotifier.Send(ctx, envelope.Destination, envelope.TextMessage); err != nil {
+				duration := time.Since(start).Seconds()
+				appmetrics.RecordJobProcessed(workerName, "failed", duration)
+				appmetrics.RecordJobFailed(workerName, "send_error")
 				logger.Error("Failed to send WhatsApp message",
 					slog.String("user_id", envelope.UserID),
 					slog.String("destination", envelope.Destination),
@@ -120,6 +132,8 @@ func main() {
 				return err
 			}
 
+			duration := time.Since(start).Seconds()
+			appmetrics.RecordJobProcessed(workerName, "success", duration)
 			logger.Info("WhatsApp message sent successfully",
 				slog.String("user_id", envelope.UserID),
 				slog.String("destination", envelope.Destination),
