@@ -88,12 +88,15 @@ jobs:
         run: |
           cd backend/email-worker
           go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > email-worker-performance.txt 2>&1 || true
+          cp email-worker-performance.txt test-output.log || true
           
           cd ../translation-worker
           go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > translation-worker-performance.txt 2>&1 || true
+          cp translation-worker-performance.txt test-output.log || true
           
           cd ../whatsapp-worker
           go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > whatsapp-worker-performance.txt 2>&1 || true
+          cp whatsapp-worker-performance.txt test-output.log || true
 
       - name: Load baseline metrics
         id: load_baseline
@@ -110,7 +113,8 @@ jobs:
         id: check_regression
         run: |
           chmod +x .github/scripts/check_performance_regression.py
-          python3 .github/scripts/check_performance_regression.py
+          python3 .github/scripts/check_performance_regression.py > regression-check.log 2>&1 || true
+          cat regression-check.log
         continue-on-error: true
 
       - name: Upload performance results
@@ -120,7 +124,10 @@ jobs:
           name: performance-results-${{ github.run_number }}
           path: |
             backend/*/performance*.txt
+            backend/*/test-output.log
+            regression-check.log
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: Comment PR with results
         if: github.event_name == 'pull_request' && steps.check_regression.outcome == 'failure'

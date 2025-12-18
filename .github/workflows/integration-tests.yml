@@ -77,12 +77,58 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend/server/app
-        run: go mod download
+        run: |
+          echo "Installing Go dependencies..." > setup.log 2>&1
+          go mod download >> setup.log 2>&1 || (cat setup.log && exit 1)
+          cat setup.log
+
+      - name: Upload setup logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-setup-logs
+          path: backend/server/app/setup.log
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Wait for services
         run: |
           echo "Waiting for services to be ready..."
           sleep 10
+          
+          # Check service health and save logs
+          echo "=== Service Health Check ===" > service-health.log 2>&1
+          echo "Timestamp: $(date)" >> service-health.log
+          echo "" >> service-health.log
+          
+          # Check PostgreSQL
+          echo "PostgreSQL (port 5433):" >> service-health.log
+          timeout 5 bash -c 'until echo > /dev/tcp/localhost/5433; do sleep 0.5; done' 2>/dev/null && echo "✅ PostgreSQL is reachable" >> service-health.log || echo "❌ PostgreSQL check failed or timeout" >> service-health.log
+          
+          # Check Redis
+          echo "Redis (port 6380):" >> service-health.log
+          timeout 5 bash -c 'until echo > /dev/tcp/localhost/6380; do sleep 0.5; done' 2>/dev/null && echo "✅ Redis is reachable" >> service-health.log || echo "❌ Redis check failed or timeout" >> service-health.log
+          
+          # Check RabbitMQ
+          echo "RabbitMQ (port 5673):" >> service-health.log
+          timeout 5 bash -c 'until echo > /dev/tcp/localhost/5673; do sleep 0.5; done' 2>/dev/null && echo "✅ RabbitMQ is reachable" >> service-health.log || echo "❌ RabbitMQ check failed or timeout" >> service-health.log
+          
+          # Check RabbitMQ Management API (optional)
+          echo "RabbitMQ Management (port 15673):" >> service-health.log
+          curl -s -f --max-time 5 http://localhost:15673/api/overview -u test:test > /dev/null 2>&1 && echo "✅ RabbitMQ Management API is accessible" >> service-health.log || echo "⚠️ RabbitMQ Management API check failed (may be normal)" >> service-health.log
+          
+          echo "" >> service-health.log
+          echo "=== End Service Health Check ===" >> service-health.log
+          cat service-health.log
+
+      - name: Upload service health logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-service-health-logs
+          path: backend/server/app/service-health.log
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Run server integration tests
         working-directory: backend/server/app
@@ -91,7 +137,17 @@ jobs:
           REDIS_URL: redis://localhost:6380/0
           RABBITMQ_URL: amqp://test:test@localhost:5673/test
         run: |
-          go test -tags=integration -v -coverprofile=coverage.out ./internal/integration/...
+          set -o pipefail
+          go test -tags=integration -v -coverprofile=coverage.out ./internal/integration/... 2>&1 | tee test-output.log
+
+      - name: Upload server test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-integration-test-logs
+          path: backend/server/app/test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Upload coverage reports
         uses: codecov/codecov@v4
@@ -134,7 +190,19 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend/email-worker
-        run: go mod download
+        run: |
+          echo "Installing Go dependencies..." > setup.log 2>&1
+          go mod download >> setup.log 2>&1 || (cat setup.log && exit 1)
+          cat setup.log
+
+      - name: Upload setup logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: email-worker-setup-logs
+          path: backend/email-worker/setup.log
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Wait for RabbitMQ
         run: sleep 10
@@ -144,7 +212,17 @@ jobs:
         env:
           RABBITMQ_URL: amqp://test:test@localhost:5673/test
         run: |
-          go test -tags=integration -v ./internal/integration/...
+          set -o pipefail
+          go test -tags=integration -v ./internal/integration/... 2>&1 | tee test-output.log
+
+      - name: Upload email worker test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: email-worker-integration-test-logs
+          path: backend/email-worker/test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
 
   translation-worker-tests:
     name: Translation Worker Integration Tests
@@ -203,7 +281,17 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable
           RABBITMQ_URL: amqp://test:test@localhost:5673/test
         run: |
-          go test -tags=integration -v ./internal/integration/...
+          set -o pipefail
+          go test -tags=integration -v ./internal/integration/... 2>&1 | tee test-output.log
+
+      - name: Upload translation worker test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: translation-worker-integration-test-logs
+          path: backend/translation-worker/test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
 
   whatsapp-worker-tests:
     name: WhatsApp Worker Integration Tests
@@ -237,7 +325,19 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend/whatsapp-worker
-        run: go mod download
+        run: |
+          echo "Installing Go dependencies..." > setup.log 2>&1
+          go mod download >> setup.log 2>&1 || (cat setup.log && exit 1)
+          cat setup.log
+
+      - name: Upload setup logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: whatsapp-worker-setup-logs
+          path: backend/whatsapp-worker/setup.log
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Wait for RabbitMQ
         run: sleep 10
@@ -247,7 +347,17 @@ jobs:
         env:
           RABBITMQ_URL: amqp://test:test@localhost:5673/test
         run: |
-          go test -tags=integration -v ./internal/integration/...
+          set -o pipefail
+          go test -tags=integration -v ./internal/integration/... 2>&1 | tee test-output.log
+
+      - name: Upload WhatsApp worker test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: whatsapp-worker-integration-test-logs
+          path: backend/whatsapp-worker/test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
 
   test-summary:
     name: Test Summary
@@ -256,7 +366,13 @@ jobs:
     if: always()
 
     steps:
-      - name: Check test results
+      - name: Download all test logs
+        uses: actions/download-artifact@v4
+        if: always()
+        continue-on-error: true
+
+      - name: Create failure summary
+        if: always()
         run: |
           echo "## Integration Tests Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -266,6 +382,57 @@ jobs:
           echo "| Email Worker Tests | ${{ needs.email-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Translation Worker Tests | ${{ needs.translation-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| WhatsApp Worker Tests | ${{ needs.whatsapp-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts Available" >> $GITHUB_STEP_SUMMARY
+          echo "- Test logs for each service are available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage reports are available in coverage artifacts" >> $GITHUB_STEP_SUMMARY
+          
+          # Create a consolidated failure report if any tests failed
+          if [ "${{ needs.server-integration-tests.result }}" == "failure" ] || \
+             [ "${{ needs.email-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.translation-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.whatsapp-worker-tests.result }}" == "failure" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ Test Failures Detected" >> $GITHUB_STEP_SUMMARY
+            echo "Check the artifacts section below for detailed error logs." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload consolidated failure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-failure-report
+          path: |
+            **/test-output.log
+            **/setup.log
+            **/service-health.log
+          retention-days: 30
+          if-no-files-found: ignore
+      
+      - name: Capture workflow failure details
+        if: failure()
+        run: |
+          echo "## Workflow Failure Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Run:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Failed Jobs:" >> $GITHUB_STEP_SUMMARY
+          echo "- Server Integration Tests: ${{ needs.server-integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Email Worker Tests: ${{ needs.email-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Translation Worker Tests: ${{ needs.translation-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- WhatsApp Worker Tests: ${{ needs.whatsapp-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts Available:" >> $GITHUB_STEP_SUMMARY
+          echo "Check the Artifacts section below for detailed logs, including:" >> $GITHUB_STEP_SUMMARY
+          echo "- Test output logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Setup logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Service health logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage reports" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** GitHub Actions also automatically saves complete workflow logs. Click 'View workflow run' to see all step logs."
       
       - name: Check for failures
         id: check_failures

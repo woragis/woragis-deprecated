@@ -87,6 +87,8 @@ jobs:
         run: |
           go test -tags=integration -run "Test.*Load|Test.*Latency|Test.*Rate|Benchmark" -v ./internal/integration/... > email-worker-performance.txt 2>&1 || true
           cat email-worker-performance.txt
+          # Also save full test output
+          cp email-worker-performance.txt test-output.log || true
 
       - name: Run translation worker performance tests
         working-directory: backend/translation-worker
@@ -96,6 +98,8 @@ jobs:
         run: |
           go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > translation-worker-performance.txt 2>&1 || true
           cat translation-worker-performance.txt
+          # Also save full test output
+          cp translation-worker-performance.txt test-output.log || true
 
       - name: Run WhatsApp worker performance tests
         working-directory: backend/whatsapp-worker
@@ -104,6 +108,8 @@ jobs:
         run: |
           go test -tags=integration -run "Test.*Load|Test.*Latency|Test.*Rate|Benchmark" -v ./internal/integration/... > whatsapp-worker-performance.txt 2>&1 || true
           cat whatsapp-worker-performance.txt
+          # Also save full test output
+          cp whatsapp-worker-performance.txt test-output.log || true
 
       - name: Upload performance test results
         uses: actions/upload-artifact@v4
@@ -112,12 +118,24 @@ jobs:
           name: performance-test-results
           path: |
             backend/*/performance*.txt
+            backend/*/test-output.log
           retention-days: 30
+          if-no-files-found: ignore
 
       - name: Check performance regression
         id: check_regression
         run: |
-          python3 .github/scripts/check_performance_regression.py || true
+          python3 .github/scripts/check_performance_regression.py > regression-check.log 2>&1 || true
+          cat regression-check.log
+
+      - name: Upload regression check logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-regression-check-logs
+          path: regression-check.log
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Performance Test Summary
         if: always()
