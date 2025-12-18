@@ -16,6 +16,7 @@ from app.providers import make_model, CipherClient
 from app.config import settings
 from app.logger import configure_logging, get_logger
 from app.middleware import RequestIDMiddleware, RequestLoggerMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 load_dotenv()
@@ -34,6 +35,9 @@ app = FastAPI(title="Woragis AI Service", version="0.1.0")
 # Add middleware for request ID and logging
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RequestLoggerMiddleware)
+
+# Add Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 if settings.CORS_ENABLED:
     origins = settings.CORS_ALLOWED_ORIGINS.split(",")
