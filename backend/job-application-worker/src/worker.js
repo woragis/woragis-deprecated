@@ -4,6 +4,7 @@ import { Orchestrator } from './orchestrator.js';
 import { Scraper } from './scraper.js';
 import { CoverLetterService } from './coverLetter.js';
 import { logger } from './utils/logger.js';
+import { recordJobProcessed, recordJobFailed } from './metrics.js';
 
 export class Worker {
   constructor() {
@@ -40,6 +41,9 @@ export class Worker {
   }
 
   async processJob(job) {
+    const startTime = Date.now();
+    const workerName = 'job-application-worker';
+    
     try {
       logger.info('Processing job application', {
         jobId: job.id,
@@ -64,8 +68,13 @@ export class Worker {
       // Increment website count
       await this.orchestrator.incrementWebsiteCount(job.website);
 
+      const duration = (Date.now() - startTime) / 1000; // Convert to seconds
+      recordJobProcessed(workerName, 'success', duration);
       logger.info('Job application completed', { jobId: job.id });
     } catch (error) {
+      const duration = (Date.now() - startTime) / 1000; // Convert to seconds
+      recordJobProcessed(workerName, 'failed', duration);
+      recordJobFailed(workerName, error.name || 'unknown_error');
       logger.error('Error processing job', { 
         jobId: job.id,
         error: error.message, 
