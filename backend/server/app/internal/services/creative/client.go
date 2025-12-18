@@ -6,30 +6,53 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/sony/gobreaker"
+	appcircuitbreaker "github.com/woragis/backend/server/app/pkg/circuitbreaker"
 )
 
 // Client interacts with the creative-service API
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+	cb         *gobreaker.CircuitBreaker
+	logger     *slog.Logger
 }
 
 // NewClient creates a new creative service client
-func NewClient(baseURL string) *Client {
+func NewClient(baseURL string, logger *slog.Logger) *Client {
 	if baseURL == "" {
 		baseURL = os.Getenv("CREATIVE_SERVICE_URL")
 		if baseURL == "" {
 			baseURL = "http://creative-service:8000"
 		}
 	}
+	
+	// Create circuit breaker for Creative Service calls
+	cbConfig := appcircuitbreaker.DefaultConfig("creative-service", logger)
+	cbConfig.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+		appcircuitbreaker.RecordStateChange(name, from, to)
+		if logger != nil {
+			logger.Info("circuit breaker state changed",
+				slog.String("name", name),
+				slog.String("from", from.String()),
+				slog.String("to", to.String()),
+			)
+		}
+	}
+	cb := appcircuitbreaker.NewCircuitBreaker(cbConfig)
+	
 	return &Client{
 		baseURL: baseURL,
 		httpClient: &http.Client{
 			Timeout: 120 * time.Second, // Longer timeout for image generation
 		},
+		cb:     cb,
+		logger: logger,
 	}
 }
 
@@ -118,6 +141,25 @@ type VideoGenerationResponse struct {
 
 // GenerateImage generates an image using the creative service
 func (c *Client) GenerateImage(ctx context.Context, req ImageGenerationRequest) (*ImageGenerationResponse, error) {
+	// Wrap the API call with circuit breaker
+	result, err := appcircuitbreaker.Execute(c.cb, func() (*ImageGenerationResponse, error) {
+		appcircuitbreaker.RecordRequestAllowed("creative-service")
+		return c.doGenerateImage(ctx, req)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			appcircuitbreaker.RecordRequestRejected("creative-service")
+			return nil, fmt.Errorf("creative-service circuit breaker is open: service unavailable")
+		}
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+func (c *Client) doGenerateImage(ctx context.Context, req ImageGenerationRequest) (*ImageGenerationResponse, error) {
 	url := fmt.Sprintf("%s/v1/images/generate", c.baseURL)
 	
 	body, err := json.Marshal(req)
@@ -160,6 +202,25 @@ func (c *Client) GenerateThumbnail(ctx context.Context, prompt, context string) 
 		N:        1,
 	}
 	
+	// Wrap the API call with circuit breaker
+	result, err := appcircuitbreaker.Execute(c.cb, func() (*ImageGenerationResponse, error) {
+		appcircuitbreaker.RecordRequestAllowed("creative-service")
+		return c.doGenerateThumbnail(ctx, req)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			appcircuitbreaker.RecordRequestRejected("creative-service")
+			return nil, fmt.Errorf("creative-service circuit breaker is open: service unavailable")
+		}
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+func (c *Client) doGenerateThumbnail(ctx context.Context, req ImageGenerationRequest) (*ImageGenerationResponse, error) {
 	url := fmt.Sprintf("%s/v1/images/generate/thumbnail", c.baseURL)
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -193,6 +254,25 @@ func (c *Client) GenerateThumbnail(ctx context.Context, prompt, context string) 
 
 // GenerateDiagram generates a technical diagram
 func (c *Client) GenerateDiagram(ctx context.Context, req DiagramGenerationRequest) (*DiagramGenerationResponse, error) {
+	// Wrap the API call with circuit breaker
+	result, err := appcircuitbreaker.Execute(c.cb, func() (*DiagramGenerationResponse, error) {
+		appcircuitbreaker.RecordRequestAllowed("creative-service")
+		return c.doGenerateDiagram(ctx, req)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			appcircuitbreaker.RecordRequestRejected("creative-service")
+			return nil, fmt.Errorf("creative-service circuit breaker is open: service unavailable")
+		}
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+func (c *Client) doGenerateDiagram(ctx context.Context, req DiagramGenerationRequest) (*DiagramGenerationResponse, error) {
 	url := fmt.Sprintf("%s/v1/diagrams/generate", c.baseURL)
 	
 	body, err := json.Marshal(req)
@@ -227,6 +307,25 @@ func (c *Client) GenerateDiagram(ctx context.Context, req DiagramGenerationReque
 
 // GenerateVideo generates a video from an image
 func (c *Client) GenerateVideo(ctx context.Context, req VideoGenerationRequest) (*VideoGenerationResponse, error) {
+	// Wrap the API call with circuit breaker
+	result, err := appcircuitbreaker.Execute(c.cb, func() (*VideoGenerationResponse, error) {
+		appcircuitbreaker.RecordRequestAllowed("creative-service")
+		return c.doGenerateVideo(ctx, req)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			appcircuitbreaker.RecordRequestRejected("creative-service")
+			return nil, fmt.Errorf("creative-service circuit breaker is open: service unavailable")
+		}
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+func (c *Client) doGenerateVideo(ctx context.Context, req VideoGenerationRequest) (*VideoGenerationResponse, error) {
 	url := fmt.Sprintf("%s/v1/videos/generate", c.baseURL)
 	
 	body, err := json.Marshal(req)

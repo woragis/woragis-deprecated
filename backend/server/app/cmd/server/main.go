@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -70,6 +71,7 @@ import (
 	appconfig "github.com/woragis/backend/server/app/pkg/config"
 	apphealth "github.com/woragis/backend/server/app/pkg/health"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
+	appmetrics "github.com/woragis/backend/server/app/pkg/metrics"
 	rabbitmq "github.com/woragis/backend/server/app/pkg/rabbitmq"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 )
@@ -237,12 +239,17 @@ func main() {
 	app.Use(applogger.RequestIDMiddleware(slogLogger))
 	// Add structured request logging middleware
 	app.Use(applogger.RequestLoggerMiddleware(slogLogger))
+	// Add Prometheus metrics middleware
+	app.Use(appmetrics.Middleware())
 
 	// Initialize health checker
 	healthChecker := apphealth.NewHealthChecker(db, redisClient, slogLogger)
 
 	// Health check endpoint (before API routes, no auth required)
 	app.Get("/healthz", healthChecker.Handler())
+
+	// Prometheus metrics endpoint (before API routes, no auth required)
+	app.Get("/metrics", promhttp.Handler())
 
 	api := app.Group("/api")
 
@@ -494,7 +501,7 @@ func main() {
 	socialmediapostsdomain.SetupRoutes(socialMediaPostsGroup, socialMediaPostHandler)
 
 	// Creative Assets: Initialize service and client
-	creativeClient := creativeservice.NewClient(os.Getenv("CREATIVE_SERVICE_URL"))
+	creativeClient := creativeservice.NewClient(os.Getenv("CREATIVE_SERVICE_URL"), slogLogger)
 	creativeAssetsRepo := creativeassetsdomain.NewRepository(db)
 	creativeAssetsService := creativeassetsdomain.NewService(creativeAssetsRepo, creativeClient)
 	creativeAssetsHandler := creativeassetsdomain.NewHandler(creativeAssetsService, slogLogger)

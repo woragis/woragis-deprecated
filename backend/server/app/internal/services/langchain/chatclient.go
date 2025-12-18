@@ -13,8 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sony/gobreaker"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
+	appcircuitbreaker "github.com/woragis/backend/server/app/pkg/circuitbreaker"
 )
 
 // ModelProvider enumerates supported chat providers.
@@ -110,13 +112,29 @@ type ChatCompletionResponse struct {
 
 // Client exposes LangChain backed LLM interactions.
 type Client struct {
-	logger *slog.Logger
+	logger         *slog.Logger
+	aiServiceCB    *gobreaker.CircuitBreaker
 }
 
 // NewClient creates a new Client.
 func NewClient(logger *slog.Logger) *Client {
+	// Create circuit breaker for AI Service calls
+	cbConfig := appcircuitbreaker.DefaultConfig("ai-service", logger)
+	cbConfig.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+		appcircuitbreaker.RecordStateChange(name, from, to)
+		if logger != nil {
+			logger.Info("circuit breaker state changed",
+				slog.String("name", name),
+				slog.String("from", from.String()),
+				slog.String("to", to.String()),
+			)
+		}
+	}
+	aiServiceCB := appcircuitbreaker.NewCircuitBreaker(cbConfig)
+
 	return &Client{
-		logger: logger,
+		logger:      logger,
+		aiServiceCB: aiServiceCB,
 	}
 }
 
@@ -151,6 +169,25 @@ type aiServiceChatResponse struct {
 }
 
 func (c *Client) callAIService(ctx context.Context, baseURL string, req ChatCompletionRequest) (ChatCompletionResponse, error) {
+	// Wrap the API call with circuit breaker
+	result, err := appcircuitbreaker.Execute(c.aiServiceCB, func() (ChatCompletionResponse, error) {
+		appcircuitbreaker.RecordRequestAllowed("ai-service")
+		return c.doAIServiceCall(ctx, baseURL, req)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			appcircuitbreaker.RecordRequestRejected("ai-service")
+			return ChatCompletionResponse{}, fmt.Errorf("ai-service circuit breaker is open: service unavailable")
+		}
+		return ChatCompletionResponse{}, err
+	}
+	
+	return result, nil
+}
+
+func (c *Client) doAIServiceCall(ctx context.Context, baseURL string, req ChatCompletionRequest) (ChatCompletionResponse, error) {
 	// Concatenate messages into a single input preserving roles.
 	var b strings.Builder
 	for _, m := range req.Messages {
@@ -235,6 +272,25 @@ func (c *Client) GenerateCompletionStream(ctx context.Context, req ChatCompletio
 		return c.GenerateCompletion(ctx, req)
 	}
 
+	// Wrap the streaming call with circuit breaker
+	result, err := appcircuitbreaker.Execute(c.aiServiceCB, func() (ChatCompletionResponse, error) {
+		appcircuitbreaker.RecordRequestAllowed("ai-service")
+		return c.doGenerateCompletionStream(ctx, aiURL, req, onDelta)
+	})
+	
+	if err != nil {
+		// Check if error is due to circuit breaker being open
+		if err == gobreaker.ErrOpenState {
+			appcircuitbreaker.RecordRequestRejected("ai-service")
+			return ChatCompletionResponse{}, fmt.Errorf("ai-service circuit breaker is open: service unavailable")
+		}
+		return ChatCompletionResponse{}, err
+	}
+	
+	return result, nil
+}
+
+func (c *Client) doGenerateCompletionStream(ctx context.Context, aiURL string, req ChatCompletionRequest, onDelta func(delta string)) (ChatCompletionResponse, error) {
 	// Build input text same as non-streaming path
 	var b strings.Builder
 	for _, m := range req.Messages {
