@@ -12,6 +12,43 @@
 
 ---
 
+## Current Implementation Status (Pleno Avançado → Sênior Júnior)
+
+### ✅ Architecture & Design (Implemented)
+- [x] Microservices architecture with clear separation of responsibilities
+- [x] Message broker (RabbitMQ) for asynchronous communication
+- [x] Specialized services (AI Service, Creative Service)
+- [x] Polyglot architecture (Go, Python, JavaScript) - appropriate languages for each context
+- [x] Cache strategy with Redis (including invalidation)
+- [x] Rate limiting (implemented in job-application-worker orchestrator)
+
+### ✅ DevOps & Infrastructure (Implemented)
+- [x] Complete CI/CD pipeline (GitHub Actions)
+- [x] Containerization (Docker)
+- [x] Orchestration (Kubernetes - partial, whatsapp-worker deployed)
+- [x] Automated tests (unit tests for most components)
+- [x] Automated deployment (Railway integration)
+
+### ✅ Security & Performance (Implemented)
+- [x] Authentication/authorization system
+- [x] Session management
+- [x] Cache for frequent queries
+- [x] Cache invalidation strategy
+
+### ✅ Resilience (Partially Implemented)
+- [x] Dead letter queues (RabbitMQ DLX configured for all queues)
+- [x] Retry policies (implemented in translation-worker and other workers)
+- [x] Graceful degradation (Server falls back RabbitMQ → Redis)
+- [ ] Circuit breakers (not implemented)
+
+### ✅ Observability (Partially Implemented)
+- [x] Structured logging (all components)
+- [ ] Metrics (Prometheus) - not implemented
+- [ ] Distributed tracing (Jaeger/OpenTelemetry) - not implemented (only trace ID exists)
+- [ ] Dashboards (Grafana) - not implemented
+
+---
+
 ## CI/CD
 
 ### Tasks
@@ -575,3 +612,343 @@ docs/
    - Keep documentation updated
    - Add new ADRs as decisions are made
    - Expand runbooks as needed
+
+---
+
+## Senior Level Improvements (To Elevate to Sênior Completo)
+
+### Observability
+
+#### Tasks
+
+**Phase 1: Metrics Collection (No Infrastructure) - ✅ COMPLETE (Testing Needed)**
+- [x] Add Prometheus client library to server
+- [x] Create metrics package (`pkg/metrics`)
+- [x] Implement HTTP request metrics (counter, histogram)
+- [x] Create metrics middleware for Fiber
+- [x] Expose `/metrics` endpoint in server
+- [x] Add Prometheus client library to email-worker
+- [x] Expose `/metrics` endpoint in email-worker
+- [x] Add metrics recording to email-worker
+- [x] Add Prometheus client library to whatsapp-worker
+- [x] Expose `/metrics` endpoint in whatsapp-worker
+- [x] Add metrics recording to whatsapp-worker
+- [x] Add Prometheus client library to translation-worker
+- [x] Expose `/metrics` endpoint in translation-worker
+- [x] Add metrics recording to translation-worker
+- [x] Add Prometheus client library to resume-worker (Python)
+- [x] Expose `/metrics` endpoint in resume-worker
+- [x] Add metrics recording to resume-worker
+- [x] Add Prometheus client library to job-application-worker (Node.js)
+- [x] Expose `/metrics` endpoint in job-application-worker
+- [x] Add metrics recording to job-application-worker
+- [x] Add Prometheus client library to ai-service (Python)
+- [x] Expose `/metrics` endpoint in ai-service
+- [x] Add Prometheus client library to creative-service (Python)
+- [x] Expose `/metrics` endpoint in creative-service
+- [ ] Test metrics collection locally (curl `/metrics`) - **TODO: Testing needed (cannot test right now)** - **TODO: Testing needed (cannot test right now)**
+
+**Phase 2: Prometheus Setup (When Ready)**
+- [ ] Deploy Prometheus on Railway (or locally)
+- [ ] Configure Prometheus to scrape all services
+- [ ] Verify metrics are being collected
+- [ ] Test Prometheus UI
+- [ ] **TODO: Testing needed (cannot test right now)**
+
+**Phase 3: Grafana Dashboards (When Ready)**
+- [ ] Deploy Grafana on Railway (or locally)
+- [ ] Connect Grafana to Prometheus
+- [ ] Create system overview dashboard
+- [ ] Create service-specific dashboards
+- [ ] Create queue monitoring dashboard
+- [ ] Create error tracking dashboard
+- [ ] **TODO: Testing needed (cannot test right now)**
+
+**Metrics Implemented:**
+- [x] Request rate metrics (requests per second) - HTTP request counter
+- [x] Latency metrics (p50, p95, p99) - HTTP request duration histogram
+- [x] Error rate metrics - HTTP request status codes
+- [x] Queue metrics (size, throughput, DLQ size) - Queue depth and DLQ size gauges
+- [x] Worker processing metrics (jobs processed, duration) - Job counters and histograms
+- [ ] Database connection pool metrics - **TODO: Not yet implemented**
+- [ ] **Testing needed (cannot test right now)**
+- [ ] Grafana dashboards
+  - [ ] System overview dashboard
+  - [ ] Service health dashboard
+  - [ ] Queue monitoring dashboard
+  - [ ] Error tracking dashboard
+- [ ] Distributed tracing (OpenTelemetry/Jaeger)
+  - [ ] OpenTelemetry instrumentation
+  - [ ] Trace context propagation across services
+  - [ ] Jaeger for trace visualization
+  - [ ] Integration with existing trace IDs
+
+#### Strategy
+**Prometheus Metrics:**
+- **Library:** `prometheus/client_golang` for Go, `prometheus_client` for Python
+- **Metrics to expose:**
+  - HTTP request metrics (counter, histogram)
+  - Queue depth and throughput
+  - Database query duration
+  - Worker job processing time
+  - Error counts by type
+- **Endpoint:** `/metrics` endpoint on each service
+- **Scraping:** Prometheus scrapes metrics from all services
+
+**Grafana Dashboards:**
+- **Data source:** Prometheus
+- **Dashboards:**
+  - System overview (all services health, request rates)
+  - Service-specific dashboards (per service/worker)
+  - Queue monitoring (RabbitMQ queue depths, DLQ sizes)
+  - Error tracking (error rates, error types)
+- **Alerts:** Configure alerting rules in Prometheus, notify via Grafana
+
+**Distributed Tracing:**
+- **Library:** OpenTelemetry SDK
+- **Instrumentation:**
+  - HTTP requests (server and client)
+  - Database queries
+  - Queue operations (publish/consume)
+  - External API calls
+- **Trace context:** Propagate trace IDs across service boundaries
+- **Visualization:** Jaeger UI for trace exploration
+
+---
+
+### Resilience
+
+#### Tasks
+- [x] Dead letter queues (already implemented)
+- [x] Retry policies (already implemented in workers)
+- [x] Graceful degradation (already implemented - RabbitMQ fallback)
+- [ ] Circuit breakers - ✅ **IMPLEMENTED (Testing Needed)**
+  - [x] **Server → AI Service**
+    - [x] Add `sony/gobreaker` library to server
+    - [x] Create circuit breaker package (`pkg/circuitbreaker`)
+    - [x] Wrap AI Service HTTP calls in langchain client (both regular and streaming)
+    - [x] Configure failure threshold (5 consecutive failures)
+    - [x] Configure timeout (30 seconds before half-open)
+    - [x] Add circuit breaker metrics
+    - [ ] Test circuit breaker behavior - **TODO: Testing needed**
+  - [x] **Server → Creative Service**
+    - [x] Wrap Creative Service HTTP calls in creative client (all endpoints)
+    - [x] Configure failure threshold (5 consecutive failures)
+    - [x] Configure timeout (30 seconds before half-open)
+    - [x] Add circuit breaker metrics
+    - [ ] Test circuit breaker behavior - **TODO: Testing needed**
+  - [x] **Translation Worker → Translation APIs**
+    - [x] Add `sony/gobreaker` library to translation-worker
+    - [x] Wrap Google Translate API calls
+    - [x] Wrap DeepL API calls
+    - [x] Wrap LibreTranslate API calls
+    - [x] Configure failure threshold (5 consecutive failures)
+    - [x] Configure timeout (30 seconds before half-open)
+    - [x] Integrate with retry logic (circuit breaker wraps entire call, fails fast if open)
+    - [x] Add circuit breaker logging
+    - [ ] Test circuit breaker behavior - **TODO: Testing needed**
+  - [x] **Resume Worker → AI Service**
+    - [x] Add `circuitbreaker` library to resume-worker
+    - [x] Wrap AI Service HTTP calls (both generate_resume_section and generate_tags)
+    - [x] Configure failure threshold (5 consecutive failures)
+    - [x] Configure timeout (30 seconds before half-open)
+    - [x] Add circuit breaker logging
+    - [ ] Test circuit breaker behavior - **TODO: Testing needed**
+
+#### Strategy
+**Circuit Breakers:**
+- **Library:** `sony/gobreaker` for Go, `circuitbreaker` for Python
+- **Configuration:**
+  - **Failure Threshold**: 5 consecutive failures before opening
+  - **Timeout**: 30 seconds before transitioning to half-open
+  - **Half-Open Requests**: 3 requests allowed in half-open state
+  - **Success Threshold**: 2 successes in half-open to close circuit
+- **Implementation:**
+  - Wrap external API calls with circuit breaker
+  - Fail fast when circuit is open (no actual API call made)
+  - Record metrics for circuit breaker state changes
+  - Log circuit breaker state transitions
+- **Integration points:**
+  - Server → AI Service calls (via langchain client)
+  - Server → Creative Service calls (via creative client)
+  - Translation Worker → Translation APIs (Google, DeepL, LibreTranslate)
+  - Resume Worker → AI Service calls
+- **Error Handling:**
+  - When circuit is open, return error immediately
+  - Don't retry if circuit is open (circuit breaker handles this)
+  - Route to DLQ if circuit is open (for workers)
+
+**Circuit Breaker States:**
+- **Closed:** Normal operation, requests pass through, failures tracked
+- **Open:** Too many failures, requests fail fast (no API call), after timeout → half-open
+- **Half-open:** Testing if service recovered, limited requests allowed (3), if successful → closed, if failing → open
+
+**Benefits:**
+- Prevents cascading failures
+- Fails fast (no waiting for timeouts)
+- Reduces load on failing services
+- Automatic recovery testing
+- Better user experience (faster error responses)
+
+---
+
+### Scalability Documentation
+
+#### Tasks
+- [ ] Document scalability strategy
+  - [ ] Horizontal scaling approach (how to scale each component)
+  - [ ] Vertical scaling limits
+  - [ ] Database scaling strategy (read replicas, sharding if needed)
+  - [ ] Queue scaling strategy (multiple workers, queue partitioning)
+- [ ] Performance benchmarks
+  - [ ] Load testing results
+  - [ ] Throughput measurements (requests per second)
+  - [ ] Latency measurements under load
+  - [ ] Resource usage (CPU, memory) under load
+- [ ] Sharding strategy (if applicable)
+  - [ ] When sharding is needed
+  - [ ] Sharding key selection
+  - [ ] Sharding implementation approach
+
+#### Strategy
+**Scalability Documentation:**
+- **Horizontal Scaling:**
+  - Server: Stateless, can scale horizontally (2-3 replicas)
+  - Workers: Scale based on queue depth (1-5 replicas per worker type)
+  - Services: Stateless, can scale horizontally (1-2 replicas)
+- **Vertical Scaling:**
+  - Document resource limits (CPU, memory)
+  - When vertical scaling is needed vs horizontal
+- **Database Scaling:**
+  - Read replicas for read-heavy workloads
+  - Connection pooling limits
+  - Query optimization strategies
+- **Queue Scaling:**
+  - Multiple workers consume from same queue
+  - Queue partitioning if needed (by user ID, job type, etc.)
+
+**Performance Benchmarks:**
+- **Tools:** `k6`, `artillery`, or `wrk` for load testing
+- **Metrics to measure:**
+  - Requests per second (RPS)
+  - Latency (p50, p95, p99)
+  - Error rate under load
+  - Resource usage (CPU, memory)
+- **Scenarios:**
+  - Normal load
+  - Peak load (2x normal)
+  - Stress test (5x normal)
+  - Spike test (sudden increase)
+
+---
+
+### Cost Management
+
+#### Tasks
+- [ ] Cloud cost analysis
+  - [ ] Current monthly costs breakdown
+  - [ ] Cost per service/component
+  - [ ] Cost optimization opportunities
+- [ ] Resource optimization
+  - [ ] Right-size containers (CPU/memory requests/limits)
+  - [ ] Auto-scaling policies to reduce idle resources
+  - [ ] Database query optimization to reduce compute
+  - [ ] Cache hit rate optimization
+- [ ] Cost monitoring
+  - [ ] Set up cost alerts
+  - [ ] Track cost trends over time
+  - [ ] Identify cost anomalies
+
+#### Strategy
+**Cost Optimization:**
+- **Container Sizing:**
+  - Review and optimize CPU/memory requests and limits
+  - Use VPA (Vertical Pod Autoscaler) for right-sizing
+  - Remove over-provisioned resources
+- **Auto-scaling:**
+  - Scale down during low-traffic periods
+  - Scale up proactively before peak times
+  - Use predictive scaling if available
+- **Database Optimization:**
+  - Optimize slow queries
+  - Use read replicas instead of scaling primary
+  - Implement connection pooling limits
+- **Caching:**
+  - Increase cache hit rates
+  - Use appropriate TTLs
+  - Cache expensive computations
+- **Resource Cleanup:**
+  - Remove unused resources
+  - Clean up old logs/data
+  - Archive old data to cheaper storage
+
+---
+
+### Disaster Recovery
+
+#### Tasks
+- [ ] Backup strategy
+  - [ ] Database backup strategy (automated backups, retention policy)
+  - [ ] Configuration backup (secrets, configs)
+  - [ ] Application state backup (if applicable)
+- [ ] Recovery procedures
+  - [ ] Database restore procedure
+  - [ ] Service recovery procedure
+  - [ ] Full system recovery procedure
+- [ ] RTO/RPO definition
+  - [ ] Recovery Time Objective (RTO) - how quickly to recover
+  - [ ] Recovery Point Objective (RPO) - how much data loss is acceptable
+- [ ] Disaster recovery testing
+  - [ ] Test backup restoration
+  - [ ] Test failover procedures
+  - [ ] Document lessons learned
+
+#### Strategy
+**Backup Strategy:**
+- **Database Backups:**
+  - Automated daily backups
+  - Point-in-time recovery (PITR) if supported
+  - Retention: 7 days daily, 4 weeks weekly, 12 months monthly
+  - Store backups in separate region/account
+- **Configuration Backups:**
+  - Version control for configs (Git)
+  - Encrypted secrets backup
+  - Infrastructure as Code (IaC) for infrastructure state
+- **Backup Verification:**
+  - Regular restore tests
+  - Verify backup integrity
+  - Document restore procedures
+
+**Recovery Procedures:**
+- **Database Recovery:**
+  - Restore from latest backup
+  - Point-in-time recovery if needed
+  - Verify data integrity after restore
+- **Service Recovery:**
+  - Restart failed services
+  - Scale up if needed
+  - Verify health checks
+- **Full System Recovery:**
+  - Restore database
+  - Deploy all services
+  - Verify end-to-end functionality
+
+**RTO/RPO:**
+- **RTO (Recovery Time Objective):**
+  - Critical services: 1 hour
+  - Non-critical services: 4 hours
+- **RPO (Recovery Point Objective):**
+  - Database: 1 hour (hourly backups)
+  - Application state: Real-time (stateless services)
+
+**Disaster Recovery Testing:**
+- **Frequency:** Quarterly
+- **Scenarios:**
+  - Database failure
+  - Service failure
+  - Region failure (if multi-region)
+  - Data corruption
+- **Documentation:**
+  - Test results
+  - Issues found
+  - Improvements made
