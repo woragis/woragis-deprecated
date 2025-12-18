@@ -9,11 +9,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/woragis/backend/email-worker/internal/config"
 	"github.com/woragis/backend/email-worker/internal/queue"
 	"github.com/woragis/backend/email-worker/internal/sender"
 	"github.com/woragis/backend/email-worker/pkg/health"
 	"github.com/woragis/backend/email-worker/pkg/logger"
+	appmetrics "github.com/woragis/backend/email-worker/pkg/metrics"
 )
 
 func main() {
@@ -76,6 +78,7 @@ func main() {
 	healthChecker := health.NewHealthChecker(conn, logger)
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", healthChecker.Handler())
+	healthMux.Handle("/metrics", promhttp.Handler()) // Prometheus metrics endpoint
 	healthServer := &http.Server{
 		Addr:    ":8080",
 		Handler: healthMux,
@@ -99,6 +102,9 @@ func main() {
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- emailQueue.Consume(ctx, func(envelope queue.EmailEnvelope) error {
+			start := time.Now()
+			workerName := "email-worker"
+
 			// Convert envelope to email message
 			msg := sender.Message{
 				To:       envelope.Destination,
@@ -109,6 +115,9 @@ func main() {
 
 			// Send email
 			if err := emailSender.Send(ctx, msg); err != nil {
+				duration := time.Since(start).Seconds()
+				appmetrics.RecordJobProcessed(workerName, "failed", duration)
+				appmetrics.RecordJobFailed(workerName, "send_error")
 				logger.Error("Failed to send email",
 					slog.String("user_id", envelope.UserID),
 					slog.String("destination", envelope.Destination),
@@ -118,6 +127,8 @@ func main() {
 				return err
 			}
 
+			duration := time.Since(start).Seconds()
+			appmetrics.RecordJobProcessed(workerName, "success", duration)
 			logger.Info("Email sent successfully",
 				slog.String("user_id", envelope.UserID),
 				slog.String("destination", envelope.Destination),
