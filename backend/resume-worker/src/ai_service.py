@@ -5,8 +5,22 @@ AI Service client for generating resume content.
 import logging
 import requests
 from typing import Dict, List
+from circuitbreaker import circuit
 
 logger = logging.getLogger(__name__)
+
+# Circuit breaker configuration for AI Service calls
+# Opens after 5 consecutive failures, timeout 30 seconds before half-open
+@circuit(failure_threshold=5, recovery_timeout=30, expected_exception=requests.RequestException)
+def _call_ai_service(base_url: str, payload: Dict) -> requests.Response:
+    """Make HTTP call to AI service with circuit breaker protection"""
+    response = requests.post(
+        f"{base_url}/v1/chat",
+        json=payload,
+        timeout=30
+    )
+    response.raise_for_status()
+    return response
 
 # Profile template - base structure for AI to follow
 PROFILE_TEMPLATE = """Passionate Full-Stack Developer specializing in clean architecture and domain-driven design principles.
@@ -68,20 +82,23 @@ class AIService:
                 "Be concise, use strong action verbs, and quantify achievements when possible. "
                 "IMPORTANT: Return ONLY valid HTML code. Do NOT use markdown. Use proper HTML tags like <p>, <strong>, <em>, <ul>, <li>, <h3>, <h4>, <div>, <span> with appropriate CSS classes as specified in the prompt."
             )
-            response = requests.post(
-                f"{self.base_url}/v1/chat",
-                json={
-                    "agent": "auto",
-                    "provider": "anthropic",
-                    "model": "claude-3-5-sonnet-latest",
-                    "system": system_prompt,
-                    "input": prompt,
-                    "temperature": 0.3
-                },
-                timeout=30
-            )
             
-            response.raise_for_status()
+            # Use circuit breaker protected call
+            payload = {
+                "agent": "auto",
+                "provider": "anthropic",
+                "model": "claude-3-5-sonnet-latest",
+                "system": system_prompt,
+                "input": prompt,
+                "temperature": 0.3
+            }
+            
+            try:
+                response = _call_ai_service(self.base_url, payload)
+            except Exception as e:
+                # Circuit breaker will handle failures and open circuit if threshold reached
+                logger.error(f"AI service call failed (circuit breaker protected): {e}")
+                raise
             data = response.json()
             # Extract content from response
             content = ""
@@ -363,21 +380,22 @@ Requirements:
         try:
             prompt = self._build_tags_prompt(job_description, projects)
             
-            # Call AI service
-            response = requests.post(
-                f"{self.base_url}/v1/chat",
-                json={
-                    "agent": "auto",
-                    "provider": "anthropic",
-                    "model": "claude-3-5-sonnet-latest",
-                    "system": "You are a technical tag extractor. Extract relevant technology tags from the job description and projects. Return ONLY a comma-separated list of lowercase tags, nothing else.",
-                    "input": prompt,
-                    "temperature": 0.2
-                },
-                timeout=20
-            )
-
-            response.raise_for_status()
+            # Use circuit breaker protected call
+            payload = {
+                "agent": "auto",
+                "provider": "anthropic",
+                "model": "claude-3-5-sonnet-latest",
+                "system": "You are a technical tag extractor. Extract relevant technology tags from the job description and projects. Return ONLY a comma-separated list of lowercase tags, nothing else.",
+                "input": prompt,
+                "temperature": 0.2
+            }
+            
+            try:
+                response = _call_ai_service(self.base_url, payload)
+            except Exception as e:
+                # Circuit breaker will handle failures and open circuit if threshold reached
+                logger.error(f"AI service call failed (circuit breaker protected): {e}")
+                raise
             data = response.json()
 
             # Extract content

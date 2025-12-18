@@ -29,6 +29,8 @@ from ai_service import AIService
 from resume_generator import ResumeGenerator
 from translation_helper import TranslationHelper
 from queue_consumer import create_consumer_from_env
+from metrics import record_job_processed, record_job_failed
+import time
 
 # Load environment variables
 load_dotenv()
@@ -95,45 +97,57 @@ def process_resume_job(message: dict) -> bool:
         
         logger.info(f"Processing resume generation job for user: {user_id}, language: {language}")
         
-        # Initialize components
-        db = Database(DATABASE_URL)
-        ai_service = AIService(AI_SERVICE_URL)
-        translation_helper = TranslationHelper(DATABASE_URL)
-        generator = ResumeGenerator(db, ai_service, OUTPUT_DIR, translation_helper)
+        start_time = time.time()
+        worker_name = "resume-worker"
         
         try:
-            db.connect()
-            translation_helper.connect()
+            # Initialize components
+            db = Database(DATABASE_URL)
+            ai_service = AIService(AI_SERVICE_URL)
+            translation_helper = TranslationHelper(DATABASE_URL)
+            generator = ResumeGenerator(db, ai_service, OUTPUT_DIR, translation_helper)
             
-            # Generate resume
-            result = generator.generate_resume(
-                user_id=user_id,
-                job_description=job_description,
-                job_title=job_title,
-                output_filename=output_filename,
-                language=language
-            )
-            
-            # Save result metadata
-            save_result(result, RESULTS_LOG_DIR)
-            
-            logger.info(f"Resume successfully generated: {result['output_path']}")
-            logger.info(f"File size: {result['file_size']} bytes")
-            logger.info(f"Projects included: {result['projects_count']}")
-            logger.info(f"Certifications included: {result['certifications_count']}")
-            
-            return True
-            
+            try:
+                db.connect()
+                translation_helper.connect()
+                
+                # Generate resume
+                result = generator.generate_resume(
+                    user_id=user_id,
+                    job_description=job_description,
+                    job_title=job_title,
+                    output_filename=output_filename,
+                    language=language
+                )
+                
+                # Save result metadata
+                save_result(result, RESULTS_LOG_DIR)
+                
+                duration = time.time() - start_time
+                record_job_processed(worker_name, "success", duration)
+                logger.info(f"Resume successfully generated: {result['output_path']}")
+                logger.info(f"File size: {result['file_size']} bytes")
+                logger.info(f"Projects included: {result['projects_count']}")
+                logger.info(f"Certifications included: {result['certifications_count']}")
+                
+                return True
+                
+            except Exception as e:
+                duration = time.time() - start_time
+                record_job_processed(worker_name, "failed", duration)
+                record_job_failed(worker_name, "processing_error")
+                logger.error(f"Error generating resume: {e}", exc_info=True)
+                return False
+            finally:
+                db.close()
+                translation_helper.close()
+                
         except Exception as e:
-            logger.error(f"Error generating resume: {e}", exc_info=True)
+            duration = time.time() - start_time
+            record_job_processed(worker_name, "failed", duration)
+            record_job_failed(worker_name, "initialization_error")
+            logger.error(f"Error processing resume job: {e}", exc_info=True)
             return False
-        finally:
-            db.close()
-            translation_helper.close()
-            
-    except Exception as e:
-        logger.error(f"Error processing resume job: {e}", exc_info=True)
-        return False
 
 
 def run_cli_mode():
@@ -198,6 +212,7 @@ def run_queue_mode():
     from http.server import HTTPServer, BaseHTTPRequestHandler
     import json as json_lib
     from health import check_health
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
     
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -209,6 +224,12 @@ def run_queue_mode():
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json_lib.dumps(result).encode())
+            elif self.path == '/metrics':
+                # Prometheus metrics endpoint
+                self.send_response(200)
+                self.send_header('Content-Type', CONTENT_TYPE_LATEST)
+                self.end_headers()
+                self.wfile.write(generate_latest())
             else:
                 self.send_response(404)
                 self.end_headers()
@@ -221,7 +242,7 @@ def run_queue_mode():
     import threading
     health_thread = threading.Thread(target=health_server.serve_forever, daemon=True)
     health_thread.start()
-    logger.info("Health check server started on port 8080")
+    logger.info("Health check server started on port 8080 (includes /metrics endpoint)")
     
     try:
         # Create queue consumer
