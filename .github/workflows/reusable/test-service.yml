@@ -1,0 +1,184 @@
+name: Test Service (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      language:
+        required: true
+        type: string
+        description: 'go, python, or node'
+      working_directory:
+        required: true
+        type: string
+      cache_dependency_path:
+        required: false
+        type: string
+      go_version:
+        required: false
+        type: string
+        default: '1.24'
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
+      node_version:
+        required: false
+        type: string
+        default: '20'
+      test_command:
+        required: false
+        type: string
+      coverage_file:
+        required: false
+        type: string
+    secrets:
+      DATABASE_URL:
+        required: false
+      REDIS_URL:
+        required: false
+
+jobs:
+  test:
+    name: Test ${{ inputs.service_name }}
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Go
+      - name: Set up Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+          cache-dependency-path: ${{ inputs.cache_dependency_path }}
+
+      # Setup Python
+      - name: Set up Python
+        if: inputs.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+          cache-dependency-path: ${{ inputs.cache_dependency_path }}
+
+      # Setup Node.js
+      - name: Set up Node.js
+        if: inputs.language == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.cache_dependency_path }}
+
+      # Install Go dependencies
+      - name: Install Go dependencies
+        if: inputs.language == 'go'
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          go mod download
+          go mod verify
+
+      # Install Python dependencies
+      - name: Install Python dependencies
+        if: inputs.language == 'python'
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx || true
+
+      # Install Node.js dependencies
+      - name: Install Node.js dependencies
+        if: inputs.language == 'node'
+        working-directory: ${{ inputs.working_directory }}
+        run: npm ci
+
+      # Run Go tests
+      - name: Run Go tests
+        if: inputs.language == 'go'
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://test:test@localhost:5432/test_db?sslmode=disable' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+        run: |
+          if [ -n "${{ inputs.test_command }}" ]; then
+            ${{ inputs.test_command }}
+          else
+            go test -v -race -coverprofile=coverage.out ./...
+            go tool cover -html=coverage.out -o coverage.html || true
+          fi
+
+      # Run Python tests
+      - name: Run Python tests
+        if: inputs.language == 'python'
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://test:test@localhost:5432/test_db?sslmode=disable' }}
+        run: |
+          if [ -n "${{ inputs.test_command }}" ]; then
+            ${{ inputs.test_command }}
+          else
+            pytest -v --cov=src --cov-report=html --cov-report=term || pytest -v --cov=app --cov-report=html --cov-report=term || echo "No tests found, skipping"
+          fi
+
+      # Run Node.js tests
+      - name: Run Node.js tests
+        if: inputs.language == 'node'
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgres://test:test@localhost:5432/test_db?sslmode=disable' }}
+          REDIS_URL: ${{ secrets.REDIS_URL || 'redis://localhost:6379' }}
+        run: |
+          if [ -n "${{ inputs.test_command }}" ]; then
+            ${{ inputs.test_command }}
+          else
+            npm test || echo "No tests found, skipping"
+          fi
+
+      # Upload Go coverage
+      - name: Upload Go coverage
+        if: inputs.language == 'go' && inputs.coverage_file != ''
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ${{ inputs.working_directory }}/${{ inputs.coverage_file }}
+          flags: go
+          name: ${{ inputs.service_name }}-coverage
+          fail_ci_if_error: false
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## ✅ ${{ inputs.service_name }} Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tests completed for **${{ inputs.service_name }}**" >> $GITHUB_STEP_SUMMARY

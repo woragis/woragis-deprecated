@@ -1,0 +1,63 @@
+name: Test All Services
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test:
+    name: Test Services
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: server
+            language: go
+            working_directory: ./backend/server
+            cache_dependency_path: backend/server/go.sum
+            coverage_file: coverage.out
+          - service_name: email-worker
+            language: go
+            working_directory: ./backend/email-worker
+            cache_dependency_path: backend/email-worker/go.sum
+          - service_name: translation-worker
+            language: go
+            working_directory: ./backend/translation-worker
+            cache_dependency_path: backend/translation-worker/go.sum
+          - service_name: whatsapp-worker
+            language: go
+            working_directory: ./backend/whatsapp-worker
+            cache_dependency_path: backend/whatsapp-worker/go.sum
+          - service_name: job-application-worker
+            language: node
+            working_directory: ./backend/job-application-worker
+            cache_dependency_path: backend/job-application-worker/package-lock.json
+          - service_name: resume-worker
+            language: python
+            working_directory: ./backend/resume-worker
+            cache_dependency_path: backend/resume-worker/requirements.txt
+          - service_name: ai-service
+            language: python
+            working_directory: ./backend/ai-service
+            cache_dependency_path: backend/ai-service/requirements.txt
+          - service_name: creative-service
+            language: python
+            working_directory: ./backend/creative-service
+            cache_dependency_path: backend/creative-service/requirements.txt
+
+    uses: ./.github/workflows/reusable/test-service.yml
+    with:
+      service_name: ${{ matrix.service_name }}
+      language: ${{ matrix.language }}
+      working_directory: ${{ matrix.working_directory }}
+      cache_dependency_path: ${{ matrix.cache_dependency_path }}
+      coverage_file: ${{ matrix.coverage_file || '' }}
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}

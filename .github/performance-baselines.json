@@ -1,0 +1,17 @@
+{
+  "email-worker": {
+    "throughput": 50.0,
+    "latency_avg": 100.0,
+    "latency_p95": 200.0
+  },
+  "translation-worker": {
+    "throughput": 10.0,
+    "latency_avg": 200.0,
+    "latency_p95": 500.0
+  },
+  "whatsapp-worker": {
+    "throughput": 50.0,
+    "latency_avg": 100.0,
+    "latency_p95": 200.0
+  }
+}

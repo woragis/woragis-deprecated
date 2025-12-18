@@ -1,0 +1,181 @@
+name: Performance Regression Detection
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**/internal/integration/performance_test.go'
+      - '.github/workflows/performance-regression.yml'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+  POSTGRES_VERSION: '15-alpine'
+  REDIS_VERSION: '7-alpine'
+  RABBITMQ_VERSION: '3.13-management-alpine'
+
+jobs:
+  detect-regression:
+    name: Detect Performance Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: woragis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for baseline comparison
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend/email-worker && go mod download
+          cd ../translation-worker && go mod download
+          cd ../whatsapp-worker && go mod download
+
+      - name: Wait for services
+        run: sleep 15
+
+      - name: Run performance tests
+        run: |
+          cd backend/email-worker
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > email-worker-performance.txt 2>&1 || true
+          
+          cd ../translation-worker
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > translation-worker-performance.txt 2>&1 || true
+          
+          cd ../whatsapp-worker
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > whatsapp-worker-performance.txt 2>&1 || true
+
+      - name: Load baseline metrics
+        id: load_baseline
+        run: |
+          if [ -f .github/performance-baselines.json ]; then
+            echo "baseline_exists=true" >> $GITHUB_OUTPUT
+            cat .github/performance-baselines.json
+          else
+            echo "baseline_exists=false" >> $GITHUB_OUTPUT
+            echo "No baseline file found, using default baselines"
+          fi
+
+      - name: Check performance regression
+        id: check_regression
+        run: |
+          chmod +x .github/scripts/check_performance_regression.py
+          python3 .github/scripts/check_performance_regression.py
+        continue-on-error: true
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results-${{ github.run_number }}
+          path: |
+            backend/*/performance*.txt
+          retention-days: 7
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && steps.check_regression.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## ⚠️ Performance Regression Detected
+            
+            Performance tests detected regressions. Please review the results.
+            
+            ### Test Artifacts
+            - Check the workflow artifacts for detailed performance test results
+            
+            ### Next Steps
+            1. Review the performance test output
+            2. Investigate the cause of regression
+            3. Fix performance issues or update baselines if regression is acceptable`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Performance Test Summary
+        if: always()
+        run: |
+          echo "## Performance Regression Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_regression.outcome }}" == "failure" ]; then
+            echo "⚠️ **Performance regressions detected!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the test results and investigate the cause." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **No performance regressions detected**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All performance metrics are within acceptable ranges." >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Trigger notification on regression
+        if: steps.check_regression.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'notify-test-failure.yml',
+              ref: context.ref,
+              inputs: {
+                workflow_name: 'Performance Regression Detection',
+                workflow_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                status: 'failure',
+                commit_sha: context.sha,
+                actor: context.actor
+              }
+            });

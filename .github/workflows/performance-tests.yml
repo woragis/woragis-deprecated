@@ -1,0 +1,151 @@
+name: Performance Tests
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**/internal/integration/performance_test.go'
+      - '.github/workflows/performance-tests.yml'
+
+env:
+  GO_VERSION: '1.21'
+  POSTGRES_VERSION: '15-alpine'
+  REDIS_VERSION: '7-alpine'
+  RABBITMQ_VERSION: '3.13-management-alpine'
+
+jobs:
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: woragis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd backend/email-worker && go mod download
+          cd ../translation-worker && go mod download
+          cd ../whatsapp-worker && go mod download
+
+      - name: Wait for services
+        run: sleep 15
+
+      - name: Run email worker performance tests
+        working-directory: backend/email-worker
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Test.*Rate|Benchmark" -v ./internal/integration/... > email-worker-performance.txt 2>&1 || true
+          cat email-worker-performance.txt
+
+      - name: Run translation worker performance tests
+        working-directory: backend/translation-worker
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > translation-worker-performance.txt 2>&1 || true
+          cat translation-worker-performance.txt
+
+      - name: Run WhatsApp worker performance tests
+        working-directory: backend/whatsapp-worker
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Test.*Rate|Benchmark" -v ./internal/integration/... > whatsapp-worker-performance.txt 2>&1 || true
+          cat whatsapp-worker-performance.txt
+
+      - name: Upload performance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            backend/*/performance*.txt
+          retention-days: 30
+
+      - name: Check performance regression
+        id: check_regression
+        run: |
+          python3 .github/scripts/check_performance_regression.py || true
+
+      - name: Performance Test Summary
+        if: always()
+        run: |
+          echo "## Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Performance tests completed. Check artifacts for detailed results." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Email Worker: email-worker-performance.txt" >> $GITHUB_STEP_SUMMARY
+          echo "- Translation Worker: translation-worker-performance.txt" >> $GITHUB_STEP_SUMMARY
+          echo "- WhatsApp Worker: whatsapp-worker-performance.txt" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Trigger notification on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'notify-test-failure.yml',
+              ref: context.ref,
+              inputs: {
+                workflow_name: 'Performance Tests',
+                workflow_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                status: 'failure',
+                commit_sha: context.sha,
+                actor: context.actor
+              }
+            });

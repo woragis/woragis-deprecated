@@ -1,0 +1,150 @@
+name: Build All Services
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v1, v1.0, v8.5, etc.
+
+env:
+  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+  DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+jobs:
+  extract-tag:
+    name: Extract Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Extract tag name
+        id: tag
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Tag name: $TAG_NAME"
+
+  test:
+    name: Test Services
+    needs: extract-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: server
+            language: go
+            working_directory: ./backend/server
+            cache_dependency_path: backend/server/go.sum
+            coverage_file: coverage.out
+          - service_name: email-worker
+            language: go
+            working_directory: ./backend/email-worker
+            cache_dependency_path: backend/email-worker/go.sum
+          - service_name: translation-worker
+            language: go
+            working_directory: ./backend/translation-worker
+            cache_dependency_path: backend/translation-worker/go.sum
+          - service_name: whatsapp-worker
+            language: go
+            working_directory: ./backend/whatsapp-worker
+            cache_dependency_path: backend/whatsapp-worker/go.sum
+          - service_name: job-application-worker
+            language: node
+            working_directory: ./backend/job-application-worker
+            cache_dependency_path: backend/job-application-worker/package-lock.json
+          - service_name: resume-worker
+            language: python
+            working_directory: ./backend/resume-worker
+            cache_dependency_path: backend/resume-worker/requirements.txt
+          - service_name: ai-service
+            language: python
+            working_directory: ./backend/ai-service
+            cache_dependency_path: backend/ai-service/requirements.txt
+          - service_name: creative-service
+            language: python
+            working_directory: ./backend/creative-service
+            cache_dependency_path: backend/creative-service/requirements.txt
+
+    uses: ./.github/workflows/reusable/test-service.yml
+    with:
+      service_name: ${{ matrix.service_name }}
+      language: ${{ matrix.language }}
+      working_directory: ${{ matrix.working_directory }}
+      cache_dependency_path: ${{ matrix.cache_dependency_path }}
+      coverage_file: ${{ matrix.coverage_file || '' }}
+    secrets:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+
+  build:
+    name: Build Services
+    needs: [extract-tag, test]
+    if: success()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: server
+            image_name: woragis-server
+            dockerfile_path: ./backend/server/Dockerfile
+            context_path: ./backend/server
+          - service_name: email-worker
+            image_name: woragis-email-worker
+            dockerfile_path: ./backend/Dockerfile.email-worker
+            context_path: ./backend/email-worker
+          - service_name: translation-worker
+            image_name: woragis-translation-worker
+            dockerfile_path: ./backend/Dockerfile.translation-worker
+            context_path: ./backend/translation-worker
+          - service_name: whatsapp-worker
+            image_name: woragis-whatsapp-worker
+            dockerfile_path: ./backend/Dockerfile.whatsapp-worker
+            context_path: ./backend/whatsapp-worker
+          - service_name: job-application-worker
+            image_name: woragis-job-application-worker
+            dockerfile_path: ./backend/Dockerfile.job-application-worker
+            context_path: ./backend/job-application-worker
+          - service_name: resume-worker
+            image_name: woragis-resume-worker
+            dockerfile_path: ./backend/Dockerfile.resume-worker
+            context_path: ./backend/resume-worker
+          - service_name: ai-service
+            image_name: woragis-ai-service
+            dockerfile_path: ./backend/ai-service/Dockerfile
+            context_path: ./backend/ai-service
+          - service_name: creative-service
+            image_name: woragis-creative-service
+            dockerfile_path: ./backend/creative-service/Dockerfile
+            context_path: ./backend/creative-service
+
+    uses: ./.github/workflows/reusable/build-service.yml
+    with:
+      service_name: ${{ matrix.service_name }}
+      image_name: ${{ matrix.image_name }}
+      dockerfile_path: ${{ matrix.dockerfile_path }}
+      context_path: ${{ matrix.context_path }}
+      tag: ${{ needs.extract-tag.outputs.tag }}
+    secrets:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+  build-summary:
+    name: Build Summary
+    needs: [extract-tag, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🐳 Docker Images Built and Pushed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tag: **${{ needs.extract-tag.outputs.tag }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Images:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-server:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-ai-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-job-application-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-resume-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-translation-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-whatsapp-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-email-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-creative-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,107 @@
+name: Deploy All Services
+
+on:
+  workflow_run:
+    workflows: ["Build All Services"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  extract-tag:
+    name: Extract Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Extract tag from workflow
+        id: tag
+        run: |
+          # Try to get tag from the triggering workflow
+          TAG_NAME=$(echo "${{ github.event.workflow_run.head_branch }}" | sed 's/refs\/tags\///')
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "${{ github.event.workflow_run.head_branch }}" ]; then
+            # Try to get from the workflow run API
+            TAG_NAME=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags" | \
+              jq -r '.[] | select(.ref | contains("v")) | .ref' | head -1 | sed 's/refs\/tags\///')
+          fi
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Deploying tag: $TAG_NAME"
+
+  deploy:
+    name: Deploy Services
+    needs: extract-tag
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: woragis-server
+            image_name: woragis-server
+            needs_db: true
+            needs_redis: true
+          - service_name: woragis-ai-service
+            image_name: woragis-ai-service
+            needs_db: true
+            needs_redis: false
+          - service_name: woragis-job-application-worker
+            image_name: woragis-job-application-worker
+            needs_db: true
+            needs_redis: true
+          - service_name: woragis-resume-worker
+            image_name: woragis-resume-worker
+            needs_db: true
+            needs_redis: true
+          - service_name: woragis-translation-worker
+            image_name: woragis-translation-worker
+            needs_db: true
+            needs_redis: true
+          - service_name: woragis-whatsapp-worker
+            image_name: woragis-whatsapp-worker
+            needs_db: true
+            needs_redis: true
+          - service_name: woragis-email-worker
+            image_name: woragis-email-worker
+            needs_db: true
+            needs_redis: true
+          - service_name: woragis-creative-service
+            image_name: woragis-creative-service
+            needs_db: false
+            needs_redis: false
+
+    uses: ./.github/workflows/reusable/deploy-service.yml
+    with:
+      service_name: ${{ matrix.service_name }}
+      image_name: ${{ matrix.image_name }}
+      tag: ${{ needs.extract-tag.outputs.tag }}
+      needs_db: ${{ matrix.needs_db }}
+      needs_redis: ${{ matrix.needs_redis }}
+    secrets:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      RAILWAY_DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+      RAILWAY_REDIS_URL: ${{ secrets.RAILWAY_REDIS_URL }}
+
+  deploy-summary:
+    name: Deployment Summary
+    needs: [extract-tag, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🚀 Railway Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tag: **${{ needs.extract-tag.outputs.tag }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployed Services:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Main Server: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-server:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ AI Service: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-ai-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Job Application Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-job-application-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Resume Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-resume-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Translation Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-translation-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ WhatsApp Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-whatsapp-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Email Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-email-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Creative Service: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-creative-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

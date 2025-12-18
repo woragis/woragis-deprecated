@@ -1,0 +1,144 @@
+name: Deploy Service (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+        description: 'Railway service name (e.g., woragis-server)'
+      image_name:
+        required: true
+        type: string
+        description: 'Docker image name without registry (e.g., woragis-server)'
+      tag:
+        required: true
+        type: string
+      needs_db:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether service needs DATABASE_URL'
+      needs_redis:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether service needs REDIS_URL'
+    secrets:
+      RAILWAY_TOKEN:
+        required: true
+      RAILWAY_PROJECT_ID:
+        required: true
+      DOCKER_HUB_USERNAME:
+        required: true
+      RAILWAY_DATABASE_URL:
+        required: false
+      RAILWAY_REDIS_URL:
+        required: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.service_name }}
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Login to Railway
+        run: |
+          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Link Railway Project
+        run: railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+        run: |
+          IMAGE="$DOCKER_HUB_USERNAME/${{ inputs.image_name }}:${{ inputs.tag }}"
+          FULL_IMAGE="docker.io/$IMAGE"
+          echo "🚀 Deploying ${{ inputs.service_name }} with image: $FULL_IMAGE"
+          echo ""
+          
+          # Verify image exists on Docker Hub (optional check)
+          echo "🔍 Verifying image exists on Docker Hub..."
+          if docker manifest inspect "$FULL_IMAGE" > /dev/null 2>&1; then
+            echo "✅ Image found on Docker Hub: $FULL_IMAGE"
+          else
+            echo "⚠️  Warning: Could not verify image exists on Docker Hub"
+            echo "   This might be normal if the image was just pushed"
+          fi
+          echo ""
+          
+          # Method 1: Set DOCKER_IMAGE variable (Railway watches this and redeploys)
+          echo "📦 Setting DOCKER_IMAGE environment variable..."
+          if railway variables set "DOCKER_IMAGE=$FULL_IMAGE" --service "${{ inputs.service_name }}" 2>&1; then
+            echo "✅ Successfully set DOCKER_IMAGE=$FULL_IMAGE"
+            echo "   Railway will automatically redeploy with the new image"
+          elif railway variables upsert "DOCKER_IMAGE=$FULL_IMAGE" --service "${{ inputs.service_name }}" 2>&1; then
+            echo "✅ Successfully upserted DOCKER_IMAGE=$FULL_IMAGE"
+            echo "   Railway will automatically redeploy with the new image"
+          else
+            echo "⚠️  Failed to set DOCKER_IMAGE variable"
+            echo "   Trying alternative deployment methods..."
+            echo ""
+            
+            # Method 2: Try Railway service update command
+            echo "🔄 Attempting service update..."
+            railway service "${{ inputs.service_name }}" update --image "$FULL_IMAGE" 2>&1 || \
+            railway service update "${{ inputs.service_name }}" --image "$FULL_IMAGE" 2>&1 || \
+            echo "   Service update command not available or failed"
+            echo ""
+            
+            # Method 3: Manual trigger (if service is configured to watch Docker Hub)
+            echo "🔄 Triggering manual redeploy..."
+            railway redeploy "${{ inputs.service_name }}" 2>&1 || \
+            railway up --service "${{ inputs.service_name }}" --detach 2>&1 || \
+            echo "   Manual redeploy not available"
+          fi
+          
+          echo ""
+          echo "📝 Deployment Summary:"
+          echo "   Service: ${{ inputs.service_name }}"
+          echo "   Image: $FULL_IMAGE"
+          echo "   Tag: ${{ inputs.tag }}"
+          echo ""
+          echo "💡 Note: If automatic deployment fails, manually update the service in Railway dashboard:"
+          echo "   1. Go to Railway dashboard"
+          echo "   2. Select service: ${{ inputs.service_name }}"
+          echo "   3. Update image source to: $FULL_IMAGE"
+          echo "   4. Trigger redeploy"
+
+      - name: Set Environment Variables
+        if: inputs.needs_db == true || inputs.needs_redis == true
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          # Set DATABASE_URL if needed
+          if [ "${{ inputs.needs_db }}" = "true" ] && [ -n "${{ secrets.RAILWAY_DATABASE_URL }}" ]; then
+            railway variables set "DATABASE_URL=${{ secrets.RAILWAY_DATABASE_URL }}" --service "${{ inputs.service_name }}" || true
+          fi
+          
+          # Set REDIS_URL if needed
+          if [ "${{ inputs.needs_redis }}" = "true" ] && [ -n "${{ secrets.RAILWAY_REDIS_URL }}" ]; then
+            railway variables set "REDIS_URL=${{ secrets.RAILWAY_REDIS_URL }}" --service "${{ inputs.service_name }}" || true
+          fi
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 ${{ inputs.service_name }} Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Service: **${{ inputs.service_name }}**" >> $GITHUB_STEP_SUMMARY
+          echo "Image: \`${{ secrets.DOCKER_HUB_USERNAME }}/${{ inputs.image_name }}:${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

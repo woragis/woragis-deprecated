@@ -1,0 +1,110 @@
+name: Update Performance Baselines
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm updating baselines'
+        required: true
+        default: 'no'
+
+env:
+  GO_VERSION: '1.21'
+  POSTGRES_VERSION: '15-alpine'
+  REDIS_VERSION: '7-alpine'
+  RABBITMQ_VERSION: '3.13-management-alpine'
+
+jobs:
+  update-baselines:
+    name: Update Performance Baselines
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'yes'
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: woragis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend/email-worker && go mod download
+          cd ../translation-worker && go mod download
+          cd ../whatsapp-worker && go mod download
+
+      - name: Wait for services
+        run: sleep 15
+
+      - name: Run performance tests
+        run: |
+          cd backend/email-worker
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > email-worker-performance.txt 2>&1 || true
+          
+          cd ../translation-worker
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > translation-worker-performance.txt 2>&1 || true
+          
+          cd ../whatsapp-worker
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > whatsapp-worker-performance.txt 2>&1 || true
+
+      - name: Store performance baselines
+        run: |
+          chmod +x .github/scripts/store_performance_baseline.py
+          python3 .github/scripts/store_performance_baseline.py
+
+      - name: Commit updated baselines
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .github/performance-baselines.json
+          git diff --staged --quiet || git commit -m "chore: update performance baselines [skip ci]"
+          git push

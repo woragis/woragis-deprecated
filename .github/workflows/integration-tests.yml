@@ -1,0 +1,299 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/integration-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/integration-tests.yml'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+  POSTGRES_VERSION: '15-alpine'
+  REDIS_VERSION: '7-alpine'
+  RABBITMQ_VERSION: '3.13-management-alpine'
+
+jobs:
+  server-integration-tests:
+    name: Server Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: woragis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+          - 15673:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/server/app/go.sum
+
+      - name: Install dependencies
+        working-directory: backend/server/app
+        run: go mod download
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for services to be ready..."
+          sleep 10
+
+      - name: Run server integration tests
+        working-directory: backend/server/app
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable
+          REDIS_URL: redis://localhost:6380/0
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -v -coverprofile=coverage.out ./internal/integration/...
+
+      - name: Upload coverage reports
+        uses: codecov/codecov@v4
+        if: always()
+        with:
+          file: backend/server/app/coverage.out
+          flags: integration
+          name: server-integration-tests
+          fail_ci_if_error: false
+
+  email-worker-tests:
+    name: Email Worker Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/email-worker/go.sum
+
+      - name: Install dependencies
+        working-directory: backend/email-worker
+        run: go mod download
+
+      - name: Wait for RabbitMQ
+        run: sleep 10
+
+      - name: Run email worker integration tests
+        working-directory: backend/email-worker
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -v ./internal/integration/...
+
+  translation-worker-tests:
+    name: Translation Worker Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: woragis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/translation-worker/go.sum
+
+      - name: Install dependencies
+        working-directory: backend/translation-worker
+        run: go mod download
+
+      - name: Wait for services
+        run: sleep 10
+
+      - name: Run translation worker integration tests
+        working-directory: backend/translation-worker
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -v ./internal/integration/...
+
+  whatsapp-worker-tests:
+    name: WhatsApp Worker Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      rabbitmq:
+        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/whatsapp-worker/go.sum
+
+      - name: Install dependencies
+        working-directory: backend/whatsapp-worker
+        run: go mod download
+
+      - name: Wait for RabbitMQ
+        run: sleep 10
+
+      - name: Run WhatsApp worker integration tests
+        working-directory: backend/whatsapp-worker
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -v ./internal/integration/...
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [server-integration-tests, email-worker-tests, translation-worker-tests, whatsapp-worker-tests]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Integration Tests Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Server Integration Tests | ${{ needs.server-integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Email Worker Tests | ${{ needs.email-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Translation Worker Tests | ${{ needs.translation-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| WhatsApp Worker Tests | ${{ needs.whatsapp-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Check for failures
+        id: check_failures
+        run: |
+          if [ "${{ needs.server-integration-tests.result }}" == "failure" ] || \
+             [ "${{ needs.email-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.translation-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.whatsapp-worker-tests.result }}" == "failure" ]; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Trigger notification workflow
+        if: steps.check_failures.outputs.has_failures == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'notify-test-failure.yml',
+              ref: context.ref,
+              inputs: {
+                workflow_name: 'Integration Tests',
+                workflow_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                status: 'failure',
+                commit_sha: context.sha,
+                actor: context.actor
+              }
+            });

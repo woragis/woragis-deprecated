@@ -1,0 +1,94 @@
+name: Notify Test Failure
+
+on:
+  workflow_run:
+    workflows: ["Integration Tests", "Performance Tests", "Performance Regression Detection"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      workflow_name:
+        description: 'Workflow name'
+        required: true
+      workflow_url:
+        description: 'Workflow URL'
+        required: true
+      status:
+        description: 'Workflow status'
+        required: true
+        default: 'failure'
+      commit_sha:
+        description: 'Commit SHA'
+        required: true
+      actor:
+        description: 'Actor who triggered workflow'
+        required: true
+        default: 'github-actions'
+
+jobs:
+  send-notification:
+    name: Send Email Notification
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled' || github.event_name == 'workflow_dispatch' }}
+    timeout-minutes: 5
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3.13-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pika
+
+      - name: Wait for RabbitMQ
+        run: sleep 10
+
+      - name: Set workflow variables
+        id: set_vars
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "workflow_name=${{ github.event.workflow_run.name }}" >> $GITHUB_OUTPUT
+            echo "workflow_url=${{ github.event.workflow_run.html_url }}" >> $GITHUB_OUTPUT
+            echo "status=${{ github.event.workflow_run.conclusion }}" >> $GITHUB_OUTPUT
+            echo "commit_sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+            echo "actor=${{ github.event.workflow_run.actor.login }}" >> $GITHUB_OUTPUT
+          else
+            echo "workflow_name=${{ github.event.inputs.workflow_name }}" >> $GITHUB_OUTPUT
+            echo "workflow_url=${{ github.event.inputs.workflow_url }}" >> $GITHUB_OUTPUT
+            echo "status=${{ github.event.inputs.status }}" >> $GITHUB_OUTPUT
+            echo "commit_sha=${{ github.event.inputs.commit_sha }}" >> $GITHUB_OUTPUT
+            echo "actor=${{ github.event.inputs.actor }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send email notification via RabbitMQ
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+          NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL || 'dev-team@woragis.com' }}
+        run: |
+          python3 .github/scripts/send_test_notification.py \
+            --workflow "${{ steps.set_vars.outputs.workflow_name }}" \
+            --status "${{ steps.set_vars.outputs.status }}" \
+            --url "${{ steps.set_vars.outputs.workflow_url }}" \
+            --commit "${{ steps.set_vars.outputs.commit_sha }}" \
+            --actor "${{ steps.set_vars.outputs.actor }}" \
+            --email "$NOTIFICATION_EMAIL"
