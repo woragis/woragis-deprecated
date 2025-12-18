@@ -7,18 +7,20 @@
 - **resume-worker** (Python)
 - **translation-worker** (Go)
 - **whatsapp-worker** (Go)
+- **ai-service** (Python)
+- **creative-service** (Python)
 
 ---
 
 ## CI/CD
 
 ### Tasks
-- [ ] CI/CD pipeline for server
-- [ ] CI/CD pipeline for email-worker
-- [ ] CI/CD pipeline for job-application-worker
-- [ ] CI/CD pipeline for resume-worker
-- [ ] CI/CD pipeline for translation-worker
-- [ ] CI/CD pipeline for whatsapp-worker
+- [x] CI/CD pipeline for server (via docker-build-push.yml)
+- [x] CI/CD pipeline for email-worker (via docker-build-push.yml)
+- [x] CI/CD pipeline for job-application-worker (via docker-build-push.yml)
+- [x] CI/CD pipeline for resume-worker (via docker-build-push.yml)
+- [x] CI/CD pipeline for translation-worker (via docker-build-push.yml)
+- [x] CI/CD pipeline for whatsapp-worker (via docker-build-push.yml)
 
 ### Strategy
 **Platform:** GitHub Actions
@@ -33,30 +35,34 @@
 4. **Deploy** - Trigger Railway via CLI/API/webhook
 
 **Implementation:**
-- Separate workflow file per service for independent builds
-- Parallel execution across services
-- Docker layer caching (especially for Node.js/Python)
-- Tests on every push/PR
-- Builds/deployments on merge to main
-- Railway integration: GitHub integration (auto-deploy) or CLI/API (manual control)
+- ~~Separate workflow file per service for independent builds~~ (Currently using combined workflows: docker-build-push.yml and test-only.yml)
+- Parallel execution across services ✅
+- Docker layer caching (especially for Node.js/Python) ✅
+- Tests on every push/PR ✅ (test-only.yml)
+- Builds/deployments on merge to main ✅ (docker-build-push.yml on tags)
+- Railway integration: GitHub integration (auto-deploy) or CLI/API (manual control) ✅ (railway-deploy.yml)
 
 ---
 
 ## Tests
 
 ### Tasks
-- [ ] Unit tests for server
+- [x] Unit tests for server (partial - service_test.go files exist)
 - [ ] Integration tests for server
-- [ ] Unit tests for email-worker
+- [x] Unit tests for email-worker (config, queue, sender, logger, health tests exist)
 - [ ] Integration tests for email-worker
-- [ ] Unit tests for job-application-worker
+- [x] Unit tests for job-application-worker (coverLetter, health, orchestrator tests exist)
 - [ ] Integration tests for job-application-worker
-- [ ] Unit tests for resume-worker
-- [ ] Integration tests for resume-worker
-- [ ] Unit tests for translation-worker
+- [x] Unit tests for resume-worker (comprehensive unit tests exist)
+- [x] Integration tests for resume-worker (test_worker.py exists)
+- [x] Unit tests for translation-worker (comprehensive unit tests exist)
 - [ ] Integration tests for translation-worker
-- [ ] Unit tests for whatsapp-worker
+- [x] Unit tests for whatsapp-worker (config, queue, notifier, logger, health tests exist)
 - [ ] Integration tests for whatsapp-worker
+- [x] Unit tests for ai-service (agents, api, providers tests exist)
+- [x] Integration tests for ai-service (test_api.py exists)
+- [x] Unit tests for creative-service (api, provider implementations, providers tests exist)
+- [x] Integration tests for creative-service (test_api.py exists)
 
 ### Strategy
 
@@ -197,7 +203,7 @@
 - [ ] Kubernetes deployment for job-application-worker
 - [ ] Kubernetes deployment for resume-worker
 - [ ] Kubernetes deployment for translation-worker
-- [ ] Kubernetes deployment for whatsapp-worker
+- [x] Kubernetes deployment for whatsapp-worker (StatefulSet and deployment-leader-election manifests exist)
 
 ### Strategy
 
@@ -361,3 +367,211 @@
 - Use structured fields instead of string interpolation
 - Log errors with full context (stack traces, request details)
 - Set appropriate log levels per environment (debug in dev, info in prod)
+
+---
+
+## Technical Documentation
+
+### Tasks
+- [ ] Architecture overview document with high-level diagram
+- [ ] ADR-001: RabbitMQ with Redis fallback
+- [ ] ADR-002: Standalone workers architecture
+- [ ] ADR-003: Structured logging implementation
+- [ ] ADR-004: Translation worker architecture (Go + external APIs)
+- [ ] ADR-005: Health checks implementation strategy
+- [ ] Runbook: Monitoring Dead Letter Queues
+- [ ] Runbook: Deploying services and workers
+- [ ] Runbook: Troubleshooting common issues
+- [ ] Component documentation (one page per component)
+- [ ] API documentation for server endpoints
+- [ ] API documentation for AI service
+- [ ] API documentation for Creative service
+- [ ] Development guide (how to add new domain, worker, etc.)
+
+### Strategy
+
+**Architecture Decision Records (ADRs):**
+- **Purpose:** Capture why decisions were made, context, and trade-offs
+- **Format:** Markdown files in `docs/adr/` directory
+- **Structure:**
+  - Context: What problem are we solving?
+  - Decision: What did we choose?
+  - Consequences: What are the trade-offs? (pros/cons)
+  - Status: Accepted/Deprecated/Superseded
+- **Priority ADRs:**
+  1. RabbitMQ + Redis fallback (high availability strategy)
+  2. Standalone workers (scalability and separation of concerns)
+  3. Structured logging (observability)
+  4. Translation worker architecture (hybrid approach: Go + external APIs)
+  5. Health checks implementation (monitoring and reliability)
+
+**Architecture Diagrams:**
+- **High-level system architecture:**
+  - Server → Services (AI, Creative)
+  - Server → Workers (Email, WhatsApp, Translation, Resume, Job App)
+  - RabbitMQ as message broker
+  - Redis for caching/fallback
+  - PostgreSQL for data
+- **Component interaction diagrams:**
+  - Request flow: API → Server → Queue → Worker → DB
+  - Translation flow: Server → RabbitMQ → Translation Worker → Translation API → DB
+  - Data flow through the system
+- **Deployment architecture:**
+  - Docker containers and networks
+  - Dependencies between services
+- **Tools:** Mermaid diagrams (in Markdown) or draw.io/Excalidraw
+- **Location:** `docs/architecture/` directory
+
+**Runbooks:**
+- **Purpose:** Step-by-step guides for common operational tasks
+- **Format:** Markdown files in `docs/runbooks/` directory
+- **Priority Runbooks:**
+  1. Monitoring Dead Letter Queues
+     - How to check DLQ in RabbitMQ
+     - What to look for (normal vs abnormal)
+     - How to reprocess failed jobs
+     - When to alert
+  2. Deploying services and workers
+     - Steps to deploy new version
+     - Rollback procedure
+     - Verification steps
+  3. Troubleshooting common issues
+     - Translation failures
+     - Queue backlogs
+     - Database connection issues
+     - Worker not processing jobs
+- **Structure:**
+  - When to use this runbook
+  - Prerequisites
+  - Step-by-step instructions
+  - Expected outcomes
+  - Troubleshooting tips
+
+**Component Documentation:**
+- **Purpose:** Explain what each component does and how it works
+- **Format:** One Markdown file per component in `docs/components/` directory
+- **Content per component:**
+  - Purpose and responsibilities
+  - Dependencies (what it needs)
+  - Configuration options
+  - How it interacts with other components
+  - Common issues and solutions
+- **Components to document:**
+  - Server (main API)
+  - Email Worker
+  - WhatsApp Worker
+  - Translation Worker
+  - Resume Worker
+  - Job Application Worker
+  - AI Service
+  - Creative Service
+
+**API Documentation:**
+- **Purpose:** How to use the APIs
+- **Format:** OpenAPI/Swagger specs or Markdown with examples
+- **Location:** `docs/api/` directory
+- **APIs to document:**
+  - Server API endpoints (REST)
+  - AI Service API (FastAPI)
+  - Creative Service API (FastAPI)
+- **Content:**
+  - Endpoint descriptions
+  - Request/response examples
+  - Error codes and meanings
+  - Authentication requirements
+  - Rate limiting (if applicable)
+
+**Development Guides:**
+- **Purpose:** How to work with the codebase
+- **Format:** Markdown files in `docs/development/` directory
+- **Guides to create:**
+  1. How to add a new domain
+     - File structure
+     - Required components (repository, service, handler)
+     - Testing requirements
+  2. How to add a new worker
+     - Worker structure
+     - Queue setup
+     - Configuration
+     - Testing
+  3. How to add a new service
+     - Service structure
+     - API endpoints
+     - Testing
+  4. Testing patterns
+     - Unit test patterns
+     - Integration test patterns
+     - Mocking strategies
+  5. Logging conventions
+     - When to log
+     - What to log
+     - Log levels
+  6. Error handling patterns
+     - Error types
+     - Error propagation
+     - Error responses
+
+**Documentation Structure:**
+```
+docs/
+├── adr/                    # Architecture Decision Records
+│   ├── 001-rabbitmq-redis-fallback.md
+│   ├── 002-standalone-workers.md
+│   ├── 003-structured-logging.md
+│   ├── 004-translation-worker.md
+│   └── 005-health-checks.md
+├── architecture/            # Architecture diagrams and descriptions
+│   ├── system-overview.md
+│   ├── component-interaction.md
+│   └── deployment.md
+├── runbooks/               # Operational runbooks
+│   ├── monitoring-dlq.md
+│   ├── deploying-services.md
+│   └── troubleshooting.md
+├── components/             # Component documentation
+│   ├── server.md
+│   ├── email-worker.md
+│   ├── whatsapp-worker.md
+│   ├── translation-worker.md
+│   ├── resume-worker.md
+│   ├── job-application-worker.md
+│   ├── ai-service.md
+│   └── creative-service.md
+├── api/                    # API documentation
+│   ├── server-api.md
+│   ├── ai-service-api.md
+│   └── creative-service-api.md
+└── development/           # Development guides
+    ├── adding-domain.md
+    ├── adding-worker.md
+    ├── adding-service.md
+    ├── testing-patterns.md
+    ├── logging-conventions.md
+    └── error-handling.md
+```
+
+**Best Practices:**
+- Keep documentation close to code (in repository)
+- Use Markdown for easy editing and version control
+- Include diagrams (Mermaid or images)
+- Keep it simple and focused
+- Update documentation when making significant changes
+- Link from README.md for discoverability
+- Use consistent formatting and structure
+- Include examples and code snippets
+- Keep runbooks actionable (step-by-step)
+- Review and update periodically
+
+**Implementation Priority:**
+1. **Phase 1 (Quick wins):**
+   - Architecture overview document
+   - 3-5 priority ADRs
+   - 2-3 critical runbooks
+2. **Phase 2 (Expansion):**
+   - Component documentation
+   - API documentation
+   - Development guides
+3. **Phase 3 (Maintenance):**
+   - Keep documentation updated
+   - Add new ADRs as decisions are made
+   - Expand runbooks as needed
