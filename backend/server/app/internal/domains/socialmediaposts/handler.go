@@ -22,6 +22,7 @@ type Handler interface {
 	GetPostByURL(c *fiber.Ctx) error
 	ListPosts(c *fiber.Ctx) error
 	DeletePost(c *fiber.Ctx) error
+	UpdatePostStatus(c *fiber.Ctx) error
 	UpdatePostEngagement(c *fiber.Ctx) error
 
 	// Link operations
@@ -56,18 +57,17 @@ func NewHandler(service Service, enricher *translationenricher.Enricher, transla
 // Payloads
 
 type createPostPayload struct {
-	URL            string     `json:"url"`
-	Platform       Platform   `json:"platform"`
-	Title          string     `json:"title,omitempty"`
-	ContentPreview string     `json:"contentPreview,omitempty"`
-	PublishedDate  *time.Time `json:"publishedDate,omitempty"`
+	Platform      Platform      `json:"platform"`
+	Format        ContentFormat `json:"format"`
+	Title         string        `json:"title"`
+	Content       string        `json:"content"`
+	ContentPostID *string       `json:"contentPostId,omitempty"`
 }
 
 type updatePostPayload struct {
-	Title          string      `json:"title,omitempty"`
-	ContentPreview string      `json:"contentPreview,omitempty"`
-	PublishedDate  *time.Time  `json:"publishedDate,omitempty"`
-	Status         *PostStatus `json:"status,omitempty"`
+	Title   *string     `json:"title,omitempty"`
+	Content *string     `json:"content,omitempty"`
+	Status  *PostStatus `json:"status,omitempty"`
 }
 
 type updateEngagementPayload struct {
@@ -101,12 +101,21 @@ func (h *handler) CreatePost(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	var contentPostID *uuid.UUID
+	if payload.ContentPostID != nil {
+		parsed, err := uuid.Parse(*payload.ContentPostID)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+		}
+		contentPostID = &parsed
+	}
+
 	post, err := h.service.CreatePost(c.Context(), CreatePostRequest{
-		URL:            payload.URL,
-		Platform:       payload.Platform,
-		Title:          payload.Title,
-		ContentPreview: payload.ContentPreview,
-		PublishedDate:  payload.PublishedDate,
+		Platform:      payload.Platform,
+		Format:        payload.Format,
+		Title:         payload.Title,
+		Content:       payload.Content,
+		ContentPostID: contentPostID,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -132,11 +141,10 @@ func (h *handler) UpdatePost(c *fiber.Ctx) error {
 	}
 
 	post, err := h.service.UpdatePost(c.Context(), UpdatePostRequest{
-		PostID:         postID,
-		Title:          payload.Title,
-		ContentPreview: payload.ContentPreview,
-		PublishedDate:  payload.PublishedDate,
-		Status:         payload.Status,
+		PostID:  postID,
+		Title:   payload.Title,
+		Content: payload.Content,
+		Status:  payload.Status,
 	})
 	if err != nil {
 		return h.handleError(c, err)
@@ -160,8 +168,8 @@ func (h *handler) GetPost(c *fiber.Ctx) error {
 	if h.enricher != nil {
 		language := translationsdomain.LanguageFromContext(c)
 		fieldMap := map[string]*string{
-			"title":         &post.Title,
-			"contentPreview": &post.ContentPreview,
+			"title":   &post.Title,
+			"content": &post.Content,
 		}
 		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSocialMediaPost, post.ID, language, fieldMap)
 	}
@@ -184,8 +192,8 @@ func (h *handler) GetPostByURL(c *fiber.Ctx) error {
 	if h.enricher != nil {
 		language := translationsdomain.LanguageFromContext(c)
 		fieldMap := map[string]*string{
-			"title":         &post.Title,
-			"contentPreview": &post.ContentPreview,
+			"title":   &post.Title,
+			"content": &post.Content,
 		}
 		_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSocialMediaPost, post.ID, language, fieldMap)
 	}
@@ -216,8 +224,8 @@ func (h *handler) ListPosts(c *fiber.Ctx) error {
 		language := translationsdomain.LanguageFromContext(c)
 		for i := range posts {
 			fieldMap := map[string]*string{
-				"title":         &posts[i].Title,
-				"contentPreview": &posts[i].ContentPreview,
+				"title":   &posts[i].Title,
+				"content": &posts[i].Content,
 			}
 			_ = h.enricher.EnrichEntityFields(c.Context(), translationsdomain.EntityTypeSocialMediaPost, posts[i].ID, language, fieldMap)
 		}
@@ -247,6 +255,32 @@ func (h *handler) DeletePost(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, fiber.StatusOK, fiber.Map{"message": "post deleted"})
+}
+
+func (h *handler) UpdatePostStatus(c *fiber.Ctx) error {
+	_, err := authdomain.UserIDFromContext(c)
+	if err != nil {
+		return unauthorizedResponse(c)
+	}
+
+	postID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	var payload struct {
+		Status PostStatus `json:"status"`
+	}
+	if err := c.BodyParser(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	post, err := h.service.UpdatePostStatus(c.Context(), postID, payload.Status)
+	if err != nil {
+		return h.handleError(c, err)
+	}
+
+	return response.Success(c, fiber.StatusOK, toPostResponse(post))
 }
 
 func (h *handler) UpdatePostEngagement(c *fiber.Ctx) error {
@@ -443,19 +477,26 @@ func (h *handler) GetEntitiesByPost(c *fiber.Ctx) error {
 // Response helpers
 
 type postResponse struct {
-	ID             string     `json:"id"`
-	URL            string     `json:"url"`
-	Platform       Platform   `json:"platform"`
-	Title          string     `json:"title,omitempty"`
-	ContentPreview string     `json:"contentPreview,omitempty"`
-	PublishedDate  *string    `json:"publishedDate,omitempty"`
-	Likes          *int64     `json:"likes,omitempty"`
-	Shares         *int64     `json:"shares,omitempty"`
-	Comments       *int64     `json:"comments,omitempty"`
-	Views          *int64     `json:"views,omitempty"`
-	Status         PostStatus `json:"status"`
-	CreatedAt      string     `json:"createdAt"`
-	UpdatedAt      string     `json:"updatedAt"`
+	ID             string      `json:"id"`
+	ContentPostID  *string     `json:"contentPostId,omitempty"`
+	Platform       Platform    `json:"platform"`
+	Format         ContentFormat `json:"format"`
+	Status         PostStatus  `json:"status"`
+	Title          string      `json:"title"`
+	Content        string      `json:"content"`
+	WordCount      int         `json:"wordCount"`
+	ImageCount     int         `json:"imageCount"`
+	ScheduledAt    *string     `json:"scheduledAt,omitempty"`
+	PostedAt       *string     `json:"postedAt,omitempty"`
+	AnalyzedAt     *string     `json:"analyzedAt,omitempty"`
+	URL            *string     `json:"url,omitempty"`
+	PlatformPostID string      `json:"platformPostId,omitempty"`
+	Likes          *int64      `json:"likes,omitempty"`
+	Shares         *int64      `json:"shares,omitempty"`
+	Comments       *int64      `json:"comments,omitempty"`
+	Views          *int64      `json:"views,omitempty"`
+	CreatedAt      string      `json:"createdAt"`
+	UpdatedAt      string      `json:"updatedAt"`
 }
 
 type linkResponse struct {
@@ -475,24 +516,49 @@ type postWithLinkResponse struct {
 }
 
 func toPostResponse(post *SocialMediaPost) postResponse {
-	var publishedDate *string
-	if post.PublishedDate != nil {
-		dateStr := post.PublishedDate.Format("2006-01-02T15:04:05Z07:00")
-		publishedDate = &dateStr
+	var contentPostID *string
+	if post.ContentPostID != nil {
+		idStr := post.ContentPostID.String()
+		contentPostID = &idStr
+	}
+
+	var scheduledAt *string
+	if post.ScheduledAt != nil {
+		dateStr := post.ScheduledAt.Format("2006-01-02T15:04:05Z07:00")
+		scheduledAt = &dateStr
+	}
+
+	var postedAt *string
+	if post.PostedAt != nil {
+		dateStr := post.PostedAt.Format("2006-01-02T15:04:05Z07:00")
+		postedAt = &dateStr
+	}
+
+	var analyzedAt *string
+	if post.AnalyzedAt != nil {
+		dateStr := post.AnalyzedAt.Format("2006-01-02T15:04:05Z07:00")
+		analyzedAt = &dateStr
 	}
 
 	return postResponse{
 		ID:             post.ID.String(),
-		URL:            post.URL,
+		ContentPostID:  contentPostID,
 		Platform:       post.Platform,
+		Format:         post.Format,
+		Status:         post.Status,
 		Title:          post.Title,
-		ContentPreview: post.ContentPreview,
-		PublishedDate:  publishedDate,
+		Content:        post.Content,
+		WordCount:      post.WordCount,
+		ImageCount:     post.ImageCount,
+		ScheduledAt:    scheduledAt,
+		PostedAt:       postedAt,
+		AnalyzedAt:     analyzedAt,
+		URL:            post.URL,
+		PlatformPostID: post.PlatformPostID,
 		Likes:          post.Likes,
 		Shares:         post.Shares,
 		Comments:       post.Comments,
 		Views:          post.Views,
-		Status:         post.Status,
 		CreatedAt:      post.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:      post.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}

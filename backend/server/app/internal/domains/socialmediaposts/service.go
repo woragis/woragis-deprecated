@@ -17,6 +17,7 @@ type Service interface {
 	GetPostByURL(ctx context.Context, url string) (*SocialMediaPost, error)
 	ListPosts(ctx context.Context, filters PostFilters) ([]SocialMediaPost, error)
 	DeletePost(ctx context.Context, postID uuid.UUID) error
+	UpdatePostStatus(ctx context.Context, postID uuid.UUID, status PostStatus) (*SocialMediaPost, error)
 	UpdatePostEngagement(ctx context.Context, postID uuid.UUID, req UpdateEngagementRequest) (*SocialMediaPost, error)
 
 	// Link operations
@@ -47,19 +48,18 @@ func NewService(repo Repository, logger *slog.Logger) Service {
 // Request payloads
 
 type CreatePostRequest struct {
-	URL            string     `json:"url"`
-	Platform       Platform   `json:"platform"`
-	Title          string     `json:"title,omitempty"`
-	ContentPreview string     `json:"contentPreview,omitempty"`
-	PublishedDate  *time.Time `json:"publishedDate,omitempty"`
+	Platform      Platform      `json:"platform"`
+	Format        ContentFormat `json:"format"`
+	Title         string         `json:"title"`
+	Content       string         `json:"content"`
+	ContentPostID *uuid.UUID     `json:"contentPostId,omitempty"` // For repurposing
 }
 
 type UpdatePostRequest struct {
-	PostID         uuid.UUID  `json:"-"`
-	Title          string     `json:"title,omitempty"`
-	ContentPreview string     `json:"contentPreview,omitempty"`
-	PublishedDate  *time.Time `json:"publishedDate,omitempty"`
-	Status         *PostStatus `json:"status,omitempty"`
+	PostID   uuid.UUID `json:"-"`
+	Title    *string   `json:"title,omitempty"`
+	Content  *string   `json:"content,omitempty"`
+	Status   *PostStatus `json:"status,omitempty"`
 }
 
 type UpdateEngagementRequest struct {
@@ -84,15 +84,14 @@ type UpdateLinkRequest struct {
 // Post operations
 
 func (s *service) CreatePost(ctx context.Context, req CreatePostRequest) (*SocialMediaPost, error) {
-	// Check if post with same URL already exists
-	existing, _ := s.repo.GetPostByURL(ctx, req.URL)
-	if existing != nil {
-		return nil, NewDomainError(ErrCodeConflict, ErrPostAlreadyExists)
-	}
-
-	post, err := NewSocialMediaPost(req.URL, req.Platform, req.Title, req.ContentPreview, req.PublishedDate)
+	post, err := NewSocialMediaPost(req.Platform, req.Format, req.Title, req.Content)
 	if err != nil {
 		return nil, err
+	}
+
+	// Link to content post if provided (for repurposing)
+	if req.ContentPostID != nil {
+		post.SetContentPostID(*req.ContentPostID)
 	}
 
 	if err := s.repo.CreatePost(ctx, post); err != nil {
@@ -108,21 +107,38 @@ func (s *service) UpdatePost(ctx context.Context, req UpdatePostRequest) (*Socia
 		return nil, err
 	}
 
-	if req.Title != "" {
-		post.Title = req.Title
+	if req.Title != nil {
+		if err := post.UpdateTitle(*req.Title); err != nil {
+			return nil, err
+		}
 	}
-	if req.ContentPreview != "" {
-		post.ContentPreview = req.ContentPreview
-	}
-	if req.PublishedDate != nil {
-		post.PublishedDate = req.PublishedDate
+	if req.Content != nil {
+		if err := post.UpdateContent(*req.Content); err != nil {
+			return nil, err
+		}
 	}
 	if req.Status != nil {
 		if err := post.UpdateStatus(*req.Status); err != nil {
 			return nil, err
 		}
 	}
-	post.UpdatedAt = time.Now().UTC()
+
+	if err := s.repo.UpdatePost(ctx, post); err != nil {
+		return nil, err
+	}
+
+	return post, nil
+}
+
+func (s *service) UpdatePostStatus(ctx context.Context, postID uuid.UUID, status PostStatus) (*SocialMediaPost, error) {
+	post, err := s.repo.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := post.UpdateStatus(status); err != nil {
+		return nil, err
+	}
 
 	if err := s.repo.UpdatePost(ctx, post); err != nil {
 		return nil, err

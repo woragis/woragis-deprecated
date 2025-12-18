@@ -125,7 +125,7 @@ func (r *gormRepository) ListPosts(ctx context.Context, filters PostFilters) ([]
 		query = query.Where("status = ?", *filters.Status)
 	}
 
-	if err := query.Order("published_date desc, created_at desc").Find(&posts).Error; err != nil {
+	if err := query.Order("posted_at desc nulls last, created_at desc").Find(&posts).Error; err != nil {
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return posts, nil
@@ -137,7 +137,7 @@ func (r *gormRepository) DeletePost(ctx context.Context, postID uuid.UUID) error
 	if err != nil {
 		return err
 	}
-	post.UpdateStatus(PostStatusDeleted)
+	post.UpdateStatus(PostStatusArchived)
 	return r.UpdatePost(ctx, post)
 }
 
@@ -221,7 +221,7 @@ func (r *gormRepository) GetPostsByEntity(ctx context.Context, entityType Entity
 		query = query.Where("social_media_entity_links.relationship_type = ?", *relationshipType)
 	}
 
-	if err := query.Order("social_media_posts.published_date desc, social_media_posts.created_at desc").Scan(&results).Error; err != nil {
+	if err := query.Order("social_media_posts.posted_at desc, social_media_posts.created_at desc").Scan(&results).Error; err != nil {
 		return nil, NewDomainError(ErrCodeRepositoryFailure, ErrUnableToFetch)
 	}
 	return results, nil

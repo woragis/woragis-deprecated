@@ -7,10 +7,14 @@ const (
 	ErrCodeInvalidPlatform         = 8001
 	ErrCodeInvalidEntityType       = 8002
 	ErrCodeInvalidRelationshipType = 8003
-	ErrCodeInvalidStatus          = 8004
+	ErrCodeInvalidStatus           = 8004
 	ErrCodeRepositoryFailure       = 8005
 	ErrCodeNotFound                = 8006
 	ErrCodeConflict                = 8007
+	ErrCodeInvalidFormat           = 8008
+	ErrCodeInvalidTitle            = 8009
+	ErrCodeInvalidContent          = 8010
+	ErrCodeInvalidStatusTransition = 8011
 )
 
 const (
@@ -20,14 +24,18 @@ const (
 	ErrEmptyLinkID              = "socialmediaposts: link id cannot be empty"
 	ErrEmptyURL                 = "socialmediaposts: url cannot be empty"
 	ErrEmptyEntityID            = "socialmediaposts: entity id cannot be empty"
+	ErrEmptyPostTitle           = "socialmediaposts: post title cannot be empty"
+	ErrEmptyPostContent         = "socialmediaposts: post content cannot be empty"
 	ErrPostNotFound             = "socialmediaposts: post not found"
 	ErrLinkNotFound             = "socialmediaposts: link not found"
 	ErrPostAlreadyExists        = "socialmediaposts: post with this url already exists"
 	ErrLinkAlreadyExists        = "socialmediaposts: link already exists"
 	ErrUnsupportedPlatform      = "socialmediaposts: unsupported platform"
+	ErrUnsupportedFormat        = "socialmediaposts: unsupported content format"
 	ErrUnsupportedEntityType    = "socialmediaposts: unsupported entity type"
 	ErrUnsupportedRelationshipType = "socialmediaposts: unsupported relationship type"
 	ErrUnsupportedStatus        = "socialmediaposts: unsupported status"
+	ErrInvalidStatusTransition  = "socialmediaposts: invalid status transition"
 	ErrUnableToPersist          = "socialmediaposts: unable to persist data"
 	ErrUnableToFetch            = "socialmediaposts: unable to fetch data"
 	ErrUnableToUpdate           = "socialmediaposts: unable to update data"
@@ -57,4 +65,3 @@ func AsDomainError(err error) (*DomainError, bool) {
 
 	return nil, false
 }
-
