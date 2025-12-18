@@ -84,6 +84,7 @@ require (
 	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect

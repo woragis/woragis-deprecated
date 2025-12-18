@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  test-database:
+    image: postgres:15-alpine
+    container_name: woragis-test-database
+    environment:
+      POSTGRES_DB: woragis_test
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    tmpfs:
+      - /var/lib/postgresql/data  # Use tmpfs for faster tests
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+
+  test-redis:
+    image: redis:7-alpine
+    container_name: woragis-test-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    command: ["redis-server", "--appendonly", "no"]
+
+  test-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: woragis-test-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: test
+      RABBITMQ_DEFAULT_PASS: test
+      RABBITMQ_DEFAULT_VHOST: test
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5673:5672"   # AMQP port
+      - "15673:15672" # Management UI
+    volumes:
+      - rabbitmq-test-data:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq-test-data:
