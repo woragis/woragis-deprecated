@@ -952,3 +952,629 @@ docs/
   - Test results
   - Issues found
   - Improvements made
+
+---
+
+## Senior Level Improvements (To Elevate to Sênior Completo/Pleno)
+
+### Advanced Observability & Monitoring
+
+#### Tasks
+- [ ] **Distributed Tracing Implementation**
+  - [ ] Implement OpenTelemetry SDK across all services (Go, Python, Node.js)
+  - [ ] Instrument HTTP requests (server and client)
+  - [ ] Instrument database queries with trace context
+  - [ ] Instrument queue operations (publish/consume) with trace context
+  - [ ] Instrument external API calls with trace context
+  - [ ] Propagate trace IDs across service boundaries (HTTP headers, RabbitMQ headers)
+  - [ ] Deploy Jaeger or Tempo for trace collection and visualization
+  - [ ] Create trace sampling strategy (100% in dev, 10% in prod)
+  - [ ] Integrate with existing trace ID logging
+  - [ ] Create trace correlation dashboards
+
+- [ ] **Advanced Metrics & Alerting**
+  - [ ] Implement business metrics (user signups, job applications processed, resumes generated)
+  - [ ] Implement SLO/SLI metrics (availability, latency, error rate)
+  - [ ] Set up Prometheus alerting rules (Alertmanager)
+  - [ ] Configure alert routing (PagerDuty, Slack, email)
+  - [ ] Create alert runbooks for each alert type
+  - [ ] Implement alert fatigue prevention (deduplication, grouping)
+  - [ ] Set up on-call rotation and escalation policies
+  - [ ] Implement error budget tracking and alerting
+  - [ ] Create anomaly detection for metrics (using Prometheus recording rules)
+
+- [ ] **Advanced Grafana Dashboards**
+  - [ ] Create service dependency graph dashboard
+  - [ ] Create user journey tracking dashboard
+  - [ ] Create cost per request dashboard
+  - [ ] Create queue depth trends dashboard
+  - [ ] Create database query performance dashboard
+  - [ ] Create external API dependency health dashboard
+  - [ ] Create circuit breaker state dashboard
+  - [ ] Create distributed trace explorer dashboard
+  - [ ] Set up dashboard templating for multi-environment views
+
+- [ ] **Log Aggregation & Analysis**
+  - [ ] Set up centralized log aggregation (Loki, ELK, or cloud-native solution)
+  - [ ] Implement log correlation across services (by trace ID, request ID)
+  - [ ] Create log-based alerting (critical errors, security events)
+  - [ ] Implement log retention policies
+  - [ ] Create log analysis queries for common troubleshooting scenarios
+  - [ ] Set up log sampling for high-volume services
+
+### Advanced Resilience & Reliability
+
+#### Tasks
+- [ ] **Chaos Engineering**
+  - [ ] Set up chaos engineering framework (Chaos Mesh, Litmus, or custom)
+  - [ ] Create chaos experiments for service failures
+  - [ ] Create chaos experiments for network latency
+  - [ ] Create chaos experiments for database failures
+  - [ ] Create chaos experiments for queue failures
+  - [ ] Schedule regular chaos experiments (weekly/monthly)
+  - [ ] Document chaos experiment results and improvements
+  - [ ] Create runbooks for chaos experiment recovery
+
+- [ ] **Advanced Circuit Breaker Patterns**
+  - [ ] Implement adaptive circuit breakers (adjust thresholds based on load)
+  - [ ] Implement circuit breaker metrics aggregation
+  - [ ] Create circuit breaker dashboard
+  - [ ] Implement circuit breaker fallback strategies (cached responses, default values)
+  - [ ] Test circuit breaker behavior under various failure scenarios
+  - [ ] Document circuit breaker best practices
+
+- [ ] **Rate Limiting & Throttling**
+  - [ ] Implement rate limiting at API gateway level
+  - [ ] Implement per-user rate limiting
+  - [ ] Implement per-IP rate limiting
+  - [ ] Implement adaptive rate limiting (slow down under load)
+  - [ ] Create rate limit metrics and dashboards
+  - [ ] Document rate limit policies and exceptions
+
+- [ ] **SLO/SLI Implementation**
+  - [ ] Define SLOs for critical user journeys
+  - [ ] Implement SLI metrics (availability, latency, error rate)
+  - [ ] Set up error budget tracking
+  - [ ] Create SLO dashboards
+  - [ ] Implement alerting when error budget is depleted
+  - [ ] Document SLO definitions and rationale
+  - [ ] Review and adjust SLOs quarterly
+
+### Advanced Testing Strategies
+
+#### Tasks
+- [ ] **Contract Testing**
+  - [ ] Implement contract testing between services (Pact or similar)
+  - [ ] Create contracts for Server → AI Service
+  - [ ] Create contracts for Server → Creative Service
+  - [ ] Create contracts for Server → Workers (via RabbitMQ)
+  - [ ] Integrate contract tests in CI/CD pipeline
+  - [ ] Set up contract testing broker
+
+- [ ] **End-to-End Testing**
+  - [ ] Create E2E test suite for critical user journeys
+  - [ ] Set up E2E test environment (staging)
+  - [ ] Implement E2E tests for job application flow
+  - [ ] Implement E2E tests for resume generation flow
+  - [ ] Implement E2E tests for translation flow
+  - [ ] Run E2E tests in CI/CD pipeline (nightly or on release)
+  - [ ] Create E2E test reports and dashboards
+
+- [ ] **Chaos Testing**
+  - [ ] Create automated chaos tests (service failures, network issues)
+  - [ ] Integrate chaos tests in CI/CD pipeline (optional stage)
+  - [ ] Document chaos test results and system behavior
+
+- [ ] **Performance Testing**
+  - [ ] Create performance test suite (load, stress, spike tests)
+  - [ ] Set up performance test environment
+  - [ ] Define performance benchmarks (RPS, latency, error rate)
+  - [ ] Run performance tests regularly (weekly/monthly)
+  - [ ] Create performance regression detection
+  - [ ] Document performance characteristics
+
+- [ ] **Security Testing**
+  - [ ] Implement security scanning in CI/CD (SAST, DAST)
+  - [ ] Set up dependency vulnerability scanning (Dependabot, Snyk)
+  - [ ] Create security test suite (OWASP Top 10)
+  - [ ] Implement secrets scanning
+  - [ ] Set up container image scanning
+  - [ ] Create security incident response plan
+
+### Advanced Architecture Patterns
+
+#### Tasks
+- [ ] **Event Sourcing (If Applicable)**
+  - [ ] Evaluate if event sourcing is needed for any domain
+  - [ ] Implement event store if needed
+  - [ ] Create event replay capabilities
+  - [ ] Document event sourcing patterns
+
+- [ ] **CQRS (If Applicable)**
+  - [ ] Evaluate if CQRS is needed for read-heavy domains
+  - [ ] Implement read models if needed
+  - [ ] Document CQRS patterns
+
+- [ ] **Saga Pattern (If Applicable)**
+  - [ ] Evaluate if saga pattern is needed for distributed transactions
+  - [ ] Implement saga orchestrator if needed
+  - [ ] Document saga patterns
+
+- [ ] **API Gateway**
+  - [ ] Evaluate need for API gateway (Kong, Traefik, Envoy)
+  - [ ] Implement API gateway if needed
+  - [ ] Centralize authentication/authorization
+  - [ ] Centralize rate limiting
+  - [ ] Centralize request/response transformation
+
+- [ ] **Service Mesh (If Applicable)**
+  - [ ] Evaluate need for service mesh (Istio, Linkerd)
+  - [ ] Implement service mesh if needed
+  - [ ] Enable mTLS between services
+  - [ ] Enable advanced traffic management
+
+### Advanced Security
+
+#### Tasks
+- [ ] **Security Hardening**
+  - [ ] Implement security headers (CSP, HSTS, X-Frame-Options)
+  - [ ] Implement input validation and sanitization
+  - [ ] Implement output encoding
+  - [ ] Set up WAF (Web Application Firewall) if needed
+  - [ ] Implement DDoS protection
+
+- [ ] **Secrets Management**
+  - [ ] Implement secrets rotation strategy
+  - [ ] Set up secrets management service (HashiCorp Vault, AWS Secrets Manager)
+  - [ ] Implement secrets rotation automation
+  - [ ] Document secrets management procedures
+
+- [ ] **Compliance & Auditing**
+  - [ ] Implement audit logging for sensitive operations
+  - [ ] Create compliance checklist (GDPR, SOC 2, etc.)
+  - [ ] Implement data retention policies
+  - [ ] Implement data deletion procedures (GDPR right to be forgotten)
+
+- [ ] **Dependency Management**
+  - [ ] Set up automated dependency updates (Dependabot)
+  - [ ] Create dependency update policy
+  - [ ] Implement dependency vulnerability scanning
+  - [ ] Document dependency management procedures
+
+### Advanced DevOps & Infrastructure
+
+#### Tasks
+- [ ] **GitOps**
+  - [ ] Evaluate GitOps approach (ArgoCD, Flux)
+  - [ ] Implement GitOps for infrastructure
+  - [ ] Implement GitOps for application deployments
+  - [ ] Document GitOps workflows
+
+- [ ] **Infrastructure as Code**
+  - [ ] Convert infrastructure to IaC (Terraform, Pulumi)
+  - [ ] Version control infrastructure changes
+  - [ ] Implement infrastructure testing
+  - [ ] Document infrastructure architecture
+
+- [ ] **Advanced CI/CD**
+  - [ ] Implement feature flags for gradual rollouts
+  - [ ] Implement canary deployments
+  - [ ] Implement blue-green deployments
+  - [ ] Implement automated rollback on failure
+  - [ ] Create deployment runbooks
+  - [ ] Implement deployment metrics (deployment frequency, lead time)
+
+- [ ] **Multi-Environment Strategy**
+  - [ ] Set up proper dev/staging/prod environments
+  - [ ] Implement environment promotion workflows
+  - [ ] Create environment-specific configurations
+  - [ ] Document environment management procedures
+
+### Advanced Performance & Optimization
+
+#### Tasks
+- [ ] **Performance Profiling**
+  - [ ] Set up continuous profiling (Parca, Pyroscope)
+  - [ ] Create performance profiling runbooks
+  - [ ] Implement performance regression detection
+  - [ ] Document performance optimization procedures
+
+- [ ] **Database Optimization**
+  - [ ] Implement database query profiling
+  - [ ] Create database index optimization strategy
+  - [ ] Implement connection pooling optimization
+  - [ ] Create database performance dashboards
+  - [ ] Document database optimization procedures
+
+- [ ] **Caching Strategy**
+  - [ ] Implement multi-level caching (L1: in-memory, L2: Redis)
+  - [ ] Implement cache warming strategies
+  - [ ] Create cache hit rate optimization
+  - [ ] Document caching patterns and strategies
+
+- [ ] **Resource Optimization**
+  - [ ] Implement resource profiling (CPU, memory, I/O)
+  - [ ] Create resource optimization strategy
+  - [ ] Implement auto-scaling based on custom metrics
+  - [ ] Document resource optimization procedures
+
+### Advanced Documentation & Knowledge Management
+
+#### Tasks
+- [ ] **Operational Runbooks**
+  - [ ] Create runbook for each alert type
+  - [ ] Create runbook for common incidents
+  - [ ] Create runbook for service recovery
+  - [ ] Create runbook for data recovery
+  - [ ] Keep runbooks updated and tested
+
+- [ ] **Incident Response**
+  - [ ] Create incident response playbook
+  - [ ] Set up incident management system (PagerDuty, Opsgenie)
+  - [ ] Create post-incident review process
+  - [ ] Document incident response procedures
+
+- [ ] **Knowledge Base**
+  - [ ] Create internal knowledge base (Confluence, Notion, or docs)
+  - [ ] Document common problems and solutions
+  - [ ] Document architecture decisions (ADRs)
+  - [ ] Create onboarding documentation for new team members
+
+- [ ] **API Documentation**
+  - [ ] Implement OpenAPI/Swagger for all APIs
+  - [ ] Create interactive API documentation
+  - [ ] Generate API client SDKs
+  - [ ] Keep API documentation updated
+
+### Advanced Scalability & Reliability
+
+#### Tasks
+- [ ] **Auto-Scaling**
+  - [ ] Implement HPA (Horizontal Pod Autoscaler) for all services
+  - [ ] Implement VPA (Vertical Pod Autoscaler) for resource optimization
+  - [ ] Implement custom metrics-based scaling
+  - [ ] Test auto-scaling under various load scenarios
+  - [ ] Document auto-scaling policies
+
+- [ ] **Load Balancing**
+  - [ ] Implement advanced load balancing strategies (least connections, weighted)
+  - [ ] Implement health check-based routing
+  - [ ] Implement session affinity if needed
+  - [ ] Document load balancing configuration
+
+- [ ] **Database Scaling**
+  - [ ] Implement read replicas for read-heavy workloads
+  - [ ] Implement connection pooling optimization
+  - [ ] Implement query result caching
+  - [ ] Evaluate database sharding if needed
+  - [ ] Document database scaling strategy
+
+- [ ] **Queue Scaling**
+  - [ ] Implement queue partitioning if needed
+  - [ ] Implement priority queues
+  - [ ] Implement queue monitoring and alerting
+  - [ ] Document queue scaling strategy
+
+### Advanced Cost Management
+
+#### Tasks
+- [ ] **Cost Optimization**
+  - [ ] Implement cost monitoring and alerting
+  - [ ] Create cost allocation by service/team
+  - [ ] Implement cost optimization recommendations
+  - [ ] Create cost dashboards
+  - [ ] Document cost optimization procedures
+
+- [ ] **Resource Right-Sizing**
+  - [ ] Implement continuous resource right-sizing
+  - [ ] Create resource optimization recommendations
+  - [ ] Implement spot instances for non-critical workloads
+  - [ ] Document resource right-sizing procedures
+
+### Advanced Data Management
+
+#### Tasks
+- [ ] **Data Archival**
+  - [ ] Implement data archival strategy for old data
+  - [ ] Create data retention policies
+  - [ ] Implement automated data archival
+  - [ ] Document data archival procedures
+
+- [ ] **Data Backup & Recovery**
+  - [ ] Implement automated database backups
+  - [ ] Implement point-in-time recovery
+  - [ ] Test backup restoration regularly
+  - [ ] Document backup and recovery procedures
+
+- [ ] **Data Privacy**
+  - [ ] Implement data encryption at rest
+  - [ ] Implement data encryption in transit
+  - [ ] Implement PII (Personally Identifiable Information) detection and masking
+  - [ ] Document data privacy procedures
+
+---
+
+## Distributed Tracing & Advanced Observability - Implementation Guide
+
+### What is Distributed Tracing?
+
+**Current State:**
+- You have `trace_id` in logs (correlation ID)
+- But traces are NOT connected across services
+- You can't see the full request journey: API → Server → Queue → Worker → External API
+
+**What Distributed Tracing Does:**
+- Tracks a request across ALL services it touches
+- Shows timing for each service call
+- Shows where bottlenecks are
+- Shows which service failed in a chain
+- Correlates logs, metrics, and traces together
+
+**Example Flow:**
+```
+User Request → Server → AI Service → Queue → Resume Worker → Database
+     ↓           ↓          ↓          ↓          ↓            ↓
+   Trace      Trace      Trace      Trace      Trace        Trace
+   Span       Span       Span       Span       Span         Span
+```
+
+### How to Implement Distributed Tracing
+
+#### Option 1: OpenTelemetry + Jaeger (Recommended)
+
+**Architecture:**
+```
+Your Services → OpenTelemetry SDK → OTLP Collector → Jaeger Backend → Jaeger UI
+```
+
+**Components Needed:**
+1. **OpenTelemetry SDK** (in your code) - No new frontend needed
+2. **OTLP Collector** (optional, but recommended) - Separate service
+3. **Jaeger Backend** - Separate service (collects and stores traces)
+4. **Jaeger UI** - Web interface (separate service, but accessed via URL)
+
+**Deployment Options:**
+
+**Option A: Railway (Easiest)**
+- Deploy Jaeger as a Railway service
+- Access Jaeger UI via Railway URL (e.g., `jaeger.yourdomain.com` or Railway-provided URL)
+- No subdomain needed if using Railway URLs
+- Subdomain needed if you want `jaeger.woragis.com`
+
+**Option B: Docker Compose (Local/Dev)**
+- Run Jaeger in docker-compose
+- Access via `http://localhost:16686` (Jaeger UI port)
+- No subdomain needed
+
+**Option C: Kubernetes (Production)**
+- Deploy Jaeger as Kubernetes service
+- Access via Ingress (e.g., `jaeger.woragis.com`)
+- Subdomain needed
+
+**What You Need to Do:**
+
+1. **Add OpenTelemetry SDK to each service:**
+   - Go services: `go.opentelemetry.io/otel`
+   - Python services: `opentelemetry` package
+   - Node.js services: `@opentelemetry/api`
+
+2. **Instrument your code:**
+   - HTTP requests (automatic with middleware)
+   - Database queries (automatic with GORM/ORM plugins)
+   - Queue operations (add trace context to RabbitMQ headers)
+   - External API calls (automatic with HTTP client wrappers)
+
+3. **Deploy Jaeger:**
+   - Single Docker container or Railway service
+   - Exposes UI on port 16686
+   - Stores traces in memory (or persistent storage)
+
+4. **Configure trace context propagation:**
+   - HTTP headers: `traceparent`, `tracestate` (W3C standard)
+   - RabbitMQ headers: Add trace context to message headers
+   - Database: Not needed (traces are separate from DB)
+
+**No New Frontend Needed:**
+- Jaeger UI is a pre-built web interface
+- You access it via browser (like Prometheus UI)
+- It's a separate service, but not a "frontend" you build
+
+**Subdomain Needed?**
+- **For Railway:** No, use Railway-provided URL
+- **For Production:** Yes, if you want `jaeger.woragis.com`
+- **For Local Dev:** No, use `localhost:16686`
+
+### Advanced Observability (Grafana)
+
+**What Grafana Does:**
+- Visualizes Prometheus metrics (dashboards)
+- Shows traces from Jaeger (trace explorer)
+- Shows logs from Loki (log viewer)
+- All in one place
+
+**Architecture:**
+```
+Prometheus (metrics) ──┐
+Jaeger (traces) ───────┼──→ Grafana (visualization)
+Loki (logs) ───────────┘
+```
+
+**Components Needed:**
+1. **Prometheus** - Already have metrics, need to deploy Prometheus server
+2. **Grafana** - Web interface for dashboards
+3. **Loki** (optional) - Log aggregation (if you want logs in Grafana)
+
+**Deployment Options:**
+
+**Option A: Railway (Easiest)**
+- Deploy Grafana as Railway service
+- Deploy Prometheus as Railway service (or use managed Prometheus)
+- Access Grafana via Railway URL
+- No subdomain needed initially
+
+**Option B: Docker Compose (Local/Dev)**
+- Run Grafana + Prometheus in docker-compose
+- Access Grafana via `http://localhost:3000`
+- No subdomain needed
+
+**Option C: Kubernetes (Production)**
+- Deploy Grafana + Prometheus as Kubernetes services
+- Access via Ingress (e.g., `grafana.woragis.com`)
+- Subdomain needed
+
+**What You Need to Do:**
+
+1. **Deploy Prometheus:**
+   - Configure Prometheus to scrape all your services' `/metrics` endpoints
+   - Prometheus pulls metrics (you don't push)
+
+2. **Deploy Grafana:**
+   - Connect Grafana to Prometheus (data source)
+   - Connect Grafana to Jaeger (data source, optional)
+   - Create dashboards (pre-built or custom)
+
+3. **Configure Service Discovery:**
+   - Tell Prometheus where your services are
+   - Static config (list of URLs) or dynamic (Kubernetes service discovery)
+
+**No New Frontend Needed:**
+- Grafana is a pre-built web interface
+- You access it via browser
+- You create dashboards in Grafana UI (no coding)
+
+**Subdomain Needed?**
+- **For Railway:** No, use Railway-provided URL
+- **For Production:** Yes, if you want `grafana.woragis.com` or `monitoring.woragis.com`
+- **For Local Dev:** No, use `localhost:3000`
+
+### Complete Observability Stack
+
+**Recommended Stack:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Your Services                        │
+│  (Server, Workers, AI Service, Creative Service)        │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │ Prometheus   │  │ OpenTelemetry│  │ Structured   │ │
+│  │ Metrics      │  │ Traces       │  │ Logs         │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
+         │                    │                    │
+         ▼                    ▼                    ▼
+┌─────────────────────────────────────────────────────────┐
+│              Observability Backend                       │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │ Prometheus   │  │ Jaeger       │  │ Loki         │ │
+│  │ Server       │  │ Backend      │  │ (optional)   │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+└─────────────────────────────────────────────────────────┘
+         │                    │                    │
+         └────────────────────┴────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │    Grafana      │
+                    │  (One UI for     │
+                    │   Everything)    │
+                    └─────────────────┘
+```
+
+### Implementation Phases
+
+**Phase 1: Distributed Tracing (2-3 weeks)**
+1. Add OpenTelemetry SDK to all services
+2. Instrument HTTP, DB, Queue operations
+3. Deploy Jaeger (Railway or Docker)
+4. Test trace collection
+5. Access Jaeger UI
+
+**Phase 2: Prometheus Deployment (1 week)**
+1. Deploy Prometheus server
+2. Configure service discovery
+3. Verify metrics collection
+4. Test Prometheus UI
+
+**Phase 3: Grafana Dashboards (1-2 weeks)**
+1. Deploy Grafana
+2. Connect to Prometheus
+3. Connect to Jaeger (optional)
+4. Create dashboards
+5. Set up alerts
+
+**Phase 4: Log Aggregation (Optional, 1-2 weeks)**
+1. Deploy Loki
+2. Configure log shipping
+3. Connect Loki to Grafana
+4. Create log dashboards
+
+### Cost Considerations
+
+**Railway:**
+- Jaeger: ~$5-10/month (small instance)
+- Prometheus: ~$5-10/month (small instance)
+- Grafana: ~$5/month (small instance)
+- **Total: ~$15-25/month**
+
+**Self-Hosted (Docker/Kubernetes):**
+- Just compute costs (if you have infrastructure)
+- Storage costs for trace/metric retention
+
+### Security Considerations
+
+**Access Control:**
+- Grafana: Set up authentication (OAuth, LDAP, or basic auth)
+- Jaeger: Usually no auth (internal network only)
+- Prometheus: Usually no auth (internal network only)
+
+**Network:**
+- All observability services should be internal (not public)
+- Access via VPN or Railway's private network
+- Or use authentication if public
+
+### Summary
+
+**Do you need a new frontend?**
+- **No** - Jaeger and Grafana are pre-built web UIs
+- You access them via browser (like Prometheus UI)
+- You configure dashboards in their UIs (no coding)
+
+**Do you need a subdomain?**
+- **For Railway:** No, use Railway-provided URLs
+- **For Production:** Yes, if you want custom domains (`monitoring.woragis.com`)
+- **For Local Dev:** No, use `localhost`
+
+**What you need to build:**
+- Instrumentation code (OpenTelemetry SDK in your services)
+- Configuration files (Prometheus config, Grafana data sources)
+- No new frontend application
+
+**Deployment:**
+- Deploy as separate services (Railway, Docker, or Kubernetes)
+- They run alongside your application services
+- They don't affect your main application
+
+---
+
+## Immediate Next Steps (Current Sprint)
+
+### Build & Deployment
+- [ ] Rebuild server with socialmediaposts domain enabled (v0.0.1)
+- [ ] Build and push all remaining services (translation-worker, whatsapp-worker, job-application-worker, resume-worker, ai-service, creative-service, docs-service) as v0.0.1
+- [ ] Test build workflow end-to-end locally
+- [ ] Update build-all.yml workflow to include docs-service
+- [ ] Test integration tests with socialmediaposts enabled
+- [ ] Set up Railway connection testing locally
+- [ ] Verify Railway deployment workflow
+
+### Testing
+- [ ] Run all integration tests with socialmediaposts enabled
+- [ ] Verify TestSocialMediaPostsAPI passes
+- [ ] Run performance tests for all services
+- [ ] Verify all tests pass in CI/CD
+
+### Documentation
+- [ ] Update build workflow documentation
+- [ ] Document Railway setup and testing procedures
+- [ ] Update deployment runbooks
