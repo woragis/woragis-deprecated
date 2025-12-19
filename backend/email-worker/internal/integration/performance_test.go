@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -21,21 +22,37 @@ import (
 	"github.com/woragis/backend/email-worker/internal/sender"
 )
 
+// setupRabbitMQConnectionForBenchmark creates a RabbitMQ connection for benchmarks
+func setupRabbitMQConnectionForBenchmark(b *testing.B) *queue.Connection {
+	rabbitmqURL := os.Getenv("RABBITMQ_URL")
+	if rabbitmqURL == "" {
+		rabbitmqURL = "amqp://test:test@localhost:5673/test"
+	}
+	conn, err := queue.NewConnection(rabbitmqURL)
+	if err != nil {
+		b.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	return conn
+}
+
 // BenchmarkEmailWorkerThroughput benchmarks email worker throughput
 func BenchmarkEmailWorkerThroughput(b *testing.B) {
-	conn := setupRabbitMQConnection(b)
+	conn := setupRabbitMQConnectionForBenchmark(b)
 	defer conn.Close()
 
 	queueName := fmt.Sprintf("bench.emails.queue.%d", time.Now().Unix())
 	exchange := fmt.Sprintf("bench.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "bench.emails.send"
 
-	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
-	require.NoError(b, err)
-
 	ch := conn.Channel()
 	defer ch.Close()
+
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
+	// Create queue
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
+	require.NoError(b, err)
 
 	// Setup mock sender
 	mockSender := &mockSender{
@@ -113,8 +130,11 @@ func TestEmailWorkerLoadTest(t *testing.T) {
 	exchange := fmt.Sprintf("load.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "load.emails.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -228,8 +248,11 @@ func TestEmailWorkerConcurrentConsumers(t *testing.T) {
 	exchange := fmt.Sprintf("concurrent.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "concurrent.emails.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -321,8 +344,11 @@ func TestEmailWorkerLatency(t *testing.T) {
 	exchange := fmt.Sprintf("latency.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "latency.emails.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -438,8 +464,11 @@ func TestEmailWorkerRateLimiting(t *testing.T) {
 	exchange := fmt.Sprintf("ratelimit.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "ratelimit.emails.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()

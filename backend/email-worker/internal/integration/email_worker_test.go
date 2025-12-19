@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -58,7 +59,8 @@ func TestEmailWorkerQueueSetup(t *testing.T) {
 	exchange := "test.woragis.notifications"
 	routingKey := "test.emails.send"
 
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err, "Failed to create email queue")
 
 	// Verify queue exists
@@ -83,7 +85,8 @@ func TestEmailWorkerMessagePublish(t *testing.T) {
 	routingKey := "test.emails.send"
 
 	// Create queue
-	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -130,8 +133,11 @@ func TestEmailWorkerMessageConsume(t *testing.T) {
 	exchange := "test.woragis.notifications.consume"
 	routingKey := "test.emails.send.consume"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -216,8 +222,11 @@ func TestEmailWorkerInvalidMessage(t *testing.T) {
 	exchange := "test.woragis.notifications.invalid"
 	routingKey := "test.emails.send.invalid"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -268,8 +277,11 @@ func TestEmailWorkerRetryOnFailure(t *testing.T) {
 	exchange := "test.woragis.notifications.retry"
 	routingKey := "test.emails.send.retry"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -339,8 +351,11 @@ func TestEmailWorkerMultipleMessages(t *testing.T) {
 	exchange := "test.woragis.notifications.multiple"
 	routingKey := "test.emails.send.multiple"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	emailQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
