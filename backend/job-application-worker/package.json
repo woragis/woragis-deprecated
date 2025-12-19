@@ -24,6 +24,7 @@
     "amqplib": "^0.10.9",
     "axios": "^1.6.2",
     "dotenv": "^16.3.1",
+    "ioredis": "^5.8.2",
     "pg": "^8.11.3",
     "playwright": "^1.40.0",
     "prom-client": "^15.1.3"
