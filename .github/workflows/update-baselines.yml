@@ -23,7 +23,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: woragis_test
           POSTGRES_USER: postgres
@@ -37,7 +37,7 @@ jobs:
           --health-retries 5
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7-alpine
         ports:
           - 6380:6379
         options: >-
@@ -47,7 +47,7 @@ jobs:
           --health-retries 5
 
       rabbitmq:
-        image: rabbitmq:${{ env.RABBITMQ_VERSION }}
+        image: rabbitmq:3.13-management-alpine
         env:
           RABBITMQ_DEFAULT_USER: test
           RABBITMQ_DEFAULT_PASS: test
