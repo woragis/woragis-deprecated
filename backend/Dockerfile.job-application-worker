@@ -3,13 +3,13 @@ FROM node:20-bookworm AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY job-application-worker/package.json job-application-worker/package-lock.json ./
 
 # Install dependencies
 RUN npm ci --only=production
 
 # Copy application code
-COPY . ./
+COPY job-application-worker/ ./
 
 FROM node:20-bookworm-slim AS runtime
 
