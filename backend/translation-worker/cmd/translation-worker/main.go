@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/woragis/backend/translation-worker/internal/config"
 	"github.com/woragis/backend/translation-worker/internal/database"
 	"github.com/woragis/backend/translation-worker/internal/queue"
