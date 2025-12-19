@@ -7,9 +7,38 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 )
+
+// SocialMediaPostRepository is an interface to avoid import cycle with parent package.
+type SocialMediaPostRepository interface {
+	GetPost(ctx context.Context, postID uuid.UUID) (*SocialMediaPost, error)
+	CreatePost(ctx context.Context, post *SocialMediaPost) error
+}
+
+// SocialMediaPostService is an interface to avoid import cycle with parent package.
+type SocialMediaPostService interface {
+	CreatePost(ctx context.Context, req CreateSocialMediaPostRequest) (*SocialMediaPost, error)
+}
+
+// SocialMediaPost represents a social media post (duplicated from parent to avoid import cycle).
+type SocialMediaPost struct {
+	ID            uuid.UUID
+	Platform      Platform
+	Format        ContentFormat
+	Title         string
+	Content       string
+	Status        string
+	ContentPostID *uuid.UUID
+}
+
+// CreateSocialMediaPostRequest is a request to create a social media post (duplicated from parent to avoid import cycle).
+type CreateSocialMediaPostRequest struct {
+	Platform      Platform
+	Format        ContentFormat
+	Title         string
+	Content       string
+	ContentPostID *uuid.UUID
+}
 
 // Service orchestrates content post repurposing workflows.
 type Service interface {
@@ -18,21 +47,21 @@ type Service interface {
 	ListContentPosts(ctx context.Context, filters ContentPostFilters) ([]ContentPost, error)
 	GetContentBacklog(ctx context.Context) ([]ContentPost, error)
 	UpdateContentPostPriority(ctx context.Context, contentPostID uuid.UUID, priority ContentPostPriority) (*ContentPost, error)
-	RepurposeToPlatforms(ctx context.Context, contentPostID uuid.UUID, req RepurposeRequest) ([]*socialmediaposts.SocialMediaPost, error)
+	RepurposeToPlatforms(ctx context.Context, contentPostID uuid.UUID, req RepurposeRequest) ([]*SocialMediaPost, error)
 	GetRepurposingHistory(ctx context.Context, contentPostID uuid.UUID) ([]RepurposingHistoryItem, error)
 }
 
 type service struct {
 	repo              Repository
-	socialPostsRepo   socialmediaposts.Repository
-	socialPostsService socialmediaposts.Service
+	socialPostsRepo   SocialMediaPostRepository
+	socialPostsService SocialMediaPostService
 	logger            *slog.Logger
 }
 
 var _ Service = (*service)(nil)
 
 // NewService constructs a Service.
-func NewService(repo Repository, socialPostsRepo socialmediaposts.Repository, socialPostsService socialmediaposts.Service, logger *slog.Logger) Service {
+func NewService(repo Repository, socialPostsRepo SocialMediaPostRepository, socialPostsService SocialMediaPostService, logger *slog.Logger) Service {
 	return &service{
 		repo:              repo,
 		socialPostsRepo:   socialPostsRepo,
@@ -55,20 +84,20 @@ type RepurposeRequest struct {
 }
 
 type RepurposePlatform struct {
-	Platform socialmediaposts.Platform      `json:"platform"`
-	Format   socialmediaposts.ContentFormat `json:"format"`
-	Title    string                         `json:"title"`
-	Content  string                         `json:"content"`
+	Platform Platform      `json:"platform"`
+	Format   ContentFormat `json:"format"`
+	Title    string        `json:"title"`
+	Content  string        `json:"content"`
 }
 
 type ContentPostWithSocialPosts struct {
 	ContentPost
-	SocialPosts []socialmediaposts.SocialMediaPost `json:"socialPosts"`
+	SocialPosts []SocialMediaPost `json:"socialPosts"`
 }
 
 type RepurposingHistoryItem struct {
-	SocialPost socialmediaposts.SocialMediaPost `json:"socialPost"`
-	RepurposedAt time.Time                      `json:"repurposedAt"`
+	SocialPost  SocialMediaPost `json:"socialPost"`
+	RepurposedAt time.Time      `json:"repurposedAt"`
 }
 
 // CreateContentPostFromBackend creates a content post from an existing backend post.
@@ -118,7 +147,7 @@ func (s *service) GetContentPost(ctx context.Context, contentPostID uuid.UUID) (
 	}
 
 	// Fetch social posts
-	socialPosts := make([]socialmediaposts.SocialMediaPost, 0, len(repurposings))
+	socialPosts := make([]SocialMediaPost, 0, len(repurposings))
 	for _, rep := range repurposings {
 		socialPost, err := s.socialPostsRepo.GetPost(ctx, rep.SocialPostID)
 		if err != nil {
@@ -163,7 +192,7 @@ func (s *service) UpdateContentPostPriority(ctx context.Context, contentPostID u
 }
 
 // RepurposeToPlatforms creates social media posts for multiple platforms from a content post.
-func (s *service) RepurposeToPlatforms(ctx context.Context, contentPostID uuid.UUID, req RepurposeRequest) ([]*socialmediaposts.SocialMediaPost, error) {
+func (s *service) RepurposeToPlatforms(ctx context.Context, contentPostID uuid.UUID, req RepurposeRequest) ([]*SocialMediaPost, error) {
 	contentPost, err := s.repo.GetContentPost(ctx, contentPostID)
 	if err != nil {
 		return nil, err
@@ -179,12 +208,12 @@ func (s *service) RepurposeToPlatforms(ctx context.Context, contentPostID uuid.U
 		}
 	}
 
-	createdPosts := make([]*socialmediaposts.SocialMediaPost, 0, len(req.Platforms))
+	createdPosts := make([]*SocialMediaPost, 0, len(req.Platforms))
 	contentPostIDPtr := &contentPostID
 
 	for _, platform := range req.Platforms {
 		// Create social media post
-		socialPost, err := s.socialPostsService.CreatePost(ctx, socialmediaposts.CreatePostRequest{
+		socialPost, err := s.socialPostsService.CreatePost(ctx, CreateSocialMediaPostRequest{
 			Platform:      platform.Platform,
 			Format:        platform.Format,
 			Title:         platform.Title,
@@ -251,7 +280,7 @@ func (s *service) GetRepurposingHistory(ctx context.Context, contentPostID uuid.
 
 // AdaptContentForPlatform adapts content for a specific platform and format.
 // This is a placeholder - in a real implementation, this would use AI/ML to adapt content.
-func AdaptContentForPlatform(originalContent string, platform socialmediaposts.Platform, format socialmediaposts.ContentFormat) (title, content string) {
+func AdaptContentForPlatform(originalContent string, platform Platform, format ContentFormat) (title, content string) {
 	// Simple adaptation logic - in production, this would be more sophisticated
 	title = extractTitle(originalContent)
 	content = adaptContentLength(originalContent, platform, format)
@@ -285,7 +314,7 @@ func extractTitle(content string) string {
 	return "Untitled"
 }
 
-func adaptContentLength(content string, platform socialmediaposts.Platform, format socialmediaposts.ContentFormat) string {
+func adaptContentLength(content string, platform Platform, format ContentFormat) string {
 	// Simple truncation based on platform/format
 	maxLength := getMaxLengthForPlatform(platform, format)
 	if len(content) <= maxLength {
@@ -301,24 +330,24 @@ func adaptContentLength(content string, platform socialmediaposts.Platform, form
 	return truncated + "..."
 }
 
-func getMaxLengthForPlatform(platform socialmediaposts.Platform, format socialmediaposts.ContentFormat) int {
+func getMaxLengthForPlatform(platform Platform, format ContentFormat) int {
 	// Character limits by platform and format
 	switch platform {
-	case socialmediaposts.PlatformTwitter:
-		if format == socialmediaposts.FormatThread {
+	case PlatformTwitter:
+		if format == FormatThread {
 			return 280 * 10 // Thread can have multiple tweets
 		}
 		return 280
-	case socialmediaposts.PlatformLinkedIn:
-		if format == socialmediaposts.FormatLongForm {
+	case PlatformLinkedIn:
+		if format == FormatLongForm {
 			return 3000
 		}
 		return 1300
-	case socialmediaposts.PlatformInstagram:
+	case PlatformInstagram:
 		return 2200
-	case socialmediaposts.PlatformMedium:
+	case PlatformMedium:
 		return 10000
-	case socialmediaposts.PlatformSubstack:
+	case PlatformSubstack:
 		return 50000
 	default:
 		return 2000

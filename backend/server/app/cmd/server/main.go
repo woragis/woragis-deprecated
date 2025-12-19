@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -55,6 +56,11 @@ import (
 	aimlintegrationsdomain "github.com/woragis/backend/server/app/internal/domains/aimlintegrations"
 	technicalwritingsdomain "github.com/woragis/backend/server/app/internal/domains/technicalwritings"
 	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
+	socialmediapostsanalytics "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/analytics"
+	socialmediapostsassets "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/assets"
+	socialmediapostscontent "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/content"
+	socialmediapostsplatforms "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/platforms"
+	socialmediapostsscheduling "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/scheduling"
 	jobapplicationsdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications"
 	jobapplicationresponsesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/responses"
 	jobapplicationstagesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/interviewstages"
@@ -249,7 +255,7 @@ func main() {
 	app.Get("/healthz", healthChecker.Handler())
 
 	// Prometheus metrics endpoint (before API routes, no auth required)
-	app.Get("/metrics", promhttp.Handler())
+	app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	api := app.Group("/api")
 
@@ -491,6 +497,44 @@ func main() {
 	socialMediaPostRepo := socialmediapostsdomain.NewGormRepository(db)
 	socialMediaPostService := socialmediapostsdomain.NewService(socialMediaPostRepo, slogLogger)
 	socialMediaPostHandler := socialmediapostsdomain.NewHandler(socialMediaPostService, translationEnricher, translationService, slogLogger)
+	
+	// Initialize subdomain services and handlers
+	// Platforms subdomain
+	platformsRepo := socialmediapostsplatforms.NewGormRepository(db)
+	platformsService := socialmediapostsplatforms.NewService(platformsRepo, slogLogger)
+	platformsHandler := socialmediapostsplatforms.NewHandler(platformsService, slogLogger)
+	
+	// Content subdomain (needs social media post repo and service as adapters)
+	contentRepo := socialmediapostscontent.NewGormRepository(db)
+	contentService := socialmediapostscontent.NewService(
+		contentRepo,
+		socialMediaPostRepo, // Adapter: Repository implements SocialMediaPostRepository interface
+		socialMediaPostService, // Adapter: Service implements SocialMediaPostService interface
+		slogLogger,
+	)
+	contentHandler := socialmediapostscontent.NewHandler(contentService, slogLogger)
+	
+	// Scheduling subdomain
+	schedulingRepo := socialmediapostsscheduling.NewGormRepository(db)
+	schedulingService := socialmediapostsscheduling.NewService(
+		schedulingRepo,
+		socialMediaPostRepo,
+		socialMediaPostService,
+		platformsService,
+		slogLogger,
+	)
+	schedulingHandler := socialmediapostsscheduling.NewHandler(schedulingService, slogLogger)
+	
+	// Analytics subdomain
+	analyticsRepo := socialmediapostsanalytics.NewGormRepository(db)
+	analyticsService := socialmediapostsanalytics.NewService(analyticsRepo, slogLogger)
+	analyticsHandler := socialmediapostsanalytics.NewHandler(analyticsService, slogLogger)
+	
+	// Assets subdomain
+	assetsRepo := socialmediapostsassets.NewGormRepository(db)
+	assetsService := socialmediapostsassets.NewService(assetsRepo, slogLogger)
+	assetsHandler := socialmediapostsassets.NewHandler(assetsService, slogLogger)
+	
 	socialMediaPostsGroup := api.Group("/social-media-posts")
 	socialMediaPostsGroup.Use(translationsdomain.LanguageMiddleware()) // Add language detection middleware
 	socialMediaPostsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
@@ -498,7 +542,15 @@ func main() {
 		authdomain.NewAuthMiddleware(jwtManager, slogLogger),
 		slogLogger,
 	))
-	socialmediapostsdomain.SetupRoutes(socialMediaPostsGroup, socialMediaPostHandler)
+	socialmediapostsdomain.SetupRoutes(
+		socialMediaPostsGroup,
+		socialMediaPostHandler,
+		platformsHandler,
+		contentHandler,
+		schedulingHandler,
+		analyticsHandler,
+		assetsHandler,
+	)
 
 	// Creative Assets: Initialize service and client
 	creativeClient := creativeservice.NewClient(os.Getenv("CREATIVE_SERVICE_URL"), slogLogger)
@@ -1078,6 +1130,12 @@ func migrate(db *gorm.DB) error {
 		&interestsdomain.Interest{},
 		&socialmediapostsdomain.SocialMediaPost{},
 		&socialmediapostsdomain.SocialMediaEntityLink{},
+		&socialmediapostscontent.ContentPost{},
+		&socialmediapostscontent.ContentRepurposing{},
+		&socialmediapostsplatforms.PlatformConfig{},
+		&socialmediapostsscheduling.ScheduledPost{},
+		&socialmediapostsanalytics.PostAnalytics{},
+		&socialmediapostsassets.ContentAsset{},
 		&apikeysdomain.APIKey{},
 		&postsdomain.Post{},
 		&postsdomain.PostSkill{},

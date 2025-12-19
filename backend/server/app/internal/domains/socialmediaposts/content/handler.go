@@ -7,8 +7,32 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	"github.com/woragis/backend/server/app/pkg/response"
+)
+
+// Platform represents the social media platform (duplicated from parent to avoid import cycle).
+type Platform string
+
+const (
+	PlatformLinkedIn  Platform = "linkedin"
+	PlatformTwitter   Platform = "twitter"
+	PlatformInstagram Platform = "instagram"
+	PlatformMedium    Platform = "medium"
+	PlatformSubstack  Platform = "substack"
+	PlatformValete    Platform = "valete"
+	PlatformWebsite   Platform = "website"
+)
+
+// ContentFormat represents the format of the social media post content (duplicated from parent to avoid import cycle).
+type ContentFormat string
+
+const (
+	FormatLongForm   ContentFormat = "long-form"
+	FormatThread     ContentFormat = "thread"
+	FormatCarousel   ContentFormat = "carousel"
+	FormatArticle    ContentFormat = "article"
+	FormatNewsletter ContentFormat = "newsletter"
+	FormatPost       ContentFormat = "post"
 )
 
 // Handler exposes content post endpoints.
@@ -196,8 +220,8 @@ func (h *handler) RepurposeToPlatforms(c *fiber.Ctx) error {
 	platforms := make([]RepurposePlatform, len(payload.Platforms))
 	for i, p := range payload.Platforms {
 		platforms[i] = RepurposePlatform{
-			Platform: socialmediaposts.Platform(p.Platform),
-			Format:   socialmediaposts.ContentFormat(p.Format),
+			Platform: Platform(p.Platform),
+			Format:   ContentFormat(p.Format),
 			Title:    p.Title,
 			Content:  p.Content,
 		}

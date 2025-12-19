@@ -49,6 +49,7 @@ require (
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
+	github.com/gofiber/adaptor/v2 v2.2.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect

@@ -302,10 +302,85 @@ func TestCaseStudiesAPI(t *testing.T) {
 }
 
 // TestSocialMediaPostsAPI tests the Social Media Posts API endpoints
-// Note: This test is skipped if social media posts routes are not set up in test app
 func TestSocialMediaPostsAPI(t *testing.T) {
-	t.Skip("Social Media Posts requires subdomain handlers setup - skipping for now")
-	// TODO: Set up social media posts with all subdomain handlers for full testing
+	db := testutil.SetupTestDB(t)
+	defer testutil.CleanupTestDB(t, db)
+
+	redis := testutil.SetupTestRedis(t)
+	defer testutil.CleanupTestRedis(t, redis)
+
+	app := setupTestAppWithRoutes(t, db, redis)
+	_, token := createTestUserAndToken(t, db)
+
+	// Create a social media post
+	createReq := map[string]interface{}{
+		"platform": "linkedin",
+		"format":   "post",
+		"title":    "Test Social Media Post",
+		"content":  "This is a test social media post content",
+	}
+
+	body, _ := json.Marshal(createReq)
+	req := httptest.NewRequest("POST", "/api/social-media-posts", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var post map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&post)
+	require.NoError(t, err)
+	assert.NotNil(t, post["id"])
+	assert.Equal(t, "linkedin", post["platform"])
+	assert.Equal(t, "post", post["format"])
+	postID := post["id"].(string)
+
+	// Get post by ID
+	req = httptest.NewRequest("GET", "/api/social-media-posts/"+postID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// List posts
+	req = httptest.NewRequest("GET", "/api/social-media-posts", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Update post
+	updateReq := map[string]interface{}{
+		"title": "Updated Social Media Post Title",
+	}
+	body, _ = json.Marshal(updateReq)
+	req = httptest.NewRequest("PATCH", "/api/social-media-posts/"+postID, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Update post status
+	statusReq := map[string]interface{}{
+		"status": "ready",
+	}
+	body, _ = json.Marshal(statusReq)
+	req = httptest.NewRequest("PATCH", "/api/social-media-posts/"+postID+"/status", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Delete post
+	req = httptest.NewRequest("DELETE", "/api/social-media-posts/"+postID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 // TestCertificationsRelationships tests certification relationships (skills, entities)

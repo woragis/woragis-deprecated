@@ -30,6 +30,12 @@ import (
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
 	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
 	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
+	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
+	socialmediapostsanalytics "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/analytics"
+	socialmediapostsassets "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/assets"
+	socialmediapostscontent "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/content"
+	socialmediapostsplatforms "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/platforms"
+	socialmediapostsscheduling "github.com/woragis/backend/server/app/internal/domains/socialmediaposts/scheduling"
 	creativeservice "github.com/woragis/backend/server/app/internal/services/creative"
 	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
@@ -615,14 +621,58 @@ func setupTestAppWithRoutes(t *testing.T, db *gorm.DB, redisClient *redis.Client
 	casestudiesdomain.SetupRoutes(caseStudiesGroup, caseStudyHandler)
 	
 	// Setup Social Media Posts domain
-	// Note: This requires subdomain handlers, but for tests we'll skip it for now
-	// as it requires additional setup. The main CRUD endpoints can be tested separately.
-	// socialMediaPostRepo := socialmediapostsdomain.NewGormRepository(db)
-	// socialMediaPostService := socialmediapostsdomain.NewService(socialMediaPostRepo, logger)
-	// socialMediaPostHandler := socialmediapostsdomain.NewHandler(socialMediaPostService, translationEnricher, translationService, logger)
-	// ... (subdomain handlers setup would go here)
-	// socialMediaPostsGroup := api.Group("/social-media-posts")
-	// socialmediapostsdomain.SetupRoutes(socialMediaPostsGroup, socialMediaPostHandler, ...)
+	socialMediaPostRepo := socialmediapostsdomain.NewGormRepository(db)
+	socialMediaPostService := socialmediapostsdomain.NewService(socialMediaPostRepo, logger)
+	socialMediaPostHandler := socialmediapostsdomain.NewHandler(socialMediaPostService, translationEnricher, translationService, logger)
+	
+	// Initialize subdomain services and handlers
+	platformsRepo := socialmediapostsplatforms.NewGormRepository(db)
+	platformsService := socialmediapostsplatforms.NewService(platformsRepo, logger)
+	platformsHandler := socialmediapostsplatforms.NewHandler(platformsService, logger)
+	
+	contentRepo := socialmediapostscontent.NewGormRepository(db)
+	contentService := socialmediapostscontent.NewService(
+		contentRepo,
+		socialMediaPostRepo,
+		socialMediaPostService,
+		logger,
+	)
+	contentHandler := socialmediapostscontent.NewHandler(contentService, logger)
+	
+	schedulingRepo := socialmediapostsscheduling.NewGormRepository(db)
+	schedulingService := socialmediapostsscheduling.NewService(
+		schedulingRepo,
+		socialMediaPostRepo,
+		socialMediaPostService,
+		platformsService,
+		logger,
+	)
+	schedulingHandler := socialmediapostsscheduling.NewHandler(schedulingService, logger)
+	
+	analyticsRepo := socialmediapostsanalytics.NewGormRepository(db)
+	analyticsService := socialmediapostsanalytics.NewService(analyticsRepo, logger)
+	analyticsHandler := socialmediapostsanalytics.NewHandler(analyticsService, logger)
+	
+	assetsRepo := socialmediapostsassets.NewGormRepository(db)
+	assetsService := socialmediapostsassets.NewService(assetsRepo, logger)
+	assetsHandler := socialmediapostsassets.NewHandler(assetsService, logger)
+	
+	socialMediaPostsGroup := api.Group("/social-media-posts")
+	socialMediaPostsGroup.Use(translationsdomain.LanguageMiddleware())
+	socialMediaPostsGroup.Use(apikeysdomain.RequireAPIKeyOrAuth(
+		apiKeyService,
+		authdomain.NewAuthMiddleware(jwtManager, logger),
+		logger,
+	))
+	socialmediapostsdomain.SetupRoutes(
+		socialMediaPostsGroup,
+		socialMediaPostHandler,
+		platformsHandler,
+		contentHandler,
+		schedulingHandler,
+		analyticsHandler,
+		assetsHandler,
+	)
 	
 	// Setup health check
 	healthChecker := apphealth.NewHealthChecker(db, redisClient, logger)
