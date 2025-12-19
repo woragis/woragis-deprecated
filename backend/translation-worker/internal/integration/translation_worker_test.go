@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/woragis/backend/translation-worker/internal/database"
 	"github.com/woragis/backend/translation-worker/internal/queue"
-	"github.com/woragis/backend/translation-worker/internal/translator"
 )
 
 // mockTranslator is a mock translator for testing
@@ -70,7 +70,8 @@ func TestTranslationWorkerQueueSetup(t *testing.T) {
 	exchange := "test.woragis.translations"
 	routingKey := "test.translations.process"
 
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err, "Failed to create translation queue")
 
 	// Verify queue exists
@@ -95,7 +96,8 @@ func TestTranslationWorkerMessagePublish(t *testing.T) {
 	routingKey := "test.translations.process.publish"
 
 	// Create queue
-	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -149,7 +151,8 @@ func TestTranslationWorkerMessageConsume(t *testing.T) {
 	routingKey := "test.translations.process.consume"
 
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -290,7 +293,8 @@ func TestTranslationWorkerInvalidMessage(t *testing.T) {
 	routingKey := "test.translations.process.invalid"
 
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -342,7 +346,8 @@ func TestTranslationWorkerRetryOnFailure(t *testing.T) {
 	routingKey := "test.translations.process.retry"
 
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -413,7 +418,8 @@ func TestTranslationWorkerMultipleLanguages(t *testing.T) {
 	routingKey := "test.translations.process.multilang"
 
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()

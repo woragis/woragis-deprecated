@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -22,19 +23,48 @@ import (
 	"github.com/woragis/backend/translation-worker/internal/queue"
 )
 
+// setupRabbitMQConnectionForBenchmark creates a RabbitMQ connection for benchmarks
+func setupRabbitMQConnectionForBenchmark(b *testing.B) *queue.Connection {
+	rabbitmqURL := os.Getenv("RABBITMQ_URL")
+	if rabbitmqURL == "" {
+		rabbitmqURL = "amqp://test:test@localhost:5673/test"
+	}
+	conn, err := queue.NewConnection(rabbitmqURL)
+	if err != nil {
+		b.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	return conn
+}
+
+// setupDatabaseForBenchmark creates a database repository for benchmarks
+func setupDatabaseForBenchmark(b *testing.B) database.Repository {
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable"
+	}
+	repo, err := database.NewRepository(dbURL, nil)
+	if err != nil {
+		b.Fatalf("Failed to create database repository: %v", err)
+	}
+	return repo
+}
+
 // BenchmarkTranslationWorkerThroughput benchmarks translation worker throughput
 func BenchmarkTranslationWorkerThroughput(b *testing.B) {
-	conn := setupRabbitMQConnection(b)
+	conn := setupRabbitMQConnectionForBenchmark(b)
 	defer conn.Close()
 
-	dbRepo := setupDatabase(b)
+	dbRepo := setupDatabaseForBenchmark(b)
 
 	queueName := fmt.Sprintf("bench.translations.queue.%d", time.Now().Unix())
 	exchange := fmt.Sprintf("bench.woragis.translations.%d", time.Now().Unix())
 	routingKey := "bench.translations.process"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(b, err)
 
 	ch := conn.Channel()
@@ -139,8 +169,11 @@ func TestTranslationWorkerLoadTest(t *testing.T) {
 	exchange := fmt.Sprintf("load.woragis.translations.%d", time.Now().Unix())
 	routingKey := "load.translations.process"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -288,8 +321,11 @@ func TestTranslationWorkerMultiLanguageLoad(t *testing.T) {
 	exchange := fmt.Sprintf("multilang.woragis.translations.%d", time.Now().Unix())
 	routingKey := "multilang.translations.process"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, nil)
+	translationQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, 1, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()

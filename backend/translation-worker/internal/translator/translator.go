@@ -311,10 +311,24 @@ type LibreTranslator struct {
 	retryDelay int
 	logger     *slog.Logger
 	client     *http.Client
+	cb         *gobreaker.CircuitBreaker
 }
 
 // NewLibreTranslator creates a new LibreTranslate client.
 func NewLibreTranslator(apiURL, apiKey string, timeout, maxRetries, retryDelay int, logger *slog.Logger) *LibreTranslator {
+	// Create circuit breaker for LibreTranslate API
+	cbConfig := appcircuitbreaker.DefaultConfig("libretranslate", logger)
+	cbConfig.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+		if logger != nil {
+			logger.Info("circuit breaker state changed",
+				slog.String("name", name),
+				slog.String("from", from.String()),
+				slog.String("to", to.String()),
+			)
+		}
+	}
+	cb := appcircuitbreaker.NewCircuitBreaker(cbConfig)
+
 	return &LibreTranslator{
 		apiURL:     apiURL,
 		apiKey:     apiKey,
@@ -325,6 +339,7 @@ func NewLibreTranslator(apiURL, apiKey string, timeout, maxRetries, retryDelay i
 		client: &http.Client{
 			Timeout: time.Duration(timeout) * time.Second,
 		},
+		cb: cb,
 	}
 }
 
