@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -20,17 +21,33 @@ import (
 	"github.com/woragis/backend/whatsapp-worker/internal/queue"
 )
 
+// setupRabbitMQConnectionForBenchmark creates a RabbitMQ connection for benchmarks
+func setupRabbitMQConnectionForBenchmark(b *testing.B) *queue.Connection {
+	rabbitmqURL := os.Getenv("RABBITMQ_URL")
+	if rabbitmqURL == "" {
+		rabbitmqURL = "amqp://test:test@localhost:5673/test"
+	}
+	conn, err := queue.NewConnection(rabbitmqURL)
+	if err != nil {
+		b.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	return conn
+}
+
 // BenchmarkWhatsAppWorkerThroughput benchmarks WhatsApp worker throughput
 func BenchmarkWhatsAppWorkerThroughput(b *testing.B) {
-	conn := setupRabbitMQConnection(b)
+	conn := setupRabbitMQConnectionForBenchmark(b)
 	defer conn.Close()
 
 	queueName := fmt.Sprintf("bench.whatsapp.queue.%d", time.Now().Unix())
 	exchange := fmt.Sprintf("bench.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "bench.whatsapp.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(b, err)
 
 	ch := conn.Channel()
@@ -109,8 +126,11 @@ func TestWhatsAppWorkerLoadTest(t *testing.T) {
 	exchange := fmt.Sprintf("load.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "load.whatsapp.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -222,8 +242,11 @@ func TestWhatsAppWorkerConcurrentConsumers(t *testing.T) {
 	exchange := fmt.Sprintf("concurrent.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "concurrent.whatsapp.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -312,8 +335,11 @@ func TestWhatsAppWorkerLatency(t *testing.T) {
 	exchange := fmt.Sprintf("latency.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "latency.whatsapp.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -421,8 +447,11 @@ func TestWhatsAppWorkerRateLimiting(t *testing.T) {
 	exchange := fmt.Sprintf("ratelimit.woragis.notifications.%d", time.Now().Unix())
 	routingKey := "ratelimit.whatsapp.send"
 
+	// Create logger for queue
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()

@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -70,7 +71,8 @@ func TestWhatsAppWorkerQueueSetup(t *testing.T) {
 	exchange := "test.woragis.notifications"
 	routingKey := "test.whatsapp.send"
 
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err, "Failed to create WhatsApp queue")
 
 	// Verify queue exists
@@ -95,7 +97,8 @@ func TestWhatsAppWorkerMessagePublish(t *testing.T) {
 	routingKey := "test.whatsapp.send.publish"
 
 	// Create queue
-	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	_, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -141,7 +144,8 @@ func TestWhatsAppWorkerMessageConsume(t *testing.T) {
 	routingKey := "test.whatsapp.send.consume"
 
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -224,7 +228,8 @@ func TestWhatsAppWorkerInvalidMessage(t *testing.T) {
 	routingKey := "test.whatsapp.send.invalid"
 
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -276,7 +281,8 @@ func TestWhatsAppWorkerMissingDestination(t *testing.T) {
 	routingKey := "test.whatsapp.send.nodest"
 
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -338,7 +344,8 @@ func TestWhatsAppWorkerRetryOnFailure(t *testing.T) {
 	routingKey := "test.whatsapp.send.retry"
 
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
@@ -403,7 +410,8 @@ func TestWhatsAppWorkerMultipleMessages(t *testing.T) {
 	routingKey := "test.whatsapp.send.multiple"
 
 	// Create queue
-	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, nil)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	whatsappQueue, err := queue.NewQueue(conn, queueName, exchange, routingKey, logger)
 	require.NoError(t, err)
 
 	ch := conn.Channel()
