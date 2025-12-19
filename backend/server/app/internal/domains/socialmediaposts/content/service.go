@@ -18,6 +18,7 @@ type SocialMediaPostRepository interface {
 // SocialMediaPostService is an interface to avoid import cycle with parent package.
 type SocialMediaPostService interface {
 	CreatePost(ctx context.Context, req CreateSocialMediaPostRequest) (*SocialMediaPost, error)
+	GetPost(ctx context.Context, postID uuid.UUID) (*SocialMediaPost, error)
 }
 
 // SocialMediaPost represents a social media post (duplicated from parent to avoid import cycle).

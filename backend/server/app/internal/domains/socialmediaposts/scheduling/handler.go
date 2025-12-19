@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -233,7 +232,7 @@ func (h *handler) AutoSchedule(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	platform := socialmediaposts.Platform(payload.Platform)
+	platform := Platform(payload.Platform)
 	schedule, err := h.service.AutoSchedule(c.Context(), socialPostID, platform)
 	if err != nil {
 		return h.handleError(c, err)

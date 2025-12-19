@@ -7,8 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
-
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 )
 
 // Repository defines persistence operations for platform configurations.
@@ -16,7 +14,7 @@ type Repository interface {
 	CreateConfig(ctx context.Context, config *PlatformConfig) error
 	UpdateConfig(ctx context.Context, config *PlatformConfig) error
 	GetConfig(ctx context.Context, configID uuid.UUID) (*PlatformConfig, error)
-	GetConfigByName(ctx context.Context, name socialmediaposts.Platform) (*PlatformConfig, error)
+	GetConfigByName(ctx context.Context, name Platform) (*PlatformConfig, error)
 	ListConfigs(ctx context.Context, activeOnly bool) ([]PlatformConfig, error)
 	DeleteConfig(ctx context.Context, configID uuid.UUID) error
 }
@@ -70,7 +68,7 @@ func (r *gormRepository) GetConfig(ctx context.Context, configID uuid.UUID) (*Pl
 	return &config, nil
 }
 
-func (r *gormRepository) GetConfigByName(ctx context.Context, name socialmediaposts.Platform) (*PlatformConfig, error) {
+func (r *gormRepository) GetConfigByName(ctx context.Context, name Platform) (*PlatformConfig, error) {
 	var config PlatformConfig
 	err := r.db.WithContext(ctx).Where("name = ?", name).First(&config).Error
 	if err != nil {

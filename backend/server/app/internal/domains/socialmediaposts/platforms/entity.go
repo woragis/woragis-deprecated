@@ -7,14 +7,37 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
+)
+
+// Platform represents the social media platform (duplicated from parent to avoid import cycle).
+type Platform string
+
+const (
+	PlatformLinkedIn  Platform = "linkedin"
+	PlatformTwitter   Platform = "twitter"
+	PlatformInstagram Platform = "instagram"
+	PlatformMedium    Platform = "medium"
+	PlatformSubstack  Platform = "substack"
+	PlatformValete    Platform = "valete"
+	PlatformWebsite   Platform = "website"
+)
+
+// ContentFormat represents the format of the social media post content (duplicated from parent to avoid import cycle).
+type ContentFormat string
+
+const (
+	FormatLongForm   ContentFormat = "long-form"
+	FormatThread     ContentFormat = "thread"
+	FormatCarousel   ContentFormat = "carousel"
+	FormatArticle    ContentFormat = "article"
+	FormatNewsletter ContentFormat = "newsletter"
+	FormatPost       ContentFormat = "post"
 )
 
 // PlatformConfig represents configuration for a social media platform.
 type PlatformConfig struct {
 	ID               uuid.UUID                    `gorm:"column:id;type:uuid;primaryKey" json:"id"`
-	Name             socialmediaposts.Platform     `gorm:"column:name;type:varchar(20);not null;uniqueIndex" json:"name"`
+	Name             Platform                     `gorm:"column:name;type:varchar(20);not null;uniqueIndex" json:"name"`
 	DisplayName      string                       `gorm:"column:display_name;type:varchar(100);not null" json:"displayName"`
 	PostingFrequency *int                         `gorm:"column:posting_frequency;type:integer" json:"postingFrequency,omitempty"` // Posts per week
 	BestDays         datatypes.JSON               `gorm:"column:best_days;type:jsonb" json:"bestDays,omitempty"`                    // Array of day names
@@ -32,7 +55,7 @@ func (PlatformConfig) TableName() string {
 }
 
 // NewPlatformConfig creates a new platform configuration.
-func NewPlatformConfig(name socialmediaposts.Platform, displayName string, supportedFormats []socialmediaposts.ContentFormat) (*PlatformConfig, error) {
+func NewPlatformConfig(name Platform, displayName string, supportedFormats []ContentFormat) (*PlatformConfig, error) {
 	config := &PlatformConfig{
 		ID:               uuid.New(),
 		Name:             name,
@@ -88,7 +111,7 @@ func (p *PlatformConfig) SetBestTimes(times []string) {
 }
 
 // SetSupportedFormats updates the supported content formats.
-func (p *PlatformConfig) SetSupportedFormats(formats []socialmediaposts.ContentFormat) {
+func (p *PlatformConfig) SetSupportedFormats(formats []ContentFormat) {
 	p.SupportedFormats = datatypes.JSON(mustMarshalJSON(formats))
 	p.UpdatedAt = time.Now().UTC()
 }
@@ -101,12 +124,12 @@ func (p *PlatformConfig) SetActive(active bool) {
 
 // Validation helpers
 
-func isValidPlatform(p socialmediaposts.Platform) bool {
+func isValidPlatform(p Platform) bool {
 	switch p {
-	case socialmediaposts.PlatformLinkedIn, socialmediaposts.PlatformTwitter,
-		socialmediaposts.PlatformInstagram, socialmediaposts.PlatformMedium,
-		socialmediaposts.PlatformSubstack, socialmediaposts.PlatformValete,
-		socialmediaposts.PlatformWebsite:
+	case PlatformLinkedIn, PlatformTwitter,
+		PlatformInstagram, PlatformMedium,
+		PlatformSubstack, PlatformValete,
+		PlatformWebsite:
 		return true
 	}
 	return false

@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	"github.com/woragis/backend/server/app/pkg/response"
 )
 
@@ -43,7 +42,7 @@ type updateConfigPayload struct {
 	PostingFrequency *int                           `json:"postingFrequency,omitempty"`
 	BestDays         []string                       `json:"bestDays,omitempty"`
 	BestTimes        []string                       `json:"bestTimes,omitempty"`
-	SupportedFormats []socialmediaposts.ContentFormat `json:"supportedFormats,omitempty"`
+	SupportedFormats []ContentFormat `json:"supportedFormats,omitempty"`
 	IsActive         *bool                          `json:"isActive,omitempty"`
 }
 
@@ -80,7 +79,7 @@ func (h *handler) GetConfig(c *fiber.Ctx) error {
 }
 
 func (h *handler) GetConfigByName(c *fiber.Ctx) error {
-	platformName := socialmediaposts.Platform(c.Params("name"))
+	platformName := Platform(c.Params("name"))
 	if platformName == "" {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -126,7 +125,7 @@ func (h *handler) UpdateConfig(c *fiber.Ctx) error {
 }
 
 func (h *handler) GetOptimalTimes(c *fiber.Ctx) error {
-	platformName := socialmediaposts.Platform(c.Params("name"))
+	platformName := Platform(c.Params("name"))
 	if platformName == "" {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
@@ -143,12 +142,12 @@ func (h *handler) GetOptimalTimes(c *fiber.Ctx) error {
 
 type configResponse struct {
 	ID               string                        `json:"id"`
-	Name             socialmediaposts.Platform     `json:"name"`
-	DisplayName      string                        `json:"displayName"`
-	PostingFrequency *int                         `json:"postingFrequency,omitempty"`
-	BestDays         []string                      `json:"bestDays,omitempty"`
-	BestTimes        []string                      `json:"bestTimes,omitempty"`
-	SupportedFormats []socialmediaposts.ContentFormat `json:"supportedFormats"`
+	Name             Platform      `json:"name"`
+	DisplayName      string        `json:"displayName"`
+	PostingFrequency *int          `json:"postingFrequency,omitempty"`
+	BestDays         []string      `json:"bestDays,omitempty"`
+	BestTimes        []string      `json:"bestTimes,omitempty"`
+	SupportedFormats []ContentFormat `json:"supportedFormats"`
 	IsActive         bool                          `json:"isActive"`
 	CreatedAt        string                        `json:"createdAt"`
 	UpdatedAt        string                        `json:"updatedAt"`
@@ -166,7 +165,7 @@ func toConfigResponse(config *PlatformConfig) configResponse {
 	}
 
 	// Parse supported formats
-	var formats []socialmediaposts.ContentFormat
+	var formats []ContentFormat
 	if len(config.SupportedFormats) > 0 {
 		_ = json.Unmarshal(config.SupportedFormats, &formats)
 	}

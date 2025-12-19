@@ -11,12 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/websocket/v2"
-	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
@@ -172,6 +173,181 @@ func (a *jobApplicationServiceForResponsesAdapter) GetJobApplication(ctx context
 	return &jobapplicationresponsesdomain.JobApplication{
 		ID:       app.ID,
 		ResumeID: app.ResumeID,
+	}, nil
+}
+
+// Adapter types to bridge parent package types with subdomain types (to avoid import cycles)
+
+// Content subdomain adapters
+type contentRepositoryAdapter struct {
+	repo socialmediapostsdomain.Repository
+}
+
+func (a *contentRepositoryAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostscontent.SocialMediaPost, error) {
+	post, err := a.repo.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostscontent.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostscontent.Platform(post.Platform),
+		Format:        socialmediapostscontent.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+	}, nil
+}
+
+func (a *contentRepositoryAdapter) CreatePost(ctx context.Context, post *socialmediapostscontent.SocialMediaPost) error {
+	parentPost := &socialmediapostsdomain.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsdomain.Platform(post.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        socialmediapostsdomain.PostStatus(post.Status),
+		ContentPostID: post.ContentPostID,
+	}
+	return a.repo.CreatePost(ctx, parentPost)
+}
+
+type contentServiceAdapter struct {
+	service socialmediapostsdomain.Service
+}
+
+func (a *contentServiceAdapter) CreatePost(ctx context.Context, req socialmediapostscontent.CreateSocialMediaPostRequest) (*socialmediapostscontent.SocialMediaPost, error) {
+	parentPost, err := a.service.CreatePost(ctx, socialmediapostsdomain.CreatePostRequest{
+		Platform:      socialmediapostsdomain.Platform(req.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(req.Format),
+		Title:         req.Title,
+		Content:       req.Content,
+		ContentPostID: req.ContentPostID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostscontent.SocialMediaPost{
+		ID:            parentPost.ID,
+		Platform:      socialmediapostscontent.Platform(parentPost.Platform),
+		Format:        socialmediapostscontent.ContentFormat(parentPost.Format),
+		Title:         parentPost.Title,
+		Content:       parentPost.Content,
+		Status:        string(parentPost.Status),
+		ContentPostID: parentPost.ContentPostID,
+	}, nil
+}
+
+func (a *contentServiceAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostscontent.SocialMediaPost, error) {
+	post, err := a.service.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostscontent.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostscontent.Platform(post.Platform),
+		Format:        socialmediapostscontent.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+	}, nil
+}
+
+// Scheduling subdomain adapters
+type schedulingRepositoryAdapter struct {
+	repo socialmediapostsdomain.Repository
+}
+
+func (a *schedulingRepositoryAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostsscheduling.SocialMediaPost, error) {
+	post, err := a.repo.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostsscheduling.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsscheduling.Platform(post.Platform),
+		Format:        string(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}, nil
+}
+
+func (a *schedulingRepositoryAdapter) CreatePost(ctx context.Context, post *socialmediapostsscheduling.SocialMediaPost) error {
+	parentPost := &socialmediapostsdomain.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsdomain.Platform(post.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        socialmediapostsdomain.PostStatus(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}
+	return a.repo.CreatePost(ctx, parentPost)
+}
+
+func (a *schedulingRepositoryAdapter) UpdatePost(ctx context.Context, post *socialmediapostsscheduling.SocialMediaPost) error {
+	parentPost := &socialmediapostsdomain.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsdomain.Platform(post.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        socialmediapostsdomain.PostStatus(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}
+	return a.repo.UpdatePost(ctx, parentPost)
+}
+
+type schedulingServiceAdapter struct {
+	service socialmediapostsdomain.Service
+}
+
+func (a *schedulingServiceAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostsscheduling.SocialMediaPost, error) {
+	post, err := a.service.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostsscheduling.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsscheduling.Platform(post.Platform),
+		Format:        string(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}, nil
+}
+
+func (a *schedulingServiceAdapter) UpdatePost(ctx context.Context, req socialmediapostsscheduling.UpdateSocialMediaPostRequest) (*socialmediapostsscheduling.SocialMediaPost, error) {
+	updateReq := socialmediapostsdomain.UpdatePostRequest{
+		PostID:  req.PostID,
+		Title:   req.Title,
+		Content: req.Content,
+	}
+	if req.Status != nil {
+		status := socialmediapostsdomain.PostStatus(*req.Status)
+		updateReq.Status = &status
+	}
+	post, err := a.service.UpdatePost(ctx, updateReq)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostsscheduling.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsscheduling.Platform(post.Platform),
+		Format:        string(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
 	}, nil
 }
 
@@ -506,20 +682,26 @@ func main() {
 	
 	// Content subdomain (needs social media post repo and service as adapters)
 	contentRepo := socialmediapostscontent.NewGormRepository(db)
+	// Create adapters to convert between parent types and content subdomain types
+	contentRepoAdapter := &contentRepositoryAdapter{repo: socialMediaPostRepo}
+	contentServiceAdapter := &contentServiceAdapter{service: socialMediaPostService}
 	contentService := socialmediapostscontent.NewService(
 		contentRepo,
-		socialMediaPostRepo, // Adapter: Repository implements SocialMediaPostRepository interface
-		socialMediaPostService, // Adapter: Service implements SocialMediaPostService interface
+		contentRepoAdapter,
+		contentServiceAdapter,
 		slogLogger,
 	)
 	contentHandler := socialmediapostscontent.NewHandler(contentService, slogLogger)
 	
 	// Scheduling subdomain
 	schedulingRepo := socialmediapostsscheduling.NewGormRepository(db)
+	// Create adapters to convert between parent types and scheduling subdomain types
+	schedulingRepoAdapter := &schedulingRepositoryAdapter{repo: socialMediaPostRepo}
+	schedulingServiceAdapter := &schedulingServiceAdapter{service: socialMediaPostService}
 	schedulingService := socialmediapostsscheduling.NewService(
 		schedulingRepo,
-		socialMediaPostRepo,
-		socialMediaPostService,
+		schedulingRepoAdapter,
+		schedulingServiceAdapter,
 		platformsService,
 		slogLogger,
 	)

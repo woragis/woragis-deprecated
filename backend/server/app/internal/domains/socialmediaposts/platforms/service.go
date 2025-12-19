@@ -7,18 +7,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 )
 
 // Service orchestrates platform configuration workflows.
 type Service interface {
 	InitializeDefaultPlatforms(ctx context.Context) error
 	GetConfig(ctx context.Context, configID uuid.UUID) (*PlatformConfig, error)
-	GetConfigByName(ctx context.Context, name socialmediaposts.Platform) (*PlatformConfig, error)
+	GetConfigByName(ctx context.Context, name Platform) (*PlatformConfig, error)
 	ListConfigs(ctx context.Context, activeOnly bool) ([]PlatformConfig, error)
 	UpdateConfig(ctx context.Context, req UpdateConfigRequest) (*PlatformConfig, error)
-	GetOptimalTimes(ctx context.Context, name socialmediaposts.Platform) (*OptimalTimesResponse, error)
+	GetOptimalTimes(ctx context.Context, name Platform) (*OptimalTimesResponse, error)
 }
 
 type service struct {
@@ -44,12 +42,12 @@ type UpdateConfigRequest struct {
 	PostingFrequency *int                           `json:"postingFrequency,omitempty"`
 	BestDays         []string                       `json:"bestDays,omitempty"`
 	BestTimes        []string                       `json:"bestTimes,omitempty"`
-	SupportedFormats []socialmediaposts.ContentFormat `json:"supportedFormats,omitempty"`
+	SupportedFormats []ContentFormat `json:"supportedFormats,omitempty"`
 	IsActive         *bool                          `json:"isActive,omitempty"`
 }
 
 type OptimalTimesResponse struct {
-	Platform        socialmediaposts.Platform `json:"platform"`
+	Platform        Platform `json:"platform"`
 	BestDays        []string                  `json:"bestDays,omitempty"`
 	BestTimes       []string                  `json:"bestTimes,omitempty"`
 	PostingFrequency *int                     `json:"postingFrequency,omitempty"`
@@ -58,65 +56,65 @@ type OptimalTimesResponse struct {
 // InitializeDefaultPlatforms creates default platform configurations.
 func (s *service) InitializeDefaultPlatforms(ctx context.Context) error {
 	defaultPlatforms := []struct {
-		name             socialmediaposts.Platform
+		name             Platform
 		displayName      string
-		supportedFormats []socialmediaposts.ContentFormat
+		supportedFormats []ContentFormat
 	}{
 		{
-			socialmediaposts.PlatformLinkedIn,
+			PlatformLinkedIn,
 			"LinkedIn",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatLongForm,
-				socialmediaposts.FormatArticle,
-				socialmediaposts.FormatPost,
+			[]ContentFormat{
+				FormatLongForm,
+				FormatArticle,
+				FormatPost,
 			},
 		},
 		{
-			socialmediaposts.PlatformTwitter,
+			PlatformTwitter,
 			"Twitter",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatThread,
-				socialmediaposts.FormatPost,
+			[]ContentFormat{
+				FormatThread,
+				FormatPost,
 			},
 		},
 		{
-			socialmediaposts.PlatformInstagram,
+			PlatformInstagram,
 			"Instagram",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatCarousel,
-				socialmediaposts.FormatPost,
+			[]ContentFormat{
+				FormatCarousel,
+				FormatPost,
 			},
 		},
 		{
-			socialmediaposts.PlatformMedium,
+			PlatformMedium,
 			"Medium",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatArticle,
-				socialmediaposts.FormatLongForm,
+			[]ContentFormat{
+				FormatArticle,
+				FormatLongForm,
 			},
 		},
 		{
-			socialmediaposts.PlatformSubstack,
+			PlatformSubstack,
 			"Substack",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatNewsletter,
-				socialmediaposts.FormatArticle,
+			[]ContentFormat{
+				FormatNewsletter,
+				FormatArticle,
 			},
 		},
 		{
-			socialmediaposts.PlatformValete,
+			PlatformValete,
 			"Valete+",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatArticle,
-				socialmediaposts.FormatPost,
+			[]ContentFormat{
+				FormatArticle,
+				FormatPost,
 			},
 		},
 		{
-			socialmediaposts.PlatformWebsite,
+			PlatformWebsite,
 			"Website",
-			[]socialmediaposts.ContentFormat{
-				socialmediaposts.FormatArticle,
-				socialmediaposts.FormatLongForm,
+			[]ContentFormat{
+				FormatArticle,
+				FormatLongForm,
 			},
 		},
 	}
@@ -150,7 +148,7 @@ func (s *service) GetConfig(ctx context.Context, configID uuid.UUID) (*PlatformC
 	return s.repo.GetConfig(ctx, configID)
 }
 
-func (s *service) GetConfigByName(ctx context.Context, name socialmediaposts.Platform) (*PlatformConfig, error) {
+func (s *service) GetConfigByName(ctx context.Context, name Platform) (*PlatformConfig, error) {
 	return s.repo.GetConfigByName(ctx, name)
 }
 
@@ -196,7 +194,7 @@ func (s *service) UpdateConfig(ctx context.Context, req UpdateConfigRequest) (*P
 	return config, nil
 }
 
-func (s *service) GetOptimalTimes(ctx context.Context, name socialmediaposts.Platform) (*OptimalTimesResponse, error) {
+func (s *service) GetOptimalTimes(ctx context.Context, name Platform) (*OptimalTimesResponse, error) {
 	config, err := s.repo.GetConfigByName(ctx, name)
 	if err != nil {
 		return nil, err

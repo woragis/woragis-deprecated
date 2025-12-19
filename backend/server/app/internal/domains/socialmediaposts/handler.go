@@ -2,7 +2,6 @@ package socialmediaposts
 
 import (
 	"log/slog"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
