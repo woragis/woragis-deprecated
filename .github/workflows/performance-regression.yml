@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: [main, develop]
     paths:
-      - 'backend/**/internal/integration/performance_test.go'
+      - 'backend/**/*performance*.go'
+      - 'backend/**/*performance*.js'
+      - 'backend/**/*performance*.py'
       - '.github/workflows/performance-regression.yml'
   workflow_dispatch:
 
@@ -69,22 +71,46 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: |
+            backend/server/app/go.sum
+            backend/email-worker/go.sum
+            backend/translation-worker/go.sum
+            backend/whatsapp-worker/go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/job-application-worker/package-lock.json
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Go dependencies
         run: |
-          cd backend/email-worker && go mod download
-          cd ../translation-worker && go mod download
-          cd ../whatsapp-worker && go mod download
+          cd backend/server/app && go mod download && go mod tidy
+          cd ../../email-worker && go mod download && go mod tidy
+          cd ../translation-worker && go mod download && go mod tidy
+          cd ../whatsapp-worker && go mod download && go mod tidy
+
+      - name: Install Node.js dependencies
+        working-directory: backend/job-application-worker
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: |
+          cd backend/ai-service && pip install -r requirements.txt pytest pytest-asyncio httpx || true
+          cd ../docs-service && pip install -r requirements.txt pytest pytest-asyncio httpx || true
+          cd ../creative-service && pip install -r requirements.txt pytest pytest-asyncio httpx || true
+          cd ../resume-worker && pip install -r requirements.txt pytest pytest-asyncio pika || true
 
       - name: Wait for services
         run: sleep 15
 
-      - name: Run performance tests
+      - name: Run Go workers performance tests
         run: |
           cd backend/email-worker
           go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > email-worker-performance.txt 2>&1 || true
@@ -97,6 +123,44 @@ jobs:
           cd ../whatsapp-worker
           go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > whatsapp-worker-performance.txt 2>&1 || true
           cp whatsapp-worker-performance.txt test-output.log || true
+
+      - name: Run server API performance tests
+        working-directory: backend/server/app
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable
+          REDIS_URL: redis://localhost:6380/0
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          go test -tags=integration -run "Test.*Load|Test.*Latency|Benchmark" -v ./internal/integration/... > server-performance.txt 2>&1 || true
+          cp server-performance.txt test-output.log || true
+
+      - name: Run Node.js worker performance tests
+        working-directory: backend/job-application-worker
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          npm test -- tests/performance.test.js > job-application-worker-performance.txt 2>&1 || true
+          cp job-application-worker-performance.txt test-output.log || true
+
+      - name: Run Python services performance tests
+        env:
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          cd backend/ai-service
+          pytest app/tests/performance_test.py -v > ai-service-performance.txt 2>&1 || true
+          cp ai-service-performance.txt test-output.log || true
+          
+          cd ../docs-service
+          pytest tests/performance_test.py -v > docs-service-performance.txt 2>&1 || true
+          cp docs-service-performance.txt test-output.log || true
+          
+          cd ../creative-service
+          pytest app/tests/performance_test.py -v > creative-service-performance.txt 2>&1 || true
+          cp creative-service-performance.txt test-output.log || true
+          
+          cd ../resume-worker
+          pytest tests/performance_test.py -v > resume-worker-performance.txt 2>&1 || true
+          cp resume-worker-performance.txt test-output.log || true
 
       - name: Load baseline metrics
         id: load_baseline

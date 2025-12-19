@@ -78,9 +78,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend/email-worker && go mod download
-          cd ../translation-worker && go mod download
-          cd ../whatsapp-worker && go mod download
+          cd backend/email-worker && go mod download && go mod tidy
+          cd ../translation-worker && go mod download && go mod tidy
+          cd ../whatsapp-worker && go mod download && go mod tidy
 
       - name: Wait for services
         run: sleep 15

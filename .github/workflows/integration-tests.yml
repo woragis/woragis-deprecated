@@ -359,10 +359,115 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
+  resume-worker-tests:
+    name: Resume Worker Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: woragis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:3.13-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: test
+          RABBITMQ_DEFAULT_PASS: test
+          RABBITMQ_DEFAULT_VHOST: test
+        ports:
+          - 5673:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: backend/resume-worker
+        run: |
+          pip install -r requirements.txt || true
+          pip install pytest pytest-asyncio pika || true
+
+      - name: Wait for services
+        run: sleep 10
+
+      - name: Run resume worker integration tests
+        working-directory: backend/resume-worker
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable
+          RABBITMQ_URL: amqp://test:test@localhost:5673/test
+        run: |
+          set -o pipefail
+          pytest tests/integration/ -v -m integration -o addopts= 2>&1 | tee test-output.log
+
+      - name: Upload resume worker test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resume-worker-integration-test-logs
+          path: backend/resume-worker/test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+  docs-service-tests:
+    name: Docs Service Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: backend/docs-service
+        run: |
+          pip install -r requirements.txt || true
+          pip install pytest pytest-asyncio httpx || true
+
+      - name: Run docs service integration tests
+        working-directory: backend/docs-service
+        run: |
+          set -o pipefail
+          pytest tests/integration/ -v -m integration -o addopts= 2>&1 | tee test-output.log
+
+      - name: Upload docs service test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docs-service-integration-test-logs
+          path: backend/docs-service/test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
+
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [server-integration-tests, email-worker-tests, translation-worker-tests, whatsapp-worker-tests]
+    needs: [server-integration-tests, email-worker-tests, translation-worker-tests, whatsapp-worker-tests, resume-worker-tests, docs-service-tests]
     if: always()
 
     steps:
@@ -382,6 +487,8 @@ jobs:
           echo "| Email Worker Tests | ${{ needs.email-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Translation Worker Tests | ${{ needs.translation-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| WhatsApp Worker Tests | ${{ needs.whatsapp-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Resume Worker Tests | ${{ needs.resume-worker-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docs Service Tests | ${{ needs.docs-service-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts Available" >> $GITHUB_STEP_SUMMARY
           echo "- Test logs for each service are available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
@@ -391,7 +498,9 @@ jobs:
           if [ "${{ needs.server-integration-tests.result }}" == "failure" ] || \
              [ "${{ needs.email-worker-tests.result }}" == "failure" ] || \
              [ "${{ needs.translation-worker-tests.result }}" == "failure" ] || \
-             [ "${{ needs.whatsapp-worker-tests.result }}" == "failure" ]; then
+             [ "${{ needs.whatsapp-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.resume-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.docs-service-tests.result }}" == "failure" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### ⚠️ Test Failures Detected" >> $GITHUB_STEP_SUMMARY
             echo "Check the artifacts section below for detailed error logs." >> $GITHUB_STEP_SUMMARY
@@ -424,6 +533,8 @@ jobs:
           echo "- Email Worker Tests: ${{ needs.email-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Translation Worker Tests: ${{ needs.translation-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- WhatsApp Worker Tests: ${{ needs.whatsapp-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Resume Worker Tests: ${{ needs.resume-worker-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docs Service Tests: ${{ needs.docs-service-tests.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts Available:" >> $GITHUB_STEP_SUMMARY
           echo "Check the Artifacts section below for detailed logs, including:" >> $GITHUB_STEP_SUMMARY
@@ -440,7 +551,9 @@ jobs:
           if [ "${{ needs.server-integration-tests.result }}" == "failure" ] || \
              [ "${{ needs.email-worker-tests.result }}" == "failure" ] || \
              [ "${{ needs.translation-worker-tests.result }}" == "failure" ] || \
-             [ "${{ needs.whatsapp-worker-tests.result }}" == "failure" ]; then
+             [ "${{ needs.whatsapp-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.resume-worker-tests.result }}" == "failure" ] || \
+             [ "${{ needs.docs-service-tests.result }}" == "failure" ]; then
             echo "has_failures=true" >> $GITHUB_OUTPUT
           else
             echo "has_failures=false" >> $GITHUB_OUTPUT
