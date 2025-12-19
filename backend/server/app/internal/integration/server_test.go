@@ -1,5 +1,5 @@
-//go:build integration
-// +build integration
+//go:build integration && !performance_test
+// +build integration,!performance_test
 
 package integration
 
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -27,7 +28,6 @@ import (
 	postsdomain "github.com/woragis/backend/server/app/internal/domains/posts"
 	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
 	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
-	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
 	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
 	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
 	creativeservice "github.com/woragis/backend/server/app/internal/services/creative"

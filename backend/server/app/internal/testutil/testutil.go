@@ -3,7 +3,6 @@ package testutil
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"testing"
 	"time"
@@ -15,40 +14,8 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	aimlintegrationsdomain "github.com/woragis/backend/server/app/internal/domains/aimlintegrations"
-	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
-	casestudiesdomain "github.com/woragis/backend/server/app/internal/domains/casestudies"
-	certificationsdomain "github.com/woragis/backend/server/app/internal/domains/certifications"
-	chatsdomain "github.com/woragis/backend/server/app/internal/domains/chats"
-	clientsdomain "github.com/woragis/backend/server/app/internal/domains/clients"
-	creativeassetsdomain "github.com/woragis/backend/server/app/internal/domains/creativeassets"
-	experiencesdomain "github.com/woragis/backend/server/app/internal/domains/experiences"
-	financesdomain "github.com/woragis/backend/server/app/internal/domains/finances"
-	ideasdomain "github.com/woragis/backend/server/app/internal/domains/ideas"
-	impactmetricsdomain "github.com/woragis/backend/server/app/internal/domains/impactmetrics"
-	interestsdomain "github.com/woragis/backend/server/app/internal/domains/interests"
-	jobapplicationsdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications"
-	jobapplicationresponsesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/responses"
-	jobapplicationstagesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/interviewstages"
-	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
-	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
-	postcommentsdomain "github.com/woragis/backend/server/app/internal/domains/posts/comments"
-	postsdomain "github.com/woragis/backend/server/app/internal/domains/posts"
-	problemsolutionsdomain "github.com/woragis/backend/server/app/internal/domains/problemsolutions"
-	projectcasestudiesdomain "github.com/woragis/backend/server/app/internal/domains/projects/projectcasestudies"
-	projectsdomain "github.com/woragis/backend/server/app/internal/domains/projects"
-	reportsdomain "github.com/woragis/backend/server/app/internal/domains/reports"
-	resumesdomain "github.com/woragis/backend/server/app/internal/domains/resumes"
-	schedulerdomain "github.com/woragis/backend/server/app/internal/domains/scheduler"
-	skillsdomain "github.com/woragis/backend/server/app/internal/domains/skills"
-	socialmediapostsdomain "github.com/woragis/backend/server/app/internal/domains/socialmediaposts"
-	systemdesignsdomain "github.com/woragis/backend/server/app/internal/domains/systemdesigns"
-	technicalwritingsdomain "github.com/woragis/backend/server/app/internal/domains/technicalwritings"
-	testimonialsdomain "github.com/woragis/backend/server/app/internal/domains/testimonials"
-	translationsdomain "github.com/woragis/backend/server/app/internal/domains/translations"
-	userprofilesdomain "github.com/woragis/backend/server/app/internal/domains/userprofiles"
-	userpreferencesdomain "github.com/woragis/backend/server/app/internal/domains/userpreferences"
+	emailservice "github.com/woragis/backend/server/app/internal/services/email"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 )
 
@@ -78,11 +45,12 @@ func getEnv(key, defaultValue string) string {
 }
 
 // SetupTestDB creates a test database connection
-func SetupTestDB(t *testing.T) *gorm.DB {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func SetupTestDB(t testing.TB) *gorm.DB {
 	cfg := LoadTestConfig()
 	
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
-		Logger: gormlogger.Default.LogLevel(gormlogger.Silent), // Silence GORM logs in tests
+		Logger: gormlogger.Default, // Use default logger (silent in tests)
 	})
 	if err != nil {
 		t.Fatalf("failed to connect to test database: %v", err)
@@ -109,7 +77,8 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 }
 
 // SetupTestRedis creates a test Redis connection
-func SetupTestRedis(t *testing.T) *redis.Client {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func SetupTestRedis(t testing.TB) *redis.Client {
 	cfg := LoadTestConfig()
 	
 	opts, err := redis.ParseURL(cfg.RedisURL)
@@ -137,7 +106,8 @@ func SetupTestRedis(t *testing.T) *redis.Client {
 }
 
 // SetupTestApp creates a Fiber app instance for testing
-func SetupTestApp(t *testing.T, db *gorm.DB, redisClient *redis.Client) *fiber.App {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func SetupTestApp(t testing.TB, db *gorm.DB, redisClient *redis.Client) *fiber.App {
 	logger := applogger.New("test")
 	
 	app := fiber.New(fiber.Config{
@@ -154,7 +124,8 @@ func SetupTestApp(t *testing.T, db *gorm.DB, redisClient *redis.Client) *fiber.A
 }
 
 // CleanupTestDB cleans up test database
-func CleanupTestDB(t *testing.T, db *gorm.DB) {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func CleanupTestDB(t testing.TB, db *gorm.DB) {
 	if err := cleanDatabase(db); err != nil {
 		t.Logf("warning: failed to clean database: %v", err)
 	}
@@ -166,7 +137,8 @@ func CleanupTestDB(t *testing.T, db *gorm.DB) {
 }
 
 // CleanupTestRedis cleans up test Redis
-func CleanupTestRedis(t *testing.T, client *redis.Client) {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func CleanupTestRedis(t testing.TB, client *redis.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	
@@ -221,7 +193,8 @@ func defaultErrorHandler(c *fiber.Ctx, err error) error {
 }
 
 // CreateTestUser creates a test user in the database and returns the user ID
-func CreateTestUser(t *testing.T, db *gorm.DB, email, password string) uuid.UUID {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func CreateTestUser(t testing.TB, db *gorm.DB, email, password string) uuid.UUID {
 	cfg := LoadTestConfig()
 	
 	// Create auth repository
@@ -262,7 +235,8 @@ func CreateTestUser(t *testing.T, db *gorm.DB, email, password string) uuid.UUID
 }
 
 // GenerateTestJWT generates a test JWT token for a user
-func GenerateTestJWT(t *testing.T, userID uuid.UUID, email string) string {
+// Accepts testing.TB to support both *testing.T and *testing.B
+func GenerateTestJWT(t testing.TB, userID uuid.UUID, email string) string {
 	cfg := LoadTestConfig()
 	
 	jwtManager, err := authdomain.NewJWTManager(cfg.JWTSecret, 24*time.Hour, "woragis-test")
