@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Callable
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
@@ -33,8 +34,6 @@ def _model() -> BaseChatModel:
         timeout=60,
     )
 
-
-import os
 
 AGENTS: Dict[str, Callable[[], Runnable]] = {
     "economist": lambda: _build_chain(
