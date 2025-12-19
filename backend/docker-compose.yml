@@ -35,7 +35,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -91,7 +91,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../resume-worker/output:/app/output
+      - ./resume-worker/output:/app/output
     restart: on-failure
   translation-worker:
     build:
@@ -106,10 +106,10 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/}
       RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
-      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-google}
       GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-}
       GOOGLE_CLOUD_PROJECT_ID: ${GOOGLE_CLOUD_PROJECT_ID:-}
@@ -122,8 +122,8 @@ services:
     restart: unless-stopped
   job-application-worker:
     build:
-      context: ../job-application-worker
-      dockerfile: ../Dockerfile.job-application-worker
+      context: .
+      dockerfile: Dockerfile.job-application-worker
     container_name: woragis-job-application-worker
     depends_on:
       database:
@@ -230,7 +230,7 @@ services:
     restart: on-failure
   resume-worker:
     build:
-      context: ../resume-worker
+      context: ./resume-worker
       dockerfile: ../Dockerfile.resume-worker
     container_name: woragis-resume-worker
     depends_on:
@@ -242,12 +242,12 @@ services:
         condition: service_started
     environment:
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/woragis}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/}
       RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
-      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-woragis}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RESUME_QUEUE_NAME: ${RESUME_QUEUE_NAME:-resumes.queue}
       RESUME_EXCHANGE: ${RESUME_EXCHANGE:-woragis.tasks}
       RESUME_ROUTING_KEY: ${RESUME_ROUTING_KEY:-resumes.queue}
@@ -267,7 +267,7 @@ services:
     restart: unless-stopped
   email-worker:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile.email-worker
     container_name: woragis-email-worker
     depends_on:
@@ -294,8 +294,8 @@ services:
     restart: unless-stopped
   whatsapp-worker:
     build:
-      context: ./whatsapp-worker
-      dockerfile: ../Dockerfile.whatsapp-worker
+      context: .
+      dockerfile: Dockerfile.whatsapp-worker
     container_name: woragis-whatsapp-worker
     depends_on:
       rabbitmq:
