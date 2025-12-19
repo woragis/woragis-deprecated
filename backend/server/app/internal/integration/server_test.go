@@ -43,7 +43,183 @@ import (
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 	"github.com/woragis/backend/server/app/internal/testutil"
+	"context"
 )
+
+// Adapter types to bridge parent package types with subdomain types (to avoid import cycles)
+
+// Content subdomain adapters
+type testContentRepositoryAdapter struct {
+	repo socialmediapostsdomain.Repository
+}
+
+func (a *testContentRepositoryAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostscontent.SocialMediaPost, error) {
+	post, err := a.repo.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostscontent.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostscontent.Platform(post.Platform),
+		Format:        socialmediapostscontent.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+	}, nil
+}
+
+func (a *testContentRepositoryAdapter) CreatePost(ctx context.Context, post *socialmediapostscontent.SocialMediaPost) error {
+	parentPost := &socialmediapostsdomain.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsdomain.Platform(post.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        socialmediapostsdomain.PostStatus(post.Status),
+		ContentPostID: post.ContentPostID,
+	}
+	return a.repo.CreatePost(ctx, parentPost)
+}
+
+type testContentServiceAdapter struct {
+	service socialmediapostsdomain.Service
+}
+
+func (a *testContentServiceAdapter) CreatePost(ctx context.Context, req socialmediapostscontent.CreateSocialMediaPostRequest) (*socialmediapostscontent.SocialMediaPost, error) {
+	parentPost, err := a.service.CreatePost(ctx, socialmediapostsdomain.CreatePostRequest{
+		Platform:      socialmediapostsdomain.Platform(req.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(req.Format),
+		Title:         req.Title,
+		Content:       req.Content,
+		ContentPostID: req.ContentPostID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostscontent.SocialMediaPost{
+		ID:            parentPost.ID,
+		Platform:      socialmediapostscontent.Platform(parentPost.Platform),
+		Format:        socialmediapostscontent.ContentFormat(parentPost.Format),
+		Title:         parentPost.Title,
+		Content:       parentPost.Content,
+		Status:        string(parentPost.Status),
+		ContentPostID: parentPost.ContentPostID,
+	}, nil
+}
+
+func (a *testContentServiceAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostscontent.SocialMediaPost, error) {
+	post, err := a.service.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostscontent.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostscontent.Platform(post.Platform),
+		Format:        socialmediapostscontent.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+	}, nil
+}
+
+// Scheduling subdomain adapters
+type testSchedulingRepositoryAdapter struct {
+	repo socialmediapostsdomain.Repository
+}
+
+func (a *testSchedulingRepositoryAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostsscheduling.SocialMediaPost, error) {
+	post, err := a.repo.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostsscheduling.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsscheduling.Platform(post.Platform),
+		Format:        string(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}, nil
+}
+
+func (a *testSchedulingRepositoryAdapter) CreatePost(ctx context.Context, post *socialmediapostsscheduling.SocialMediaPost) error {
+	parentPost := &socialmediapostsdomain.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsdomain.Platform(post.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        socialmediapostsdomain.PostStatus(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}
+	return a.repo.CreatePost(ctx, parentPost)
+}
+
+func (a *testSchedulingRepositoryAdapter) UpdatePost(ctx context.Context, post *socialmediapostsscheduling.SocialMediaPost) error {
+	parentPost := &socialmediapostsdomain.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsdomain.Platform(post.Platform),
+		Format:        socialmediapostsdomain.ContentFormat(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        socialmediapostsdomain.PostStatus(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}
+	return a.repo.UpdatePost(ctx, parentPost)
+}
+
+type testSchedulingServiceAdapter struct {
+	service socialmediapostsdomain.Service
+}
+
+func (a *testSchedulingServiceAdapter) GetPost(ctx context.Context, postID uuid.UUID) (*socialmediapostsscheduling.SocialMediaPost, error) {
+	post, err := a.service.GetPost(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostsscheduling.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsscheduling.Platform(post.Platform),
+		Format:        string(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}, nil
+}
+
+func (a *testSchedulingServiceAdapter) UpdatePost(ctx context.Context, req socialmediapostsscheduling.UpdateSocialMediaPostRequest) (*socialmediapostsscheduling.SocialMediaPost, error) {
+	updateReq := socialmediapostsdomain.UpdatePostRequest{
+		PostID:  req.PostID,
+		Title:   req.Title,
+		Content: req.Content,
+	}
+	if req.Status != nil {
+		status := socialmediapostsdomain.PostStatus(*req.Status)
+		updateReq.Status = &status
+	}
+	post, err := a.service.UpdatePost(ctx, updateReq)
+	if err != nil {
+		return nil, err
+	}
+	return &socialmediapostsscheduling.SocialMediaPost{
+		ID:            post.ID,
+		Platform:      socialmediapostsscheduling.Platform(post.Platform),
+		Format:        string(post.Format),
+		Title:         post.Title,
+		Content:       post.Content,
+		Status:        string(post.Status),
+		ContentPostID: post.ContentPostID,
+		ScheduledAt:   post.ScheduledAt,
+	}, nil
+}
 
 // TestServerHealthCheck tests the health check endpoint
 func TestServerHealthCheck(t *testing.T) {
@@ -631,19 +807,23 @@ func setupTestAppWithRoutes(t *testing.T, db *gorm.DB, redisClient *redis.Client
 	platformsHandler := socialmediapostsplatforms.NewHandler(platformsService, logger)
 	
 	contentRepo := socialmediapostscontent.NewGormRepository(db)
+	contentRepoAdapter := &testContentRepositoryAdapter{repo: socialMediaPostRepo}
+	contentServiceAdapter := &testContentServiceAdapter{service: socialMediaPostService}
 	contentService := socialmediapostscontent.NewService(
 		contentRepo,
-		socialMediaPostRepo,
-		socialMediaPostService,
+		contentRepoAdapter,
+		contentServiceAdapter,
 		logger,
 	)
 	contentHandler := socialmediapostscontent.NewHandler(contentService, logger)
 	
 	schedulingRepo := socialmediapostsscheduling.NewGormRepository(db)
+	schedulingRepoAdapter := &testSchedulingRepositoryAdapter{repo: socialMediaPostRepo}
+	schedulingServiceAdapter := &testSchedulingServiceAdapter{service: socialMediaPostService}
 	schedulingService := socialmediapostsscheduling.NewService(
 		schedulingRepo,
-		socialMediaPostRepo,
-		socialMediaPostService,
+		schedulingRepoAdapter,
+		schedulingServiceAdapter,
 		platformsService,
 		logger,
 	)
