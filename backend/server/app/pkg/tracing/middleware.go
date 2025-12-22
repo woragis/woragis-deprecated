@@ -39,7 +39,7 @@ func Middleware(serviceName string) fiber.Handler {
 				semconv.HTTPRouteKey.String(c.Path()),
 				semconv.HTTPURLKey.String(c.OriginalURL()),
 				semconv.HTTPUserAgentKey.String(c.Get("User-Agent")),
-				semconv.HTTPClientIPKey.String(c.IP()),
+				semconv.NetSockPeerAddrKey.String(c.IP()),
 			),
 		)
 
