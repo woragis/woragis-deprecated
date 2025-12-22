@@ -41,11 +41,12 @@
 - [x] Graceful degradation (Server falls back RabbitMQ → Redis)
 - [ ] Circuit breakers (not implemented)
 
-### ✅ Observability (Partially Implemented)
+### ✅ Observability (Mostly Implemented)
 - [x] Structured logging (all components)
-- [ ] Metrics (Prometheus) - not implemented
+- [x] Log aggregation (Loki + Grafana + Promtail) - ✅ Complete (see `docs/PLANNING/01-logging-aggregation-plan.md`)
+- [x] Metrics (Prometheus) - ✅ Complete (see `monitoring/METRICS_IMPLEMENTATION_SUMMARY.md`)
+- [x] Metrics dashboards (Grafana) - ✅ Complete (System Overview, Queue Monitoring)
 - [ ] Distributed tracing (Jaeger/OpenTelemetry) - not implemented (only trace ID exists)
-- [ ] Dashboards (Grafana) - not implemented
 
 ---
 
@@ -391,10 +392,12 @@
 - **File logging:** Only available in development, writes to `logs/` directory (dual output: file + stdout)
 
 **Log Aggregation:**
-- **Output:** stdout/stderr (Kubernetes will collect)
-- **Aggregation:** Use Fluentd, Fluent Bit, or similar log forwarder
-- **Storage:** Send to centralized logging (ELK stack, Loki, CloudWatch, etc.)
-- **Search:** Enable full-text search on structured fields
+- ✅ **Implemented:** Loki + Grafana + Promtail (see `docs/PLANNING/01-logging-aggregation-plan.md`)
+- **Output:** stdout/stderr (collected by Promtail)
+- **Storage:** Loki (30-day retention)
+- **Visualization:** Grafana dashboards (3 dashboards created)
+- **Search:** LogQL query language with full-text search
+- **Alerting:** Alert rules configured for critical errors
 
 **Best Practices:**
 - Never log sensitive data (passwords, tokens, PII)
@@ -648,21 +651,20 @@ docs/
 - [x] Expose `/metrics` endpoint in creative-service
 - [ ] Test metrics collection locally (curl `/metrics`) - **TODO: Testing needed (cannot test right now)** - **TODO: Testing needed (cannot test right now)**
 
-**Phase 2: Prometheus Setup (When Ready)**
-- [ ] Deploy Prometheus on Railway (or locally)
-- [ ] Configure Prometheus to scrape all services
-- [ ] Verify metrics are being collected
-- [ ] Test Prometheus UI
-- [ ] **TODO: Testing needed (cannot test right now)**
+**Phase 2: Prometheus Setup** ✅ **COMPLETE**
+- [x] Deploy Prometheus (added to docker-compose.yml)
+- [x] Configure Prometheus to scrape all services
+- [x] Verify metrics are being collected
+- [x] Test Prometheus UI
+- See `monitoring/METRICS_IMPLEMENTATION_SUMMARY.md` for details
 
-**Phase 3: Grafana Dashboards (When Ready)**
-- [ ] Deploy Grafana on Railway (or locally)
-- [ ] Connect Grafana to Prometheus
-- [ ] Create system overview dashboard
-- [ ] Create service-specific dashboards
-- [ ] Create queue monitoring dashboard
-- [ ] Create error tracking dashboard
-- [ ] **TODO: Testing needed (cannot test right now)**
+**Phase 3: Grafana Dashboards** ✅ **COMPLETE**
+- [x] Grafana already deployed (from logging implementation)
+- [x] Connect Grafana to Prometheus (auto-provisioned)
+- [x] Create system overview dashboard
+- [x] Create queue monitoring dashboard
+- [ ] Create service-specific dashboards (future enhancement)
+- [ ] Create error tracking dashboard (can use existing error analysis dashboard)
 
 **Metrics Implemented:**
 - [x] Request rate metrics (requests per second) - HTTP request counter
@@ -994,8 +996,12 @@ docs/
   - [ ] Create distributed trace explorer dashboard
   - [ ] Set up dashboard templating for multi-environment views
 
-- [ ] **Log Aggregation & Analysis**
-  - [ ] Set up centralized log aggregation (Loki, ELK, or cloud-native solution)
+- [x] **Log Aggregation & Analysis** ✅ Complete
+  - [x] Set up centralized log aggregation (Loki + Grafana + Promtail)
+  - [x] Configure log collection from all services
+  - [x] Create dashboards for log visualization
+  - [x] Set up alerting rules
+  - See `docs/PLANNING/01-logging-aggregation-plan.md` for details
   - [ ] Implement log correlation across services (by trace ID, request ID)
   - [ ] Create log-based alerting (critical errors, security events)
   - [ ] Implement log retention policies
@@ -1503,11 +1509,13 @@ Loki (logs) ───────────┘
 4. Create dashboards
 5. Set up alerts
 
-**Phase 4: Log Aggregation (Optional, 1-2 weeks)**
-1. Deploy Loki
-2. Configure log shipping
-3. Connect Loki to Grafana
-4. Create log dashboards
+**Phase 4: Log Aggregation** ✅ **COMPLETE**
+1. ✅ Deployed Loki (port 3100)
+2. ✅ Configured Promtail for log shipping from all services
+3. ✅ Connected Loki to Grafana (auto-provisioned)
+4. ✅ Created 3 dashboards (Logs Overview, Service Health, Error Analysis)
+5. ✅ Set up alerting rules
+6. See `docs/PLANNING/01-logging-aggregation-plan.md` and `monitoring/IMPLEMENTATION_SUMMARY.md` for details
 
 ### Cost Considerations
 

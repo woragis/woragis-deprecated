@@ -1,12 +1,16 @@
-# Logging Aggregation with Loki + Grafana
+# Monitoring & Observability
 
-This directory contains the configuration for centralized log aggregation using Grafana Loki and Grafana.
+This directory contains the configuration for centralized logging and metrics collection using Loki, Prometheus, and Grafana.
 
 ## Architecture
 
+### Logging
 - **Loki**: Log aggregation system that collects and stores logs
 - **Promtail**: Log shipper that collects logs from Docker containers and sends them to Loki
-- **Grafana**: Visualization and dashboard tool for querying and analyzing logs
+
+### Metrics
+- **Prometheus**: Metrics collection and storage system
+- **Grafana**: Visualization and dashboard tool for logs and metrics
 
 ## Services
 
@@ -18,9 +22,21 @@ The following services are added to `docker-compose.yml`:
 
 ## Quick Start
 
-1. **Start the services:**
+1. **Start all monitoring services:**
    ```bash
+   docker-compose up -d loki promtail prometheus grafana
+   ```
+
+   Or start individually:
+   ```bash
+   # Logging only
    docker-compose up -d loki promtail grafana
+   
+   # Metrics only
+   docker-compose up -d prometheus grafana
+   
+   # Everything
+   docker-compose up -d loki promtail prometheus grafana
    ```
 
 2. **Access Grafana:**
@@ -142,8 +158,26 @@ On Windows/Mac with Docker Desktop, this should work automatically.
 4. Add log parsing rules for specific log formats
 5. Integrate with Prometheus metrics (if using Prometheus)
 
+## Documentation
+
+### Logging
+- **Quick Start**: `QUICK_START.md`
+- **User Guide**: `USER_GUIDE.md`
+- **Query Library**: `LOGQL_QUERY_LIBRARY.md`
+- **Troubleshooting**: `TROUBLESHOOTING.md`
+
+### Metrics
+- **Prometheus Guide**: `PROMETHEUS_GUIDE.md`
+- **Quick Start**: `METRICS_QUICK_START.md`
+
 ## References
 
+### Logging
 - [Grafana Loki Documentation](https://grafana.com/docs/loki/latest/)
 - [LogQL Query Language](https://grafana.com/docs/loki/latest/logql/)
 - [Promtail Configuration](https://grafana.com/docs/loki/latest/clients/promtail/configuration/)
+
+### Metrics
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [PromQL Guide](https://prometheus.io/docs/prometheus/latest/querying/basics/)
+- [Grafana Prometheus Data Source](https://grafana.com/docs/grafana/latest/datasources/prometheus/)

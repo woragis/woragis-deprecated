@@ -1,0 +1,63 @@
+groups:
+  - name: woragis_service_alerts
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job!="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) > 10
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate in {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has error rate of {{ $value }} errors/sec"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High latency in {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has P95 latency of {{ $value }}s"
+
+      - alert: HighQueueDepth
+        expr: sum(rabbitmq_queue_messages) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High queue depth detected"
+          description: "Total queue depth is {{ $value }} messages"
+
+      - alert: DeadLetterQueueMessages
+        expr: sum(rabbitmq_queue_messages{queue=~".*dlq.*"}) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Messages in Dead Letter Queue"
+          description: "There are {{ $value }} messages in the DLQ that need attention"
+
+      - alert: LowJobProcessingRate
+        expr: sum(rate(worker_jobs_processed_total[5m])) by (service) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Low job processing rate in {{ $labels.service }}"
+          description: "Service {{ $labels.service }} is processing jobs at {{ $value }} jobs/sec"

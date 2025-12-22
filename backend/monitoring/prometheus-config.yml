@@ -1,0 +1,132 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'woragis'
+    environment: 'development'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "/etc/prometheus/alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Main server (app)
+  - job_name: 'app'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app:8080']
+        labels:
+          service: 'app'
+          instance: 'woragis-app'
+
+  # AI Service
+  - job_name: 'ai-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['ai-service:8000']
+        labels:
+          service: 'ai-service'
+          instance: 'woragis-ai-service'
+
+  # Creative Service
+  - job_name: 'creative-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['creative-service:8000']
+        labels:
+          service: 'creative-service'
+          instance: 'woragis-creative-service'
+
+  # Docs Service
+  - job_name: 'docs-service'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['docs-service:8000']
+        labels:
+          service: 'docs-service'
+          instance: 'woragis-docs-service'
+
+  # Resume Worker
+  - job_name: 'resume-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['resume-worker:8000']
+        labels:
+          service: 'resume-worker'
+          instance: 'woragis-resume-worker'
+
+  # Translation Worker
+  - job_name: 'translation-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['translation-worker:8080']
+        labels:
+          service: 'translation-worker'
+          instance: 'woragis-translation-worker'
+
+  # Email Worker
+  - job_name: 'email-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['email-worker:8080']
+        labels:
+          service: 'email-worker'
+          instance: 'woragis-email-worker'
+
+  # WhatsApp Worker
+  - job_name: 'whatsapp-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['whatsapp-worker:8080']
+        labels:
+          service: 'whatsapp-worker'
+          instance: 'woragis-whatsapp-worker'
+
+  # Job Application Worker
+  - job_name: 'job-application-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['job-application-worker:3000']
+        labels:
+          service: 'job-application-worker'
+          instance: 'woragis-job-application-worker'
+
+  # RabbitMQ (if exposing metrics)
+  - job_name: 'rabbitmq'
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['rabbitmq:15672']
+        labels:
+          service: 'rabbitmq'
+          instance: 'woragis-rabbitmq'
+
+  # Redis (if using redis_exporter)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+  #       labels:
+  #         service: 'redis'
+  #         instance: 'woragis-redis'
+
+  # PostgreSQL (if using postgres_exporter)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+  #       labels:
+  #         service: 'postgres'
+  #         instance: 'woragis-database'
