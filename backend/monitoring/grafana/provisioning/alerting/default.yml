@@ -1,0 +1,22 @@
+apiVersion: 1
+
+# Alerting configuration
+# Note: Alert rules are defined in Grafana UI or via API
+# This file configures alert notification channels
+
+notifiers:
+  # Example: Email notification channel
+  # - uid: email
+  #   name: Email
+  #   type: email
+  #   settings:
+  #     addresses: admin@woragis.com
+  
+  # Example: Slack notification channel
+  # - uid: slack
+  #   name: Slack
+  #   type: slack
+  #   settings:
+  #     url: https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+  #     username: Grafana
+  #     channel: #alerts

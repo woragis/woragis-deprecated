@@ -1,0 +1,96 @@
+apiVersion: 1
+
+groups:
+  - name: woragis_critical_errors
+    interval: 30s
+    rules:
+      - uid: high_error_rate
+        title: High Error Rate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: sum(rate({job="docker", level="error"}[5m])) > 10
+              refId: A
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: High error rate detected
+          description: Error rate is {{ $value }} errors/sec, exceeding threshold of 10 errors/sec
+        labels:
+          severity: critical
+          team: platform
+
+      - uid: service_down
+        title: Service Not Logging
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: count(count_over_time({job="docker", service="app"}[5m]) > 0) == 0
+              refId: A
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: Service appears to be down
+          description: No logs received from service in the last 2 minutes
+        labels:
+          severity: critical
+          team: platform
+
+      - uid: critical_error_pattern
+        title: Critical Error Pattern Detected
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: sum(count_over_time({job="docker", level="error"} |~ "database|connection|timeout" [5m])) > 5
+              refId: A
+        noDataState: NoData
+        execErrState: Alerting
+        for: 3m
+        annotations:
+          summary: Critical error pattern detected
+          description: Multiple database/connection errors detected
+        labels:
+          severity: critical
+          team: platform
+
+  - name: woragis_warnings
+    interval: 1m
+    rules:
+      - uid: high_warning_rate
+        title: High Warning Rate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: sum(rate({job="docker", level="warn"}[5m])) > 50
+              refId: A
+        noDataState: NoData
+        execErrState: OK
+        for: 10m
+        annotations:
+          summary: High warning rate
+          description: Warning rate is {{ $value }} warnings/sec
+        labels:
+          severity: warning
+          team: platform
