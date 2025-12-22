@@ -128,6 +128,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
       ai-service:
@@ -135,6 +137,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgres://postgres:postgres@database:5432/woragis?sslmode=disable
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://woragis:woragis@rabbitmq:5672/}
       RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
