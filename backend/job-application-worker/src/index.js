@@ -4,6 +4,16 @@ import { Worker } from './worker.js';
 import { logger } from './utils/logger.js';
 import { checkHealth } from './health.js';
 import { getMetrics } from './metrics.js';
+import { initTracing } from './utils/tracing.js';
+
+// Initialize OpenTelemetry tracing (must be done before other imports)
+const env = process.env.NODE_ENV || 'development';
+try {
+  initTracing('job-application-worker', '1.0.0', env);
+  logger.info('Tracing initialized');
+} catch (error) {
+  logger.warn('Failed to initialize tracing', { error: error.message });
+}
 
 const worker = new Worker();
 

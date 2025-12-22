@@ -16,6 +16,7 @@ from app.providers import make_model, CipherClient
 from app.config import settings
 from app.logger import configure_logging, get_logger
 from app.middleware import RequestIDMiddleware, RequestLoggerMiddleware
+from app.tracing import init_tracing, get_trace_id, set_trace_id
 from prometheus_fastapi_instrumentator import Instrumentator
 
 
@@ -29,6 +30,17 @@ configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
 
 logger = get_logger()
 logger.info("AI service initialized", env=env)
+
+# Initialize OpenTelemetry tracing
+try:
+    init_tracing(
+        service_name="ai-service",
+        service_version="0.1.0",
+        environment=env,
+    )
+    logger.info("Tracing initialized")
+except Exception as e:
+    logger.warn("Failed to initialize tracing", error=str(e))
 
 app = FastAPI(title="Woragis AI Service", version="0.1.0")
 

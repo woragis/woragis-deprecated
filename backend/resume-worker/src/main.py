@@ -37,6 +37,7 @@ load_dotenv()
 
 # Configure structured logging
 from logger import configure_logging, get_logger
+from tracing import init_tracing
 
 env = os.getenv("ENV", "development")
 log_to_file = os.getenv("LOG_TO_FILE", "false").lower() == "true"
@@ -44,6 +45,17 @@ log_dir = os.getenv("LOG_DIR", "logs")
 configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
 
 logger = get_logger()
+
+# Initialize OpenTelemetry tracing
+try:
+    init_tracing(
+        service_name="resume-worker",
+        service_version="1.0.0",
+        environment=env,
+    )
+    logger.info("Tracing initialized")
+except Exception as e:
+    logger.warn("Failed to initialize tracing", error=str(e))
 
 # Configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgres://postgres:postgres@database:5432/woragis?sslmode=disable')

@@ -7,6 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.logger import get_logger, set_trace_id, get_trace_id
+from app.tracing import get_trace_id as get_otel_trace_id, set_trace_id as set_otel_trace_id
 
 logger = get_logger()
 
@@ -15,14 +16,20 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     """Middleware to generate and propagate trace IDs (request IDs)."""
     
     async def dispatch(self, request: Request, call_next):
-        # Check if trace_id already exists in header (for distributed tracing)
-        trace_id = request.headers.get("X-Trace-ID")
+        # First, try to get trace_id from OpenTelemetry (if tracing is active)
+        trace_id = get_otel_trace_id()
+        
+        # If no trace_id from OpenTelemetry, check header
         if not trace_id:
-            # Generate new trace_id if not present
+            trace_id = request.headers.get("X-Trace-ID")
+        
+        # If still no trace_id, generate new one
+        if not trace_id:
             trace_id = str(uuid.uuid4())
         
-        # Set trace_id in context
+        # Set trace_id in both logger and OpenTelemetry contexts
         set_trace_id(trace_id)
+        set_otel_trace_id(trace_id)
         
         # Add trace_id to response header
         response = await call_next(request)

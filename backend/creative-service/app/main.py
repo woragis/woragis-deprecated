@@ -11,6 +11,7 @@ from app.providers import ImageProviderFactory, DiagramProviderFactory, VideoPro
 from app.config import settings
 from app.logger import configure_logging, get_logger
 from app.middleware import RequestIDMiddleware, RequestLoggerMiddleware
+from app.tracing import init_tracing
 from prometheus_fastapi_instrumentator import Instrumentator
 
 
@@ -24,6 +25,17 @@ configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
 
 logger = get_logger()
 logger.info("Creative service initialized", env=env)
+
+# Initialize OpenTelemetry tracing
+try:
+    init_tracing(
+        service_name="creative-service",
+        service_version="0.1.0",
+        environment=env,
+    )
+    logger.info("Tracing initialized")
+except Exception as e:
+    logger.warn("Failed to initialize tracing", error=str(e))
 
 app = FastAPI(title="Woragis Creative Service", version="0.1.0", description="AI-powered image, diagram, and video generation for technical content")
 

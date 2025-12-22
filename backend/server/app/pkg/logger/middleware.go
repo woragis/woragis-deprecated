@@ -6,24 +6,36 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	apptracing "github.com/woragis/backend/server/app/pkg/tracing"
 )
 
 // RequestIDMiddleware generates and adds a trace_id (request ID) to each request.
 // The trace_id is added to the context and response headers for distributed tracing.
+// This works with OpenTelemetry tracing - if a trace ID exists from OpenTelemetry,
+// it will be used; otherwise a new one is generated.
 func RequestIDMiddleware(log *slog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Check if trace_id already exists in header (for distributed tracing)
-		traceID := c.Get("X-Trace-ID")
+		ctx := c.UserContext()
+		
+		// First, try to get trace ID from OpenTelemetry span context
+		// (if tracing middleware ran first)
+		traceID := apptracing.TraceIDFromContext(ctx)
+		
+		// If no trace ID from OpenTelemetry, check header
 		if traceID == "" {
-			// Generate new trace_id if not present
+			traceID = c.Get("X-Trace-ID")
+		}
+		
+		// If still no trace ID, generate new one
+		if traceID == "" {
 			traceID = uuid.New().String()
 		}
 
 		// Add trace_id to response header
 		c.Set("X-Trace-ID", traceID)
 
-		// Add trace_id to context for logging
-		ctx := WithTraceID(c.UserContext(), traceID)
+		// Add trace_id to context for logging (preserves OpenTelemetry context)
+		ctx = WithTraceID(ctx, traceID)
 		c.SetUserContext(ctx)
 
 		// Store trace_id in locals for easy access

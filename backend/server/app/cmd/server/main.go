@@ -79,6 +79,7 @@ import (
 	apphealth "github.com/woragis/backend/server/app/pkg/health"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 	appmetrics "github.com/woragis/backend/server/app/pkg/metrics"
+	apptracing "github.com/woragis/backend/server/app/pkg/tracing"
 	rabbitmq "github.com/woragis/backend/server/app/pkg/rabbitmq"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 )
@@ -376,6 +377,20 @@ func main() {
 		slog.Int("port", cfg.Port),
 	)
 
+	// Initialize OpenTelemetry tracing
+	tracingShutdown, err := apptracing.Init(apptracing.Config{
+		ServiceName:    cfg.AppName,
+		ServiceVersion: "1.0.0", // TODO: Get from build info
+		Environment:    cfg.Env,
+		JaegerEndpoint: os.Getenv("JAEGER_ENDPOINT"), // Defaults to http://jaeger:14268/api/traces
+	})
+	if err != nil {
+		slogLogger.Warn("failed to initialize tracing", slog.Any("error", err))
+	} else {
+		slogLogger.Info("tracing initialized", slog.String("service", cfg.AppName))
+		defer tracingShutdown()
+	}
+
 	db, err := connectDatabase(slogLogger)
 	if err != nil {
 		slogLogger.Error("database connection failed", slog.Any("error", err))
@@ -417,7 +432,9 @@ func main() {
 	}
 
 	app.Use(recover.New())
-	// Add request ID middleware for distributed tracing
+	// Add OpenTelemetry tracing middleware (must be first to extract trace context)
+	app.Use(apptracing.Middleware(cfg.AppName))
+	// Add request ID middleware for distributed tracing (works with tracing, preserves trace_id)
 	app.Use(applogger.RequestIDMiddleware(slogLogger))
 	// Add structured request logging middleware
 	app.Use(applogger.RequestLoggerMiddleware(slogLogger))

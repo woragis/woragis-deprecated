@@ -8,6 +8,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.config import settings
 from app.logger import configure_logging, get_logger
 from app.middleware import RequestIDMiddleware, RequestLoggerMiddleware
+from app.tracing import init_tracing
 from app.health import check_health
 from app.routes import docs
 
@@ -21,6 +22,17 @@ configure_logging(env=env, log_to_file=log_to_file, log_dir=log_dir)
 
 logger = get_logger()
 logger.info("Docs service initialized", env=env, docs_root=settings.DOCS_ROOT)
+
+# Initialize OpenTelemetry tracing
+try:
+    init_tracing(
+        service_name="docs-service",
+        service_version="0.1.0",
+        environment=env,
+    )
+    logger.info("Tracing initialized")
+except Exception as e:
+    logger.warn("Failed to initialize tracing", error=str(e))
 
 app = FastAPI(
     title="Woragis Docs Service",
