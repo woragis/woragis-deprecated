@@ -23,16 +23,27 @@ type Translator interface {
 }
 
 // NewTranslator creates a translator based on the configured provider.
+// If the configured provider requires an API key that's missing, it falls back to LibreTranslate.
 func NewTranslator(cfg config.TranslationConfig, logger *slog.Logger) (Translator, error) {
 	switch cfg.Provider {
 	case config.ProviderGoogle:
 		if cfg.GoogleAPIKey == "" {
-			return nil, fmt.Errorf("GOOGLE_TRANSLATE_API_KEY is required for Google Translate")
+			logger.Warn("GOOGLE_TRANSLATE_API_KEY not provided, falling back to LibreTranslate")
+			apiURL := cfg.LibreAPIURL
+			if apiURL == "" {
+				apiURL = "https://libretranslate.com/translate" // Default public instance
+			}
+			return NewLibreTranslator(apiURL, cfg.LibreAPIKey, cfg.Timeout, cfg.MaxRetries, cfg.RetryDelay, logger), nil
 		}
 		return NewGoogleTranslator(cfg.GoogleAPIKey, cfg.GoogleProjectID, cfg.Timeout, cfg.MaxRetries, cfg.RetryDelay, logger), nil
 	case config.ProviderDeepL:
 		if cfg.DeepLAPIKey == "" {
-			return nil, fmt.Errorf("DEEPL_API_KEY is required for DeepL")
+			logger.Warn("DEEPL_API_KEY not provided, falling back to LibreTranslate")
+			apiURL := cfg.LibreAPIURL
+			if apiURL == "" {
+				apiURL = "https://libretranslate.com/translate" // Default public instance
+			}
+			return NewLibreTranslator(apiURL, cfg.LibreAPIKey, cfg.Timeout, cfg.MaxRetries, cfg.RetryDelay, logger), nil
 		}
 		return NewDeepLTranslator(cfg.DeepLAPIKey, cfg.Timeout, cfg.MaxRetries, cfg.RetryDelay, logger), nil
 	case config.ProviderLibre:
@@ -42,7 +53,13 @@ func NewTranslator(cfg config.TranslationConfig, logger *slog.Logger) (Translato
 		}
 		return NewLibreTranslator(apiURL, cfg.LibreAPIKey, cfg.Timeout, cfg.MaxRetries, cfg.RetryDelay, logger), nil
 	default:
-		return nil, fmt.Errorf("unsupported translation provider: %s", cfg.Provider)
+		// Unknown provider, fallback to LibreTranslate
+		logger.Warn("Unknown translation provider, falling back to LibreTranslate", "provider", cfg.Provider)
+		apiURL := cfg.LibreAPIURL
+		if apiURL == "" {
+			apiURL = "https://libretranslate.com/translate" // Default public instance
+		}
+		return NewLibreTranslator(apiURL, cfg.LibreAPIKey, cfg.Timeout, cfg.MaxRetries, cfg.RetryDelay, logger), nil
 	}
 }
 

@@ -39,13 +39,13 @@ func LoadRabbitMQConfig() RabbitMQConfig {
 		}
 		vhost := os.Getenv("RABBITMQ_VHOST")
 		if vhost == "" {
-			vhost = "woragis"
+			vhost = "/"
 		}
-		// Remove leading slash if present
-		if len(vhost) > 0 && vhost[0] == '/' {
-			vhost = vhost[1:]
+		// Ensure vhost starts with / for URL construction
+		if len(vhost) > 0 && vhost[0] != '/' {
+			vhost = "/" + vhost
 		}
-		url = fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, port, vhost)
+		url = fmt.Sprintf("amqp://%s:%s@%s:%s%s", user, password, host, port, vhost)
 	}
 
 	return RabbitMQConfig{

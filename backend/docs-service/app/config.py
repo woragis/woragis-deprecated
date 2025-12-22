@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 
@@ -15,7 +15,7 @@ class Settings:
     
     # Docs configuration
     DOCS_ROOT: str = os.getenv("DOCS_ROOT", "/app/docs")
-    DOCS_EXTENSIONS: list[str] = [".md", ".markdown"]
+    DOCS_EXTENSIONS: list[str] = field(default_factory=lambda: [".md", ".markdown"])
     
     # Markdown extensions
     MARKDOWN_EXTENSIONS: str = os.getenv(

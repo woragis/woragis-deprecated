@@ -24,7 +24,8 @@ MARKDOWN_EXTENSIONS = settings.MARKDOWN_EXTENSIONS.split(",")
 MARKDOWN_EXTENSIONS = [ext.strip() for ext in MARKDOWN_EXTENSIONS if ext.strip()]
 
 # Configure code highlighting
-formatter = HtmlFormatter(style="github", cssclass="codehilite")
+# Use 'default' style which is always available in pygments
+formatter = HtmlFormatter(style="default", cssclass="codehilite")
 
 
 class DocResponse(BaseModel):

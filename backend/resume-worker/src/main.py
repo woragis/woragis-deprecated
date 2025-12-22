@@ -83,71 +83,67 @@ def process_resume_job(message: dict) -> bool:
     Returns:
         True if job was processed successfully, False otherwise
     """
+    # Extract job parameters
+    user_id = message.get('user_id')
+    job_description = message.get('job_description')
+    job_title = message.get('job_title', 'Software Engineer')
+    output_filename = message.get('output_filename')
+    language = message.get('language', 'en')
+    
+    if not user_id or not job_description:
+        logger.error("Missing required fields: user_id and job_description are required")
+        return False
+    
+    logger.info(f"Processing resume generation job for user: {user_id}, language: {language}")
+    
+    start_time = time.time()
+    worker_name = "resume-worker"
+    
+    db = None
+    translation_helper = None
+    
     try:
-        # Extract job parameters
-        user_id = message.get('user_id')
-        job_description = message.get('job_description')
-        job_title = message.get('job_title', 'Software Engineer')
-        output_filename = message.get('output_filename')
-        language = message.get('language', 'en')
+        # Initialize components
+        db = Database(DATABASE_URL)
+        ai_service = AIService(AI_SERVICE_URL)
+        translation_helper = TranslationHelper(DATABASE_URL)
+        generator = ResumeGenerator(db, ai_service, OUTPUT_DIR, translation_helper)
         
-        if not user_id or not job_description:
-            logger.error("Missing required fields: user_id and job_description are required")
-            return False
+        db.connect()
+        translation_helper.connect()
         
-        logger.info(f"Processing resume generation job for user: {user_id}, language: {language}")
+        # Generate resume
+        result = generator.generate_resume(
+            user_id=user_id,
+            job_description=job_description,
+            job_title=job_title,
+            output_filename=output_filename,
+            language=language
+        )
         
-        start_time = time.time()
-        worker_name = "resume-worker"
+        # Save result metadata
+        save_result(result, RESULTS_LOG_DIR)
         
-        try:
-            # Initialize components
-            db = Database(DATABASE_URL)
-            ai_service = AIService(AI_SERVICE_URL)
-            translation_helper = TranslationHelper(DATABASE_URL)
-            generator = ResumeGenerator(db, ai_service, OUTPUT_DIR, translation_helper)
-            
-            try:
-                db.connect()
-                translation_helper.connect()
-                
-                # Generate resume
-                result = generator.generate_resume(
-                    user_id=user_id,
-                    job_description=job_description,
-                    job_title=job_title,
-                    output_filename=output_filename,
-                    language=language
-                )
-                
-                # Save result metadata
-                save_result(result, RESULTS_LOG_DIR)
-                
-                duration = time.time() - start_time
-                record_job_processed(worker_name, "success", duration)
-                logger.info(f"Resume successfully generated: {result['output_path']}")
-                logger.info(f"File size: {result['file_size']} bytes")
-                logger.info(f"Projects included: {result['projects_count']}")
-                logger.info(f"Certifications included: {result['certifications_count']}")
-                
-                return True
-                
-            except Exception as e:
-                duration = time.time() - start_time
-                record_job_processed(worker_name, "failed", duration)
-                record_job_failed(worker_name, "processing_error")
-                logger.error(f"Error generating resume: {e}", exc_info=True)
-                return False
-            finally:
-                db.close()
-                translation_helper.close()
-                
-        except Exception as e:
-            duration = time.time() - start_time
-            record_job_processed(worker_name, "failed", duration)
-            record_job_failed(worker_name, "initialization_error")
-            logger.error(f"Error processing resume job: {e}", exc_info=True)
-            return False
+        duration = time.time() - start_time
+        record_job_processed(worker_name, "success", duration)
+        logger.info(f"Resume successfully generated: {result['output_path']}")
+        logger.info(f"File size: {result['file_size']} bytes")
+        logger.info(f"Projects included: {result['projects_count']}")
+        logger.info(f"Certifications included: {result['certifications_count']}")
+        
+        return True
+        
+    except Exception as e:
+        duration = time.time() - start_time
+        record_job_processed(worker_name, "failed", duration)
+        record_job_failed(worker_name, "processing_error")
+        logger.error(f"Error processing resume job: {e}", exc_info=True)
+        return False
+    finally:
+        if db:
+            db.close()
+        if translation_helper:
+            translation_helper.close()
 
 
 def run_cli_mode():
