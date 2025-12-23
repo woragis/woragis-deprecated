@@ -165,10 +165,19 @@ On Windows/Mac with Docker Desktop, this should work automatically.
 - **User Guide**: `USER_GUIDE.md`
 - **Query Library**: `LOGQL_QUERY_LIBRARY.md`
 - **Troubleshooting**: `TROUBLESHOOTING.md`
+- **Retention Policy**: `RETENTION_POLICY.md`
+- **Security**: `SECURITY.md`
 
 ### Metrics
 - **Prometheus Guide**: `PROMETHEUS_GUIDE.md`
 - **Quick Start**: `METRICS_QUICK_START.md`
+
+### Tracing
+- **Tracing Guide**: `TRACING_GUIDE.md`
+- **Quick Start**: `TRACING_QUICK_START.md`
+
+### Planning & Improvements
+- **TODO**: `TODO.md` - Monitoring improvements and next steps
 
 ## References
 

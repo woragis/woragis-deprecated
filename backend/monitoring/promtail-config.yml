@@ -16,7 +16,7 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: label
-            values: ["com.docker.compose.project=woragis"]
+            values: ["com.docker.compose.project=backend"]
     relabel_configs:
       # Extract service name from container name
       - source_labels: ['__meta_docker_container_name']
@@ -48,7 +48,7 @@ scrape_configs:
       
       # Keep only containers that match our project
       - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
-        regex: 'woragis'
+        regex: 'backend'
         action: keep
 
     pipeline_stages:
