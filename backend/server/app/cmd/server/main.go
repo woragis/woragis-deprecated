@@ -79,7 +79,9 @@ import (
 	apphealth "github.com/woragis/backend/server/app/pkg/health"
 	applogger "github.com/woragis/backend/server/app/pkg/logger"
 	appmetrics "github.com/woragis/backend/server/app/pkg/metrics"
+	appsecurity "github.com/woragis/backend/server/app/pkg/security"
 	apptracing "github.com/woragis/backend/server/app/pkg/tracing"
+	appvalidation "github.com/woragis/backend/server/app/pkg/validation"
 	rabbitmq "github.com/woragis/backend/server/app/pkg/rabbitmq"
 	translationenricher "github.com/woragis/backend/server/app/pkg/translations"
 )
@@ -420,6 +422,15 @@ func main() {
 		AppName: cfg.AppName,
 	})
 
+	// Security headers middleware (must be early in chain)
+	app.Use(appsecurity.SecurityHeadersMiddleware())
+	// Request size limit (10MB)
+	app.Use(appvalidation.RequestSizeLimitMiddleware(10 * 1024 * 1024))
+	// Rate limiting (100 requests per minute per IP)
+	app.Use(appvalidation.RateLimitMiddleware(100, time.Minute))
+	// Input sanitization
+	app.Use(appvalidation.InputSanitizationMiddleware())
+
 	if corsCfg.Enabled {
 		app.Use(cors.New(cors.Config{
 			AllowOrigins:     corsCfg.AllowedOrigins,
@@ -432,6 +443,16 @@ func main() {
 	}
 
 	app.Use(recover.New())
+	
+	// Security middleware (early in chain)
+	app.Use(appsecurity.SecurityHeadersMiddleware())
+	// Request size limit (10MB)
+	app.Use(appvalidation.RequestSizeLimitMiddleware(10 * 1024 * 1024))
+	// Rate limiting (100 requests per minute per IP)
+	app.Use(appvalidation.RateLimitMiddleware(100, time.Minute))
+	// Input sanitization
+	app.Use(appvalidation.InputSanitizationMiddleware())
+	
 	// Add OpenTelemetry tracing middleware (must be first to extract trace context)
 	app.Use(apptracing.Middleware(cfg.AppName))
 	// Add request ID middleware for distributed tracing (works with tracing, preserves trace_id)

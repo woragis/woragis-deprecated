@@ -1,0 +1,21 @@
+# SOPS configuration for encrypting secrets
+# See: https://github.com/mozilla/sops
+
+creation_rules:
+  # Production environment secrets
+  - path_regex: \.env\.production$
+    age: >-
+      # Replace with your age public key
+      # Generate with: age-keygen -o secrets-key.txt
+      # Then copy the public key (starts with age1...) here
+      age1your-public-key-here-replace-me
+  
+  # Staging environment secrets
+  - path_regex: \.env\.staging$
+    age: >-
+      age1your-public-key-here-replace-me
+  
+  # Any .env.encrypted files
+  - path_regex: \.env\.encrypted$
+    age: >-
+      age1your-public-key-here-replace-me
