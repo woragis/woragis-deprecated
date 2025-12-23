@@ -27,6 +27,8 @@ Recorded architectural decisions and their rationale:
 ### [Runbooks](./runbooks/)
 Operational procedures and troubleshooting guides:
 - [Monitoring Dead Letter Queues](./runbooks/monitoring-dlq.md) - How to monitor and handle DLQ messages
+- [Monitoring and Alerting](./runbooks/monitoring-alerting.md) - Monitoring setup and alerting configuration
+- [Backup and Restore](./runbooks/backup-restore.md) - Backup and disaster recovery procedures
 - [Deploying Services and Workers](./runbooks/deploying-services.md) - Deployment procedures
 - [Troubleshooting Common Issues](./runbooks/troubleshooting.md) - Common problems and solutions
 
@@ -49,14 +51,41 @@ API endpoint documentation:
 - [Creative Service API](./api/creative-service-api.md) - Creative service endpoints
 - [Docs Service API](./api/docs-service-api.md) - Documentation service endpoints
 
+### [Deployment Guides](./deployment/)
+Production deployment and configuration guides:
+- [Configuration](./deployment/configuration.md) - Environment variables and configuration
+- [Docker Setup](./deployment/docker-setup.md) - Docker deployment guide
+- [Secrets Management](./deployment/secrets-management.md) - Managing secrets securely
+- [SSL/TLS Configuration](./deployment/ssl-tls-configuration.md) - SSL/TLS setup
+- [Authentication & Authorization](./deployment/authentication-authorization.md) - Auth configuration
+- [Input Validation](./deployment/input-validation.md) - Input validation setup
+- [Performance Optimization](./deployment/performance-optimization.md) - Performance tuning
+- [Circuit Breaker Implementation](./deployment/circuit-breaker-implementation.md) - Circuit breaker setup
+
 ### [Development Guides](./development/)
 Guides for developers working on the codebase:
+- [Setup Guide](./development/setup-guide.md) - Local development environment setup
+- [Contributing](./development/contributing.md) - Contribution guidelines
+- [Coding Standards](./development/coding-standards.md) - Code style and standards
+- [Code Review Process](./development/code-review-process.md) - Code review workflow
 - [Adding a New Domain](./development/adding-domain.md) - How to add a new domain to the server
 - [Adding a New Worker](./development/adding-worker.md) - How to create a new worker service
 - [Adding a New Service](./development/adding-service.md) - How to create a new microservice
 - [Testing Patterns](./development/testing-patterns.md) - Testing conventions and patterns
 - [Logging Conventions](./development/logging-conventions.md) - When and how to log
 - [Error Handling Patterns](./development/error-handling.md) - Error handling best practices
+
+### [Planning Documents](./PLANNING/)
+Planning documents and implementation plans:
+- [01: Logging Aggregation Plan](./PLANNING/01-logging-aggregation-plan.md) - Logging infrastructure planning
+- [02: Documentation Plan](./PLANNING/02-documentation-plan.md) - Documentation strategy
+- [03: Production Readiness Plan](./PLANNING/03-production-readiness-plan.md) - Production deployment planning
+- [04: Development Workflow Plan](./PLANNING/04-development-workflow-plan.md) - Development process planning
+- [05: Distributed Tracing Plan](./PLANNING/05-distributed-tracing-plan.md) - Distributed tracing implementation
+- [Circuit Breaker Plan](./PLANNING/CIRCUIT_BREAKER_PLAN.md) - Circuit breaker implementation plan
+- [Documentation Audit](./PLANNING/DOCUMENTATION_AUDIT.md) - Documentation audit and gap analysis
+
+**Note:** Completed implementation summaries and status reports are archived in [PLANNING/archive/](./PLANNING/archive/) for historical reference.
 
 ## 🚀 Quick Start
 
@@ -91,8 +120,16 @@ When adding new documentation:
 5. Link related documents
 6. Update this README if adding new sections
 
+## 📁 Archive Folders
+
+- **[PLANNING/archive/](./PLANNING/archive/)** - Historical implementation summaries and status reports
+- **[deployment/archive/](./deployment/archive/)** - Archived deployment implementation summaries
+
+These folders contain completed implementation documentation for historical reference. Active planning documents remain in their respective parent folders.
+
 ## 🔗 Related Documentation
 
 - [Backend TODO](../TODO.md) - Current tasks and implementation status
 - [Testing Guide](../TESTING.md) - Testing instructions
+- [Logging Format Specification](./LOGGING_FORMAT_SPECIFICATION.md) - Structured logging format specification
 - Component-specific READMEs in each component directory
