@@ -1,0 +1,13 @@
+# Exclude archive folders from Docker builds
+# These contain historical implementation summaries and status reports
+# that are not needed in production deployments
+
+# Root archive folder
+archive/
+
+# Planning archive (historical implementation summaries)
+PLANNING/archive/
+
+# Deployment archive (historical implementation summaries)
+deployment/archive/
+
