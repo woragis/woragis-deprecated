@@ -11,7 +11,9 @@
     "test:scraping": "node src/test-linkedin-scraping.js",
     "test:cover-letter": "node src/test-cover-letter.js",
     "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js --no-coverage",
-    "test:jest:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    "test:jest:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --no-coverage tests/integration/",
+    "test:integration:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage tests/integration/"
   },
   "keywords": [
     "playwright",
