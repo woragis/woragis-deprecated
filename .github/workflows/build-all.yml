@@ -63,6 +63,10 @@ jobs:
             language: python
             working_directory: ./backend/creative-service
             cache_dependency_path: backend/creative-service/requirements.txt
+          - service_name: docs-service
+            language: python
+            working_directory: ./backend/docs-service
+            cache_dependency_path: backend/docs-service/requirements.txt
 
     uses: ./.github/workflows/reusable/test-service.yml
     with:
@@ -115,6 +119,10 @@ jobs:
             image_name: woragis-creative-service
             dockerfile_path: ./backend/creative-service/Dockerfile
             context_path: ./backend/creative-service
+          - service_name: docs-service
+            image_name: woragis-docs-service
+            dockerfile_path: ./backend/Dockerfile.docs-service
+            context_path: ./backend
 
     uses: ./.github/workflows/reusable/build-service.yml
     with:
@@ -148,3 +156,4 @@ jobs:
           echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-whatsapp-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-email-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-creative-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_HUB_USERNAME }}/woragis-docs-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

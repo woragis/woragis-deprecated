@@ -1,0 +1,189 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  lint-go:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=5m
+          working-directory: |
+            backend/server/app
+            backend/email-worker
+            backend/translation-worker
+            backend/whatsapp-worker
+      
+      - name: Run gofmt
+        run: |
+          cd backend/server/app && gofmt -l . | tee /tmp/gofmt.out
+          cd ../../email-worker && gofmt -l . | tee -a /tmp/gofmt.out
+          cd ../translation-worker && gofmt -l . | tee -a /tmp/gofmt.out
+          cd ../whatsapp-worker && gofmt -l . | tee -a /tmp/gofmt.out
+          if [ -s /tmp/gofmt.out ]; then
+            echo "Code is not formatted. Run 'gofmt -w .'"
+            exit 1
+          fi
+      
+      - name: Run go vet
+        run: |
+          cd backend/server/app && go vet ./...
+          cd ../../email-worker && go vet ./...
+          cd ../translation-worker && go vet ./...
+          cd ../whatsapp-worker && go vet ./...
+
+  lint-python:
+    name: Lint Python Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install black isort flake8 bandit mypy
+      
+      - name: Run black (check)
+        run: |
+          black --check backend/ai-service backend/creative-service backend/docs-service backend/resume-worker
+          
+      - name: Run isort (check)
+        run: |
+          isort --check-only backend/ai-service backend/creative-service backend/docs-service backend/resume-worker
+          
+      - name: Run flake8
+        run: |
+          flake8 backend/ai-service backend/creative-service backend/docs-service backend/resume-worker --max-line-length=100 --extend-ignore=E203,W503
+          
+      - name: Run bandit (security)
+        run: |
+          bandit -r backend/ai-service backend/creative-service backend/docs-service backend/resume-worker -f json -o bandit-report.json || true
+          bandit -r backend/ai-service backend/creative-service backend/docs-service backend/resume-worker --skip B101,B601
+
+  lint-javascript:
+    name: Lint JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        working-directory: backend/job-application-worker
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: backend/job-application-worker
+        run: npm run lint || true
+
+      - name: Run Prettier (check)
+        working-directory: backend/job-application-worker
+        run: npx prettier --check . || true
+
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Scan Go dependencies
+        run: |
+          cd backend/server/app && go list -json -deps | nancy sleuth || true
+          cd ../../email-worker && go list -json -deps | nancy sleuth || true
+      
+      - name: Scan Python dependencies
+        run: |
+          pip install safety pip-audit
+          safety check --json || true
+          pip-audit || true
+      
+      - name: Scan Node.js dependencies
+        working-directory: backend/job-application-worker
+        run: npm audit --audit-level=high || true
+
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Run Go tests with coverage
+        run: |
+          cd backend/server/app && go test -coverprofile=coverage.out ./...
+          cd ../../email-worker && go test -coverprofile=coverage.out ./...
+          cd ../translation-worker && go test -coverprofile=coverage.out ./...
+          cd ../whatsapp-worker && go test -coverprofile=coverage.out ./...
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Run Python tests with coverage
+        run: |
+          pip install pytest pytest-cov
+          cd backend/ai-service && pytest --cov=. --cov-report=xml || true
+          cd ../creative-service && pytest --cov=. --cov-report=xml || true
+          cd ../docs-service && pytest --cov=. --cov-report=xml || true
+          cd ../resume-worker && pytest --cov=. --cov-report=xml || true
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./**/coverage.out,./**/coverage.xml
+          fail_ci_if_error: false
+
+  commit-message:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate commit messages
+        uses: commitizen-tools/commitizen-action@v0.17.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

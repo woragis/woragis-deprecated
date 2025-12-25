@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      is_test: ${{ steps.tag.outputs.is_test }}
     steps:
       - name: Extract tag from workflow
         id: tag
@@ -27,12 +28,20 @@ jobs:
               jq -r '.[] | select(.ref | contains("v")) | .ref' | head -1 | sed 's/refs\/tags\///')
           fi
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "Deploying tag: $TAG_NAME"
+          
+          # Check if tag ends with -test
+          if [[ "$TAG_NAME" == *"-test" ]]; then
+            echo "is_test=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Test tag detected: $TAG_NAME - Deployment will be skipped"
+          else
+            echo "is_test=false" >> $GITHUB_OUTPUT
+            echo "✅ Deploying tag: $TAG_NAME"
+          fi
 
   deploy:
     name: Deploy Services
     needs: extract-tag
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && needs.extract-tag.outputs.is_test == 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -92,16 +101,26 @@ jobs:
     steps:
       - name: Summary
         run: |
-          echo "## 🚀 Railway Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Tag: **${{ needs.extract-tag.outputs.tag }}**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Deployed Services:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Main Server: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-server:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ AI Service: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-ai-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Job Application Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-job-application-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Resume Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-resume-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Translation Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-translation-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ WhatsApp Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-whatsapp-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Email Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-email-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Creative Service: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-creative-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.extract-tag.outputs.is_test }}" == "true" ]; then
+            echo "## ⏭️ Deployment Skipped (Test Tag)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Tag: **${{ needs.extract-tag.outputs.tag }}**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Deployment skipped** - Tags ending with \`-test\` are for build/testing only." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Images were built and pushed to Docker Hub, but not deployed to Railway." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 🚀 Railway Deployment Complete" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Tag: **${{ needs.extract-tag.outputs.tag }}**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Deployed Services:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Main Server: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-server:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ AI Service: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-ai-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Job Application Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-job-application-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Resume Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-resume-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Translation Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-translation-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ WhatsApp Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-whatsapp-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Email Worker: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-email-worker:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Creative Service: \`${{ secrets.DOCKER_HUB_USERNAME }}/woragis-creative-service:${{ needs.extract-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
