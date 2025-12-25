@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: job-application-worker
+  namespace: default
+  labels:
+    app: job-application-worker
+    component: worker
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: metrics
+  selector:
+    app: job-application-worker
+

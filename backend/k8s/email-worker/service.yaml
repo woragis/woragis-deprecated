@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: email-worker
+  namespace: default
+  labels:
+    app: email-worker
+    component: worker
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: metrics
+  selector:
+    app: email-worker
+

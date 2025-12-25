@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: translation-worker
+  namespace: default
+  labels:
+    app: translation-worker
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: translation-worker
+  template:
+    metadata:
+      labels:
+        app: translation-worker
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: woragis/translation-worker:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8081
+          name: metrics
+          protocol: TCP
+        env:
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: translation-worker-secrets
+              key: rabbitmq_url
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: translation-worker-secrets
+              key: database_url
+        - name: GOOGLE_TRANSLATE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-worker-secrets
+              key: google_translate_api_key
+        - name: DEEPL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: translation-worker-secrets
+              key: deepl_api_key
+        - name: LIBRETRANSLATE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: translation-worker-config
+              key: libretranslate_url
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      restartPolicy: Always
+

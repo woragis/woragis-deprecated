@@ -1,0 +1,48 @@
+# Kustomization file for managing all Kubernetes resources
+# 
+# Usage:
+#   kubectl apply -k .
+#   kubectl delete -k .
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources:
+  # Services
+  - ai-service/deployment.yaml
+  - ai-service/service.yaml
+  - creative-service/deployment.yaml
+  - creative-service/service.yaml
+  - docs-service/deployment.yaml
+  - docs-service/service.yaml
+  
+  # Workers
+  - email-worker/deployment.yaml
+  - email-worker/service.yaml
+  - email-worker/configmap.yaml
+  - translation-worker/deployment.yaml
+  - translation-worker/service.yaml
+  - translation-worker/configmap.yaml
+  - job-application-worker/deployment.yaml
+  - job-application-worker/service.yaml
+  - job-application-worker/configmap.yaml
+  - resume-worker/deployment.yaml
+  - resume-worker/service.yaml
+  - resume-worker/configmap.yaml
+  - whatsapp-worker/statefulset.yaml
+  
+  # Server
+  - server/deployment.yaml
+  - server/service.yaml
+  - server/configmap.yaml
+  - server/ingress.yaml
+  - server/hpa.yaml
+  - server/pdb.yaml
+
+# Common labels
+commonLabels:
+  app.kubernetes.io/name: woragis
+  app.kubernetes.io/part-of: woragis-backend
+

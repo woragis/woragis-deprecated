@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs-service
+  namespace: default
+  labels:
+    app: docs-service
+    component: service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: docs-service
+

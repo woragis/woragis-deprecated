@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-worker
+  namespace: default
+  labels:
+    app: email-worker
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: email-worker
+  template:
+    metadata:
+      labels:
+        app: email-worker
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: woragis/email-worker:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8081
+          name: metrics
+          protocol: TCP
+        env:
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: email-worker-secrets
+              key: rabbitmq_url
+        - name: SMTP_HOST
+          valueFrom:
+            secretKeyRef:
+              name: email-worker-secrets
+              key: smtp_host
+        - name: SMTP_PORT
+          valueFrom:
+            secretKeyRef:
+              name: email-worker-secrets
+              key: smtp_port
+        - name: SMTP_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: email-worker-secrets
+              key: smtp_username
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: email-worker-secrets
+              key: smtp_password
+        - name: SMTP_FROM
+          valueFrom:
+            configMapKeyRef:
+              name: email-worker-config
+              key: smtp_from
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      restartPolicy: Always
+

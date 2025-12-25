@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: email-worker-config
+  namespace: default
+data:
+  smtp_from: "notifications@woragis.app"
+  smtp_tls: "true"
+

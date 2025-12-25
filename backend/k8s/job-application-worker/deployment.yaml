@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: job-application-worker
+  namespace: default
+  labels:
+    app: job-application-worker
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: job-application-worker
+  template:
+    metadata:
+      labels:
+        app: job-application-worker
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: woragis/job-application-worker:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8081
+          name: metrics
+          protocol: TCP
+        env:
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: job-application-worker-secrets
+              key: rabbitmq_url
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: job-application-worker-secrets
+              key: database_url
+        - name: AI_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: job-application-worker-config
+              key: ai_service_url
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "300m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      restartPolicy: Always
+

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: server-config
+  namespace: default
+data:
+  ai_service_url: "http://ai-service:8000"
+  creative_service_url: "http://creative-service:8000"
+  cors_allowed_origins: "https://woragis.com,https://www.woragis.com"
+  app_public_url: "https://api.woragis.com"
+
