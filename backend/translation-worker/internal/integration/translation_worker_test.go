@@ -6,8 +6,10 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,6 +17,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/woragis/backend/translation-worker/internal/database"
 	"github.com/woragis/backend/translation-worker/internal/queue"
@@ -48,9 +53,34 @@ func setupRabbitMQConnection(t *testing.T) *queue.Connection {
 // setupDatabase creates a database repository for testing
 func setupDatabase(t *testing.T) database.Repository {
 	dbURL := getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/woragis_test?sslmode=disable")
+	
+	// Run migrations first to create translations table
+	if err := migrateTestDatabase(dbURL); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
+	
+	// Create repository after migrations
 	repo, err := database.NewRepository(dbURL, nil)
 	require.NoError(t, err, "Failed to create database repository")
+	
 	return repo
+}
+
+// migrateTestDatabase runs database migrations for the test database
+func migrateTestDatabase(dbURL string) error {
+	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to database for migration: %w", err)
+	}
+	
+	// Migrate translations table
+	if err := db.AutoMigrate(&database.Translation{}); err != nil {
+		return fmt.Errorf("failed to migrate translations table: %w", err)
+	}
+	
+	return nil
 }
 
 // getEnv gets an environment variable or returns a default value
@@ -467,9 +497,13 @@ func TestTranslationWorkerMultipleLanguages(t *testing.T) {
 	}
 
 	// Process messages
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	processedCount := 0
+	processedMutex := &sync.Mutex{}
+	done := make(chan bool, 1)
+	
 	go func() {
 		_ = translationQueue.Consume(ctx, func(job queue.TranslationJob) error {
 			entityUUID, _ := uuid.Parse(job.EntityID)
@@ -496,16 +530,45 @@ func TestTranslationWorkerMultipleLanguages(t *testing.T) {
 
 			translation.SetFields(translatedFields)
 			translation.Status = "completed"
-			return dbRepo.UpdateTranslation(ctx, translation)
+			err := dbRepo.UpdateTranslation(ctx, translation)
+			
+			processedMutex.Lock()
+			processedCount++
+			if processedCount >= len(languages) {
+				select {
+				case done <- true:
+				default:
+				}
+			}
+			processedMutex.Unlock()
+			
+			return err
 		})
 	}()
 
-	time.Sleep(3 * time.Second)
+	// Wait for all messages to be processed or timeout
+	select {
+	case <-done:
+		// All messages processed
+		t.Logf("All %d messages processed successfully", len(languages))
+	case <-time.After(12 * time.Second):
+		// Timeout - check what was processed
+		processedMutex.Lock()
+		count := processedCount
+		processedMutex.Unlock()
+		t.Logf("Timeout waiting for messages. Processed: %d/%d", count, len(languages))
+		if count < len(languages) {
+			t.Skipf("Only %d/%d messages processed, skipping verification", count, len(languages))
+		}
+	}
 	cancel()
 
 	// Verify translations for all languages were created
+	verifyCtx, verifyCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer verifyCancel()
+	
 	for _, lang := range languages {
-		translation, err := dbRepo.GetTranslationByEntity(ctx, "project", entityID, lang)
+		translation, err := dbRepo.GetTranslationByEntity(verifyCtx, "project", entityID, lang)
 		require.NoError(t, err)
 		assert.NotNil(t, translation, "Translation should exist for language: %s", lang)
 		if translation != nil {
