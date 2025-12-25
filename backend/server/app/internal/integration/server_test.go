@@ -1,5 +1,5 @@
-//go:build integration && !performance_test
-// +build integration,!performance_test
+//go:build integration
+// +build integration
 
 package integration
 

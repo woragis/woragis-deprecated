@@ -45,11 +45,15 @@ func TestTestimonialsAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var testimonial map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&testimonial)
+	var testimonialResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&testimonialResponse)
 	require.NoError(t, err)
-	assert.NotNil(t, testimonial["id"])
-	testimonialID := testimonial["id"].(string)
+	
+	// Response is wrapped in "data" field
+	testimonialData, ok := testimonialResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, testimonialData["id"])
+	testimonialID := testimonialData["id"].(string)
 
 	// Get testimonial by ID
 	req = httptest.NewRequest("GET", "/api/testimonials/"+testimonialID, nil)
@@ -115,11 +119,15 @@ func TestExperiencesAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var experience map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&experience)
+	var experienceResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&experienceResponse)
 	require.NoError(t, err)
-	assert.NotNil(t, experience["id"])
-	experienceID := experience["id"].(string)
+	
+	// Response is wrapped in "data" field
+	experienceData, ok := experienceResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, experienceData["id"])
+	experienceID := experienceData["id"].(string)
 
 	// Get experience by ID
 	req = httptest.NewRequest("GET", "/api/experiences/"+experienceID, nil)
@@ -185,11 +193,15 @@ func TestCertificationsAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var certification map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&certification)
+	var certificationResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&certificationResponse)
 	require.NoError(t, err)
-	assert.NotNil(t, certification["id"])
-	certificationID := certification["id"].(string)
+	
+	// Response is wrapped in "data" field
+	certificationData, ok := certificationResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, certificationData["id"])
+	certificationID := certificationData["id"].(string)
 
 	// Get certification by ID
 	req = httptest.NewRequest("GET", "/api/certifications/"+certificationID, nil)
@@ -261,11 +273,15 @@ func TestCaseStudiesAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var caseStudy map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&caseStudy)
+	var caseStudyResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&caseStudyResponse)
 	require.NoError(t, err)
-	assert.NotNil(t, caseStudy["id"])
-	caseStudyID := caseStudy["id"].(string)
+	
+	// Response is wrapped in "data" field
+	caseStudyData, ok := caseStudyResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, caseStudyData["id"])
+	caseStudyID := caseStudyData["id"].(string)
 
 	// Get case study by ID
 	req = httptest.NewRequest("GET", "/api/case-studies/"+caseStudyID, nil)
@@ -329,13 +345,17 @@ func TestSocialMediaPostsAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var post map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&post)
+	var postResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&postResponse)
 	require.NoError(t, err)
-	assert.NotNil(t, post["id"])
-	assert.Equal(t, "linkedin", post["platform"])
-	assert.Equal(t, "post", post["format"])
-	postID := post["id"].(string)
+	
+	// Response is wrapped in "data" field
+	postData, ok := postResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, postData["id"])
+	assert.Equal(t, "linkedin", postData["platform"])
+	assert.Equal(t, "post", postData["format"])
+	postID := postData["id"].(string)
 
 	// Get post by ID
 	req = httptest.NewRequest("GET", "/api/social-media-posts/"+postID, nil)
@@ -405,10 +425,14 @@ func TestCertificationsRelationships(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	var skill map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&skill)
+	var skillResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&skillResponse)
 	require.NoError(t, err)
-	skillID := skill["id"].(string)
+	
+	// Response is wrapped in "data" field
+	skillData, ok := skillResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	skillID := skillData["id"].(string)
 
 	// Create a certification
 	certReq := map[string]interface{}{

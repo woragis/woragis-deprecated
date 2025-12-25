@@ -31,9 +31,18 @@ import (
 func MigrateTestDB(t testing.TB, db *gorm.DB) error {
 	err := db.AutoMigrate(
 		&authdomain.User{},
+		&authdomain.EmailToken{}, // Added for email confirmation tests
+		&authdomain.AuditLog{},   // Added for audit log tests
+		&authdomain.Device{},     // Added for device tracking in auth
+		&authdomain.Session{},    // Added for session management in auth
 		&userprofilesdomain.UserProfile{},
 		&userpreferencesdomain.UserPreferences{},
 		&postsdomain.Post{},
+		&postsdomain.PostSkill{},     // Added for post-skill relationship tests
+		&postsdomain.Category{},      // Added for posts category tests
+		&postsdomain.PostCategory{},  // Added for posts category relationship tests
+		&postsdomain.Tag{},           // Added for posts tag tests
+		&postsdomain.PostTag{},       // Added for posts tag relationship tests
 		&postcommentsdomain.Comment{},
 		&projectsdomain.Project{},
 		&interestsdomain.Interest{},
@@ -41,6 +50,7 @@ func MigrateTestDB(t testing.TB, db *gorm.DB) error {
 		&casestudiesdomain.CaseStudy{},
 		&certificationsdomain.Certification{},
 		&skillsdomain.Skill{},
+		&skillsdomain.ProjectSkill{}, // Added for project-skill relationship tests
 		&testimonialsdomain.Testimonial{},
 		&creativeassetsdomain.CreativeAsset{},
 		&apikeysdomain.APIKey{},

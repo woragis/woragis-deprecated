@@ -82,8 +82,12 @@ func TestEmailConfirmationFlow(t *testing.T) {
 	var loginResp map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&loginResp)
 	require.NoError(t, err)
-	assert.NotNil(t, loginResp["access_token"])
-	assert.NotNil(t, loginResp["refresh_token"])
+	
+	// Response is wrapped in "data" field
+	loginData, ok := loginResp["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, loginData["access_token"])
+	assert.NotNil(t, loginData["refresh_token"])
 }
 
 // TestPasswordResetFlow tests the password reset flow

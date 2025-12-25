@@ -6,6 +6,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,7 +32,7 @@ func TestSkillsAPI(t *testing.T) {
 	createReq := map[string]interface{}{
 		"name":        "Go",
 		"description": "Go programming language",
-		"category":    "programming",
+		"category":    "language",  // Use valid category (backend, frontend, database, infrastructure, devops, language, framework, tool, service, library, other)
 		"icon":        "go-icon",
 		"color":       "#00ADD8",
 	}
@@ -43,14 +44,46 @@ func TestSkillsAPI(t *testing.T) {
 
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	
+	// Check if request was successful
+	if resp.StatusCode != http.StatusCreated {
+		// Read error response
+		var errorResp map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&errorResp); err == nil {
+			t.Logf("Error response: %+v", errorResp)
+		}
+		// Try to read body as text
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Logf("Response body: %s", string(bodyBytes))
+	}
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Skill creation should succeed")
 
-	var skill map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&skill)
+	var response map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	require.NoError(t, err)
-	assert.NotNil(t, skill["id"])
+	
+	// Response is wrapped in "data" field
+	dataValue, ok := response["data"]
+	if !ok {
+		t.Fatalf("Data field not found in response. Response: %+v", response)
+	}
+	
+	skill, ok := dataValue.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Data is not a map, got type: %T, value: %v", dataValue, dataValue)
+	}
+	
+	// Safely extract skill ID
+	skillIDValue, ok := skill["id"]
+	if !ok {
+		t.Fatalf("Skill ID not found in response. Response: %+v", skill)
+	}
+	skillID, ok := skillIDValue.(string)
+	if !ok {
+		t.Fatalf("Skill ID is not a string, got type: %T, value: %v", skillIDValue, skillIDValue)
+	}
+	
 	assert.Equal(t, "Go", skill["name"])
-	skillID := skill["id"].(string)
 
 	// Get skill by ID
 	req = httptest.NewRequest("GET", "/api/skills/"+skillID, nil)
@@ -83,7 +116,7 @@ func TestSkillsAPI(t *testing.T) {
 	// Update skill
 	updateReq := map[string]interface{}{
 		"description": "Updated description",
-		"proficiencyLevel": "intermediate",
+		"proficiencyLevel": "proficient",
 	}
 	body, _ = json.Marshal(updateReq)
 	req = httptest.NewRequest("PATCH", "/api/skills/"+skillID, bytes.NewReader(body))
@@ -136,12 +169,16 @@ func TestPostsAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var post map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&post)
+	var response map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	require.NoError(t, err)
-	assert.NotNil(t, post["id"])
-	assert.Equal(t, "Test Post", post["title"])
-	postID := post["id"].(string)
+	
+	// Response is wrapped in "data" field
+	postData, ok := response["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, postData["id"])
+	assert.Equal(t, "Test Post", postData["title"])
+	postID := postData["id"].(string)
 
 	// Get post by ID
 	req = httptest.NewRequest("GET", "/api/posts/"+postID, nil)
@@ -206,12 +243,16 @@ func TestInterestsAPI(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var interest map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&interest)
+	var response map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	require.NoError(t, err)
-	assert.NotNil(t, interest["id"])
-	assert.Equal(t, "Machine Learning", interest["title"])
-	interestID := interest["id"].(string)
+	
+	// Response is wrapped in "data" field
+	interestData, ok := response["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	assert.NotNil(t, interestData["id"])
+	assert.Equal(t, "Machine Learning", interestData["title"])
+	interestID := interestData["id"].(string)
 
 	// Get interest by ID
 	req = httptest.NewRequest("GET", "/api/interests/"+interestID, nil)
@@ -275,8 +316,8 @@ func TestSkillsSearchAndFiltering(t *testing.T) {
 
 	// Create multiple skills with different categories
 	skills := []map[string]interface{}{
-		{"name": "Go", "category": "programming", "description": "Go language"},
-		{"name": "Python", "category": "programming", "description": "Python language"},
+		{"name": "Go", "category": "language", "description": "Go language"},
+		{"name": "Python", "category": "language", "description": "Python language"},
 		{"name": "Docker", "category": "devops", "description": "Containerization"},
 		{"name": "Kubernetes", "category": "devops", "description": "Orchestration"},
 	}
@@ -291,10 +332,14 @@ func TestSkillsSearchAndFiltering(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		var skill map[string]interface{}
-		err = json.NewDecoder(resp.Body).Decode(&skill)
+		var response map[string]interface{}
+		err = json.NewDecoder(resp.Body).Decode(&response)
 		require.NoError(t, err)
-		skillIDs = append(skillIDs, skill["id"].(string))
+		
+		// Response is wrapped in "data" field
+		skillData, ok := response["data"].(map[string]interface{})
+		require.True(t, ok, "response should have data field")
+		skillIDs = append(skillIDs, skillData["id"].(string))
 	}
 
 	// Test search functionality
@@ -340,8 +385,9 @@ func TestPostsRelationships(t *testing.T) {
 
 	// Create a skill first
 	skillReq := map[string]interface{}{
-		"name":     "Go",
-		"category": "programming",
+		"name":        "Go",
+		"category":    "language",
+		"description": "Go programming language",
 	}
 	body, _ := json.Marshal(skillReq)
 	req := httptest.NewRequest("POST", "/api/skills", bytes.NewReader(body))
@@ -349,10 +395,16 @@ func TestPostsRelationships(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	var skill map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&skill)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Skill creation should succeed")
+	
+	var response map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	require.NoError(t, err)
-	skillID := skill["id"].(string)
+	
+	// Response is wrapped in "data" field
+	skillData, ok := response["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	skillID := skillData["id"].(string)
 
 	// Create a category
 	categoryReq := map[string]interface{}{
@@ -364,10 +416,16 @@ func TestPostsRelationships(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err = app.Test(req)
 	require.NoError(t, err)
-	var category map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&category)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Category creation should succeed")
+	
+	var categoryResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&categoryResponse)
 	require.NoError(t, err)
-	categoryID := category["id"].(string)
+	
+	// Response is wrapped in "data" field
+	categoryData, ok := categoryResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	categoryID := categoryData["id"].(string)
 
 	// Create a post with relationships
 	postReq := map[string]interface{}{
@@ -385,10 +443,14 @@ func TestPostsRelationships(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var post map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&post)
+	var postResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&postResponse)
 	require.NoError(t, err)
-	postID := post["id"].(string)
+	
+	// Response is wrapped in "data" field
+	postData, ok := postResponse["data"].(map[string]interface{})
+	require.True(t, ok, "response should have data field")
+	postID := postData["id"].(string)
 
 	// Get post skills
 	req = httptest.NewRequest("GET", "/api/posts/"+postID+"/skills", nil)
