@@ -30,6 +30,7 @@ from resume_generator import ResumeGenerator
 from translation_helper import TranslationHelper
 from queue_consumer import create_consumer_from_env
 from metrics import record_job_processed, record_job_failed
+from validation import validate_resume_job_message, validate_cli_arguments, sanitize_string
 import time
 
 # Load environment variables
@@ -95,16 +96,19 @@ def process_resume_job(message: dict) -> bool:
     Returns:
         True if job was processed successfully, False otherwise
     """
-    # Extract job parameters
-    user_id = message.get('user_id')
-    job_description = message.get('job_description')
-    job_title = message.get('job_title', 'Software Engineer')
-    output_filename = message.get('output_filename')
-    language = message.get('language', 'en')
-    
-    if not user_id or not job_description:
-        logger.error("Missing required fields: user_id and job_description are required")
+    # Validate job message
+    try:
+        validate_resume_job_message(message)
+    except ValueError as e:
+        logger.error(f"Invalid job message: {e}")
         return False
+    
+    # Extract and sanitize job parameters
+    user_id = sanitize_string(message.get('user_id'))
+    job_description = sanitize_string(message.get('job_description'))
+    job_title = sanitize_string(message.get('job_title', 'Software Engineer'))
+    output_filename = sanitize_string(message.get('output_filename')) if message.get('output_filename') else None
+    language = sanitize_string(message.get('language', 'en'))
     
     logger.info(f"Processing resume generation job for user: {user_id}, language: {language}")
     
@@ -172,16 +176,19 @@ def run_cli_mode():
         db.connect()
         translation_helper.connect()
         
-        # Check command line arguments
-        if len(sys.argv) < 3:
+        # Validate and extract command line arguments
+        try:
+            validate_cli_arguments(sys.argv)
+        except ValueError as e:
+            logger.error(f"Invalid arguments: {e}")
             logger.error("Usage: python main.py <user_id> <job_description> [job_title] [output_filename] [language]")
             sys.exit(1)
         
-        user_id = sys.argv[1]
-        job_description = sys.argv[2]
-        job_title = sys.argv[3] if len(sys.argv) > 3 else "Software Engineer"
-        output_filename = sys.argv[4] if len(sys.argv) > 4 else None
-        language = sys.argv[5] if len(sys.argv) > 5 else "en"
+        user_id = sanitize_string(sys.argv[1])
+        job_description = sanitize_string(sys.argv[2])
+        job_title = sanitize_string(sys.argv[3]) if len(sys.argv) > 3 else "Software Engineer"
+        output_filename = sanitize_string(sys.argv[4]) if len(sys.argv) > 4 else None
+        language = sanitize_string(sys.argv[5]) if len(sys.argv) > 5 else "en"
         
         # Generate resume
         result = generator.generate_resume(
