@@ -9,8 +9,7 @@ from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.sdk.resource import Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import Resource, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Tracer
 
@@ -87,8 +86,8 @@ def init_tracing(
     
     # Auto-instrument FastAPI and requests
     try:
-        FastAPIInstrumentor.instrument()
-        RequestsInstrumentor.instrument()
+        FastAPIInstrumentor().instrument()
+        RequestsInstrumentor().instrument()
     except Exception as e:
         # Log but don't fail if instrumentation fails
         print(f"Warning: Failed to auto-instrument: {e}")
