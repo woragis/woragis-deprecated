@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { logger } from './utils/logger.js';
+import { validateString, validateNoSQLInjection, validateNoXSS } from './validation.js';
 
 // Note: Import logger if not already imported
 
@@ -9,6 +10,29 @@ export class CoverLetterService {
   }
 
   async generateCoverLetter(profile, jobInfo) {
+    // Validate inputs
+    if (!jobInfo || !jobInfo.companyName || !jobInfo.jobTitle) {
+      throw new Error('jobInfo must contain companyName and jobTitle');
+    }
+    validateString(jobInfo.companyName, 1, 200, 'companyName');
+    validateString(jobInfo.jobTitle, 1, 200, 'jobTitle');
+    validateNoSQLInjection(jobInfo.companyName, 'companyName');
+    validateNoSQLInjection(jobInfo.jobTitle, 'jobTitle');
+    validateNoXSS(jobInfo.companyName, 'companyName');
+    validateNoXSS(jobInfo.jobTitle, 'jobTitle');
+
+    if (jobInfo.location) {
+      validateString(jobInfo.location, 1, 200, 'location');
+      validateNoSQLInjection(jobInfo.location, 'location');
+      validateNoXSS(jobInfo.location, 'location');
+    }
+
+    if (jobInfo.jobDescription) {
+      validateString(jobInfo.jobDescription, 1, 50000, 'jobDescription');
+      validateNoSQLInjection(jobInfo.jobDescription, 'jobDescription');
+      validateNoXSS(jobInfo.jobDescription, 'jobDescription');
+    }
+
     logger.info('Generating cover letter', {
       company: jobInfo.companyName,
       jobTitle: jobInfo.jobTitle,

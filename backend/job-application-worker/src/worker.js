@@ -5,6 +5,7 @@ import { Scraper } from './scraper.js';
 import { CoverLetterService } from './coverLetter.js';
 import { logger } from './utils/logger.js';
 import { recordJobProcessed, recordJobFailed } from './metrics.js';
+import { validateJobApplicationJob, validateScrapedJobInfo, validateCoverLetter } from './validation.js';
 
 export class Worker {
   constructor() {
@@ -45,6 +46,20 @@ export class Worker {
     const workerName = 'job-application-worker';
     
     try {
+      // Validate job
+      try {
+        validateJobApplicationJob(job);
+      } catch (error) {
+        const duration = (Date.now() - startTime) / 1000;
+        recordJobProcessed(workerName, 'failed', duration);
+        recordJobFailed(workerName, 'validation_error');
+        logger.error('Invalid job application job', {
+          jobId: job.id,
+          error: error.message,
+        });
+        throw error;
+      }
+
       logger.info('Processing job application', {
         jobId: job.id,
         company: job.companyName,
@@ -116,6 +131,17 @@ export class Worker {
     };
 
     const coverLetter = await this.coverLetterService.generateCoverLetter(profile, jobInfo);
+    
+    // Validate cover letter
+    try {
+      validateCoverLetter(coverLetter);
+    } catch (error) {
+      logger.error('Invalid cover letter generated', {
+        error: error.message,
+        jobId: job.id,
+      });
+      throw new Error(`Cover letter validation failed: ${error.message}`);
+    }
 
     // Apply to job using Playwright
     try {
