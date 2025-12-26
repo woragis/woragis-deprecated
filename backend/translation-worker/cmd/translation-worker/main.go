@@ -105,6 +105,14 @@ func main() {
 			start := time.Now()
 			workerName := "translation-worker"
 
+			// Validate job
+			if err := queue.ValidateTranslationJob(job); err != nil {
+				logger.Error("Invalid translation job", slog.Any("error", err), slog.String("job_id", job.ID))
+				appmetrics.RecordJobProcessed(workerName, "failed", time.Since(start).Seconds())
+				appmetrics.RecordJobFailed(workerName, "validation_error")
+				return fmt.Errorf("validation failed: %w", err)
+			}
+
 			err := processTranslationJob(ctx, job, dbRepo, translatorClient, logger)
 			duration := time.Since(start).Seconds()
 
