@@ -108,15 +108,16 @@ func main() {
 			start := time.Now()
 			workerName := "whatsapp-worker"
 
-			// Validate destination
-			if envelope.Destination == "" {
+			// Validate envelope
+			if err := queue.ValidateWhatsAppEnvelope(envelope); err != nil {
 				duration := time.Since(start).Seconds()
 				appmetrics.RecordJobProcessed(workerName, "failed", duration)
 				appmetrics.RecordJobFailed(workerName, "validation_error")
-				logger.Error("Missing destination in WhatsApp message",
+				logger.Error("Invalid WhatsApp message",
 					slog.String("user_id", envelope.UserID),
+					slog.Any("error", err),
 				)
-				return fmt.Errorf("missing destination")
+				return fmt.Errorf("validation failed: %w", err)
 			}
 
 			// Send WhatsApp message
