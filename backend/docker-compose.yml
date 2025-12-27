@@ -96,9 +96,7 @@ services:
       - ./resume-worker/output:/app/output
     restart: on-failure
   translation-worker:
-    build:
-      context: ./translation-worker
-      dockerfile: Dockerfile
+    image: woragis/translation-worker:1.1.0
     container_name: woragis-translation-worker
     depends_on:
       database:
@@ -121,6 +119,14 @@ services:
       TRANSLATION_TIMEOUT: ${TRANSLATION_TIMEOUT:-30}
       TRANSLATION_MAX_RETRIES: ${TRANSLATION_MAX_RETRIES:-3}
       TRANSLATION_RETRY_DELAY: ${TRANSLATION_RETRY_DELAY:-1000}
+    ports:
+      - "8082:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
   job-application-worker:
     build:
@@ -157,9 +163,7 @@ services:
       PLAYWRIGHT_TIMEOUT: ${PLAYWRIGHT_TIMEOUT:-30000}
     restart: unless-stopped
   ai-service:
-    build:
-      context: ./ai-service
-      dockerfile: Dockerfile
+    image: woragis/ai-service:1.1.0
     container_name: woragis-ai-service
     depends_on:
       redis:
@@ -187,11 +191,15 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: on-failure
   creative-service:
-    build:
-      context: ./creative-service
-      dockerfile: Dockerfile
+    image: woragis/creative-service:1.1.0
     container_name: woragis-creative-service
     depends_on:
       redis:
@@ -218,6 +226,12 @@ services:
       DEFAULT_DIAGRAM_FORMAT: ${DEFAULT_DIAGRAM_FORMAT:-png}
     ports:
       - "8001:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: on-failure
   docs-service:
     build:
@@ -271,9 +285,7 @@ services:
     command: ["python", "src/main.py"]
     restart: unless-stopped
   email-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.email-worker
+    image: woragis/email-worker:1.1.0
     container_name: woragis-email-worker
     depends_on:
       rabbitmq:
@@ -296,11 +308,17 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_TLS: ${SMTP_TLS:-true}
+    ports:
+      - "8083:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
   whatsapp-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.whatsapp-worker
+    image: woragis/whatsapp-worker:1.1.0
     container_name: woragis-whatsapp-worker
     depends_on:
       rabbitmq:
@@ -318,8 +336,16 @@ services:
       WHATSAPP_ROUTING_KEY: ${WHATSAPP_ROUTING_KEY:-whatsapp.send}
       WHATSAPP_PREFETCH_COUNT: ${WHATSAPP_PREFETCH_COUNT:-1}
       WHATSAPP_SESSION_PATH: ${WHATSAPP_SESSION_PATH:-/app/session}
+    ports:
+      - "8084:8080"
     volumes:
       - ./whatsapp-worker/session:/app/session
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
   # Ensure the main app knows where to reach ai-service
   # (defined here for visibility; env actually belongs to app service)
