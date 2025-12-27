@@ -202,7 +202,7 @@ function sanitizeString(value) {
   return value.trim();
 }
 
-module.exports = {
+export {
   validateUUID,
   validateString,
   validateURL,
