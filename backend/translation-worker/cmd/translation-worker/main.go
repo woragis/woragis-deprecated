@@ -50,16 +50,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Connect to RabbitMQ
+	// Connect to RabbitMQ with retry logic
 	logger.Info("Connecting to RabbitMQ", slog.String("url", rabbitmqCfg.URL))
-	conn, err := queue.NewConnection(rabbitmqCfg.URL)
-	if err != nil {
-		logger.Error("Failed to connect to RabbitMQ", slog.Any("error", err))
-		os.Exit(1)
+	var conn *queue.Connection
+	const maxRabbitMQAttempts = 5
+	for attempt := 1; attempt <= maxRabbitMQAttempts; attempt++ {
+		var err error
+		conn, err = queue.NewConnection(rabbitmqCfg.URL)
+		if err != nil {
+			logger.Warn("RabbitMQ connection failed, retrying...",
+				slog.Int("attempt", attempt),
+				slog.Int("max_attempts", maxRabbitMQAttempts),
+				slog.Any("error", err),
+			)
+			if attempt < maxRabbitMQAttempts {
+				time.Sleep(time.Duration(attempt) * time.Second)
+				continue
+			}
+			logger.Error("RabbitMQ connection failed after multiple attempts", slog.Any("error", err))
+			os.Exit(1)
+		}
+		logger.Info("Connected to RabbitMQ")
+		break
 	}
 	defer conn.Close()
-
-	logger.Info("Connected to RabbitMQ")
 
 	// Create queue
 	translationQueue, err := queue.NewQueue(
