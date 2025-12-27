@@ -17,6 +17,9 @@ from datetime import datetime
 import pika
 from pika.exceptions import AMQPConnectionError, AMQPChannelError
 
+# Reduce pika logging verbosity
+logging.getLogger('pika').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,53 +66,74 @@ class ResumeQueueConsumer:
             self.connection.close()
         sys.exit(0)
     
-    def connect(self):
-        """Establish connection to RabbitMQ"""
-        try:
-            logger.info(f"Connecting to RabbitMQ: {self.rabbitmq_url}")
-            params = pika.URLParameters(self.rabbitmq_url)
-            self.connection = pika.BlockingConnection(params)
-            self.channel = self.connection.channel()
-            
-            # Declare exchange
-            self.channel.exchange_declare(
-                exchange=self.exchange,
-                exchange_type='direct',
-                durable=True
-            )
-            
-            # Declare queue with durability and dead letter exchange
-            self.channel.queue_declare(
-                queue=self.queue_name,
-                durable=True,
-                arguments={
-                    'x-dead-letter-exchange': 'woragis.dlx',
-                    'x-dead-letter-routing-key': self.queue_name + '.failed'
-                }
-            )
-            
-            # Bind queue to exchange
-            self.channel.queue_bind(
-                exchange=self.exchange,
-                queue=self.queue_name,
-                routing_key=self.routing_key
-            )
-            
-            # Set QoS to process one message at a time
-            self.channel.basic_qos(prefetch_count=1)
-            
-            logger.info(f"Connected to RabbitMQ and ready to consume from queue: {self.queue_name}")
-            
-            # Update health check connection reference
-            self._expose_for_health()
-            
-            return True
-        except AMQPConnectionError as e:
-            logger.error(f"Failed to connect to RabbitMQ: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error connecting to RabbitMQ: {e}", exc_info=True)
-            return False
+    def connect(self, max_attempts: int = 5):
+        """
+        Establish connection to RabbitMQ with retry logic.
+        
+        Args:
+            max_attempts: Maximum number of connection attempts (default: 5)
+        
+        Returns:
+            True if connection successful, False otherwise
+        """
+        import time
+        
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(f"Connecting to RabbitMQ (attempt {attempt}/{max_attempts}): {self.rabbitmq_url}")
+                params = pika.URLParameters(self.rabbitmq_url)
+                self.connection = pika.BlockingConnection(params)
+                self.channel = self.connection.channel()
+                
+                # Declare exchange
+                self.channel.exchange_declare(
+                    exchange=self.exchange,
+                    exchange_type='direct',
+                    durable=True
+                )
+                
+                # Declare queue with durability and dead letter exchange
+                self.channel.queue_declare(
+                    queue=self.queue_name,
+                    durable=True,
+                    arguments={
+                        'x-dead-letter-exchange': 'woragis.dlx',
+                        'x-dead-letter-routing-key': self.queue_name + '.failed'
+                    }
+                )
+                
+                # Bind queue to exchange
+                self.channel.queue_bind(
+                    exchange=self.exchange,
+                    queue=self.queue_name,
+                    routing_key=self.routing_key
+                )
+                
+                # Set QoS to process one message at a time
+                self.channel.basic_qos(prefetch_count=1)
+                
+                logger.info(f"Connected to RabbitMQ and ready to consume from queue: {self.queue_name}")
+                
+                # Update health check connection reference
+                self._expose_for_health()
+                
+                return True
+            except AMQPConnectionError as e:
+                if attempt < max_attempts:
+                    logger.warning(f"RabbitMQ connection failed (attempt {attempt}/{max_attempts}), retrying...", extra={"error": str(e)})
+                    time.sleep(attempt)  # Exponential backoff
+                else:
+                    logger.error(f"Failed to connect to RabbitMQ after {max_attempts} attempts: {e}")
+                    return False
+            except Exception as e:
+                if attempt < max_attempts:
+                    logger.warning(f"Unexpected error connecting to RabbitMQ (attempt {attempt}/{max_attempts}), retrying...", exc_info=True)
+                    time.sleep(attempt)  # Exponential backoff
+                else:
+                    logger.error(f"Unexpected error connecting to RabbitMQ after {max_attempts} attempts: {e}", exc_info=True)
+                    return False
+        
+        return False
     
     def _expose_for_health(self):
         """Expose connection for health checks."""
