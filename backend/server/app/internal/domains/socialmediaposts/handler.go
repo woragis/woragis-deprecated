@@ -100,6 +100,13 @@ func (h *handler) CreatePost(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateCreatePostPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	var contentPostID *uuid.UUID
 	if payload.ContentPostID != nil {
 		parsed, err := uuid.Parse(*payload.ContentPostID)
@@ -137,6 +144,13 @@ func (h *handler) UpdatePost(c *fiber.Ctx) error {
 	var payload updatePostPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateUpdatePostPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	post, err := h.service.UpdatePost(c.Context(), UpdatePostRequest{
@@ -298,6 +312,13 @@ func (h *handler) UpdatePostEngagement(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateUpdateEngagementPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	post, err := h.service.UpdatePostEngagement(c.Context(), postID, UpdateEngagementRequest{
 		Likes:    payload.Likes,
 		Shares:   payload.Shares,
@@ -322,6 +343,13 @@ func (h *handler) CreateLink(c *fiber.Ctx) error {
 	var payload createLinkPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateCreateLinkPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	link, err := h.service.CreateLink(c.Context(), CreateLinkRequest{
@@ -351,6 +379,13 @@ func (h *handler) UpdateLink(c *fiber.Ctx) error {
 	var payload updateLinkPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateUpdateLinkPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	link, err := h.service.UpdateLink(c.Context(), UpdateLinkRequest{

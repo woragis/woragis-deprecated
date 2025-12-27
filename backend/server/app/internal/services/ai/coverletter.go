@@ -7,6 +7,7 @@ import (
 	"time"
 
 	langchainservice "github.com/woragis/backend/server/app/internal/services/langchain"
+	"github.com/woragis/backend/server/app/pkg/validation"
 )
 
 // CoverLetterService generates personalized cover letters using AI.
@@ -63,11 +64,39 @@ type JobInfo struct {
 
 // GenerateCoverLetter generates a personalized cover letter.
 func (cls *CoverLetterService) GenerateCoverLetter(ctx context.Context, profile UserProfile, job JobInfo) (string, error) {
+	// Validate inputs
+	if err := ValidateUserProfile(profile); err != nil {
+		return "", fmt.Errorf("invalid user profile: %w", err)
+	}
+	if err := ValidateJobInfo(job); err != nil {
+		return "", fmt.Errorf("invalid job info: %w", err)
+	}
 	return cls.GenerateCoverLetterWithContext(ctx, profile, job, "")
 }
 
 // GenerateCoverLetterWithContext generates a personalized cover letter with additional context.
 func (cls *CoverLetterService) GenerateCoverLetterWithContext(ctx context.Context, profile UserProfile, job JobInfo, additionalContext string) (string, error) {
+	// Validate inputs
+	if err := ValidateUserProfile(profile); err != nil {
+		return "", fmt.Errorf("invalid user profile: %w", err)
+	}
+	if err := ValidateJobInfo(job); err != nil {
+		return "", fmt.Errorf("invalid job info: %w", err)
+	}
+
+	// Validate additional context if provided
+	if additionalContext != "" {
+		if err := validation.ValidateString(additionalContext, 1, 10000, "additional_context"); err != nil {
+			return "", fmt.Errorf("invalid additional context: %w", err)
+		}
+		if err := validation.ValidateNoSQLInjection(additionalContext); err != nil {
+			return "", fmt.Errorf("invalid additional context: %w", err)
+		}
+		if err := validation.ValidateNoXSS(additionalContext); err != nil {
+			return "", fmt.Errorf("invalid additional context: %w", err)
+		}
+	}
+
 	cls.logger.Info("generating cover letter",
 		slog.String("company", job.CompanyName),
 		slog.String("jobTitle", job.JobTitle),
@@ -103,6 +132,18 @@ func (cls *CoverLetterService) GenerateCoverLetterWithContext(ctx context.Contex
 	}
 
 	coverLetter := resp.Message.Content
+
+	// Validate generated cover letter
+	if err := validation.ValidateString(coverLetter, 100, 10000, "cover_letter"); err != nil {
+		cls.logger.Error("generated cover letter validation failed", slog.Any("error", err))
+		return "", fmt.Errorf("generated cover letter validation failed: %w", err)
+	}
+	// Check for potential issues in generated content
+	if err := validation.ValidateNoSQLInjection(coverLetter); err != nil {
+		cls.logger.Warn("generated cover letter contains suspicious content", slog.Any("error", err))
+		// Don't fail, but log warning
+	}
+
 	cls.logger.Info("cover letter generated", slog.Int("length", len(coverLetter)))
 
 	return coverLetter, nil
@@ -110,6 +151,12 @@ func (cls *CoverLetterService) GenerateCoverLetterWithContext(ctx context.Contex
 
 // buildPrompt builds the prompt for cover letter generation.
 func (cls *CoverLetterService) buildPrompt(profile UserProfile, job JobInfo) string {
+	// Sanitize inputs before building prompt to prevent injection
+	companyName := validation.SanitizeString(job.CompanyName)
+	jobTitle := validation.SanitizeString(job.JobTitle)
+	location := validation.SanitizeString(job.Location)
+	jobDescription := validation.SanitizeString(job.JobDescription)
+
 	prompt := fmt.Sprintf(`You are a professional cover letter writer. Write a personalized cover letter for the following job application.
 
 Job Information:
@@ -119,13 +166,20 @@ Job Information:
 - Job Description: %s
 
 Applicant Profile:
-`, job.CompanyName, job.JobTitle, job.Location, job.JobDescription)
+`, companyName, jobTitle, location, jobDescription)
 
 	// Add projects
 	if len(profile.Projects) > 0 {
 		prompt += "\nProjects:\n"
 		for _, project := range profile.Projects {
-			prompt += fmt.Sprintf("- %s: %s (Tech: %v)\n", project.Name, project.Description, project.TechStack)
+			// Sanitize project data
+			name := validation.SanitizeString(project.Name)
+			desc := validation.SanitizeString(project.Description)
+			// Limit description length for prompt
+			if len(desc) > 500 {
+				desc = desc[:500] + "..."
+			}
+			prompt += fmt.Sprintf("- %s: %s (Tech: %v)\n", name, desc, project.TechStack)
 		}
 	}
 
@@ -138,7 +192,13 @@ Applicant Profile:
 	if len(profile.TechnicalWritings) > 0 {
 		prompt += "\nTechnical Writings:\n"
 		for _, writing := range profile.TechnicalWritings {
-			prompt += fmt.Sprintf("- %s: %s\n", writing.Title, writing.Content[:min(200, len(writing.Content))])
+			// Sanitize and limit content
+			title := validation.SanitizeString(writing.Title)
+			content := validation.SanitizeString(writing.Content)
+			if len(content) > 200 {
+				content = content[:200] + "..."
+			}
+			prompt += fmt.Sprintf("- %s: %s\n", title, content)
 		}
 	}
 

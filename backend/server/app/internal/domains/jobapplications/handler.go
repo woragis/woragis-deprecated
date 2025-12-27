@@ -153,6 +153,13 @@ func (h *handler) CreateJobApplication(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate payload
+	if err := ValidateCreateJobApplicationPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	// Normalize website to lowercase
 	payload.Website = strings.ToLower(strings.TrimSpace(payload.Website))
 	
@@ -318,38 +325,56 @@ func (h *handler) ListJobApplications(c *fiber.Ctx) error {
 		UserID: userID,
 	}
 
+	// Capture query parameters for validation
+	website := c.Query("website")
+	status := c.Query("status")
+	resumeIDStr := c.Query("resumeId")
+	interestLevel := c.Query("interestLevel")
+	source := c.Query("source")
+	applicationMethod := c.Query("applicationMethod")
+	language := c.Query("language")
+	limit := c.QueryInt("limit", 50)
+	offset := c.QueryInt("offset", 0)
+
+	// Validate query parameters
+	if err := ValidateListJobApplicationsQueryParams(limit, offset, website, status, resumeIDStr, interestLevel, source, applicationMethod, language); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	// Optional query parameters
-	if website := c.Query("website"); website != "" {
+	if website != "" {
 		normalizedWebsite := strings.ToLower(strings.TrimSpace(website))
 		filters.Website = &normalizedWebsite
 	}
-	if status := c.Query("status"); status != "" {
+	if status != "" {
 		appStatus := ApplicationStatus(status)
 		filters.Status = &appStatus
 	}
-	if resumeIDStr := c.Query("resumeId"); resumeIDStr != "" {
+	if resumeIDStr != "" {
 		if resumeID, err := uuid.Parse(resumeIDStr); err == nil {
 			filters.ResumeID = &resumeID
 		}
 	}
-	if interestLevel := c.Query("interestLevel"); interestLevel != "" {
+	if interestLevel != "" {
 		filters.InterestLevel = &interestLevel
 	}
-	if source := c.Query("source"); source != "" {
+	if source != "" {
 		filters.Source = &source
 	}
-	if applicationMethod := c.Query("applicationMethod"); applicationMethod != "" {
+	if applicationMethod != "" {
 		filters.ApplicationMethod = &applicationMethod
 	}
-	if language := c.Query("language"); language != "" {
+	if language != "" {
 		filters.Language = &language
 	}
 
 	// Pagination
-	if limit := c.QueryInt("limit", 50); limit > 0 {
+	if limit > 0 {
 		filters.Limit = limit
 	}
-	if offset := c.QueryInt("offset", 0); offset > 0 {
+	if offset > 0 {
 		filters.Offset = offset
 	}
 
@@ -376,6 +401,13 @@ func (h *handler) UpdateJobApplicationStatus(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
 			"message": "invalid request payload",
+		})
+	}
+
+	// Validate payload
+	if err := ValidateUpdateStatusPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": err.Error(),
 		})
 	}
 
@@ -422,6 +454,13 @@ func (h *handler) UpdateJobApplication(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
 			"message": "invalid request payload",
+		})
+	}
+
+	// Validate payload
+	if err := ValidateUpdateJobApplicationPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
+			"message": err.Error(),
 		})
 	}
 

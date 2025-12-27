@@ -2,6 +2,7 @@ package whatsapp
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -44,6 +45,11 @@ func NewService(notifier Notifier, userRepo UserRepository, clientRepo ClientRep
 
 // SendToUser sends a WhatsApp message to a user by their user ID.
 func (s *service) SendToUser(ctx context.Context, userID uuid.UUID, message string) error {
+	// Validate inputs
+	if err := ValidateMessage(message); err != nil {
+		return NewDomainError(ErrCodeInvalidPayload, fmt.Sprintf("message validation failed: %v", err))
+	}
+
 	if s.notifier == nil {
 		return NewDomainError(ErrCodeServiceNotConfigured, ErrServiceNotConfigured)
 	}
@@ -65,6 +71,11 @@ func (s *service) SendToUser(ctx context.Context, userID uuid.UUID, message stri
 		return NewDomainError(ErrCodeNoPhoneNumber, ErrUserNoPhoneNumber)
 	}
 
+	// Validate phone number
+	if err := ValidatePhoneNumber(phoneNumber); err != nil {
+		return NewDomainError(ErrCodeInvalidPayload, fmt.Sprintf("phone number validation failed: %v", err))
+	}
+
 	if err := s.notifier.Send(ctx, phoneNumber, message); err != nil {
 		// Check if it's already a domain error
 		if domainErr, ok := AsDomainError(err); ok {
@@ -78,6 +89,11 @@ func (s *service) SendToUser(ctx context.Context, userID uuid.UUID, message stri
 
 // SendToClient sends a WhatsApp message to a client by their client ID.
 func (s *service) SendToClient(ctx context.Context, userID uuid.UUID, clientID uuid.UUID, message string) error {
+	// Validate inputs
+	if err := ValidateMessage(message); err != nil {
+		return NewDomainError(ErrCodeInvalidPayload, fmt.Sprintf("message validation failed: %v", err))
+	}
+
 	if s.notifier == nil {
 		return NewDomainError(ErrCodeServiceNotConfigured, ErrServiceNotConfigured)
 	}
@@ -97,6 +113,11 @@ func (s *service) SendToClient(ctx context.Context, userID uuid.UUID, clientID u
 
 	if phoneNumber == "" {
 		return NewDomainError(ErrCodeNoPhoneNumber, ErrClientNoPhoneNumber)
+	}
+
+	// Validate phone number
+	if err := ValidatePhoneNumber(phoneNumber); err != nil {
+		return NewDomainError(ErrCodeInvalidPayload, fmt.Sprintf("phone number validation failed: %v", err))
 	}
 
 	if err := s.notifier.Send(ctx, phoneNumber, message); err != nil {

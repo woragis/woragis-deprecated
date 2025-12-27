@@ -2,6 +2,7 @@ package translations
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -74,6 +75,26 @@ func (w *Worker) processJob(ctx context.Context) {
 		slog.String("entityId", job.EntityID),
 		slog.String("language", string(job.Language)),
 	)
+
+	// Validate job data
+	if err := ValidateTranslationJob(job); err != nil {
+		w.logger.Error("invalid translation job",
+			slog.String("jobId", job.ID),
+			slog.Any("error", err),
+		)
+		_ = w.queue.MarkJobFailed(ctx, job.ID, fmt.Sprintf("validation failed: %v", err))
+		return
+	}
+
+	// Validate job data again before processing (defense in depth)
+	if err := ValidateTranslationJob(job); err != nil {
+		w.logger.Error("translation job validation failed before processing",
+			slog.String("jobId", job.ID),
+			slog.Any("error", err),
+		)
+		_ = w.queue.MarkJobFailed(ctx, job.ID, fmt.Sprintf("validation failed: %v", err))
+		return
+	}
 
 	// Process the translation
 	if err := w.service.ProcessTranslationJob(ctx, job); err != nil {

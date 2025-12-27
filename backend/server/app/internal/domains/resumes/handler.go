@@ -15,6 +15,7 @@ import (
 
 	authdomain "github.com/woragis/backend/server/app/internal/domains/auth"
 	"github.com/woragis/backend/server/app/pkg/response"
+	"github.com/woragis/backend/server/app/pkg/validation"
 )
 
 // Handler exposes resume endpoints.
@@ -95,16 +96,15 @@ func (h *handler) CreateResume(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
-	var req struct {
-		Title    string   `json:"title"`
-		FilePath string   `json:"filePath"`
-		FileName string   `json:"fileName"`
-		FileSize int64    `json:"fileSize"`
-		Tags     []string `json:"tags"`
-	}
+	var req createResumePayload
 
 	if err := c.BodyParser(&req); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid request body"})
+	}
+
+	// Validate payload
+	if err := ValidateCreateResumePayload(&req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": err.Error()})
 	}
 
 	resume, err := h.service.CreateResume(c.Context(), userID, req.Title, req.FilePath, req.FileName, req.FileSize, JSONArray(req.Tags))
@@ -139,6 +139,17 @@ func (h *handler) UploadResume(c *fiber.Ctx) error {
 	}
 	title := titleValues[0]
 
+	// Validate title
+	if err := validation.ValidateString(title, 1, 200, "title"); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": fmt.Sprintf("title: %v", err)})
+	}
+	if err := validation.ValidateNoSQLInjection(title); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": fmt.Sprintf("title: %v", err)})
+	}
+	if err := validation.ValidateNoXSS(title); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": fmt.Sprintf("title: %v", err)})
+	}
+
 	// Get file from form
 	files := form.File["file"]
 	if len(files) == 0 {
@@ -146,13 +157,10 @@ func (h *handler) UploadResume(c *fiber.Ctx) error {
 	}
 	fileHeader := files[0]
 
-	// Validate file type (should be PDF)
-	if fileHeader.Header.Get("Content-Type") != "application/pdf" {
-		// Check extension as fallback
-		ext := filepath.Ext(fileHeader.Filename)
-		if ext != ".pdf" {
-			return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "only PDF files are allowed"})
-		}
+	// Validate file
+	contentType := fileHeader.Header.Get("Content-Type")
+	if err := ValidateUploadResumeFile(fileHeader.Filename, fileHeader.Size, contentType); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": err.Error()})
 	}
 
 	// Create upload directory if it doesn't exist
@@ -210,13 +218,15 @@ func (h *handler) UpdateResume(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid resume ID"})
 	}
 
-	var req struct {
-		Title string   `json:"title"`
-		Tags  []string `json:"tags"`
-	}
+	var req updateResumePayload
 
 	if err := c.BodyParser(&req); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid request body"})
+	}
+
+	// Validate payload
+	if err := ValidateUpdateResumePayload(&req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": err.Error()})
 	}
 
 	var tags JSONArray
@@ -327,8 +337,17 @@ func (h *handler) ListResumes(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
-	// Check for tag filter query parameter
+	// Get query parameters
+	limit := c.QueryInt("limit", 50)
+	offset := c.QueryInt("offset", 0)
+	search := c.Query("search", "")
 	tagFilter := c.Query("tags")
+
+	// Validate query parameters
+	if err := ValidateListResumesQueryParams(limit, offset, search); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": err.Error()})
+	}
+
 	var resumes []Resume
 	if tagFilter != "" {
 		// Parse comma-separated tags
@@ -688,17 +707,15 @@ func (h *handler) GenerateResume(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusUnauthorized, 0, fiber.Map{"message": "authentication required"})
 	}
 
-	var req struct {
-		JobApplicationID string `json:"jobApplicationId"`
-		Language         string `json:"language"`
-	}
+	var req generateResumePayload
 
 	if err := c.BodyParser(&req); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "invalid request body"})
 	}
 
-	if req.JobApplicationID == "" {
-		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": "jobApplicationId is required"})
+	// Validate payload
+	if err := ValidateGenerateResumePayload(&req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, 0, fiber.Map{"message": err.Error()})
 	}
 
 	jobAppID, err := uuid.Parse(req.JobApplicationID)

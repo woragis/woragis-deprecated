@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"gorm.io/gorm"
-	
-	"testing"
 
 	aimlintegrationsdomain "github.com/woragis/backend/server/app/internal/domains/aimlintegrations"
 	apikeysdomain "github.com/woragis/backend/server/app/internal/domains/apikeys"
@@ -24,11 +22,11 @@ import (
 	impactmetricsdomain "github.com/woragis/backend/server/app/internal/domains/impactmetrics"
 	interestsdomain "github.com/woragis/backend/server/app/internal/domains/interests"
 	jobapplicationsdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications"
-	jobapplicationresponsesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/responses"
+	responsesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/responses"
 	jobapplicationstagesdomain "github.com/woragis/backend/server/app/internal/domains/jobapplications/interviewstages"
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 	languagesdomain "github.com/woragis/backend/server/app/internal/domains/languages"
-	postcommentsdomain "github.com/woragis/backend/server/app/internal/domains/posts/comments"
+	commentsdomain "github.com/woragis/backend/server/app/internal/domains/posts/comments"
 	postsdomain "github.com/woragis/backend/server/app/internal/domains/posts"
 	problemsolutionsdomain "github.com/woragis/backend/server/app/internal/domains/problemsolutions"
 	projectcasestudiesdomain "github.com/woragis/backend/server/app/internal/domains/projects/projectcasestudies"
@@ -55,11 +53,11 @@ func MigrateTestDB(t testing.TB, db *gorm.DB) error {
 		// Auth and user domains
 		&authdomain.User{},
 		&userprofilesdomain.UserProfile{},
-		&userpreferencesdomain.UserPreference{},
+		&userpreferencesdomain.UserPreferences{},
 		
 		// Content domains
 		&postsdomain.Post{},
-		&postcommentsdomain.PostComment{},
+		&commentsdomain.Comment{},
 		&projectsdomain.Project{},
 		&projectcasestudiesdomain.ProjectCaseStudy{},
 		&skillsdomain.Skill{},
@@ -72,25 +70,34 @@ func MigrateTestDB(t testing.TB, db *gorm.DB) error {
 		
 		// Job application domains
 		&jobapplicationsdomain.JobApplication{},
-		&jobapplicationresponsesdomain.JobApplicationResponse{},
+		&responsesdomain.Response{},
 		&jobapplicationstagesdomain.InterviewStage{},
 		&jobwebsitesdomain.JobWebsite{},
 		
 		// Other domains
 		&apikeysdomain.APIKey{},
 		&translationsdomain.Translation{},
-		&languagesdomain.Language{},
+		&languagesdomain.StudySession{},
+		&languagesdomain.VocabularyEntry{},
 		&resumesdomain.Resume{},
 		&clientsdomain.Client{},
-		&financesdomain.FinancialRecord{},
+		&financesdomain.Transaction{},
+		&financesdomain.RecurringTemplate{},
 		&ideasdomain.Idea{},
 		&problemsolutionsdomain.ProblemSolution{},
 		&systemdesignsdomain.SystemDesign{},
 		&technicalwritingsdomain.TechnicalWriting{},
-		&reportsdomain.Report{},
+		&reportsdomain.ReportDefinition{},
+		&reportsdomain.ReportSchedule{},
+		&reportsdomain.ReportDelivery{},
+		&reportsdomain.ReportRun{},
 		&aimlintegrationsdomain.AIMLIntegration{},
-		&chatsdomain.Chat{},
-		&schedulerdomain.ScheduledTask{},
+		&chatsdomain.Conversation{},
+		&chatsdomain.Message{},
+		&chatsdomain.ConversationTranscript{},
+		&chatsdomain.ConversationAssignment{},
+		&schedulerdomain.Schedule{},
+		&schedulerdomain.ExecutionRun{},
 		&impactmetricsdomain.ImpactMetric{},
 		
 		// Social media posts (included in normal builds, excluded in performance_test builds)

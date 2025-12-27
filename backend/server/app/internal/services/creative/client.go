@@ -13,6 +13,7 @@ import (
 
 	"github.com/sony/gobreaker"
 	appcircuitbreaker "github.com/woragis/backend/server/app/pkg/circuitbreaker"
+	"github.com/woragis/backend/server/app/pkg/validation"
 )
 
 // Client interacts with the creative-service API
@@ -141,6 +142,11 @@ type VideoGenerationResponse struct {
 
 // GenerateImage generates an image using the creative service
 func (c *Client) GenerateImage(ctx context.Context, req ImageGenerationRequest) (*ImageGenerationResponse, error) {
+	// Validate request
+	if err := ValidateImageGenerationRequest(req); err != nil {
+		return nil, fmt.Errorf("invalid request: %w", err)
+	}
+
 	// Wrap the API call with circuit breaker
 	result, err := appcircuitbreaker.Execute(c.cb, func() (*ImageGenerationResponse, error) {
 		appcircuitbreaker.RecordRequestAllowed("creative-service")
@@ -194,6 +200,16 @@ func (c *Client) doGenerateImage(ctx context.Context, req ImageGenerationRequest
 
 // GenerateThumbnail generates a thumbnail optimized for social media
 func (c *Client) GenerateThumbnail(ctx context.Context, prompt, context string) (*ImageGenerationResponse, error) {
+	// Validate inputs
+	if err := validation.ValidateString(prompt, 1, 1000, "prompt"); err != nil {
+		return nil, fmt.Errorf("prompt: %w", err)
+	}
+	if context != "" {
+		if err := validation.ValidateString(context, 1, 2000, "context"); err != nil {
+			return nil, fmt.Errorf("context: %w", err)
+		}
+	}
+
 	req := ImageGenerationRequest{
 		Provider: ProviderOpenAI,
 		Prompt:   prompt,
@@ -254,6 +270,11 @@ func (c *Client) doGenerateThumbnail(ctx context.Context, req ImageGenerationReq
 
 // GenerateDiagram generates a technical diagram
 func (c *Client) GenerateDiagram(ctx context.Context, req DiagramGenerationRequest) (*DiagramGenerationResponse, error) {
+	// Validate request
+	if err := ValidateDiagramGenerationRequest(req); err != nil {
+		return nil, fmt.Errorf("invalid request: %w", err)
+	}
+
 	// Wrap the API call with circuit breaker
 	result, err := appcircuitbreaker.Execute(c.cb, func() (*DiagramGenerationResponse, error) {
 		appcircuitbreaker.RecordRequestAllowed("creative-service")
@@ -302,11 +323,21 @@ func (c *Client) doGenerateDiagram(ctx context.Context, req DiagramGenerationReq
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	// Validate response
+	if err := ValidateDiagramGenerationResponse(&result); err != nil {
+		return nil, fmt.Errorf("invalid response: %w", err)
+	}
+
 	return &result, nil
 }
 
 // GenerateVideo generates a video from an image
 func (c *Client) GenerateVideo(ctx context.Context, req VideoGenerationRequest) (*VideoGenerationResponse, error) {
+	// Validate request
+	if err := ValidateVideoGenerationRequest(req); err != nil {
+		return nil, fmt.Errorf("invalid request: %w", err)
+	}
+
 	// Wrap the API call with circuit breaker
 	result, err := appcircuitbreaker.Execute(c.cb, func() (*VideoGenerationResponse, error) {
 		appcircuitbreaker.RecordRequestAllowed("creative-service")
@@ -353,6 +384,11 @@ func (c *Client) doGenerateVideo(ctx context.Context, req VideoGenerationRequest
 	var result VideoGenerationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Validate response
+	if err := ValidateVideoGenerationResponse(&result); err != nil {
+		return nil, fmt.Errorf("invalid response: %w", err)
 	}
 
 	return &result, nil

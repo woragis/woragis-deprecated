@@ -13,6 +13,7 @@ import (
 	jobwebsitesdomain "github.com/woragis/backend/server/app/internal/domains/jobwebsites"
 	aiservice "github.com/woragis/backend/server/app/internal/services/ai"
 	playwrightservice "github.com/woragis/backend/server/app/internal/services/playwright"
+	"github.com/woragis/backend/server/app/pkg/validation"
 )
 
 // Worker processes job application jobs from Redis queue.
@@ -96,6 +97,16 @@ func (w *Worker) processJob(ctx context.Context) {
 		slog.String("website", job.Website),
 	)
 
+	// Validate job data
+	if err := ValidateJobApplicationJob(job); err != nil {
+		w.logger.Error("invalid job application job",
+			slog.String("jobId", job.ID),
+			slog.Any("error", err),
+		)
+		_ = w.queue.MarkJobFailed(ctx, job.ID, fmt.Sprintf("validation failed: %v", err))
+		return
+	}
+
 	// Check if we should process this website (rate limit check)
 	shouldProcess, err := w.orchestrator.ShouldProcessWebsite(ctx, job.Website)
 	if err != nil {
@@ -151,6 +162,11 @@ func (w *Worker) processJob(ctx context.Context) {
 }
 
 func (w *Worker) processApplication(ctx context.Context, job *jobapplicationsdomain.JobApplicationJob) error {
+	// Job validation already done in processJob, but validate again for safety
+	if err := ValidateJobApplicationJob(job); err != nil {
+		return fmt.Errorf("job validation failed: %w", err)
+	}
+
 	userID, err := uuid.Parse(job.UserID)
 	if err != nil {
 		return fmt.Errorf("invalid user ID: %w", err)
@@ -207,6 +223,15 @@ func (w *Worker) processApplication(ctx context.Context, job *jobapplicationsdom
 		profile = aiservice.UserProfile{} // Use empty profile
 	}
 
+	// Validate fetched profile data
+	if err := aiservice.ValidateUserProfile(profile); err != nil {
+		w.logger.Warn("fetched user profile validation failed, using empty profile",
+			slog.String("userId", userID.String()),
+			slog.Any("error", err),
+		)
+		profile = aiservice.UserProfile{} // Use empty profile on validation failure
+	}
+
 	// Generate cover letter
 	jobInfo := aiservice.JobInfo{
 		CompanyName:    job.CompanyName,
@@ -216,9 +241,19 @@ func (w *Worker) processApplication(ctx context.Context, job *jobapplicationsdom
 		Requirements:   []string{}, // TODO: Extract from job description
 	}
 
+	// Validate job info before generating cover letter
+	if err := aiservice.ValidateJobInfo(jobInfo); err != nil {
+		return fmt.Errorf("job info validation failed: %w", err)
+	}
+
 	coverLetter, err := w.coverLetterService.GenerateCoverLetter(ctx, profile, jobInfo)
 	if err != nil {
 		return fmt.Errorf("failed to generate cover letter: %w", err)
+	}
+
+	// Validate generated cover letter before using
+	if err := validation.ValidateString(coverLetter, 100, 10000, "cover_letter"); err != nil {
+		return fmt.Errorf("generated cover letter validation failed: %w", err)
 	}
 
 	// Apply to job using Playwright

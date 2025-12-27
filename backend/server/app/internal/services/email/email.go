@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 )
 
@@ -30,6 +31,11 @@ func NewNoopSender(logger *slog.Logger) *NoopSender {
 
 // Send logs the e-mail dispatch details for observability.
 func (s *NoopSender) Send(ctx context.Context, msg Message) error {
+	// Validate message
+	if err := ValidateMessage(msg); err != nil {
+		return fmt.Errorf("invalid message: %w", err)
+	}
+
 	if s.logger != nil {
 		s.logger.Info("email: noop send",
 			slog.String("to", msg.To),

@@ -17,6 +17,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 	appcircuitbreaker "github.com/woragis/backend/server/app/pkg/circuitbreaker"
+	"github.com/woragis/backend/server/app/pkg/validation"
 )
 
 // ModelProvider enumerates supported chat providers.
@@ -140,6 +141,11 @@ func NewClient(logger *slog.Logger) *Client {
 
 // GenerateCompletion executes a chat completion call using the requested provider.
 func (c *Client) GenerateCompletion(ctx context.Context, req ChatCompletionRequest) (ChatCompletionResponse, error) {
+	// Validate request
+	if err := ValidateChatCompletionRequest(req); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("invalid request: %w", err)
+	}
+
 	// Route all providers through the dedicated AI service to standardize behavior,
 	// falling back to direct OpenAI if AI service URL is not configured.
 	aiURL := os.Getenv("AI_SERVICE_URL")
@@ -192,24 +198,31 @@ func (c *Client) doAIServiceCall(ctx context.Context, baseURL string, req ChatCo
 	var b strings.Builder
 	for _, m := range req.Messages {
 		role := strings.ToLower(m.Role)
+		// Sanitize content before adding to prompt
+		content := validation.SanitizeString(m.Content)
 		switch role {
 		case "system":
 			// Prepend as system guidance
 			// We'll include it in the input as a labeled line to give model context.
 			b.WriteString("System: ")
-			b.WriteString(m.Content)
+			b.WriteString(content)
 			b.WriteString("\n\n")
 		case "assistant", "ai":
 			b.WriteString("Assistant: ")
-			b.WriteString(m.Content)
+			b.WriteString(content)
 			b.WriteString("\n\n")
 		default:
 			b.WriteString("User: ")
-			b.WriteString(m.Content)
+			b.WriteString(content)
 			b.WriteString("\n\n")
 		}
 	}
 	input := strings.TrimSpace(b.String())
+
+	// Validate constructed input size
+	if len(input) > 1000000 { // 1MB limit for input
+		return ChatCompletionResponse{}, fmt.Errorf("input too large: %d bytes (maximum 1MB)", len(input))
+	}
 
 	var tempPtr *float64
 	if req.Temperature != 0 {
@@ -256,6 +269,14 @@ func (c *Client) doAIServiceCall(ctx context.Context, baseURL string, req ChatCo
 		return ChatCompletionResponse{}, fmt.Errorf("ai-service decode: %w", err)
 	}
 
+	// Validate response from AI service
+	if err := validation.ValidateString(data.Output, 1, 100000, "ai_service_output"); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service response validation failed: %w", err)
+	}
+	if err := validation.ValidateString(data.Agent, 1, 100, "ai_service_agent"); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("ai-service agent validation failed: %w", err)
+	}
+
 	msg := ChatMessage{
 		Role:      "assistant",
 		Content:   data.Output,
@@ -266,6 +287,11 @@ func (c *Client) doAIServiceCall(ctx context.Context, baseURL string, req ChatCo
 
 // GenerateCompletionStream streams deltas from the AI service and invokes onDelta for each.
 func (c *Client) GenerateCompletionStream(ctx context.Context, req ChatCompletionRequest, onDelta func(delta string)) (ChatCompletionResponse, error) {
+	// Validate request
+	if err := ValidateChatCompletionRequest(req); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("invalid request: %w", err)
+	}
+
 	aiURL := os.Getenv("AI_SERVICE_URL")
 	if aiURL == "" {
 		// Fallback: no streaming support directly; do a normal call
@@ -295,22 +321,29 @@ func (c *Client) doGenerateCompletionStream(ctx context.Context, aiURL string, r
 	var b strings.Builder
 	for _, m := range req.Messages {
 		role := strings.ToLower(m.Role)
+		// Sanitize content before adding to prompt
+		content := validation.SanitizeString(m.Content)
 		switch role {
 		case "system":
 			b.WriteString("System: ")
-			b.WriteString(m.Content)
+			b.WriteString(content)
 			b.WriteString("\n\n")
 		case "assistant", "ai":
 			b.WriteString("Assistant: ")
-			b.WriteString(m.Content)
+			b.WriteString(content)
 			b.WriteString("\n\n")
 		default:
 			b.WriteString("User: ")
-			b.WriteString(m.Content)
+			b.WriteString(content)
 			b.WriteString("\n\n")
 		}
 	}
 	input := strings.TrimSpace(b.String())
+
+	// Validate constructed input size
+	if len(input) > 1000000 { // 1MB limit for input
+		return ChatCompletionResponse{}, fmt.Errorf("input too large: %d bytes (maximum 1MB)", len(input))
+	}
 
 	var tempPtr *float64
 	if req.Temperature != 0 {
@@ -381,9 +414,16 @@ func (c *Client) doGenerateCompletionStream(ctx context.Context, aiURL string, r
 		return ChatCompletionResponse{}, fmt.Errorf("ai-service stream read: %w", err)
 	}
 
+	content := full.String()
+
+	// Validate streamed response
+	if err := validation.ValidateString(content, 1, 100000, "streamed_output"); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("streamed response validation failed: %w", err)
+	}
+
 	msg := ChatMessage{
 		Role:      "assistant",
-		Content:   full.String(),
+		Content:   content,
 		Timestamp: time.Now().UTC(),
 	}
 	return ChatCompletionResponse{Message: msg, Raw: nil}, nil
@@ -430,6 +470,11 @@ func (c *Client) callOpenAI(ctx context.Context, req ChatCompletionRequest) (Cha
 	}
 
 	choice := response.Choices[0]
+
+	// Validate OpenAI response
+	if err := validation.ValidateString(choice.Content, 1, 100000, "openai_response"); err != nil {
+		return ChatCompletionResponse{}, fmt.Errorf("openai response validation failed: %w", err)
+	}
 
 	msg := ChatMessage{
 		Role:      "assistant",

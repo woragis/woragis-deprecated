@@ -33,12 +33,30 @@ func StartEmailWorker(ctx context.Context, client *redis.Client, sender emailser
 					}
 					continue
 				}
+
+				// Validate envelope
+				if err := ValidateReportEnvelope(&envelope); err != nil {
+					if logger != nil {
+						logger.Error("email worker: validation failed", slog.Any("error", err))
+					}
+					continue
+				}
+
 				message := emailservice.Message{
 					To:       envelope.Destination,
 					Subject:  envelope.Subject,
 					TextBody: envelope.TextMessage,
 					HTMLBody: envelope.HTMLMessage,
 				}
+
+				// Validate message
+				if err := emailservice.ValidateMessage(message); err != nil {
+					if logger != nil {
+						logger.Error("email worker: message validation failed", slog.Any("error", err))
+					}
+					continue
+				}
+
 				if err := sender.Send(ctx, message); err != nil && logger != nil {
 					logger.Error("email worker: send failed", slog.String("user_id", envelope.UserID), slog.Any("error", err))
 				}

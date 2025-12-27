@@ -118,6 +118,13 @@ func (h *Handler) CreateConversation(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateCreateConversationPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return err
@@ -208,8 +215,18 @@ func (h *Handler) GetConversation(c *fiber.Ctx) error {
 
 // SearchConversations handles GET /chats/conversations/search.
 func (h *Handler) SearchConversations(c *fiber.Ctx) error {
+	query := c.Query("q")
+	limit := c.QueryInt("limit", 20)
+	
+	// Validate query parameters
+	if err := ValidateSearchQueryParams(query, limit); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	params := searchQueryParams{
-		Query:            c.Query("q"),
+		Query:            query,
 		JobApplicationID: c.Query("job_application_id"),
 	}
 	userID, err := authdomain.UserIDFromContext(c)
@@ -218,7 +235,7 @@ func (h *Handler) SearchConversations(c *fiber.Ctx) error {
 	}
 	includeArchived := strings.ToLower(c.Query("include_archived")) == "true"
 	params.IncludeArchived = includeArchived
-	if limit := c.QueryInt("limit", 20); limit > 0 {
+	if limit > 0 {
 		params.Limit = limit
 	}
 
@@ -281,6 +298,13 @@ func (h *Handler) AppendMessage(c *fiber.Ctx) error {
 	var payload appendMessagePayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateAppendMessagePayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	userID, err := authdomain.UserIDFromContext(c)
@@ -734,6 +758,13 @@ func (h *Handler) parseBulkPayload(c *fiber.Ctx) ([]uuid.UUID, error) {
 	var payload bulkUpdatePayload
 	if err := c.BodyParser(&payload); err != nil {
 		return nil, response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateBulkUpdatePayload(&payload); err != nil {
+		return nil, response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	conversationIDs := make([]uuid.UUID, 0, len(payload.ConversationIDs))

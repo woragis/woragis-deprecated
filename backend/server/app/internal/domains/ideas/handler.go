@@ -94,6 +94,13 @@ func (h *Handler) PostIdea(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateCreateIdeaPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
@@ -134,6 +141,13 @@ func (h *Handler) PatchIdea(c *fiber.Ctx) error {
 	var payload updateIdeaPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateUpdateIdeaPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	actorID, err := authdomain.UserIDFromContext(c)
@@ -177,6 +191,13 @@ func (h *Handler) PatchIdeaPosition(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateMoveIdeaPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	actorID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
@@ -200,6 +221,13 @@ func (h *Handler) PostBulkMove(c *fiber.Ctx) error {
 	var payload bulkMovePayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateBulkMovePayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	actorID, err := authdomain.UserIDFromContext(c)
@@ -235,6 +263,13 @@ func (h *Handler) PostBulkUpdate(c *fiber.Ctx) error {
 	var payload bulkUpdatePayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateBulkUpdatePayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	actorID, err := authdomain.UserIDFromContext(c)
@@ -281,6 +316,14 @@ func (h *Handler) PostBulkDelete(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
+
+	// Validate payload
+	if err := ValidateBulkIDsPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	actorID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
@@ -306,6 +349,14 @@ func (h *Handler) PostBulkRestore(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
+
+	// Validate payload
+	if err := ValidateBulkIDsPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	actorID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return response.Error(c, fiber.StatusUnauthorized, ErrCodeInvalidPayload, nil)
@@ -330,6 +381,13 @@ func (h *Handler) PostLink(c *fiber.Ctx) error {
 	var payload createLinkPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateCreateLinkPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	actorID, err := authdomain.UserIDFromContext(c)
@@ -510,6 +568,13 @@ func (h *Handler) PostCollaborator(c *fiber.Ctx) error {
 	var payload collaboratorPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateCollaboratorPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	actorID, err := authdomain.UserIDFromContext(c)

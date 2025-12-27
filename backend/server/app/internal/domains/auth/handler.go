@@ -158,6 +158,14 @@ func (h *Handler) Register(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateRegisterPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	user, err := h.service.Register(c.Context(), RegisterRequest{
 		Email:       payload.Email,
 		Password:    payload.Password,
@@ -200,6 +208,14 @@ func (h *Handler) ResendConfirmation(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateResendPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	if err := h.service.ResendConfirmation(c.Context(), ResendConfirmationRequest{Email: payload.Email}); err != nil {
 		return h.handleError(c, err)
 	}
@@ -213,6 +229,14 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		h.logError(ErrMalformedPayload, err)
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateLoginPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	ip := payload.IPAddress
@@ -246,6 +270,14 @@ func (h *Handler) RefreshSession(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		h.logError(ErrMalformedPayload, err)
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateRefreshPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	ip := payload.IPAddress
@@ -301,6 +333,14 @@ func (h *Handler) RequestPasswordReset(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateRequestResetPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	if err := h.service.RequestPasswordReset(c.Context(), PasswordResetRequest{Email: payload.Email}); err != nil {
 		return h.handleError(c, err)
 	}
@@ -314,6 +354,14 @@ func (h *Handler) ConfirmPasswordReset(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		h.logError(ErrMalformedPayload, err)
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateResetConfirmPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	if err := h.service.ResetPassword(c.Context(), PasswordResetConfirmRequest{Token: payload.Token, Password: payload.Password}); err != nil {
@@ -365,6 +413,14 @@ func (h *Handler) RevokeOtherSessions(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateRevokeSessionsPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	var keep uuid.UUID
 	if payload.KeepSessionID != "" {
 		if keep, err = uuid.Parse(payload.KeepSessionID); err != nil {
@@ -390,6 +446,14 @@ func (h *Handler) EnableMFA(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		h.logError(ErrMalformedPayload, err)
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateEnableMFAPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	resp, err := h.service.EnableMFA(c.Context(), EnableMFARequest{
@@ -420,6 +484,14 @@ func (h *Handler) VerifyMFA(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		h.logError(ErrMalformedPayload, err)
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateVerifyMFAPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	if err := h.service.VerifyMFACode(c.Context(), VerifyMFACodeRequest{
@@ -466,6 +538,14 @@ func (h *Handler) StartOAuth(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		h.logError(ErrMalformedPayload, err)
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "invalid payload"})
+	}
+
+	// Validate payload
+	if err := ValidateOAuthStartPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	provider := parseOAuthProvider(payload.Provider)
@@ -656,6 +736,14 @@ func (h *Handler) UpdateProfile(c *fiber.Ctx) error {
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{
 			"message": "Invalid request payload",
+		})
+	}
+
+	// Validate payload
+	if err := ValidateUpdateProfilePayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
 		})
 	}
 
@@ -872,6 +960,14 @@ func (h *Handler) ListUsers(c *fiber.Ctx) error {
 	offset := c.QueryInt("offset", 0)
 	search := c.Query("search", "")
 
+	// Validate query parameters
+	if err := ValidateListUsersQueryParams(limit, offset, search); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	if limit <= 0 {
 		limit = 20
 	}
@@ -931,6 +1027,14 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateAdminUpdateUserPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	user, err := h.service.UpdateUser(c.Context(), AdminUpdateUserRequest{
 		UserID:            userID,
 		SetRole:           payload.SetRole,
@@ -954,8 +1058,12 @@ func (h *Handler) BulkUpdateUsers(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
-	if len(payload.UserIDs) == 0 {
-		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, fiber.Map{"message": "user_ids required"})
+	// Validate payload
+	if err := ValidateAdminBulkUpdateUsersPayload(&payload); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	userIDs := make([]uuid.UUID, 0, len(payload.UserIDs))
@@ -987,6 +1095,15 @@ func (h *Handler) GetUserAuditLogs(c *fiber.Ctx) error {
 	}
 
 	limit := c.QueryInt("limit", 50)
+	offset := c.QueryInt("offset", 0)
+
+	// Validate query parameters
+	if err := ValidateGetUserAuditLogsQueryParams(limit, offset); err != nil {
+		h.logError("validation error", err)
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
 	if limit <= 0 {
 		limit = 50
 	}

@@ -26,6 +26,11 @@ func NewScraper(browserManager *BrowserManager, logger *slog.Logger) *Scraper {
 
 // ApplyToJob applies to a job posting.
 func (s *Scraper) ApplyToJob(ctx context.Context, job *jobapplicationsdomain.JobApplicationJob, coverLetter string) error {
+	// Validate request
+	if err := ValidateApplyToJobRequest(job, coverLetter); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
 	s.logger.Info("applying to job",
 		slog.String("company", job.CompanyName),
 		slog.String("website", job.Website),

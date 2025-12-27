@@ -286,6 +286,13 @@ func (h *handler) CreateProject(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateCreateProjectPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return unauthorizedResponse(c)
@@ -506,6 +513,13 @@ func (h *handler) UpdateStatus(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateUpdateStatusPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return unauthorizedResponse(c)
@@ -532,6 +546,13 @@ func (h *handler) UpdateMetrics(c *fiber.Ctx) error {
 	var payload updateMetricsPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateUpdateMetricsPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	userID, err := authdomain.UserIDFromContext(c)
@@ -582,6 +603,13 @@ func (h *handler) AddMilestone(c *fiber.Ctx) error {
 	var payload addMilestonePayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateAddMilestonePayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	userID, err := authdomain.UserIDFromContext(c)
@@ -734,6 +762,13 @@ func (h *handler) CreateKanbanColumn(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateCreateColumnPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return unauthorizedResponse(c)
@@ -867,6 +902,13 @@ func (h *handler) CreateKanbanCard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateCreateCardPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return unauthorizedResponse(c)
@@ -981,6 +1023,13 @@ func (h *handler) MoveKanbanCard(c *fiber.Ctx) error {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
 	}
 
+	// Validate payload
+	if err := ValidateMoveCardPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
+	}
+
 	userID, err := authdomain.UserIDFromContext(c)
 	if err != nil {
 		return unauthorizedResponse(c)
@@ -1067,6 +1116,13 @@ func (h *handler) CreateDependency(c *fiber.Ctx) error {
 	var payload dependencyPayload
 	if err := c.BodyParser(&payload); err != nil {
 		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, nil)
+	}
+
+	// Validate payload
+	if err := ValidateDependencyPayload(&payload); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, ErrCodeInvalidPayload, map[string]string{
+			"message": err.Error(),
+		})
 	}
 
 	userID, err := authdomain.UserIDFromContext(c)

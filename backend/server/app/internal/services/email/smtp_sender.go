@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/woragis/backend/server/app/pkg/config"
+	"github.com/woragis/backend/server/app/pkg/validation"
 )
 
 // SMTPSender sends emails using an SMTP server.
@@ -32,8 +33,10 @@ func NewSMTPSender(cfg config.EmailConfig, logger *slog.Logger) (*SMTPSender, er
 // Send dispatches an email using SMTP.
 func (s *SMTPSender) Send(ctx context.Context, msg Message) error {
 	_ = ctx
-	if msg.To == "" {
-		return fmt.Errorf("recipient email required")
+
+	// Validate message
+	if err := ValidateMessage(msg); err != nil {
+		return fmt.Errorf("invalid message: %w", err)
 	}
 
 	messageID := fmt.Sprintf("<%s@woragis>", uuid.New().String())
@@ -60,6 +63,19 @@ func (s *SMTPSender) Send(ctx context.Context, msg Message) error {
 	builder.WriteString("--")
 
 	message := builder.String()
+
+	// Validate constructed email message size
+	if len(message) > 10*1024*1024 { // 10MB limit
+		return fmt.Errorf("email message too large: %d bytes (maximum 10MB)", len(message))
+	}
+
+	// Validate email addresses in headers
+	if err := validation.ValidateEmail(msg.To); err != nil {
+		return fmt.Errorf("invalid recipient email: %w", err)
+	}
+	if err := validation.ValidateEmail(s.cfg.From); err != nil {
+		return fmt.Errorf("invalid sender email: %w", err)
+	}
 
 	auth := smtp.PlainAuth("", s.cfg.Username, s.cfg.Password, s.cfg.Host)
 

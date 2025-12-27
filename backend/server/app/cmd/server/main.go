@@ -411,9 +411,37 @@ func main() {
 	}
 
 	redisClient := redis.NewClient(redisOpts)
-	if err := redisClient.Ping(context.Background()).Err(); err != nil {
-		slogLogger.Error("redis connection failed", slog.Any("error", err))
-		os.Exit(1)
+	
+	// Retry Redis connection with exponential backoff
+	const maxRetries = 5
+	var redisErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		redisErr = redisClient.Ping(context.Background()).Err()
+		if redisErr == nil {
+			slogLogger.Info("redis connection established", slog.Int("attempt", attempt))
+			break
+		}
+		
+		if attempt < maxRetries {
+			backoff := time.Duration(attempt) * time.Second
+			slogLogger.Warn("redis connection failed, retrying",
+				slog.Int("attempt", attempt),
+				slog.Int("max_attempts", maxRetries),
+				slog.Duration("backoff", backoff),
+				slog.Any("error", redisErr),
+			)
+			time.Sleep(backoff)
+		}
+	}
+	
+	if redisErr != nil {
+		slogLogger.Error("redis connection failed after retries", 
+			slog.Int("attempts", maxRetries),
+			slog.Any("error", redisErr),
+		)
+		// Continue anyway - some features may work without Redis
+		// The health check endpoint will report Redis as unhealthy
+		slogLogger.Warn("continuing without Redis - some features may be unavailable")
 	}
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
