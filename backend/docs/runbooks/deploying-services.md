@@ -390,3 +390,6 @@ curl -f http://$SERVICE:8080/healthz || exit 1
 - [Architecture Decision Records](../adr/) - Architecture decisions
 - [Troubleshooting Guide](./troubleshooting.md) - Troubleshooting procedures
 - [Monitoring DLQ](./monitoring-dlq.md) - DLQ monitoring
+- [Deployment Procedures](../deployment/deployment-procedures.md) - Detailed deployment guide
+- [Railway Setup](../deployment/railway-setup-and-testing.md) - Railway deployment guide
+- [Build Workflow](../deployment/build-workflow.md) - CI/CD build process

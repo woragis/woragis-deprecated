@@ -175,21 +175,109 @@ log "Old backups cleaned up"
 
 ## Restore Procedures
 
-### Database Restore
+### Step-by-Step Database Restore
 
-**From Dump File:**
+#### Prerequisites
+- Backup file available
+- Database access
+- Application stopped (recommended)
+
+#### Step 1: Prepare Environment
+
 ```bash
-# Stop application
+# Navigate to backup directory
+cd /backups/postgres
+
+# List available backups
+ls -lh *.dump.gz
+
+# Select backup to restore (example: woragis_20241222_020000.dump.gz)
+BACKUP_FILE="woragis_20241222_020000.dump.gz"
+```
+
+#### Step 2: Stop Application (Recommended)
+
+```bash
+# Docker Compose
 docker-compose stop app
 
-# Restore database
-gunzip < backup_20241222.sql.gz | docker exec -i woragis-database psql -U postgres -d woragis
+# Kubernetes
+kubectl scale deployment/server --replicas=0 -n woragis-production
 
-# Verify restore
+# Railway
+# Stop service in Railway dashboard or use CLI
+railway service stop woragis-server
+```
+
+#### Step 3: Restore Database
+
+**From Dump File (Docker):**
+```bash
+# Restore from compressed dump
+gunzip < $BACKUP_FILE | docker exec -i woragis-database psql -U postgres -d woragis
+
+# Or from uncompressed dump
+docker exec -i woragis-database pg_restore -U postgres -d woragis -c < $BACKUP_FILE
+```
+
+**From Dump File (Kubernetes):**
+```bash
+# Copy backup to pod
+kubectl cp $BACKUP_FILE postgres-pod:/tmp/backup.dump.gz -n woragis-production
+
+# Restore in pod
+kubectl exec -it postgres-pod -n woragis-production -- \
+  bash -c "gunzip < /tmp/backup.dump.gz | psql -U postgres -d woragis"
+```
+
+**From Dump File (Railway/Remote):**
+```bash
+# Download backup first
+# Then restore using psql or pg_restore
+psql $DATABASE_URL < backup.sql
+# or
+pg_restore -d $DATABASE_URL backup.dump
+```
+
+#### Step 4: Verify Restore
+
+```bash
+# Check table counts
 docker exec woragis-database psql -U postgres -d woragis -c "SELECT COUNT(*) FROM users;"
+docker exec woragis-database psql -U postgres -d woragis -c "SELECT COUNT(*) FROM projects;"
+docker exec woragis-database psql -U postgres -d woragis -c "SELECT COUNT(*) FROM skills;"
 
-# Start application
+# Check recent data
+docker exec woragis-database psql -U postgres -d woragis -c "SELECT * FROM users ORDER BY created_at DESC LIMIT 5;"
+```
+
+#### Step 5: Start Application
+
+```bash
+# Docker Compose
 docker-compose start app
+
+# Kubernetes
+kubectl scale deployment/server --replicas=2 -n woragis-production
+
+# Railway
+# Start service in Railway dashboard
+```
+
+#### Step 6: Test Application
+
+```bash
+# Test health endpoint
+curl https://api.woragis.com/healthz
+
+# Test authentication
+curl -X POST https://api.woragis.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}'
+
+# Test data retrieval
+curl https://api.woragis.com/api/projects \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **Point-in-Time Recovery:**
