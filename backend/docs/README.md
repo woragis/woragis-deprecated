@@ -48,6 +48,7 @@ Detailed documentation for each backend component:
 API endpoint documentation:
 - [Server API](./api/server-api.md) - REST API endpoints
 - [AI Service API](./api/ai-service-api.md) - AI service endpoints
+- [Endpoint Validation](./api/endpoint-validation.md) - Input validation rules and examples
 - [Creative Service API](./api/creative-service-api.md) - Creative service endpoints
 - [Docs Service API](./api/docs-service-api.md) - Documentation service endpoints
 
