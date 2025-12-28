@@ -234,18 +234,24 @@ services:
       start_period: 10s
     restart: on-failure
   docs-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.docs-service
+    image: woragis/docs-service:1.1.0
     container_name: woragis-docs-service
     environment:
       ENV: ${APP_ENV:-development}
       CORS_ENABLED: ${CORS_ENABLED:-true}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173,*}
-      DOCS_ROOT: /app/docs
+      DOCS_ROOT: ${DOCS_ROOT:-/app/docs}
       MARKDOWN_EXTENSIONS: fenced_code,codehilite,tables,toc,extra
     ports:
       - "8002:8000"
+    volumes:
+      - ./docs:/app/docs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: on-failure
   resume-worker:
     build:
