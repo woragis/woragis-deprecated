@@ -1,0 +1,346 @@
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: jobs-service-database
+    environment:
+      POSTGRES_DB: jobs_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - jobs-service-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: jobs-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${REDIS_PORT:-6381}:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - jobs-service-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: jobs-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${RABBITMQ_PORT:-5671}:5672"   # AMQP port
+      - "${RABBITMQ_MGMT_PORT:-15671}:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - jobs-service-network
+
+  app:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: jobs-service-app
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: jobs-service
+      APP_PORT: ${APP_PORT:-3000}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3001}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-secret-change-me}
+      AUTH_JWT_TTL: ${AUTH_JWT_TTL:-24h}
+      AES_KEY: ${AES_KEY:-}
+      HASH_SALT: ${HASH_SALT:-}
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@database:5432/${POSTGRES_DB:-jobs_service}?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5671}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TLS: ${SMTP_TLS:-true}
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: jobs-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://jaeger:4318}
+      JAEGER_ENDPOINT: ${JAEGER_ENDPOINT:-}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
+      CORS_ALLOWED_METHODS: ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
+      CORS_ALLOWED_HEADERS: ${CORS_ALLOWED_HEADERS:-Authorization,Content-Type,X-Requested-With,X-API-Key,x-api-key}
+      CORS_EXPOSED_HEADERS: ${CORS_EXPOSED_HEADERS:-}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-true}
+      CORS_MAX_AGE: ${CORS_MAX_AGE:-86400}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai-service:8000}
+      CREATIVE_SERVICE_URL: ${CREATIVE_SERVICE_URL:-http://creative-service:8000}
+      EMAIL_WORKER_URL: ${EMAIL_WORKER_URL:-http://email-worker:8080}
+    ports:
+      - "${APP_PORT:-3001}:3000"
+    restart: on-failure
+    networks:
+      - jobs-service-network
+      - woragis-network
+
+  ai-service:
+    image: woragis/ai-service:1.1.0
+    container_name: jobs-service-ai-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.3}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-3-5-sonnet-latest}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      XAI_BASE_URL: ${XAI_BASE_URL:-https://api.x.ai/v1}
+      XAI_MODEL: ${XAI_MODEL:-grok-beta}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
+    ports:
+      - "${AI_SERVICE_PORT:-8001}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - jobs-service-network
+
+  creative-service:
+    image: woragis/creative-service:1.1.0
+    container_name: jobs-service-creative-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:4173,http://127.0.0.1:4173}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DALL_E_MODEL: ${DALL_E_MODEL:-dall-e-3}
+      DALL_E_QUALITY: ${DALL_E_QUALITY:-standard}
+      DALL_E_SIZE: ${DALL_E_SIZE:-1024x1024}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-3-5-sonnet-latest}
+      REPLICATE_API_KEY: ${REPLICATE_API_KEY:-}
+      STABLE_DIFFUSION_MODEL: ${STABLE_DIFFUSION_MODEL:-stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b}
+      REPLICATE_VIDEO_MODEL: ${REPLICATE_VIDEO_MODEL:-stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438}
+      CIPHER_API_KEY: ${CIPHER_API_KEY:-}
+      CIPHER_IMAGE_URL: ${CIPHER_IMAGE_URL:-https://api.nofiltergpt.com/v1/images/generations}
+      CIPHER_IMAGE_SIZE: ${CIPHER_IMAGE_SIZE:-1024x1024}
+      CIPHER_IMAGE_N: ${CIPHER_IMAGE_N:-1}
+      RUNWAY_API_KEY: ${RUNWAY_API_KEY:-}
+      DEFAULT_IMAGE_FORMAT: ${DEFAULT_IMAGE_FORMAT:-png}
+      DEFAULT_DIAGRAM_FORMAT: ${DEFAULT_DIAGRAM_FORMAT:-png}
+    ports:
+      - "${CREATIVE_SERVICE_PORT:-8011}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - jobs-service-network
+
+  email-worker:
+    image: woragis/email-worker:1.1.0
+    container_name: jobs-service-email-worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@rabbitmq:5672/}
+      RABBITMQ_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5671}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      EMAIL_QUEUE_NAME: ${EMAIL_QUEUE_NAME:-emails.queue}
+      EMAIL_EXCHANGE: ${EMAIL_EXCHANGE:-jobs-service.notifications}
+      EMAIL_ROUTING_KEY: ${EMAIL_ROUTING_KEY:-emails.send}
+      EMAIL_PREFETCH_COUNT: ${EMAIL_PREFETCH_COUNT:-1}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TLS: ${SMTP_TLS:-true}
+    ports:
+      - "${EMAIL_WORKER_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: "no"
+    networks:
+      - jobs-service-network
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: jobs-service-prometheus
+    volumes:
+      - ./monitoring/prometheus-config.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    depends_on:
+      - app
+    ports:
+      - "${PROMETHEUS_PORT:-9091}:9090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jobs-service-network
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: jobs-service-loki
+    ports:
+      - "${LOKI_PORT:-3101}:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: 
+      - -config.file=/etc/loki/local-config.yaml
+      - -target=all
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /loki/rules && /usr/bin/loki -config.file=/etc/loki/local-config.yaml -target=all"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jobs-service-network
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: jobs-service-promtail
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail-positions:/tmp
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - jobs-service-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: jobs-service-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+    ports:
+      - "${JAEGER_UI_PORT:-16687}:16686"  # Jaeger UI
+      - "${JAEGER_OTLP_GRPC_PORT:-4319}:4317"    # OTLP gRPC
+      - "${JAEGER_OTLP_HTTP_PORT:-4320}:4318"    # OTLP HTTP
+      - "${JAEGER_AGENT_UDP_6831:-6831}:6831/udp"  # Jaeger agent (UDP)
+      - "${JAEGER_AGENT_UDP_6832:-6832}:6832/udp"  # Jaeger agent (UDP)
+      - "${JAEGER_CONFIG_PORT:-5778}:5778"    # Config server
+      - "${JAEGER_GRPC_PORT:-14250}:14250"  # Jaeger gRPC
+      - "${JAEGER_HTTP_PORT:-14268}:14268"  # Jaeger HTTP
+      - "${ZIPKIN_PORT:-9411}:9411"    # Zipkin
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:16686/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jobs-service-network
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: jobs-service-grafana
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+    ports:
+      - "${GRAFANA_PORT:-3011}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+    networks:
+      - jobs-service-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  grafana-data:
+  loki-data:
+  promtail-positions:
+  prometheus-data:
+
+networks:
+  jobs-service-network:
+    driver: bridge
+  woragis-network:
+    driver: bridge
+    name: woragis-network
