@@ -1,0 +1,91 @@
+name: Contract Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/auth/**'
+      - '.github/workflows/contract-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/auth/**'
+      - '.github/workflows/contract-tests.yml'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  auth-service-contract-tests:
+    name: Auth Service Contract Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/auth/server/go.sum
+
+      - name: Install dependencies
+        working-directory: backend/auth/server
+        run: |
+          echo "Installing Go dependencies..." > setup.log 2>&1
+          go mod download >> setup.log 2>&1 || (cat setup.log && exit 1)
+          cat setup.log
+
+      - name: Upload setup logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-contract-setup-logs
+          path: backend/auth/server/setup.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Run contract tests
+        working-directory: backend/auth/server
+        run: |
+          set -o pipefail
+          go test ./internal/contract/... -v -coverprofile=contract-coverage.out 2>&1 | tee contract-test-output.log
+
+      - name: Upload contract test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-contract-test-logs
+          path: backend/auth/server/contract-test-output.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload contract test coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: backend/auth/server/contract-coverage.out
+          flags: contract-tests
+          name: auth-contract-tests
+          fail_ci_if_error: false
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## ✅ Auth Service Contract Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Contract tests verify that the Auth Service maintains its API contract:" >> $GITHUB_STEP_SUMMARY
+          echo "- Request/Response JSON serialization" >> $GITHUB_STEP_SUMMARY
+          echo "- HTTP status codes and headers" >> $GITHUB_STEP_SUMMARY
+          echo "- Response structure consistency" >> $GITHUB_STEP_SUMMARY
+          echo "- Backward compatibility" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Test logs: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage report: Uploaded to Codecov" >> $GITHUB_STEP_SUMMARY
+
