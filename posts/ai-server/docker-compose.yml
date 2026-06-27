@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: woragis
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: posts_ai
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woragis']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  posts-ai-service:
+    build: .
+    ports:
+      - '3014:3014'
+    environment:
+      PORT: 3014
+      DATABASE_URL: postgres://woragis:password@postgres:5432/posts_ai?sslmode=disable
+      AI_SERVICE_URL: http://ai-service:8000
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      ENV: development
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ./posts-ai-service
+
+volumes:
+  postgres_data:

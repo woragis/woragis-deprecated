@@ -1,0 +1,17 @@
+.env
+.env.local
+*.log
+*.out
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+node_modules/

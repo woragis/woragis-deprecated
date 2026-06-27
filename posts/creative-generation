@@ -1,0 +1,432 @@
+#!/usr/bin/env python3
+"""
+AI Image Generation Workflow for Technical Blog Posts
+
+This script generates images for technical blog posts using AI image generators.
+Supports multiple providers: OpenAI DALL-E 3, Replicate (Stable Diffusion), etc.
+
+Usage:
+    python generate_post_images.py --post posts/cicd/cicd-strategy.md --type thumbnail
+    python generate_post_images.py --post posts/cicd/cicd-strategy.md --type diagram --provider replicate
+    python generate_post_images.py --batch --type thumbnail
+"""
+
+import os
+import json
+import argparse
+import requests
+from pathlib import Path
+from typing import Optional, Dict, List
+from dataclasses import dataclass
+import time
+
+try:
+    from openai import OpenAI
+except ImportError:
+    print("Warning: openai package not installed. Install with: pip install openai")
+    OpenAI = None
+
+try:
+    import replicate
+except ImportError:
+    print("Warning: replicate package not installed. Install with: pip install replicate")
+    replicate = None
+
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError:
+    print("Warning: Pillow not installed. Install with: pip install Pillow")
+    Image = None
+
+
+@dataclass
+class ImageConfig:
+    """Configuration for image generation"""
+    width: int = 1024
+    height: int = 1024
+    quality: str = "standard"  # standard, hd
+    style: str = "natural"  # natural, vivid
+    provider: str = "openai"  # openai, replicate
+
+
+class ImageGenerator:
+    """Base class for AI image generators"""
+    
+    def __init__(self, config: ImageConfig):
+        self.config = config
+    
+    def generate(self, prompt: str, output_path: str) -> bool:
+        """Generate image from prompt. Returns True if successful."""
+        raise NotImplementedError
+
+
+class Dalle3Generator(ImageGenerator):
+    """OpenAI DALL-E 3 image generator"""
+    
+    def __init__(self, config: ImageConfig, api_key: Optional[str] = None):
+        super().__init__(config)
+        if OpenAI is None:
+            raise ImportError("openai package required. Install with: pip install openai")
+        
+        api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable required")
+        
+        self.client = OpenAI(api_key=api_key)
+    
+    def generate(self, prompt: str, output_path: str) -> bool:
+        """Generate image using DALL-E 3"""
+        try:
+            print(f"Generating image with DALL-E 3...")
+            print(f"Prompt: {prompt[:100]}...")
+            
+            # Map dimensions to DALL-E 3 supported sizes
+            size_map = {
+                (1024, 1024): "1024x1024",
+                (1792, 1024): "1792x1024",
+                (1024, 1792): "1024x1792",
+            }
+            size = size_map.get((self.config.width, self.config.height), "1024x1024")
+            
+            response = self.client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size=size,
+                quality=self.config.quality,
+                style=self.config.style,
+                n=1,
+            )
+            
+            image_url = response.data[0].url
+            
+            # Download image
+            img_response = requests.get(image_url)
+            img_response.raise_for_status()
+            
+            # Save image
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'wb') as f:
+                f.write(img_response.content)
+            
+            print(f"✓ Image saved to: {output_path}")
+            return True
+            
+        except Exception as e:
+            print(f"✗ Error generating image: {e}")
+            return False
+
+
+class ReplicateGenerator(ImageGenerator):
+    """Replicate (Stable Diffusion) image generator"""
+    
+    def __init__(self, config: ImageConfig, api_token: Optional[str] = None):
+        super().__init__(config)
+        if replicate is None:
+            raise ImportError("replicate package required. Install with: pip install replicate")
+        
+        api_token = api_token or os.getenv("REPLICATE_API_TOKEN")
+        if not api_token:
+            raise ValueError("REPLICATE_API_TOKEN environment variable required")
+        
+        os.environ["REPLICATE_API_TOKEN"] = api_token
+    
+    def generate(self, prompt: str, output_path: str) -> bool:
+        """Generate image using Stable Diffusion via Replicate"""
+        try:
+            print(f"Generating image with Stable Diffusion...")
+            print(f"Prompt: {prompt[:100]}...")
+            
+            # Use Stable Diffusion XL
+            output = replicate.run(
+                "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+                input={
+                    "prompt": prompt,
+                    "width": self.config.width,
+                    "height": self.config.height,
+                    "num_outputs": 1,
+                    "guidance_scale": 7.5,
+                    "num_inference_steps": 50,
+                }
+            )
+            
+            # Download image
+            image_url = output[0] if isinstance(output, list) else output
+            img_response = requests.get(image_url)
+            img_response.raise_for_status()
+            
+            # Save image
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'wb') as f:
+                f.write(img_response.content)
+            
+            print(f"✓ Image saved to: {output_path}")
+            return True
+            
+        except Exception as e:
+            print(f"✗ Error generating image: {e}")
+            return False
+
+
+class PromptBuilder:
+    """Builds prompts for technical blog post images"""
+    
+    # Style templates
+    THUMBNAIL_STYLE = "modern tech thumbnail, clean design, professional, {colors}, minimal"
+    DIAGRAM_STYLE = "technical architecture diagram, clean white background, modern flat design, professional technical illustration"
+    WORKFLOW_STYLE = "workflow diagram, sequential steps, arrows connecting boxes, numbered sequence, technical style"
+    COMPONENT_STYLE = "technical component diagram, interconnected components, boxes and arrows, modern design"
+    
+    # Color schemes
+    COLOR_SCHEMES = [
+        "blue and orange gradient",
+        "blue and green color scheme",
+        "purple and blue gradient",
+        "modern tech colors",
+    ]
+    
+    @staticmethod
+    def build_thumbnail_prompt(post_title: str, post_topic: str) -> str:
+        """Build prompt for thumbnail image"""
+        colors = PromptBuilder.COLOR_SCHEMES[0]
+        style = PromptBuilder.THUMBNAIL_STYLE.format(colors=colors)
+        
+        # Extract key concepts from topic
+        concepts = PromptBuilder._extract_concepts(post_topic)
+        
+        prompt = f"{style}, {concepts}, {post_title}, eye-catching thumbnail for technical blog post"
+        return prompt
+    
+    @staticmethod
+    def build_diagram_prompt(post_title: str, post_topic: str, diagram_type: str = "architecture") -> str:
+        """Build prompt for technical diagram"""
+        if diagram_type == "architecture":
+            style = PromptBuilder.DIAGRAM_STYLE
+            elements = "microservices as connected boxes, arrows showing communication, database and redis cache components"
+        elif diagram_type == "workflow":
+            style = PromptBuilder.WORKFLOW_STYLE
+            elements = "5 steps, arrows connecting boxes, numbered sequence"
+        elif diagram_type == "component":
+            style = PromptBuilder.COMPONENT_STYLE
+            elements = "interconnected gears and boxes, representing microservices"
+        else:
+            style = PromptBuilder.DIAGRAM_STYLE
+            elements = "technical components, boxes and arrows"
+        
+        concepts = PromptBuilder._extract_concepts(post_topic)
+        prompt = f"{style}, {elements}, {concepts}, {post_title}"
+        return prompt
+    
+    @staticmethod
+    def _extract_concepts(topic: str) -> str:
+        """Extract key technical concepts from topic"""
+        # Common technical terms mapping
+        concept_map = {
+            "cicd": "CI/CD pipeline, GitHub Actions, Docker, Kubernetes",
+            "health": "health checks, monitoring, service status",
+            "microservices": "microservices architecture, distributed systems",
+            "database": "database architecture, PostgreSQL, data storage",
+            "redis": "Redis cache, caching layer, in-memory storage",
+            "orchestration": "orchestration pattern, workflow management",
+            "queue": "message queue, job processing, async tasks",
+            "logging": "logging strategy, log aggregation, monitoring",
+            "testing": "testing strategy, unit tests, integration tests",
+            "api": "REST API, API endpoints, service communication",
+        }
+        
+        topic_lower = topic.lower()
+        concepts = []
+        for key, value in concept_map.items():
+            if key in topic_lower:
+                concepts.append(value)
+        
+        if not concepts:
+            return "technical architecture, software engineering"
+        
+        return ", ".join(concepts[:2])  # Limit to 2 concepts
+
+
+class PostImageGenerator:
+    """Main class for generating images for blog posts"""
+    
+    def __init__(self, provider: str = "openai"):
+        self.provider = provider
+        self.prompt_builder = PromptBuilder()
+        self.generator = self._create_generator()
+    
+    def _create_generator(self) -> ImageGenerator:
+        """Create appropriate generator based on provider"""
+        config = ImageConfig()
+        
+        if self.provider == "openai":
+            return Dalle3Generator(config)
+        elif self.provider == "replicate":
+            return ReplicateGenerator(config)
+        else:
+            raise ValueError(f"Unknown provider: {self.provider}")
+    
+    def generate_for_post(self, post_path: str, image_type: str, output_dir: Optional[str] = None) -> bool:
+        """Generate image for a specific post"""
+        post_path = Path(post_path)
+        if not post_path.exists():
+            print(f"✗ Post file not found: {post_path}")
+            return False
+        
+        # Read post content
+        with open(post_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Extract title and topic
+        title = self._extract_title(content)
+        topic = self._extract_topic(content, post_path)
+        
+        # Build prompt
+        if image_type == "thumbnail":
+            prompt = self.prompt_builder.build_thumbnail_prompt(title, topic)
+            width, height = 1200, 630  # LinkedIn/Twitter optimal
+        elif image_type == "diagram":
+            diagram_type = self._infer_diagram_type(content)
+            prompt = self.prompt_builder.build_diagram_prompt(title, topic, diagram_type)
+            width, height = 1920, 1080  # Blog post width
+        else:
+            print(f"✗ Unknown image type: {image_type}")
+            return False
+        
+        # Update generator config
+        self.generator.config.width = width
+        self.generator.config.height = height
+        
+        # Determine output path
+        if output_dir is None:
+            output_dir = post_path.parent / "images"
+        else:
+            output_dir = Path(output_dir)
+        
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_filename = f"{post_path.stem}-{image_type}.png"
+        output_path = output_dir / output_filename
+        
+        # Generate image
+        success = self.generator.generate(prompt, str(output_path))
+        
+        if success:
+            # Save prompt metadata
+            metadata_path = output_dir / f"{post_path.stem}-{image_type}-prompt.txt"
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                f.write(f"Post: {post_path}\n")
+                f.write(f"Title: {title}\n")
+                f.write(f"Topic: {topic}\n")
+                f.write(f"Image Type: {image_type}\n")
+                f.write(f"Prompt: {prompt}\n")
+        
+        return success
+    
+    def _extract_title(self, content: str) -> str:
+        """Extract title from markdown content"""
+        lines = content.split('\n')
+        for line in lines[:10]:  # Check first 10 lines
+            if line.startswith('# '):
+                return line[2:].strip()
+        return "Technical Blog Post"
+    
+    def _extract_topic(self, content: str, post_path: Path) -> str:
+        """Extract topic from content and filename"""
+        # Check filename for clues
+        filename = post_path.stem.lower()
+        
+        # Check content for keywords
+        content_lower = content.lower()
+        
+        # Combine filename and content analysis
+        topic = filename
+        if "cicd" in content_lower or "pipeline" in content_lower:
+            topic += " cicd"
+        if "health" in content_lower:
+            topic += " health"
+        if "microservice" in content_lower:
+            topic += " microservices"
+        
+        return topic
+    
+    def _infer_diagram_type(self, content: str) -> str:
+        """Infer diagram type from content"""
+        content_lower = content.lower()
+        
+        if "workflow" in content_lower or "step" in content_lower or "sequence" in content_lower:
+            return "workflow"
+        elif "component" in content_lower or "module" in content_lower:
+            return "component"
+        else:
+            return "architecture"
+
+
+def create_gif_from_images(image_paths: List[str], output_path: str, duration: float = 0.5):
+    """Create animated GIF from sequence of images"""
+    if Image is None:
+        print("✗ Pillow required for GIF creation. Install with: pip install Pillow")
+        return False
+    
+    try:
+        images = [Image.open(path) for path in image_paths]
+        
+        # Resize all images to same size
+        sizes = [img.size for img in images]
+        max_size = max(sizes)
+        images = [img.resize(max_size, Image.Resampling.LANCZOS) for img in images]
+        
+        images[0].save(
+            output_path,
+            save_all=True,
+            append_images=images[1:],
+            duration=int(duration * 1000),
+            loop=0,
+        )
+        
+        print(f"✓ GIF saved to: {output_path}")
+        return True
+    except Exception as e:
+        print(f"✗ Error creating GIF: {e}")
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate AI images for technical blog posts")
+    parser.add_argument("--post", type=str, help="Path to markdown post file")
+    parser.add_argument("--type", type=str, choices=["thumbnail", "diagram"], required=True,
+                       help="Type of image to generate")
+    parser.add_argument("--provider", type=str, choices=["openai", "replicate"], default="openai",
+                       help="AI provider to use")
+    parser.add_argument("--output-dir", type=str, help="Output directory for images")
+    parser.add_argument("--batch", action="store_true", help="Generate for all posts in posts/ directory")
+    parser.add_argument("--gif", action="store_true", help="Create animated GIF from multiple images")
+    
+    args = parser.parse_args()
+    
+    generator = PostImageGenerator(provider=args.provider)
+    
+    if args.batch:
+        # Generate for all posts
+        posts_dir = Path("posts")
+        if not posts_dir.exists():
+            print(f"✗ Posts directory not found: {posts_dir}")
+            return
+        
+        markdown_files = list(posts_dir.rglob("*.md"))
+        markdown_files = [f for f in markdown_files if f.name != "index.md"]
+        
+        print(f"Found {len(markdown_files)} posts to process")
+        
+        for post_file in markdown_files:
+            print(f"\nProcessing: {post_file}")
+            generator.generate_for_post(str(post_file), args.type, args.output_dir)
+            time.sleep(2)  # Rate limiting
+        
+    elif args.post:
+        # Generate for single post
+        generator.generate_for_post(args.post, args.type, args.output_dir)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
+

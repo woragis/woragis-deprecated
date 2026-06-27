@@ -1,0 +1,16 @@
+# Requirements for AI Image Generation Script
+
+# OpenAI DALL-E 3
+openai>=1.0.0
+
+# Replicate (Stable Diffusion)
+replicate>=0.20.0
+
+# Image processing
+Pillow>=10.0.0
+requests>=2.31.0
+
+# Optional: For advanced image processing
+# imageio>=2.31.0  # For GIF creation
+# imageio-ffmpeg>=0.4.9  # For video/GIF processing
+

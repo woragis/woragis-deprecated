@@ -13,3 +13,6 @@
 [submodule "frontend/jobs"]
 	path = frontend/jobs
 	url = git@github.com:woragis/woragis-jobs-frontend-center.git
+[submodule "data/jobs"]
+	path = data/jobs
+	url = git@github.com:woragis/woragis-jobs-data.git
