@@ -1,0 +1,15 @@
+[submodule "backend/auth"]
+	path = backend/auth
+	url = git@github.com:woragis/woragis-auth-backend.git
+[submodule "backend/jobs"]
+	path = backend/jobs
+	url = git@github.com:woragis/woragis-jobs-backend.git
+[submodule "backend/posts"]
+	path = backend/posts
+	url = git@github.com:woragis/woragis-posts-backend.git
+[submodule "backend/management"]
+	path = backend/management
+	url = git@github.com:woragis/woragis-management-backend.git
+[submodule "frontend/jobs"]
+	path = frontend/jobs
+	url = git@github.com:woragis/woragis-jobs-frontend-center.git
