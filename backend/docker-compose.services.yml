@@ -1,0 +1,688 @@
+# Comprehensive Docker Compose file for all Woragis microservices
+# Port allocation:
+# - Services: 3010-3016 (Auth, Jobs, Skills, Management, Posts, Social Media, Files)
+# - PostgreSQL: 5443-5449 (one per service)
+# - Redis: 6391-6397 (one per service)
+# - RabbitMQ: 5681-5687 (AMQP), 15681-15687 (Management UI)
+# - Prometheus: 9091-9097
+# - Loki: 3101-3107
+# - Grafana: 3011-3017
+# - Jaeger UI: 16687-16693
+
+services:
+  # ============================================
+  # AUTH SERVICE (Port 3010)
+  # ============================================
+  auth-database:
+    image: postgres:15-alpine
+    container_name: auth-service-database
+    environment:
+      POSTGRES_DB: auth_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5443:5432"
+    volumes:
+      - auth-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  auth-redis:
+    image: redis:7-alpine
+    container_name: auth-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6391:6379"
+    volumes:
+      - auth-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  auth-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: auth-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5681:5672"
+      - "15681:15672"
+    volumes:
+      - auth-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  auth-service:
+    build:
+      context: ./auth/server
+      dockerfile: Dockerfile
+    container_name: auth-service-app
+    depends_on:
+      auth-database:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+      auth-rabbitmq:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: auth-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3010
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-secret-change-me}
+      AUTH_JWT_TTL: ${AUTH_JWT_TTL:-24h}
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@auth-database:5432/auth_service?sslmode=disable
+      REDIS_URL: redis://auth-redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@auth-rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: auth-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://auth-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3010:3000"
+    restart: on-failure
+    networks:
+      - woragis-network
+
+  # ============================================
+  # JOBS SERVICE (Port 3011)
+  # ============================================
+  jobs-database:
+    image: postgres:15-alpine
+    container_name: jobs-service-database
+    environment:
+      POSTGRES_DB: jobs_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5444:5432"
+    volumes:
+      - jobs-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  jobs-redis:
+    image: redis:7-alpine
+    container_name: jobs-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6392:6379"
+    volumes:
+      - jobs-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  jobs-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: jobs-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5682:5672"
+      - "15682:15672"
+    volumes:
+      - jobs-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  jobs-service:
+    build:
+      context: ./jobs/server
+      dockerfile: Dockerfile
+    container_name: jobs-service-app
+    depends_on:
+      jobs-database:
+        condition: service_healthy
+      jobs-redis:
+        condition: service_healthy
+      jobs-rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: jobs-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3011
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@jobs-database:5432/jobs_service?sslmode=disable
+      REDIS_URL: redis://jobs-redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@jobs-rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      AUTH_SERVICE_URL: http://auth-service:3000
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: jobs-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://jobs-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3011:3000"
+    restart: on-failure
+    networks:
+      - woragis-network
+
+  # ============================================
+  # SKILLS SERVICE (Port 3012)
+  # ============================================
+  skills-database:
+    image: postgres:15-alpine
+    container_name: skills-service-database
+    environment:
+      POSTGRES_DB: skills_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5445:5432"
+    volumes:
+      - skills-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  skills-redis:
+    image: redis:7-alpine
+    container_name: skills-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6393:6379"
+    volumes:
+      - skills-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  skills-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: skills-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5683:5672"
+      - "15683:15672"
+    volumes:
+      - skills-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  skills-service:
+    build:
+      context: ./skills/server
+      dockerfile: Dockerfile
+    container_name: skills-service-app
+    depends_on:
+      skills-database:
+        condition: service_healthy
+      skills-redis:
+        condition: service_healthy
+      skills-rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: skills-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3012
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@skills-database:5432/skills_service?sslmode=disable
+      REDIS_URL: redis://skills-redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@skills-rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      AUTH_SERVICE_URL: http://auth-service:3000
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: skills-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://skills-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3012:3000"
+    restart: on-failure
+    networks:
+      - woragis-network
+
+  # ============================================
+  # MANAGEMENT SERVICE (Port 3013)
+  # ============================================
+  management-database:
+    image: postgres:15-alpine
+    container_name: management-service-database
+    environment:
+      POSTGRES_DB: management_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5446:5432"
+    volumes:
+      - management-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  management-redis:
+    image: redis:7-alpine
+    container_name: management-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6394:6379"
+    volumes:
+      - management-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  management-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: management-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5684:5672"
+      - "15684:15672"
+    volumes:
+      - management-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  management-service:
+    build:
+      context: ./management/server
+      dockerfile: Dockerfile
+    container_name: management-service-app
+    depends_on:
+      management-database:
+        condition: service_healthy
+      management-redis:
+        condition: service_healthy
+      management-rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: management-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3013
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@management-database:5432/management_service?sslmode=disable
+      REDIS_URL: redis://management-redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@management-rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      AUTH_SERVICE_URL: http://auth-service:3000
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: management-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://management-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3013:3000"
+    restart: on-failure
+    networks:
+      - woragis-network
+
+  # ============================================
+  # POSTS SERVICE (Port 3014)
+  # ============================================
+  posts-database:
+    image: postgres:15-alpine
+    container_name: posts-service-database
+    environment:
+      POSTGRES_DB: posts_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5447:5432"
+    volumes:
+      - posts-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  posts-redis:
+    image: redis:7-alpine
+    container_name: posts-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6395:6379"
+    volumes:
+      - posts-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  posts-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: posts-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5685:5672"
+      - "15685:15672"
+    volumes:
+      - posts-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  posts-service:
+    build:
+      context: ./posts/server
+      dockerfile: Dockerfile
+    container_name: posts-service-app
+    depends_on:
+      posts-database:
+        condition: service_healthy
+      posts-redis:
+        condition: service_healthy
+      posts-rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: posts-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3014
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@posts-database:5432/posts_service?sslmode=disable
+      REDIS_URL: redis://posts-redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@posts-rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      AUTH_SERVICE_URL: http://auth-service:3000
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: posts-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://posts-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3014:3000"
+    restart: on-failure
+    networks:
+      - woragis-network
+
+  # ============================================
+  # SOCIAL MEDIA SERVICE (Port 3015)
+  # ============================================
+  social-media-database:
+    image: postgres:15-alpine
+    container_name: social-media-service-database
+    environment:
+      POSTGRES_DB: social_media_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5448:5432"
+    volumes:
+      - social-media-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  social-media-redis:
+    image: redis:7-alpine
+    container_name: social-media-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6396:6379"
+    volumes:
+      - social-media-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  social-media-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: social-media-service-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-woragis}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-woragis}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5686:5672"
+      - "15686:15672"
+    volumes:
+      - social-media-rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  social-media-service:
+    build:
+      context: ./social-media/server
+      dockerfile: Dockerfile
+    container_name: social-media-service-app
+    depends_on:
+      social-media-database:
+        condition: service_healthy
+      social-media-redis:
+        condition: service_healthy
+      social-media-rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: social-media-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3015
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@social-media-database:5432/social_media_service?sslmode=disable
+      REDIS_URL: redis://social-media-redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-woragis}:${RABBITMQ_PASSWORD:-woragis}@social-media-rabbitmq:5672/${RABBITMQ_VHOST:-/}
+      AUTH_SERVICE_URL: http://auth-service:3000
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: social-media-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://social-media-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3015:3000"
+    restart: on-failure
+    networks:
+      - woragis-network
+
+  # ============================================
+  # FILES SERVICE (Port 3016)
+  # ============================================
+  files-database:
+    image: postgres:15-alpine
+    container_name: files-service-database
+    environment:
+      POSTGRES_DB: files_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_USER: ${POSTGRES_USER:-woragis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-woragis}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5449:5432"
+    volumes:
+      - files-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  files-redis:
+    image: redis:7-alpine
+    container_name: files-service-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6397:6379"
+    volumes:
+      - files-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - woragis-network
+
+  files-service:
+    build:
+      context: ./files/server
+      dockerfile: Dockerfile
+    container_name: files-service-app
+    depends_on:
+      files-database:
+        condition: service_healthy
+      files-redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: files-service
+      PORT: 3000
+      APP_PUBLIC_URL: http://localhost:3016
+      DATABASE_URL: postgres://${POSTGRES_USER:-woragis}:${POSTGRES_PASSWORD:-password}@files-database:5432/files_service?sslmode=disable
+      REDIS_URL: redis://files-redis:6379/0
+      AUTH_SERVICE_URL: http://auth-service:3000
+      STORAGE_BASE_PATH: /storage/files
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      METRICS_NAMESPACE: files-service
+      OTLP_ENDPOINT: ${OTLP_ENDPOINT:-http://files-jaeger:4318}
+      CORS_ENABLED: ${CORS_ENABLED:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "3016:3000"
+    volumes:
+      - files-storage:/storage/files
+    restart: on-failure
+    networks:
+      - woragis-network
+
+volumes:
+  # Auth service volumes
+  auth-postgres-data:
+  auth-redis-data:
+  auth-rabbitmq-data:
+  
+  # Jobs service volumes
+  jobs-postgres-data:
+  jobs-redis-data:
+  jobs-rabbitmq-data:
+  
+  # Skills service volumes
+  skills-postgres-data:
+  skills-redis-data:
+  skills-rabbitmq-data:
+  
+  # Management service volumes
+  management-postgres-data:
+  management-redis-data:
+  management-rabbitmq-data:
+  
+  # Posts service volumes
+  posts-postgres-data:
+  posts-redis-data:
+  posts-rabbitmq-data:
+  
+  # Social Media service volumes
+  social-media-postgres-data:
+  social-media-redis-data:
+  social-media-rabbitmq-data:
+  
+  # Files service volumes
+  files-postgres-data:
+  files-redis-data:
+  files-storage:
+
+networks:
+  woragis-network:
+    driver: bridge
+

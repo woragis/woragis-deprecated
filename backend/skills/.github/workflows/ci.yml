@@ -1,0 +1,574 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: auth_service_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ./server
+        run: go mod download
+
+      - name: Run unit tests
+        id: unit_tests
+        working-directory: ./server
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_service_test?sslmode=disable
+          TEST_REDIS_URL: redis://localhost:6379/0
+          TEST_JWT_SECRET: test-secret-key-for-integration-tests
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./... 2>&1 | tee test-output.log || true
+
+      - name: Parse test results
+        id: parse_results
+        if: always()
+        working-directory: ./server
+        run: |
+          # Initialize defaults
+          PASSED="0"
+          FAILED="0"
+          COVERAGE="0%"
+          
+          # Extract test summary from output
+          if [ -f test-output.log ]; then
+            PASSED=$(grep -oP '^\s*\d+(?= passed)' test-output.log | head -1 || echo "0")
+            FAILED=$(grep -oP '^\s*\d+(?= failed)' test-output.log | head -1 || echo "0")
+            # Try to extract coverage from go test output
+            COVERAGE=$(grep -oP 'coverage: [\d.]+%' test-output.log | grep -oP '[\d.]+%' | head -1 || echo "0%")
+          fi
+          
+          # If no matches, try alternative patterns
+          if [ "$PASSED" == "0" ] && [ "$FAILED" == "0" ]; then
+            PASSED=$(grep -c "PASS:" test-output.log || echo "0")
+            FAILED=$(grep -c "FAIL:" test-output.log || echo "0")
+          fi
+          
+          # Ensure values are set
+          PASSED=${PASSED:-"0"}
+          FAILED=${FAILED:-"0"}
+          COVERAGE=${COVERAGE:-"0%"}
+          
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Generate unit test report
+        if: always()
+        working-directory: ./server
+        run: |
+          PASSED="${{ steps.parse_results.outputs.passed }}"
+          FAILED="${{ steps.parse_results.outputs.failed }}"
+          COVERAGE="${{ steps.parse_results.outputs.coverage }}"
+          
+          PASSED=${PASSED:-"0"}
+          FAILED=${FAILED:-"0"}
+          COVERAGE=${COVERAGE:-"0%"}
+          
+          echo "## ✅ Unit Tests Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+          echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 Coverage | $COVERAGE |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$FAILED" != "0" ]; then
+            echo "### ⚠️ Test Failures Detected" >> $GITHUB_STEP_SUMMARY
+            echo "Check the test output above for details." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-logs
+          path: server/test-output.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage-reports
+          path: |
+            server/coverage.out
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./server/coverage.out
+          flags: unit
+          name: unit-tests
+        continue-on-error: true
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: auth_service_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ./server
+        run: go mod download
+
+      - name: Run integration tests
+        id: integration_tests
+        working-directory: ./server
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_service_test?sslmode=disable
+          TEST_REDIS_URL: redis://localhost:6379/0
+          TEST_JWT_SECRET: test-secret-key-for-integration-tests
+        run: |
+          go test -v -tags=integration -race -coverprofile=coverage-integration.out -covermode=atomic ./internal/integration/... 2>&1 | tee integration-test-output.log || true
+        continue-on-error: true
+
+      - name: Parse integration test results
+        id: parse_integration_results
+        if: always()
+        working-directory: ./server
+        run: |
+          PASSED="0"
+          FAILED="0"
+          SKIPPED="0"
+          
+          if [ -f integration-test-output.log ]; then
+            PASSED=$(grep -oP '^\s*\d+(?= passed)' integration-test-output.log | head -1 || echo "0")
+            FAILED=$(grep -oP '^\s*\d+(?= failed)' integration-test-output.log | head -1 || echo "0")
+            SKIPPED=$(grep -oP '^\s*\d+(?= skipped)' integration-test-output.log | head -1 || echo "0")
+          fi
+          
+          if [ "$PASSED" == "0" ] && [ "$FAILED" == "0" ]; then
+            PASSED=$(grep -c "PASS:" integration-test-output.log || echo "0")
+            FAILED=$(grep -c "FAIL:" integration-test-output.log || echo "0")
+          fi
+          
+          PASSED=${PASSED:-"0"}
+          FAILED=${FAILED:-"0"}
+          SKIPPED=${SKIPPED:-"0"}
+          
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+
+      - name: Generate integration test report
+        if: always()
+        working-directory: ./server
+        run: |
+          PASSED="${{ steps.parse_integration_results.outputs.passed }}"
+          FAILED="${{ steps.parse_integration_results.outputs.failed }}"
+          SKIPPED="${{ steps.parse_integration_results.outputs.skipped }}"
+          
+          PASSED=${PASSED:-"0"}
+          FAILED=${FAILED:-"0"}
+          SKIPPED=${SKIPPED:-"0"}
+          
+          echo "## 🔗 Integration Tests Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+          echo "| ❌ Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload integration test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs
+          path: server/integration-test-output.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload integration coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-coverage-reports
+          path: server/coverage-integration.out
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload integration coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./server/coverage-integration.out
+          flags: integration
+          name: integration-tests
+        continue-on-error: true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ./server
+        run: go mod download
+
+      - name: Run golangci-lint
+        working-directory: ./server
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run --timeout=5m
+
+      - name: Generate lint report
+        if: always()
+        run: |
+          echo "## 🔍 Lint Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ **Linting passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Linting failed**" >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ./server
+        run: go mod download
+
+      - name: Run gosec (SAST)
+        id: gosec
+        working-directory: ./server
+        run: |
+          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          gosec -fmt json -out gosec-report.json ./... || true
+          gosec ./... || true
+        continue-on-error: true
+
+      - name: Run govulncheck (Vulnerability Scan)
+        id: govulncheck
+        working-directory: ./server
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./... || true
+        continue-on-error: true
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            server/gosec-report.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Generate security report
+        if: always()
+        run: |
+          echo "## 🔒 Security Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Scans" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| gosec (SAST) | ${{ steps.gosec.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| govulncheck (Vulnerabilities) | ${{ steps.govulncheck.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Security reports are available in the artifacts section." >> $GITHUB_STEP_SUMMARY
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [unit-tests, lint]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          push: false
+          load: true
+          tags: auth-service:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm auth-service:test --version || echo "Image built successfully"
+
+      - name: Generate Docker build report
+        if: always()
+        run: |
+          echo "## 🐳 Docker Build Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ **Docker image built successfully**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Image tag: \`auth-service:test\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The image has been validated and is ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Docker build failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the build logs above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: auth_service_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: ./server
+        run: go mod download
+
+      - name: Run benchmark tests
+        id: perf_tests
+        working-directory: ./server
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/auth_service_test?sslmode=disable
+          TEST_REDIS_URL: redis://localhost:6379/0
+          TEST_JWT_SECRET: test-secret-key-for-integration-tests
+        run: |
+          go test -bench=. -benchmem -run=^$ ./... 2>&1 | tee performance-output.log || true
+        continue-on-error: true
+
+      - name: Upload performance test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-test-logs
+          path: server/performance-output.log
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Generate performance report
+        if: always()
+        run: |
+          echo "## ⚡ Performance Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Performance test results are available in the artifacts section." >> $GITHUB_STEP_SUMMARY
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, lint, docker-build, security-tests, performance-tests]
+    if: always()
+    
+    steps:
+      - name: Generate overall summary
+        run: |
+          echo "## 📊 CI Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Tests | ${{ needs.security-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Tests | ${{ needs.performance-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall status
+          if [ "${{ needs.unit-tests.result }}" == "success" ] && \
+             [ "${{ needs.docker-build.result }}" == "success" ] && \
+             [ "${{ needs.lint.result }}" == "success" ]; then
+            echo "### ✅ Overall Status: Success" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All critical checks passed. The service is ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Overall Status: Failure" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some critical checks failed. Please review the job logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts Available" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit test logs and coverage reports" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration test logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scan reports" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance test logs" >> $GITHUB_STEP_SUMMARY

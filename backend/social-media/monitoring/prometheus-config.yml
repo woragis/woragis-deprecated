@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'auth-service-monitor'
+
+scrape_configs:
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['app:3000']
+        labels:
+          service: 'auth-service'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

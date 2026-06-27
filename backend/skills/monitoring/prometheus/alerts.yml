@@ -1,0 +1,4 @@
+groups:
+  - name: default
+    interval: 30s
+    rules: []
