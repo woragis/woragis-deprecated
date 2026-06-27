@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Dependencies and build
+node_modules/
+vendor/
+dist/
+build/
+.svelte-kit/
+.next/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Logs and artifacts
+*.log
+*.zip
+nul
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local-only / duplicate workspaces (not part of archive)
+Nova pasta/
+production-env/
+woragis-main/
+
+# Test output
+test-output.log
+coverage/
+htmlcov/
